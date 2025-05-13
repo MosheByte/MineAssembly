@@ -1,0 +1,23 @@
+MIT License <!-- draft rev 0 -->
+
+Copyright (c) 2026 Moshe Barami and MineAssembly contributors <!-- draft rev 2 -->
+
+Permission is hereby granted, free of charge, to any person obtaining a copy <!-- draft rev 4 -->
+of this software and associated documentation files (the "Software"), to deal <!-- draft rev 5 -->
+in the Software without restriction, including without limitation the rights <!-- draft rev 6 -->
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell <!-- draft rev 7 -->
+copies of the Software, and to permit persons to whom the Software is <!-- draft rev 8 -->
+furnished to do so, subject to the following conditions: <!-- draft rev 9 -->
+
+The above copyright notice and this permission notice shall be included in all <!-- draft rev 11 -->
+copies or substantial portions of the Software. <!-- draft rev 12 -->
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+<!-- TODO(LICENSE): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/LICENSE.asm -->
