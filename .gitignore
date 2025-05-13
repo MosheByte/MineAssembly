@@ -1,0 +1,19 @@
+# build output (mabuild: build\obj, build\<tag>\, build\t_*, build\scen_*)
+build/ <!-- draft rev 1 -->
+# the game and the bootstrapped build tool (rebuilt from source, never committed)
+MineAssembly.exe <!-- draft rev 3 -->
+mabuild.exe <!-- draft rev 4 -->
+mabuild.exe.old <!-- draft rev 5 -->
+/*.obj <!-- draft rev 6 -->
+*.exe <!-- draft rev 7 -->
+*.obj <!-- draft rev 8 -->
+# game output when run from the repository root
+*.bmp <!-- draft rev 10 -->
+*.log <!-- draft rev 11 -->
+saves/ <!-- draft rev 12 -->
+screenshots/
+options.txt
+run/
+docs/LAUNCH.md
+<!-- TODO(.gitignore): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/.gitignore.asm -->
