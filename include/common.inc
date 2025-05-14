@@ -1,65 +1,46 @@
 ; common.inc - win64 frame macros and shared constants
-%ifndef COMMON_INC ; v1: common scratch #1
-%define COMMON_INC ; v1: common scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (common:2)
+%ifndef COMMON_INC
+%define COMMON_INC
 
-bits 64 ; v1: common scratch #4
-    ; TODO: clamp index before table lookup on malformed input (common:4)
-default rel ; v1: common scratch #5
+bits 64
+default rel
 
 ; win64 abi: rcx rdx r8 r9 / xmm0-3, shadow 32B, rsp 16B aligned before call
-%define FRAME_OUT 96 ; v1: common scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (common:8)
+%define FRAME_OUT 96 ; shadow + 8 arg slots
 
-%macro PROC 1-2 0 ; v1: common scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (common:10)
-    global %1 ; v1: common scratch #11
-    align 16 ; v1: common scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (common:12)
-%1: ; v1: common scratch #13
-    push rbp ; v1: common scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (common:14)
-    mov  rbp, rsp ; v1: common scratch #15
-    push rbx ; v1: common scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (common:16)
-    push rsi ; v1: common scratch #17
-    push rdi ; v1: common scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (common:18)
-    push r12 ; v1: common scratch #19
-    push r13 ; v1: common scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (common:20)
-    push r14 ; v1: common scratch #21
-    push r15 ; v1: common scratch #22
-    ; TODO: clamp index before table lookup on malformed input (common:22)
-    sub  rsp, (((%2)+15) & ~15) + FRAME_OUT + 8 ; v1: common scratch #23
-%endmacro ; v1: common scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (common:24)
+%macro PROC 1-2 0
+    global %1
+    align 16
+%1:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    push r14
+    push r15
+    sub  rsp, (((%2)+15) & ~15) + FRAME_OUT + 8
+%endmacro
 
-%macro ENDP 0 ; v1: common scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (common:26)
-    lea  rsp, [rbp-56] ; v1: common scratch #27
-    pop  r15 ; v1: common scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (common:28)
-    pop  r14 ; v1: common scratch #29
-    pop  r13 ; v1: common scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (common:30)
-    pop  r12 ; v1: common scratch #31
-    pop  rdi ; v1: common scratch #32
-    ; temp: spill r12/r13 across helper call until reg alloc pass (common:32)
-    pop  rsi ; v1: common scratch #33
-    pop  rbx ; v1: common scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (common:34)
-    pop  rbp ; v1: common scratch #35
-    ret ; v1: common scratch #36
-    ; note: rcx = state ptr, rdx = index, r8d = flags (common:36)
-%endmacro ; v1: common scratch #37
+%macro ENDP 0
+    lea  rsp, [rbp-56]
+    pop  r15
+    pop  r14
+    pop  r13
+    pop  r12
+    pop  rdi
+    pop  rsi
+    pop  rbx
+    pop  rbp
+    ret
+%endmacro
 
-%macro PROCX 1-2 0 ; v1: common scratch #39
-    global %1 ; v1: common scratch #40
-    ; TODO: clamp index before table lookup on malformed input (common:40)
-    align 16 ; v1: common scratch #41
-%1: ; v1: common scratch #42
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (common:42)
+%macro PROCX 1-2 0
+    global %1
+    align 16
+%1:
     push rbp
     mov  rbp, rsp
     push rbx
@@ -127,29 +108,90 @@ default rel ; v1: common scratch #5
     movd %1, eax
 %endmacro
 
-    ; v1 temporary guard (common #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (common #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (common #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (common #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (common #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (common #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (common #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (common #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (common #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (common #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (common #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (common #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (common #43)
-    xor     r11d, r11d ; clear v1 slot 43
+%macro CSTR 2
+    section .rdata
+    %1: db %2, 0
+    section .text
+%endmacro
+
+; rip-relative addressing only (default rel)
+
+%define CHUNK_W         16
+%define CHUNK_H         128
+%define CHUNK_SHIFT     4
+%define CHUNK_MASK      15
+%define CHUNK_VOL       (CHUNK_W*CHUNK_W*CHUNK_H)
+%define SECTION_H       16
+%define SECTIONS        (CHUNK_H/SECTION_H)
+%define SEA_LEVEL       62
+; idx = x + (z<<4) + (y<<8)
+
+%define MAX_RENDER_DIST 16
+%define LOAD_MARGIN     2               ; extra ring so light/mesh have neighbours
+%define MAX_CHUNKS      1600            ; >= (2*(16+2)+1)^2 = 1369
+%define CHUNK_HASH_SIZE 4096            ; pow2!
+
+%define CS_FREE         0
+%define CS_QUEUED       1
+%define CS_GENERATING   2
+%define CS_GENERATED    3               ; blocks + column skylight
+%define CS_LIT          4               ; needs all 8 neighbours >= GENERATED first
+%define CS_READY        5
+
+%define TICKS_PER_SEC   20
+%define DAY_LENGTH      24000           ; 0 sunrise, 6000 noon, 12000 sunset
+
+%define ST_TITLE        0
+%define ST_WORLDSELECT  1
+%define ST_CREATEWORLD  2
+%define ST_LOADING      3
+%define ST_PLAYING      4
+%define ST_PAUSED       5
+%define ST_INVENTORY    6               ; any container, see g_screen_kind
+%define ST_CHAT         7
+%define ST_DEAD         8
+%define ST_SETTINGS     9
+%define ST_QUIT         10
+
+%define SCR_PLAYER      0
+%define SCR_CRAFTING    1
+%define SCR_FURNACE     2
+%define SCR_CHEST       3
+%define SCR_CREATIVE    4
+
+%define GM_SURVIVAL     0
+%define GM_CREATIVE     1
+
+%define MB_LEFT         1
+%define MB_RIGHT        2
+%define MB_MIDDLE       4
+
+; face order is shared by mesher, blk_tex and raycast, don't reorder
+%define FACE_PX         0
+%define FACE_NX         1
+%define FACE_PY         2
+%define FACE_NY         3
+%define FACE_PZ         4
+%define FACE_NZ         5               ; -z is north
+
+%define INV_SLOTS       36              ; 0-8 = hotbar
+%define HOTBAR_SLOTS    9
+
+%define MAX_ENTITIES    512
+%define MAX_PARTICLES   4096
+%define MAX_BLOCKENTS   1024
+
+; blocks
+%define PLAYER_WIDTH    0.6
+%define PLAYER_HEIGHT   1.8
+%define PLAYER_EYE      1.62
+%define REACH_SURVIVAL  4.5
+%define REACH_CREATIVE  6.0
+
+%include "win32.inc"
+%include "gl.inc"
+%include "ids.inc"
+%include "structs.inc"
+%include "api.inc"
+
+%endif
