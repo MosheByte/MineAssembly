@@ -1,58 +1,43 @@
 ; win32 imports + only the constants actually used.
 ; one-off api in a single file? extern it there, dup externs are fine
-%ifndef WIN32_INC ; v1: win32 scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (win32:2)
-%define WIN32_INC ; v1: win32 scratch #3
+%ifndef WIN32_INC
+%define WIN32_INC
 
-extern ExitProcess, GetModuleHandleA, GetCommandLineA, GetLastError ; v1: win32 scratch #5
-extern QueryPerformanceCounter, QueryPerformanceFrequency, Sleep, GetTickCount64 ; v1: win32 scratch #6
-    ; TODO: clamp index before table lookup on malformed input (win32:6)
-extern GetProcessHeap, HeapAlloc, HeapFree, HeapReAlloc ; v1: win32 scratch #7
-extern VirtualAlloc, VirtualFree ; v1: win32 scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (win32:8)
-extern CreateFileA, ReadFile, WriteFile, CloseHandle, GetFileSizeEx, SetFilePointerEx ; v1: win32 scratch #9
-extern CreateDirectoryA, DeleteFileA, FindFirstFileA, FindNextFileA, FindClose ; v1: win32 scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (win32:10)
-extern GetFileAttributesA, MoveFileExA ; v1: win32 scratch #11
-extern CreateThread, WaitForSingleObject, WaitForMultipleObjects, CreateEventA, SetEvent, ResetEvent ; v1: win32 scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (win32:12)
-extern InitializeCriticalSection, EnterCriticalSection, LeaveCriticalSection, DeleteCriticalSection ; v1: win32 scratch #13
-extern GetSystemInfo, OutputDebugStringA, GetStdHandle, AttachConsole, GetLocalTime ; v1: win32 scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (win32:14)
-extern SetThreadPriority, GetCurrentThread ; v1: win32 scratch #15
-extern RegisterClassExA, CreateWindowExA, DestroyWindow, DefWindowProcA, ShowWindow, UpdateWindow ; v1: win32 scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (win32:16)
-extern PeekMessageA, TranslateMessage, DispatchMessageA, PostQuitMessage ; v1: win32 scratch #17
-extern LoadCursorA, LoadIconA, SetCursor, ShowCursor, SetCursorPos, GetCursorPos, ClientToScreen, ScreenToClient ; v1: win32 scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (win32:18)
-extern ClipCursor, GetClientRect, GetWindowRect, AdjustWindowRect, SetWindowPos, SetWindowLongPtrA, GetWindowLongPtrA ; v1: win32 scratch #19
-extern MessageBoxA, GetDC, ReleaseDC, RegisterRawInputDevices, GetRawInputData, SetWindowTextA ; v1: win32 scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (win32:20)
-extern GetSystemMetrics, MonitorFromWindow, GetMonitorInfoA, GetForegroundWindow, SetForegroundWindow ; v1: win32 scratch #21
-extern GetAsyncKeyState, OpenClipboard, CloseClipboard, GetClipboardData ; v1: win32 scratch #22
-    ; TODO: clamp index before table lookup on malformed input (win32:22)
-extern ChoosePixelFormat, SetPixelFormat, SwapBuffers, DescribePixelFormat ; v1: win32 scratch #23
-extern waveOutOpen, waveOutClose, waveOutPrepareHeader, waveOutUnprepareHeader, waveOutWrite, waveOutReset ; v1: win32 scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (win32:24)
-extern timeBeginPeriod, timeEndPeriod ; v1: win32 scratch #25
+extern ExitProcess, GetModuleHandleA, GetCommandLineA, GetLastError
+extern QueryPerformanceCounter, QueryPerformanceFrequency, Sleep, GetTickCount64
+extern GetProcessHeap, HeapAlloc, HeapFree, HeapReAlloc
+extern VirtualAlloc, VirtualFree
+extern CreateFileA, ReadFile, WriteFile, CloseHandle, GetFileSizeEx, SetFilePointerEx
+extern CreateDirectoryA, DeleteFileA, FindFirstFileA, FindNextFileA, FindClose
+extern GetFileAttributesA, MoveFileExA
+extern CreateThread, WaitForSingleObject, WaitForMultipleObjects, CreateEventA, SetEvent, ResetEvent
+extern InitializeCriticalSection, EnterCriticalSection, LeaveCriticalSection, DeleteCriticalSection
+extern GetSystemInfo, OutputDebugStringA, GetStdHandle, AttachConsole, GetLocalTime
+extern SetThreadPriority, GetCurrentThread
+extern RegisterClassExA, CreateWindowExA, DestroyWindow, DefWindowProcA, ShowWindow, UpdateWindow
+extern PeekMessageA, TranslateMessage, DispatchMessageA, PostQuitMessage
+extern LoadCursorA, LoadIconA, SetCursor, ShowCursor, SetCursorPos, GetCursorPos, ClientToScreen, ScreenToClient
+extern ClipCursor, GetClientRect, GetWindowRect, AdjustWindowRect, SetWindowPos, SetWindowLongPtrA, GetWindowLongPtrA
+extern MessageBoxA, GetDC, ReleaseDC, RegisterRawInputDevices, GetRawInputData, SetWindowTextA
+extern GetSystemMetrics, MonitorFromWindow, GetMonitorInfoA, GetForegroundWindow, SetForegroundWindow
+extern GetAsyncKeyState, OpenClipboard, CloseClipboard, GetClipboardData
+extern ChoosePixelFormat, SetPixelFormat, SwapBuffers, DescribePixelFormat
+extern waveOutOpen, waveOutClose, waveOutPrepareHeader, waveOutUnprepareHeader, waveOutWrite, waveOutReset
+extern timeBeginPeriod, timeEndPeriod
 
-%define NULL                   0 ; v1: win32 scratch #27
-%define TRUE                    1 ; v1: win32 scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (win32:28)
-%define FALSE                   0 ; v1: win32 scratch #29
-%define INVALID_HANDLE_VALUE    -1 ; v1: win32 scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (win32:30)
-%define INFINITE                0xFFFFFFFF ; v1: win32 scratch #31
+%define NULL                   0
+%define TRUE                    1
+%define FALSE                   0
+%define INVALID_HANDLE_VALUE    -1
+%define INFINITE                0xFFFFFFFF
 
-%define MEM_COMMIT              0x1000 ; v1: win32 scratch #33
-%define MEM_RESERVE             0x2000 ; v1: win32 scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (win32:34)
-%define MEM_RELEASE             0x8000 ; v1: win32 scratch #35
-%define PAGE_READWRITE          0x04 ; v1: win32 scratch #36
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (win32:36)
-%define HEAP_ZERO_MEMORY        0x08 ; v1: win32 scratch #37
+%define MEM_COMMIT              0x1000
+%define MEM_RESERVE             0x2000
+%define MEM_RELEASE             0x8000
+%define PAGE_READWRITE          0x04
+%define HEAP_ZERO_MEMORY        0x08
 
-%define GENERIC_READ            0x80000000 ; v1: win32 scratch #39
+%define GENERIC_READ            0x80000000
 %define GENERIC_WRITE           0x40000000
 %define FILE_SHARE_READ         1
 %define CREATE_ALWAYS           2
@@ -123,47 +108,42 @@ extern timeBeginPeriod, timeEndPeriod ; v1: win32 scratch #25
 %define CALLBACK_EVENT          0x00050000
 %define WHDR_DONE               1
 
-    ; v1 temporary guard (win32 #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (win32 #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (win32 #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (win32 #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (win32 #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (win32 #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (win32 #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (win32 #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (win32 #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (win32 #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (win32 #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (win32 #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (win32 #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (win32 #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (win32 #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (win32 #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (win32 #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (win32 #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (win32 #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (win32 #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (win32 #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (win32 #57)
-    xor     r11d, r11d ; clear v1 slot 57
+%define VK_LBUTTON  0x01
+%define VK_BACK     0x08
+%define VK_TAB      0x09
+%define VK_RETURN   0x0D
+%define VK_SHIFT    0x10
+%define VK_CONTROL  0x11
+%define VK_MENU     0x12
+%define VK_ESCAPE   0x1B
+%define VK_SPACE    0x20
+%define VK_PRIOR    0x21
+%define VK_NEXT     0x22
+%define VK_END      0x23
+%define VK_HOME     0x24
+%define VK_LEFT     0x25
+%define VK_UP       0x26
+%define VK_RIGHT    0x27
+%define VK_DOWN     0x28
+%define VK_DELETE   0x2E
+%define VK_F1       0x70
+%define VK_F2       0x71
+%define VK_F3       0x72
+%define VK_F4       0x73
+%define VK_F5       0x74
+%define VK_F6       0x75
+%define VK_F7       0x76
+%define VK_F8       0x77
+%define VK_F11      0x7A
+%define VK_LSHIFT   0xA0
+%define VK_LCONTROL 0xA2
+%define VK_OEM_2    0xBF            ; /
+%define VK_OEM_3    0xC0            ; backtick
+; letters/digits = uppercase ascii
+
+; platform.asm only
+%define SIZEOF_WNDCLASSEX       80
+%define SIZEOF_PFD              40
+%define SIZEOF_MSG              48
+
+%endif
