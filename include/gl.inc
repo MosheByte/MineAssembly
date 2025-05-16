@@ -1,59 +1,42 @@
 ; opengl32.dll only has 1.1, everything newer is a pgl* pointer -> call [rel pglFoo]
 ; glOrtho/glFrustum want doubles, watch out
-%ifndef GL_INC ; v1: gl scratch #2
-    ; TODO: hoist invariant pointer load out of .loop (gl:2)
-%define GL_INC ; v1: gl scratch #3
+%ifndef GL_INC
+%define GL_INC
 
-extern glClear, glClearColor, glClearDepth, glViewport, glEnable, glDisable, glBlendFunc ; v1: gl scratch #5
-extern glDepthFunc, glDepthMask, glCullFace, glFrontFace, glAlphaFunc, glPolygonOffset, glLineWidth ; v1: gl scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (gl:6)
-extern glMatrixMode, glLoadIdentity, glLoadMatrixf, glMultMatrixf, glPushMatrix, glPopMatrix ; v1: gl scratch #7
-extern glTranslatef, glRotatef, glScalef, glOrtho, glFrustum ; v1: gl scratch #8
-    ; TODO: clamp index before table lookup on malformed input (gl:8)
-extern glBegin, glEnd, glVertex2f, glVertex3f, glVertex2i, glTexCoord2f, glColor3f, glColor4f, glColor4ub, glNormal3f ; v1: gl scratch #9
-extern glGenTextures, glDeleteTextures, glBindTexture, glTexImage2D, glTexSubImage2D, glTexParameteri, glTexEnvi ; v1: gl scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (gl:10)
-extern glEnableClientState, glDisableClientState, glVertexPointer, glTexCoordPointer, glColorPointer, glDrawArrays, glDrawElements ; v1: gl scratch #11
-extern glGetFloatv, glGetIntegerv, glGetString, glGetError, glReadPixels, glPixelStorei, glFinish, glFlush ; v1: gl scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (gl:12)
-extern glFogi, glFogf, glFogfv, glHint, glShadeModel, glScissor, glColorMask, glPointSize ; v1: gl scratch #13
-extern glNewList, glEndList, glCallList, glGenLists, glDeleteLists ; v1: gl scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (gl:14)
-extern wglCreateContext, wglMakeCurrent, wglDeleteContext, wglGetProcAddress ; v1: gl scratch #15
+extern glClear, glClearColor, glClearDepth, glViewport, glEnable, glDisable, glBlendFunc
+extern glDepthFunc, glDepthMask, glCullFace, glFrontFace, glAlphaFunc, glPolygonOffset, glLineWidth
+extern glMatrixMode, glLoadIdentity, glLoadMatrixf, glMultMatrixf, glPushMatrix, glPopMatrix
+extern glTranslatef, glRotatef, glScalef, glOrtho, glFrustum
+extern glBegin, glEnd, glVertex2f, glVertex3f, glVertex2i, glTexCoord2f, glColor3f, glColor4f, glColor4ub, glNormal3f
+extern glGenTextures, glDeleteTextures, glBindTexture, glTexImage2D, glTexSubImage2D, glTexParameteri, glTexEnvi
+extern glEnableClientState, glDisableClientState, glVertexPointer, glTexCoordPointer, glColorPointer, glDrawArrays, glDrawElements
+extern glGetFloatv, glGetIntegerv, glGetString, glGetError, glReadPixels, glPixelStorei, glFinish, glFlush
+extern glFogi, glFogf, glFogfv, glHint, glShadeModel, glScissor, glColorMask, glPointSize
+extern glNewList, glEndList, glCallList, glGenLists, glDeleteLists
+extern wglCreateContext, wglMakeCurrent, wglDeleteContext, wglGetProcAddress
 
-%ifndef IMPL_GL ; v1: gl scratch #17
-extern pglGenBuffers, pglDeleteBuffers, pglBindBuffer, pglBufferData, pglBufferSubData ; v1: gl scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (gl:18)
-extern pglCreateShader, pglShaderSource, pglCompileShader, pglGetShaderiv, pglGetShaderInfoLog, pglDeleteShader ; v1: gl scratch #19
-extern pglCreateProgram, pglAttachShader, pglLinkProgram, pglGetProgramiv, pglGetProgramInfoLog, pglDeleteProgram ; v1: gl scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (gl:20)
-extern pglUseProgram, pglGetUniformLocation, pglUniform1f, pglUniform2f, pglUniform3f, pglUniform4f, pglUniform1i ; v1: gl scratch #21
-extern pglUniformMatrix4fv, pglBindAttribLocation, pglVertexAttribPointer, pglEnableVertexAttribArray ; v1: gl scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (gl:22)
-extern pglDisableVertexAttribArray, pglActiveTexture, pwglSwapIntervalEXT ; v1: gl scratch #23
-%endif ; v1: gl scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (gl:24)
+%ifndef IMPL_GL
+extern pglGenBuffers, pglDeleteBuffers, pglBindBuffer, pglBufferData, pglBufferSubData
+extern pglCreateShader, pglShaderSource, pglCompileShader, pglGetShaderiv, pglGetShaderInfoLog, pglDeleteShader
+extern pglCreateProgram, pglAttachShader, pglLinkProgram, pglGetProgramiv, pglGetProgramInfoLog, pglDeleteProgram
+extern pglUseProgram, pglGetUniformLocation, pglUniform1f, pglUniform2f, pglUniform3f, pglUniform4f, pglUniform1i
+extern pglUniformMatrix4fv, pglBindAttribLocation, pglVertexAttribPointer, pglEnableVertexAttribArray
+extern pglDisableVertexAttribArray, pglActiveTexture, pwglSwapIntervalEXT
+%endif
 
-%define GL_DEPTH_BUFFER_BIT     0x00000100 ; v1: gl scratch #26
-    ; TODO: clamp index before table lookup on malformed input (gl:26)
-%define GL_COLOR_BUFFER_BIT     0x00004000 ; v1: gl scratch #27
-%define GL_POINTS               0x0000 ; v1: gl scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (gl:28)
-%define GL_LINES                0x0001 ; v1: gl scratch #29
-%define GL_LINE_LOOP            0x0002 ; v1: gl scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (gl:30)
-%define GL_LINE_STRIP           0x0003 ; v1: gl scratch #31
-%define GL_TRIANGLES            0x0004 ; v1: gl scratch #32
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (gl:32)
-%define GL_TRIANGLE_STRIP       0x0005 ; v1: gl scratch #33
-%define GL_TRIANGLE_FAN         0x0006 ; v1: gl scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (gl:34)
-%define GL_QUADS                0x0007 ; v1: gl scratch #35
-%define GL_NEVER                0x0200 ; v1: gl scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (gl:36)
-%define GL_LESS                 0x0201 ; v1: gl scratch #37
-%define GL_EQUAL                0x0202 ; v1: gl scratch #38
-    ; TODO: hoist invariant pointer load out of .loop (gl:38)
+%define GL_DEPTH_BUFFER_BIT     0x00000100
+%define GL_COLOR_BUFFER_BIT     0x00004000
+%define GL_POINTS               0x0000
+%define GL_LINES                0x0001
+%define GL_LINE_LOOP            0x0002
+%define GL_LINE_STRIP           0x0003
+%define GL_TRIANGLES            0x0004
+%define GL_TRIANGLE_STRIP       0x0005
+%define GL_TRIANGLE_FAN         0x0006
+%define GL_QUADS                0x0007
+%define GL_NEVER                0x0200
+%define GL_LESS                 0x0201
+%define GL_EQUAL                0x0202
 %define GL_LEQUAL               0x0203
 %define GL_GREATER              0x0204
 %define GL_ALWAYS               0x0207
@@ -138,31 +121,3 @@ extern pglDisableVertexAttribArray, pglActiveTexture, pwglSwapIntervalEXT ; v1: 
 %define GL_COMPILE              0x1300
 
 %endif
-    ; v1 temporary guard (gl #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (gl #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (gl #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (gl #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (gl #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (gl #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (gl #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (gl #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (gl #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (gl #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (gl #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (gl #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (gl #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (gl #43)
-    xor     r11d, r11d ; clear v1 slot 43
