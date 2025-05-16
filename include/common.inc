@@ -193,5 +193,5 @@ default rel
 %include "ids.inc"
 %include "structs.inc"
 %include "api.inc"
- ; wire win32
-%endif ; extern check win32
+
+%endif
