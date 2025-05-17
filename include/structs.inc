@@ -1,58 +1,42 @@
 ; structs.inc - engine memory layouts
-%ifndef STRUCTS_INC ; v1: structs scratch #1
-%define STRUCTS_INC ; v1: structs scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (structs:2)
+%ifndef STRUCTS_INC
+%define STRUCTS_INC
 
 ; 4 bytes, id 0 = empty
-struc STACK ; v1: structs scratch #5
-    .id         resb 1 ; v1: structs scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (structs:6)
-    .count      resb 1 ; v1: structs scratch #7
-    .damage     resw 1 ; v1: structs scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (structs:8)
-endstruc ; v1: structs scratch #9
+struc STACK
+    .id         resb 1
+    .count      resb 1
+    .damage     resw 1          ; durability used
+endstruc
 
 ; 1KB header + 32KB blocks + 32KB light ((sky<<4)|blk)
-struc CHUNK ; v1: structs scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (structs:12)
-    .cx         resd 1 ; v1: structs scratch #13
-    .cz         resd 1 ; v1: structs scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (structs:14)
-    .state      resd 1 ; v1: structs scratch #15
-    .dirty      resd 1 ; v1: structs scratch #16
-    ; TODO: clamp index before table lookup on malformed input (structs:16)
-    .modified   resd 1 ; v1: structs scratch #17
-    .slot       resd 1 ; v1: structs scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (structs:18)
-    .hnext      resq 1 ; v1: structs scratch #19
-    .vbo        resd 16 ; v1: structs scratch #20
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (structs:20)
-    .vcount     resd 16 ; v1: structs scratch #21
-    .sec_flags  resb 8 ; v1: structs scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (structs:22)
-    .gen_ms     resd 1 ; v1: structs scratch #23
-    .last_seen  resd 1 ; v1: structs scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (structs:24)
-    .list_idx   resd 1 ; v1: structs scratch #25
-    .user       resd 1 ; v1: structs scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (structs:26)
-    .pad0       resb 72 ; v1: structs scratch #27
-    .heightmap  resb 256 ; v1: structs scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (structs:28)
-    .biome      resb 256 ; v1: structs scratch #29
-    .reserved   resb 256 ; v1: structs scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (structs:30)
-endstruc ; v1: structs scratch #31
-%define CHUNK_HDR       1024 ; v1: structs scratch #32
-    ; TODO: clamp index before table lookup on malformed input (structs:32)
-%define CHUNK_BLOCKS    1024 ; v1: structs scratch #33
-%define CHUNK_LIGHT     (1024+32768) ; v1: structs scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (structs:34)
-%define CHUNK_BYTES     (1024+32768+32768) ; v1: structs scratch #35
+struc CHUNK
+    .cx         resd 1
+    .cz         resd 1
+    .state      resd 1          ; dword so workers can xchg it
+    .dirty      resd 1          ; bit per section
+    .modified   resd 1
+    .slot       resd 1
+    .hnext      resq 1          ; hash chain
+    .vbo        resd 16
+    .vcount     resd 16
+    .sec_flags  resb 8          ; bit0 opaque geo, bit1 translucent
+    .gen_ms     resd 1
+    .last_seen  resd 1
+    .list_idx   resd 1
+    .user       resd 1
+    .pad0       resb 72
+    .heightmap  resb 256        ; at 256
+    .biome      resb 256        ; 512
+    .reserved   resb 256        ; 768
+endstruc
+%define CHUNK_HDR       1024
+%define CHUNK_BLOCKS    1024
+%define CHUNK_LIGHT     (1024+32768)
+%define CHUNK_BYTES     (1024+32768+32768) ; 66560
 
 ; 16B chunk vertex: pos i16[3] (1/256 blk, y-64), uv u8[2] (1/8 px), rgba/light/flags
-struc VERTEX ; v1: structs scratch #38
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (structs:38)
+struc VERTEX
     .x          resw 1
     .y          resw 1
     .z          resw 1
@@ -160,55 +144,97 @@ struc PLAYER
     .pad2       resb 68
 endstruc                        ; 512
 
-    ; v1 temporary guard (structs #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (structs #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (structs #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (structs #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (structs #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (structs #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (structs #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (structs #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (structs #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (structs #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (structs #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (structs #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (structs #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (structs #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (structs #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (structs #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (structs #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (structs #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (structs #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (structs #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (structs #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (structs #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (structs #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (structs #62)
-    xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (structs #64)
-    xor     r11d, r11d ; clear v1 slot 64
-    ; v1 temporary guard (structs #66)
-    xor     r11d, r11d ; clear v1 slot 66
+struc ENTITY
+    .type       resb 1
+    .flags      resb 1
+    .ai_state   resb 1
+    .variant    resb 1          ; wool colour / falling block id
+    .health     resd 1
+    .age        resd 1
+    .timer      resd 1          ; fuse, pickup delay, whatever the type wants
+    .x          resd 1
+    .y          resd 1
+    .z          resd 1
+    .vx         resd 1          ; per TICK, not per second
+    .vy         resd 1
+    .vz         resd 1
+    .yaw        resd 1
+    .pitch      resd 1
+    .head_yaw   resd 1
+    .hw         resd 1
+    .h          resd 1
+    .item       resb 4          ; ENT_ITEM only
+    .hurt_time  resd 1
+    .anim       resd 1
+    .anim_speed resd 1
+    .target_x   resd 1
+    .target_z   resd 1
+    .fire       resd 1
+    .attack_cd  resd 1
+    .prev_x     resd 1          ; for lerp
+    .prev_y     resd 1
+    .prev_z     resd 1
+    .death_time resd 1
+    .pad        resb 20
+endstruc                        ; 128
+%define EF_ON_GROUND    1
+%define EF_IN_WATER     2
+%define EF_HOSTILE      4
+%define EF_DEAD         8
+%define EF_PERSIST      16      ; never despawns
+%define EF_IN_LAVA      32
+
+struc PARTICLE
+    .x          resd 1
+    .y          resd 1
+    .z          resd 1
+    .vx         resd 1          ; per second, unlike entities
+    .vy         resd 1
+    .vz         resd 1
+    .life       resd 1
+    .max_life   resd 1
+    .size       resd 1
+    .gravity    resd 1
+    .type       resb 1
+    .tile       resb 1
+    .uoff       resb 1          ; debris sub-tile 0..12
+    .voff       resb 1
+    .color      resd 1          ; ABGR
+endstruc
+
+struc BLOCKENT
+    .kind       resd 1
+    .x          resd 1
+    .y          resd 1
+    .z          resd 1
+    .burn       resd 1
+    .burn_max   resd 1
+    .cook       resd 1          ; 200 = done
+    .pad        resd 1
+    .slots      resb 4*27       ; furnace: 0 in 1 fuel 2 out
+    .pad2       resb 20
+endstruc                        ; 160
+%define BE_FURNACE  1
+%define BE_CHEST    2
+
+; options.txt
+struc SETTINGS
+    .render_dist    resd 1
+    .fov            resd 1
+    .sensitivity    resd 1      ; deg per count
+    .vsync          resd 1
+    .smooth_light   resd 1
+    .clouds         resd 1      ; 0 off 1 fast 2 fancy
+    .view_bob       resd 1
+    .gui_scale      resd 1      ; 0 = auto
+    .music_vol      resd 1
+    .sfx_vol        resd 1
+    .fullscreen     resd 1
+    .invert_mouse   resd 1
+    .show_fps       resd 1
+    .particles      resd 1      ; 0..2
+    .fancy_leaves   resd 1
+    .pad            resb 68
+endstruc                        ; 128
+
+%endif
