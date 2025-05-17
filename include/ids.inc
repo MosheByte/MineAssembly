@@ -259,53 +259,37 @@
 %define T_FURNACE_FRONT_LIT 86
 %define T_PINE_PLANKS    87
 %define T_BIRCH_PLANKS   88
-%define T_MOSS           89 ; v1: ids scratch #0
-    ; temp: spill r12/r13 across helper call until reg alloc pass (ids:0)
-%define T_DESTROY_0      96 ; v1: ids scratch #1
-%define T_WHITE          110 ; v1: ids scratch #2
-    ; TODO: clamp index before table lookup on malformed input (ids:2)
-%define T_SELECTION      111 ; v1: ids scratch #3
-%define T_STICK          112 ; v1: ids scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (ids:4)
-%define T_COAL           113 ; v1: ids scratch #5
-%define T_IRON_INGOT     114 ; v1: ids scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (ids:6)
-%define T_GOLD_INGOT     115 ; v1: ids scratch #7
-%define T_DIAMOND        116 ; v1: ids scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (ids:8)
-%define T_APPLE          117 ; v1: ids scratch #9
-%define T_RAW_MEAT       118 ; v1: ids scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ids:10)
-%define T_COOKED_MEAT    119 ; v1: ids scratch #11
-%define T_ROTTEN_FLESH   120 ; v1: ids scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (ids:12)
-%define T_FLINT          121 ; v1: ids scratch #13
-%define T_BREAD          122 ; v1: ids scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ids:14)
-%define T_STRING         123 ; v1: ids scratch #15
-%define T_BUCKET         124 ; v1: ids scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (ids:16)
-%define T_WATER_BUCKET   125 ; v1: ids scratch #17
-%define T_LAVA_BUCKET    126 ; v1: ids scratch #18
-    ; TODO: clamp index before table lookup on malformed input (ids:18)
-%define T_FLINT_STEEL    127 ; v1: ids scratch #19
-%define T_PICK           128 ; v1: ids scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (ids:20)
-%define T_AXE            132 ; v1: ids scratch #21
-%define T_SHOVEL         136 ; v1: ids scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (ids:22)
-%define T_SWORD          140 ; v1: ids scratch #23
-%define T_HEART_FULL     160 ; v1: ids scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (ids:24)
-%define T_HEART_HALF     161 ; v1: ids scratch #25
-%define T_HEART_EMPTY    162 ; v1: ids scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ids:26)
-%define T_FOOD_FULL      163 ; v1: ids scratch #27
-%define T_FOOD_HALF      164 ; v1: ids scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (ids:28)
-%define T_FOOD_EMPTY     165 ; v1: ids scratch #29
-%define T_BUBBLE         166 ; v1: ids scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ids:30)
+%define T_MOSS           89
+%define T_DESTROY_0      96     ; 96..105 crack stages
+%define T_WHITE          110
+%define T_SELECTION      111    ; unused
+%define T_STICK          112
+%define T_COAL           113
+%define T_IRON_INGOT     114
+%define T_GOLD_INGOT     115
+%define T_DIAMOND        116
+%define T_APPLE          117
+%define T_RAW_MEAT       118
+%define T_COOKED_MEAT    119
+%define T_ROTTEN_FLESH   120
+%define T_FLINT          121
+%define T_BREAD          122
+%define T_STRING         123
+%define T_BUCKET         124
+%define T_WATER_BUCKET   125
+%define T_LAVA_BUCKET    126
+%define T_FLINT_STEEL    127
+%define T_PICK           128    ; +tier
+%define T_AXE            132
+%define T_SHOVEL         136
+%define T_SWORD          140
+%define T_HEART_FULL     160
+%define T_HEART_HALF     161
+%define T_HEART_EMPTY    162
+%define T_FOOD_FULL      163
+%define T_FOOD_HALF      164
+%define T_FOOD_EMPTY     165
+%define T_BUBBLE         166
 %define T_BUBBLE_POP     167
 %define T_SLOT           168
 %define T_SLOT_SELECTED  169
@@ -394,41 +378,39 @@
 %define BIOME_BADLANDS   12
 %define BIOME_COUNT      13
 
-    ; v1 temporary guard (ids #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (ids #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (ids #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (ids #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (ids #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (ids #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (ids #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (ids #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (ids #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (ids #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (ids #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (ids #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (ids #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (ids #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (ids #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (ids #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (ids #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (ids #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (ids #52)
-    xor     r11d, r11d ; clear v1 slot 52
+%define ENT_NONE         0
+%define ENT_ITEM         1
+%define ENT_TNT          2
+%define ENT_FALLING      3
+%define ENT_BOAR         4
+%define ENT_WOOLLY       5
+%define ENT_SHAMBLER     6      ; burns in daylight
+%define ENT_GLOWBUG      7
+%define ENT_TYPES        8
+; a java player (net bridge). past ENT_TYPES on purpose: no ai, no damage,
+; never saved. mcplay moves it, variant = connection index
+%define ENT_REMOTE       8
+
+%define PT_BLOCK         0
+%define PT_SMOKE         1
+%define PT_FLAME         2
+%define PT_SPLASH        3
+%define PT_EXPLOSION     4
+%define PT_RAIN          5
+%define PT_SNOW          6
+%define PT_BUBBLE        7
+%define PT_CRIT          8
+%define PT_SPARK         9
+
+%define DMG_GENERIC      0
+%define DMG_FALL         1
+%define DMG_LAVA         2
+%define DMG_DROWN        3
+%define DMG_MOB          4
+%define DMG_EXPLOSION    5
+%define DMG_STARVE       6
+%define DMG_VOID         7
+%define DMG_PLAYER       8
+%define DMG_SUN          9
+
+%endif
