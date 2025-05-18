@@ -369,70 +369,49 @@ extern g_weather
 extern g_weather_timer
 %endif
 
-%ifndef IMPL_PLAYER ; v1: api scratch #0
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (api:0)
-extern player_reset ; v1: api scratch #1
-extern player_spawn ; v1: api scratch #2
-    ; TODO: hoist invariant pointer load out of .loop (api:2)
-extern player_update ; v1: api scratch #3
-extern player_tick ; v1: api scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (api:4)
-extern player_damage ; v1: api scratch #5
-extern player_respawn ; v1: api scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (api:6)
-extern player_get_eye ; v1: api scratch #7
-extern player_get_look ; v1: api scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (api:8)
-extern player_drop_held ; v1: api scratch #9
-%endif ; v1: api scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (api:10)
-%ifndef IMPL_RAYCAST ; v1: api scratch #11
-extern raycast_blocks ; v1: api scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (api:12)
-%endif ; v1: api scratch #13
-%ifndef IMPL_PHYSICS ; v1: api scratch #14
-    ; TODO: clamp index before table lookup on malformed input (api:14)
-extern physics_move ; v1: api scratch #15
-extern physics_in_liquid ; v1: api scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (api:16)
-extern physics_box_free ; v1: api scratch #17
-%endif ; v1: api scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (api:18)
+%ifndef IMPL_PLAYER
+extern player_reset
+extern player_spawn
+extern player_update ; (xmm0 dt)
+extern player_tick
+extern player_damage ; (ecx half hearts, edx DMG_*) -> eax 1 if it landed
+extern player_respawn
+extern player_get_eye ; (rcx float[3])
+extern player_get_look
+extern player_drop_held ; (ecx whole stack)
+%endif
+%ifndef IMPL_RAYCAST
+extern raycast_blocks ; (rcx origin, rdx dir, xmm2 max, r9 RAYHIT*) -> eax. hit=2 going in = liquids count
+%endif
+%ifndef IMPL_PHYSICS
+extern physics_move ; (rcx PHYS*)
+extern physics_in_liquid ; -> 0/1 water/2 lava
+extern physics_box_free ; (xmm0-3 minx miny minz maxx, ARG5 maxy, ARG6 maxz)
+%endif
 
 ; ui colours are 0xAARRGGBB, careful, biome/particle colours are ABGR.
 ; coords are virtual ui pixels from the top left
-%ifndef IMPL_UI ; v1: api scratch #22
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (api:22)
-extern ui_init ; v1: api scratch #23
-extern ui_begin ; v1: api scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (api:24)
-extern ui_end ; v1: api scratch #25
-extern ui_rect ; v1: api scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (api:26)
-extern ui_rect_grad ; v1: api scratch #27
-extern ui_frame ; v1: api scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (api:28)
-extern ui_text ; v1: api scratch #29
-extern ui_text_shadow ; v1: api scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (api:30)
-extern ui_text_scaled ; v1: api scratch #31
-extern ui_text_width ; v1: api scratch #32
-    ; TODO: clamp index before table lookup on malformed input (api:32)
-extern ui_text_centered ; v1: api scratch #33
-extern ui_tile ; v1: api scratch #34
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (api:34)
-extern ui_item_icon ; v1: api scratch #35
-extern ui_item_stack ; v1: api scratch #36
-    ; TODO: hoist invariant pointer load out of .loop (api:36)
-extern ui_button ; v1: api scratch #37
-extern ui_slider ; v1: api scratch #38
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (api:38)
-extern ui_textbox ; v1: api scratch #39
-extern ui_mouse_in ; v1: api scratch #40
-    ; TODO: verify 16-byte rsp alignment before inner call (api:40)
-extern ui_tooltip ; v1: api scratch #41
-%endif ; v1: api scratch #42
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (api:42)
+%ifndef IMPL_UI
+extern ui_init
+extern ui_begin
+extern ui_end
+extern ui_rect ; (x, y, w, h, ARG5 colour)
+extern ui_rect_grad ; (.., ARG5 top, ARG6 bottom)
+extern ui_frame ; (x, y, w, h)
+extern ui_text ; (x, y, r8 str, r9d colour) -> eax width. \f + hex digit switches colour
+extern ui_text_shadow
+extern ui_text_scaled ; (.., ARG5 scale)
+extern ui_text_width
+extern ui_text_centered ; ecx = centre x
+extern ui_tile ; (x, y, size, tile, ARG5 tint)
+extern ui_item_icon ; (x, y, r8d item)
+extern ui_item_stack ; (x, y, r8 STACK*)
+extern ui_button ; (x, y, w, h, ARG5 label, ARG6 enabled) -> eax clicked
+extern ui_slider ; (x, y, w, r9 float*, ARG5 min bits, ARG6 max, ARG7 label fmt) -> eax changed
+extern ui_textbox ; (x, y, w, r9 buf, ARG5 maxlen, ARG6 id) -> eax 1 on enter
+extern ui_mouse_in ; (x, y, w, h)
+extern ui_tooltip
+%endif
 %ifndef IMPL_HUD
 extern hud_render
 %endif
@@ -518,49 +497,33 @@ extern mobs_render ; (rcx ENTITY*)
 extern explosion_create ; (xmm0-2 pos, xmm3 power)
 %endif
 
-    ; v1 temporary guard (api #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (api #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (api #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (api #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (api #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (api #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (api #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (api #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (api #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (api #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (api #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (api #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (api #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (api #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (api #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (api #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (api #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (api #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (api #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (api #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (api #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (api #63)
-    xor     r11d, r11d ; clear v1 slot 63
-    ; v1 temporary guard (api #65)
-    xor     r11d, r11d ; clear v1 slot 65
+%ifndef IMPL_TICKS
+extern ticks_init
+extern ticks_clear
+extern ticks_schedule ; (ecx x, edx y, r8d z, r9d delay), dupes are dropped
+extern ticks_notify_neighbors
+extern ticks_tick
+%endif
+%ifndef IMPL_FLUIDS
+extern fluid_update ; (ecx x, edx y, r8d z)
+%endif
+
+; java edition bridge, the parts the rest of the game calls. full contract in net.inc
+%ifndef IMPL_NET
+extern net_init
+extern net_host ; (ecx port) -> eax 1 listening
+extern net_stop
+extern net_update ; per frame while hosting
+extern net_conn_name ; (ecx conn index) -> rax zstr or 0
+extern g_net_hosting
+extern g_net_port
+extern g_net_host_name
+%endif
+%ifndef IMPL_MCPLAY
+extern mcplay_tick ; 20 hz
+extern mcplay_block_changed ; (ecx x, edx y, r8d z, r9d block)
+extern mcplay_chat ; (rcx zstr)
+extern mcplay_count ; -> eax java players in play
+%endif
+
+%endif
