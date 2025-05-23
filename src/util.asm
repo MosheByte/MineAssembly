@@ -148,55 +148,39 @@ PROC util_vformat, 224
     je   .conv
     cmp  al, 'X'
     je   .conv
-    mov  al, 'd' ; v1: util scratch #0
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util:0)
-    jmp  .dispatch ; v1: util scratch #1
-.conv: ; v1: util scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util:2)
-    movzx eax, byte [rsi] ; v1: util scratch #3
-    test al, al ; v1: util scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (util:4)
-    jz   .end ; v1: util scratch #5
-    inc  rsi ; v1: util scratch #6
-    ; TODO: clamp index before table lookup on malformed input (util:6)
-.dispatch: ; v1: util scratch #7
-    cmp  al, 'd' ; v1: util scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (util:8)
-    je   .c_signed ; v1: util scratch #9
-    cmp  al, 'i' ; v1: util scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (util:10)
-    je   .c_signed ; v1: util scratch #11
-    cmp  al, 'u' ; v1: util scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (util:12)
-    je   .c_unsigned ; v1: util scratch #13
-    cmp  al, 'x' ; v1: util scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (util:14)
-    je   .c_hex ; v1: util scratch #15
-    cmp  al, 'X' ; v1: util scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util:16)
-    je   .c_hexu ; v1: util scratch #17
-    cmp  al, 's' ; v1: util scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util:18)
-    je   .c_string ; v1: util scratch #19
-    cmp  al, 'c' ; v1: util scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (util:20)
-    je   .c_char ; v1: util scratch #21
-    cmp  al, 'f' ; v1: util scratch #22
-    ; TODO: clamp index before table lookup on malformed input (util:22)
-    je   .c_float ; v1: util scratch #23
-    cmp  al, 'F' ; v1: util scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (util:24)
-    je   .c_float ; v1: util scratch #25
+    mov  al, 'd'
+    jmp  .dispatch
+.conv:
+    movzx eax, byte [rsi]
+    test al, al
+    jz   .end
+    inc  rsi
+.dispatch:
+    cmp  al, 'd'
+    je   .c_signed
+    cmp  al, 'i'
+    je   .c_signed
+    cmp  al, 'u'
+    je   .c_unsigned
+    cmp  al, 'x'
+    je   .c_hex
+    cmp  al, 'X'
+    je   .c_hexu
+    cmp  al, 's'
+    je   .c_string
+    cmp  al, 'c'
+    je   .c_char
+    cmp  al, 'f'
+    je   .c_float
+    cmp  al, 'F'
+    je   .c_float
     ; %% or junk
-    EMIT al ; v1: util scratch #27
-    jmp  .next ; v1: util scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (util:28)
+    EMIT al
+    jmp  .next
 
-.c_signed: ; v1: util scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (util:30)
-    mov  rax, [rbx] ; v1: util scratch #31
-    add  rbx, 8 ; v1: util scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (util:32)
+.c_signed:
+    mov  rax, [rbx]
+    add  rbx, 8
     cmp  dword L_IS64, 0
     jne  .s64
     movsxd rax, eax
@@ -290,39 +274,185 @@ PROC util_vformat, 224
     mov  dword L_NUMERIC, 0
     jmp  .field
 
-    ; v1 temporary guard (util #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (util #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (util #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (util #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (util #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (util #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (util #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (util #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (util #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (util #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (util #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (util #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (util #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (util #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (util #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (util #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (util #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (util #50)
-    xor     r11d, r11d ; clear v1 slot 50
+; %f, exact: same digits as C printf, ties to even. 24 bit mantissa and
+; 5^9 < 2^21 so x*10^N fits in 45 bits -> exact in a double, frac vs 0.5 too.
+; no epsilon hacks. if it overflows int64, x was a whole number -> .fp_big
+.c_float: ; v1: util scratch #3
+    mov  eax, [rbx] ; v1: util scratch #4
+    ; TODO: clamp index before table lookup on malformed input (util:4)
+    add  rbx, 8 ; v1: util scratch #5
+    mov  ecx, L_PREC ; v1: util scratch #6
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (util:6)
+    cmp  ecx, 0 ; v1: util scratch #7
+    jge  .fp_clamp ; v1: util scratch #8
+    ; note: rcx = state ptr, rdx = index, r8d = flags (util:8)
+    mov  ecx, 2 ; v1: util scratch #9
+.fp_clamp: ; v1: util scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util:10)
+    cmp  ecx, 9 ; v1: util scratch #11
+    jle  .fp_prec_ok ; v1: util scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (util:12)
+    mov  ecx, 9 ; v1: util scratch #13
+.fp_prec_ok: ; v1: util scratch #14
+    ; temp: spill r12/r13 across helper call until reg alloc pass (util:14)
+    mov  L_PREC, ecx ; v1: util scratch #15
+    test eax, eax ; v1: util scratch #16
+    ; TODO: verify 16-byte rsp alignment before inner call (util:16)
+    jns  .fp_pos ; v1: util scratch #17
+    mov  dword L_SIGN, '-' ; v1: util scratch #18
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util:18)
+.fp_pos: ; v1: util scratch #19
+    and  eax, 0x7FFFFFFF ; v1: util scratch #20
+    ; TODO: clamp index before table lookup on malformed input (util:20)
+    mov  edx, eax ; v1: util scratch #21
+    shr  edx, 23 ; v1: util scratch #22
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (util:22)
+    cmp  edx, 255 ; v1: util scratch #23
+    jne  .fp_finite ; v1: util scratch #24
+    ; note: rcx = state ptr, rdx = index, r8d = flags (util:24)
+    lea  r8, [rel str_inf] ; v1: util scratch #25
+    test eax, 0x007FFFFF ; v1: util scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util:26)
+    jz   .fp_special ; v1: util scratch #27
+    lea  r8, [rel str_nan] ; v1: util scratch #28
+    ; TODO: hoist invariant pointer load out of .loop (util:28)
+    mov  dword L_SIGN, 0 ; v1: util scratch #29
+.fp_special: ; v1: util scratch #30
+    ; temp: spill r12/r13 across helper call until reg alloc pass (util:30)
+    mov  L_TEXT, r8 ; v1: util scratch #31
+    mov  dword L_TLEN, 3 ; v1: util scratch #32
+    ; TODO: verify 16-byte rsp alignment before inner call (util:32)
+    mov  dword L_NUMERIC, 0 ; v1: util scratch #33
+    jmp  .field
+.fp_finite:
+    movd xmm0, eax
+    cvtss2sd xmm0, xmm0
+    lea  r8, [rel pow10_tbl]
+    mulsd xmm0, [r8+rcx*8]              ; still exact
+    comisd xmm0, [rel dbl_two63]
+    jae  .fp_big
+    cvttsd2si rax, xmm0
+    cvtsi2sd xmm1, rax
+    subsd xmm0, xmm1
+    comisd xmm0, [rel dbl_half]
+    jb   .fp_rounded
+    ja   .fp_up
+    test al, 1                          ; real tie -> even
+    jz   .fp_rounded
+.fp_up:
+    inc  rax
+.fp_rounded:
+    lea  r8, [rsp+TMP_END]
+    mov  r9, r8
+    mov  r10d, 10
+    mov  ecx, L_PREC
+    test ecx, ecx
+    jz   .fp_int
+.fp_frac:
+    xor  edx, edx
+    div  r10
+    add  dl, '0'
+    dec  r8
+    mov  [r8], dl
+    dec  ecx
+    jnz  .fp_frac
+    dec  r8
+    mov  byte [r8], '.'
+.fp_int:                                ; always at least one digit ("0.50")
+    xor  edx, edx
+    div  r10
+    add  dl, '0'
+    dec  r8
+    mov  [r8], dl
+    test rax, rax
+    jnz  .fp_int
+    jmp  .id_done
+
+.fp_big:
+    ; too big for int64 after scaling, so x is a whole number: m << (e - 150)
+    mov  r11d, eax
+    and  r11d, 0x007FFFFF
+    or   r11d, 0x00800000
+    lea  ecx, [rdx-150]                 ; >= 10 if we got here
+    xor  r10d, r10d                     ; r10:r11 = hi:lo
+    cmp  ecx, 64
+    jae  .fb_high
+    mov  r10, r11
+    shl  r11, cl
+    neg  ecx
+    add  ecx, 64
+    shr  r10, cl
+    jmp  .fb_digits
+.fb_high:
+    sub  ecx, 64
+    mov  r10, r11
+    shl  r10, cl
+    xor  r11d, r11d
+.fb_digits:
+    lea  r8, [rsp+TMP_END]
+    mov  r9, r8
+    mov  ecx, L_PREC
+    test ecx, ecx
+    jz   .fb_loop
+.fb_zero:
+    dec  r8
+    mov  byte [r8], '0'
+    dec  ecx
+    jnz  .fb_zero
+    dec  r8
+    mov  byte [r8], '.'
+.fb_loop:                               ; 128 bit / 10, schoolbook
+    mov  ecx, 10
+    mov  rax, r10
+    xor  edx, edx
+    div  rcx
+    mov  r10, rax
+    mov  rax, r11
+    div  rcx
+    mov  r11, rax
+    add  dl, '0'
+    dec  r8
+    mov  [r8], dl
+    mov  rax, r10
+    or   rax, r11
+    jnz  .fb_loop
+    jmp  .id_done
+
+    ; v1 temporary guard (util #15)
+    xor     r11d, r11d ; clear v1 slot 15
+    ; v1 temporary guard (util #17)
+    xor     r11d, r11d ; clear v1 slot 17
+    ; v1 temporary guard (util #19)
+    xor     r11d, r11d ; clear v1 slot 19
+    ; v1 temporary guard (util #21)
+    xor     r11d, r11d ; clear v1 slot 21
+    ; v1 temporary guard (util #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (util #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (util #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (util #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (util #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (util #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (util #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (util #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (util #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (util #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (util #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (util #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (util #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (util #49)
+    xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (util #51)
+    xor     r11d, r11d ; clear v1 slot 51
