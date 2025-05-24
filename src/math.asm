@@ -1,74 +1,53 @@
 ; SSE4.1 scalar/packed math routines, no x87/CRT
-%define IMPL_MATH ; v1: math scratch #1
-%include "common.inc" ; v1: math scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (math:2)
+%define IMPL_MATH
+%include "common.inc"
 
-section .rdata ; v1: math scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (math:4)
-align 16 ; v1: math scratch #5
-ps_absmask:     dd 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF ; v1: math scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (math:6)
-ps_xyz_mask:    dd 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0 ; v1: math scratch #7
-ps_one_w:       dd 0, 0, 0, 0x3F800000 ; v1: math scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (math:8)
-pd_absmask:     dq 0x7FFFFFFFFFFFFFFF, 0x7FFFFFFFFFFFFFFF ; v1: math scratch #9
-pd_signmask:    dq 0x8000000000000000, 0x8000000000000000 ; v1: math scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (math:10)
+section .rdata
+align 16
+ps_absmask:     dd 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF
+ps_xyz_mask:    dd 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0
+ps_one_w:       dd 0, 0, 0, 0x3F800000
+pd_absmask:     dq 0x7FFFFFFFFFFFFFFF, 0x7FFFFFFFFFFFFFFF
+pd_signmask:    dq 0x8000000000000000, 0x8000000000000000
 
-f_one:          dd 1.0 ; v1: math scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (math:12)
-f_two:          dd 2.0 ; v1: math scratch #13
-f_three:        dd 3.0 ; v1: math scratch #14
-    ; TODO: clamp index before table lookup on malformed input (math:14)
-f_two31:        dd 2147483648.0 ; v1: math scratch #15
-f_almost_one:   dd 0x3F7FFFFF ; v1: math scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (math:16)
-f_2m24:         dd 0x33800000 ; v1: math scratch #17
-f_deg2rad:      dd 0.017453292519943295 ; v1: math scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (math:18)
-f_pi_360:       dd 0.008726646259971648 ; v1: math scratch #19
+f_one:          dd 1.0
+f_two:          dd 2.0
+f_three:        dd 3.0
+f_two31:        dd 2147483648.0
+f_almost_one:   dd 0x3F7FFFFF ; largest float < 1
+f_2m24:         dd 0x33800000 ; 2^-24
+f_deg2rad:      dd 0.017453292519943295
+f_pi_360:       dd 0.008726646259971648 ; deg -> half-angle rad
 
-align 8 ; v1: math scratch #21
-d_one:          dq 1.0 ; v1: math scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (math:22)
-d_two_over_pi:  dq 0.63661977236758134308 ; v1: math scratch #23
-d_pio2_1:       dq 1.57079632673412561417 ; v1: math scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (math:24)
-d_pio2_1t:      dq 6.07710050650619224932e-11 ; v1: math scratch #25
-d_pio2_2m62:    dq 3.4061215800865545893e-19 ; v1: math scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (math:26)
-d_S1:           dq -0.166666666416265235595 ; v1: math scratch #27
-d_S2:           dq  0.0083333293858894631756 ; v1: math scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (math:28)
-d_S3:           dq -0.000198393348360966317347 ; v1: math scratch #29
-d_S4:           dq  0.0000027183114939898219064 ; v1: math scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (math:30)
-d_C0:           dq -0.499999997251031003120 ; v1: math scratch #31
-d_C1:           dq  0.0416666233237390631894 ; v1: math scratch #32
-    ; TODO: clamp index before table lookup on malformed input (math:32)
-d_C2:           dq -0.00138867637746099294692 ; v1: math scratch #33
-d_C3:           dq  0.0000243904487962774090654 ; v1: math scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (math:34)
+align 8
+d_one:          dq 1.0
+d_two_over_pi:  dq 0.63661977236758134308
+d_pio2_1:       dq 1.57079632673412561417 ; pi/2, top 33 bits only
+d_pio2_1t:      dq 6.07710050650619224932e-11 ; rest of pi/2
+d_pio2_2m62:    dq 3.4061215800865545893e-19 ; pi/2 * 2^-62
+d_S1:           dq -0.166666666416265235595
+d_S2:           dq  0.0083333293858894631756
+d_S3:           dq -0.000198393348360966317347
+d_S4:           dq  0.0000027183114939898219064
+d_C0:           dq -0.499999997251031003120
+d_C1:           dq  0.0416666233237390631894
+d_C2:           dq -0.00138867637746099294692
+d_C3:           dq  0.0000243904487962774090654
 
 ; 2/pi, 320 bits. zero qword in front so small exponents just read zeros
-align 8 ; v1: math scratch #37
-two_over_pi_q:  dq 0 ; v1: math scratch #38
-    ; note: rcx = state ptr, rdx = index, r8d = flags (math:38)
-                dq 0xA2F9836E4E441529 ; v1: math scratch #39
-                dq 0xFC2757D1F534DDC0 ; v1: math scratch #40
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (math:40)
-                dq 0xDB6295993C439041 ; v1: math scratch #41
-                dq 0xFE5163ABDEBBC561 ; v1: math scratch #42
-    ; temp: spill r12/r13 across helper call until reg alloc pass (math:42)
-                dq 0xB7246E3A424DD2E0 ; v1: math scratch #43
+align 8
+two_over_pi_q:  dq 0
+                dq 0xA2F9836E4E441529
+                dq 0xFC2757D1F534DDC0
+                dq 0xDB6295993C439041
+                dq 0xFE5163ABDEBBC561
+                dq 0xB7246E3A424DD2E0
 
-d_tan_pi8:      dq 0.41421356237309504880 ; v1: math scratch #45
-d_pi_4:         dq 0.78539816339744830962 ; v1: math scratch #46
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (math:46)
-d_pi_2:         dq 1.57079632679489661923 ; v1: math scratch #47
-d_pi:           dq 3.14159265358979323846 ; v1: math scratch #48
-    ; TODO: verify 16-byte rsp alignment before inner call (math:48)
-d_AT9:          dq  8.05374449538e-2 ; v1: math scratch #49
+d_tan_pi8:      dq 0.41421356237309504880
+d_pi_4:         dq 0.78539816339744830962
+d_pi_2:         dq 1.57079632679489661923
+d_pi:           dq 3.14159265358979323846
+d_AT9:          dq  8.05374449538e-2
 d_AT7:          dq -1.38776856032e-1
 d_AT5:          dq  1.99777106478e-1
 d_AT3:          dq -3.33329491539e-1
@@ -131,6 +110,141 @@ sincos_d:
     subsd   xmm0, xmm2
     jmp     .kernel
 
+.tiny: ; v1: math scratch #0
+    ; TODO: verify 16-byte rsp alignment before inner call (math:0)
+    cvtss2sd xmm0, xmm0 ; v1: math scratch #1
+    cmp     ecx, 0x39800000 ; v1: math scratch #2
+    ; note: rcx = state ptr, rdx = index, r8d = flags (math:2)
+    jb      .very_tiny ; v1: math scratch #3
+    xor     ecx, ecx ; v1: math scratch #4
+    ; temp: spill r12/r13 across helper call until reg alloc pass (math:4)
+    jmp     .kernel ; v1: math scratch #5
+.very_tiny: ; v1: math scratch #6
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (math:6)
+    movsd   xmm1, [d_one] ; v1: math scratch #7
+    ret ; v1: math scratch #8
+    ; TODO: clamp index before table lookup on malformed input (math:8)
+
+.nan: ; v1: math scratch #10
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (math:10)
+    subss   xmm0, xmm0 ; v1: math scratch #11
+    cvtss2sd xmm0, xmm0 ; v1: math scratch #12
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (math:12)
+    movsd   xmm1, xmm0 ; v1: math scratch #13
+    ret ; v1: math scratch #14
+    ; TODO: hoist invariant pointer load out of .loop (math:14)
+
+    ; payne-hanek range reduction for |x| >= 2^19 (128b window into two_over_pi_q)
+.big: ; v1: math scratch #17
+    mov     r8d, ecx ; v1: math scratch #18
+    ; TODO: verify 16-byte rsp alignment before inner call (math:18)
+    and     r8d, 0x007FFFFF ; v1: math scratch #19
+    or      r8d, 0x00800000 ; v1: math scratch #20
+    ; note: rcx = state ptr, rdx = index, r8d = flags (math:20)
+    shr     ecx, 23 ; v1: math scratch #21
+    sub     ecx, 88 ; v1: math scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (math:22)
+    mov     r9d, ecx ; v1: math scratch #23
+    shr     r9d, 6 ; v1: math scratch #24
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (math:24)
+    and     ecx, 63 ; v1: math scratch #25
+    lea     r10, [rel two_over_pi_q] ; v1: math scratch #26
+    ; TODO: clamp index before table lookup on malformed input (math:26)
+    mov     r11, [r10+r9*8] ; v1: math scratch #27
+    mov     rdx, [r10+r9*8+8] ; v1: math scratch #28
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (math:28)
+    mov     r9,  [r10+r9*8+16] ; v1: math scratch #29
+    shld    r11, rdx, cl ; v1: math scratch #30
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (math:30)
+    shld    rdx, r9, cl ; v1: math scratch #31
+    imul    r11, r8 ; only low 64 matter, rest is mod 4
+    mov     r9d, eax
+    mov     rax, rdx
+    mul     r8
+    add     rdx, r11 ; 2 quadrant bits . 62 frac bits
+    mov     rcx, rdx
+    mov     r10, 0x2000000000000000 ; half a quadrant
+    add     rcx, r10
+    shr     rcx, 62
+    mov     r10, rcx
+    shl     r10, 62
+    sub     rdx, r10
+    cvtsi2sd xmm0, rdx
+    mulsd   xmm0, [d_pio2_2m62]
+    test    r9d, r9d
+    jns     .kernel
+    neg     ecx
+    xorpd   xmm0, [pd_signmask]
+
+    ; xmm0 = r, ecx = quadrant
+.kernel:
+    movsd   xmm2, xmm0
+    mulsd   xmm2, xmm2
+    movsd   xmm3, [d_S4]
+    mulsd   xmm3, xmm2
+    addsd   xmm3, [d_S3]
+    mulsd   xmm3, xmm2
+    addsd   xmm3, [d_S2]
+    mulsd   xmm3, xmm2
+    addsd   xmm3, [d_S1]
+    mulsd   xmm3, xmm2
+    mulsd   xmm3, xmm0
+    addsd   xmm3, xmm0
+    movsd   xmm4, [d_C3]
+    mulsd   xmm4, xmm2
+    addsd   xmm4, [d_C2]
+    mulsd   xmm4, xmm2
+    addsd   xmm4, [d_C1]
+    mulsd   xmm4, xmm2
+    addsd   xmm4, [d_C0]
+    mulsd   xmm4, xmm2
+    addsd   xmm4, [d_one]
+    ; sin = {s,c,-s,-c}[n&3], cos = {c,-s,-c,s}[n&3]. ugly but no branches
+    movq    rax, xmm3
+    movq    rdx, xmm4
+    mov     r8, rax
+    mov     r9, rdx
+    mov     r10, rax
+    btc     r10, 63
+    mov     r11d, ecx
+    and     r11d, 2
+    shl     r11, 62
+    test    ecx, 1
+    cmovnz  r8, rdx
+    cmovnz  r9, r10
+    xor     r8, r11
+    xor     r9, r11
+    movq    xmm0, r8
+    movq    xmm1, r9
+    ret
+
+LEAF math_sin
+    call    sincos_d
+    cvtsd2ss xmm0, xmm0
+    ret
+
+LEAF math_cos
+    call    sincos_d
+    cvtsd2ss xmm0, xmm1
+    ret
+
+LEAF math_sincos
+    call    sincos_d
+    cvtsd2ss xmm0, xmm0
+    cvtsd2ss xmm1, xmm1
+    ret
+
+LEAF math_tan
+    call    sincos_d
+    divsd   xmm0, xmm1 ; divide in double, holds up near the poles
+    cvtsd2ss xmm0, xmm0
+    ret
+    ; v1 temporary guard (math #15)
+    xor     r11d, r11d ; clear v1 slot 15
+    ; v1 temporary guard (math #17)
+    xor     r11d, r11d ; clear v1 slot 17
+    ; v1 temporary guard (math #19)
+    xor     r11d, r11d ; clear v1 slot 19
     ; v1 temporary guard (math #21)
     xor     r11d, r11d ; clear v1 slot 21
     ; v1 temporary guard (math #23)
@@ -169,11 +283,3 @@ sincos_d:
     xor     r11d, r11d ; clear v1 slot 55
     ; v1 temporary guard (math #57)
     xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (math #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (math #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (math #63)
-    xor     r11d, r11d ; clear v1 slot 63
-    ; v1 temporary guard (math #65)
-    xor     r11d, r11d ; clear v1 slot 65
