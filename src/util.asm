@@ -518,71 +518,50 @@ LEAF str_copy
     ret
 
 ; r8 = max incl NUL, 0 touches nothing
-LEAF str_ncopy ; v1: util scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util:2)
-    mov  rax, rcx ; v1: util scratch #3
-    test r8, r8 ; v1: util scratch #4
-    ; TODO: clamp index before table lookup on malformed input (util:4)
-    jz   .ret ; v1: util scratch #5
-    dec  r8 ; v1: util scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (util:6)
-.l: test r8, r8 ; v1: util scratch #7
-    jz   .term ; v1: util scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (util:8)
-    mov  r9b, [rdx] ; v1: util scratch #9
-    test r9b, r9b ; v1: util scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (util:10)
-    jz   .term ; v1: util scratch #11
-    mov  [rax], r9b ; v1: util scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util:12)
-    inc  rax ; v1: util scratch #13
-    inc  rdx ; v1: util scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (util:14)
-    dec  r8 ; v1: util scratch #15
-    jmp  .l ; v1: util scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (util:16)
-.term: ; v1: util scratch #17
-    mov  byte [rax], 0 ; v1: util scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util:18)
-.ret: ; v1: util scratch #19
-    ret ; v1: util scratch #20
-    ; TODO: clamp index before table lookup on malformed input (util:20)
+LEAF str_ncopy
+    mov  rax, rcx
+    test r8, r8
+    jz   .ret
+    dec  r8
+.l: test r8, r8
+    jz   .term
+    mov  r9b, [rdx]
+    test r9b, r9b
+    jz   .term
+    mov  [rax], r9b
+    inc  rax
+    inc  rdx
+    dec  r8
+    jmp  .l
+.term:
+    mov  byte [rax], 0
+.ret:
+    ret
 
-LEAF str_cat ; v1: util scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (util:22)
-.f: cmp  byte [rcx], 0 ; v1: util scratch #23
-    je   .c ; v1: util scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (util:24)
-    inc  rcx ; v1: util scratch #25
-    jmp  .f ; v1: util scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (util:26)
-.c: mov  al, [rdx] ; v1: util scratch #27
-    mov  [rcx], al ; v1: util scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util:28)
-    test al, al ; v1: util scratch #29
-    jz   .d ; v1: util scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (util:30)
-    inc  rcx ; v1: util scratch #31
-    inc  rdx ; v1: util scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (util:32)
-    jmp  .c ; v1: util scratch #33
-.d: mov  rax, rcx ; v1: util scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util:34)
-    ret ; v1: util scratch #35
+LEAF str_cat
+.f: cmp  byte [rcx], 0
+    je   .c
+    inc  rcx
+    jmp  .f
+.c: mov  al, [rdx]
+    mov  [rcx], al
+    test al, al
+    jz   .d
+    inc  rcx
+    inc  rdx
+    jmp  .c
+.d: mov  rax, rcx
+    ret
 
-LEAF str_cmp ; v1: util scratch #37
-.l: movzx eax, byte [rcx] ; v1: util scratch #38
-    ; TODO: clamp index before table lookup on malformed input (util:38)
-    movzx r8d, byte [rdx] ; v1: util scratch #39
-    sub  eax, r8d ; v1: util scratch #40
-    ; temp: spill r12/r13 across helper call until reg alloc pass (util:40)
-    jnz  .d ; v1: util scratch #41
-    test r8d, r8d ; v1: util scratch #42
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (util:42)
-    jz   .d ; v1: util scratch #43
-    inc  rcx ; v1: util scratch #44
-    ; note: rcx = state ptr, rdx = index, r8d = flags (util:44)
-    inc  rdx ; v1: util scratch #45
+LEAF str_cmp
+.l: movzx eax, byte [rcx]
+    movzx r8d, byte [rdx]
+    sub  eax, r8d
+    jnz  .d
+    test r8d, r8d
+    jz   .d
+    inc  rcx
+    inc  rdx
     jmp  .l
 .d: ret
 
@@ -687,8 +666,179 @@ LEAF str_to_int
     inc  r11d
     inc  rcx
     jmp  .dec
-    ; v1 temporary guard (util #21)
-    xor     r11d, r11d ; clear v1 slot 21
+.done: ; v1: util scratch #0
+    ; TODO: clamp index before table lookup on malformed input (util:0)
+    test r11d, r11d ; v1: util scratch #1
+    jnz  .have ; v1: util scratch #2
+    ; note: rcx = state ptr, rdx = index, r8d = flags (util:2)
+    mov  rcx, r10 ; v1: util scratch #3
+    xor  eax, eax ; v1: util scratch #4
+    ; TODO: verify 16-byte rsp alignment before inner call (util:4)
+.have: ; v1: util scratch #5
+    test r9d, r9d ; v1: util scratch #6
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util:6)
+    jz   .pos ; v1: util scratch #7
+    neg  rax ; v1: util scratch #8
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (util:8)
+.pos: ; v1: util scratch #9
+    test rdx, rdx ; v1: util scratch #10
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util:10)
+    jz   .ret ; v1: util scratch #11
+    mov  [rdx], rcx ; v1: util scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (util:12)
+.ret: ; v1: util scratch #13
+    ret ; v1: util scratch #14
+    ; temp: spill r12/r13 across helper call until reg alloc pass (util:14)
+; only touches r8. 0xFF = not hex
+.hexval: ; v1: util scratch #16
+    ; TODO: clamp index before table lookup on malformed input (util:16)
+    sub  r8d, '0' ; v1: util scratch #17
+    cmp  r8d, 9 ; v1: util scratch #18
+    ; note: rcx = state ptr, rdx = index, r8d = flags (util:18)
+    jbe  .hv_ret ; v1: util scratch #19
+    add  r8d, '0' ; v1: util scratch #20
+    ; TODO: verify 16-byte rsp alignment before inner call (util:20)
+    or   r8d, 0x20 ; v1: util scratch #21
+    sub  r8d, 'a' ; v1: util scratch #22
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util:22)
+    cmp  r8d, 5 ; v1: util scratch #23
+    ja   .hv_bad ; v1: util scratch #24
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (util:24)
+    add  r8d, 10 ; v1: util scratch #25
+    ret ; v1: util scratch #26
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util:26)
+.hv_bad: ; v1: util scratch #27
+    mov  r8d, 0xFF ; v1: util scratch #28
+    ; TODO: hoist invariant pointer load out of .loop (util:28)
+.hv_ret: ; v1: util scratch #29
+    ret ; v1: util scratch #30
+    ; temp: spill r12/r13 across helper call until reg alloc pass (util:30)
+
+; <= 18 sig digits into an int64 (exact), then one mul/div by 10^exp. same 0.1f as strtof
+LEAF str_to_float ; v1: util scratch #33
+.sp: ; v1: util scratch #34
+    ; TODO: clamp index before table lookup on malformed input (util:34)
+    movzx eax, byte [rcx] ; v1: util scratch #35
+    cmp  al, ' ' ; v1: util scratch #36
+    ; note: rcx = state ptr, rdx = index, r8d = flags (util:36)
+    je   .skip ; v1: util scratch #37
+    cmp  al, 9 ; v1: util scratch #38
+    ; TODO: verify 16-byte rsp alignment before inner call (util:38)
+    jne  .sign ; v1: util scratch #39
+.skip: ; v1: util scratch #40
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util:40)
+    inc  rcx ; v1: util scratch #41
+    jmp  .sp ; v1: util scratch #42
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (util:42)
+.sign: ; v1: util scratch #43
+    xor  r9d, r9d ; v1: util scratch #44
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util:44)
+    cmp  al, '-' ; v1: util scratch #45
+    jne  .plus ; v1: util scratch #46
+    ; TODO: hoist invariant pointer load out of .loop (util:46)
+    mov  r9d, 1 ; v1: util scratch #47
+    inc  rcx
+    jmp  .mant
+.plus:
+    cmp  al, '+'
+    jne  .mant
+    inc  rcx
+.mant:
+    xor  eax, eax
+    xor  r10d, r10d
+    xor  r11d, r11d
+.int:
+    movzx edx, byte [rcx]
+    sub  edx, '0'
+    cmp  edx, 9
+    ja   .dot
+    inc  rcx
+    cmp  r11d, 18
+    jae  .int_drop
+    imul rax, rax, 10
+    add  rax, rdx
+    test rax, rax
+    jz   .int                           ; leading zeros don't count
+    inc  r11d
+    jmp  .int
+.int_drop:
+    inc  r10d
+    jmp  .int
+.dot:
+    cmp  byte [rcx], '.'
+    jne  .exp
+    inc  rcx
+.frac:
+    movzx edx, byte [rcx]
+    sub  edx, '0'
+    cmp  edx, 9
+    ja   .exp
+    inc  rcx
+    cmp  r11d, 18
+    jae  .frac                          ; past 18 digits, who cares
+    imul rax, rax, 10
+    add  rax, rdx
+    dec  r10d
+    test rax, rax
+    jz   .frac
+    inc  r11d
+    jmp  .frac
+.exp:
+    movzx edx, byte [rcx]
+    or   edx, 0x20
+    cmp  edx, 'e'
+    jne  .build
+    inc  rcx
+    xor  r8d, r8d
+    cmp  byte [rcx], '-'
+    jne  .ep
+    mov  r8d, 1
+    inc  rcx
+    jmp  .ed_start
+.ep:
+    cmp  byte [rcx], '+'
+    jne  .ed_start
+    inc  rcx
+.ed_start:
+    xor  r11d, r11d
+.ed:
+    movzx edx, byte [rcx]
+    sub  edx, '0'
+    cmp  edx, 9
+    ja   .ed_done
+    imul r11d, r11d, 10
+    add  r11d, edx
+    inc  rcx
+    cmp  r11d, 400
+    jb   .ed
+    mov  r11d, 400
+    jmp  .ed
+.ed_done:
+    test r8d, r8d
+    jz   .ed_add
+    neg  r11d
+.ed_add:
+    add  r10d, r11d
+.build:
+    cvtsi2sd xmm0, rax
+    ; 10^|r10| the dumb way, loop of mulsd. |r10| <= ~420 so whatever
+    movsd xmm1, [rel dbl_one]
+    mov  edx, r10d
+    test edx, edx
+    jns  .pw
+    neg  edx
+.pw:
+    test edx, edx
+    jz   .apply
+    mulsd xmm1, [rel dbl_ten]
+    dec  edx
+    jmp  .pw
+.apply:
+    test r10d, r10d
+    js   .divide
+    mulsd xmm0, xmm1
+    jmp  .fin
+.divide:
     ; v1 temporary guard (util #23)
     xor     r11d, r11d ; clear v1 slot 23
     ; v1 temporary guard (util #25)
@@ -721,11 +871,3 @@ LEAF str_to_int
     xor     r11d, r11d ; clear v1 slot 51
     ; v1 temporary guard (util #53)
     xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (util #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (util #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (util #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (util #61)
-    xor     r11d, r11d ; clear v1 slot 61
