@@ -666,77 +666,54 @@ LEAF str_to_int
     inc  r11d
     inc  rcx
     jmp  .dec
-.done: ; v1: util scratch #0
-    ; TODO: clamp index before table lookup on malformed input (util:0)
-    test r11d, r11d ; v1: util scratch #1
-    jnz  .have ; v1: util scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (util:2)
-    mov  rcx, r10 ; v1: util scratch #3
-    xor  eax, eax ; v1: util scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (util:4)
-.have: ; v1: util scratch #5
-    test r9d, r9d ; v1: util scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util:6)
-    jz   .pos ; v1: util scratch #7
-    neg  rax ; v1: util scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (util:8)
-.pos: ; v1: util scratch #9
-    test rdx, rdx ; v1: util scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util:10)
-    jz   .ret ; v1: util scratch #11
-    mov  [rdx], rcx ; v1: util scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (util:12)
-.ret: ; v1: util scratch #13
-    ret ; v1: util scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (util:14)
+.done:
+    test r11d, r11d
+    jnz  .have
+    mov  rcx, r10
+    xor  eax, eax
+.have:
+    test r9d, r9d
+    jz   .pos
+    neg  rax
+.pos:
+    test rdx, rdx
+    jz   .ret
+    mov  [rdx], rcx
+.ret:
+    ret
 ; only touches r8. 0xFF = not hex
-.hexval: ; v1: util scratch #16
-    ; TODO: clamp index before table lookup on malformed input (util:16)
-    sub  r8d, '0' ; v1: util scratch #17
-    cmp  r8d, 9 ; v1: util scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (util:18)
-    jbe  .hv_ret ; v1: util scratch #19
-    add  r8d, '0' ; v1: util scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (util:20)
-    or   r8d, 0x20 ; v1: util scratch #21
-    sub  r8d, 'a' ; v1: util scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util:22)
-    cmp  r8d, 5 ; v1: util scratch #23
-    ja   .hv_bad ; v1: util scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (util:24)
-    add  r8d, 10 ; v1: util scratch #25
-    ret ; v1: util scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util:26)
-.hv_bad: ; v1: util scratch #27
-    mov  r8d, 0xFF ; v1: util scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (util:28)
-.hv_ret: ; v1: util scratch #29
-    ret ; v1: util scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (util:30)
+.hexval:
+    sub  r8d, '0'
+    cmp  r8d, 9
+    jbe  .hv_ret
+    add  r8d, '0'
+    or   r8d, 0x20
+    sub  r8d, 'a'
+    cmp  r8d, 5
+    ja   .hv_bad
+    add  r8d, 10
+    ret
+.hv_bad:
+    mov  r8d, 0xFF
+.hv_ret:
+    ret
 
 ; <= 18 sig digits into an int64 (exact), then one mul/div by 10^exp. same 0.1f as strtof
-LEAF str_to_float ; v1: util scratch #33
-.sp: ; v1: util scratch #34
-    ; TODO: clamp index before table lookup on malformed input (util:34)
-    movzx eax, byte [rcx] ; v1: util scratch #35
-    cmp  al, ' ' ; v1: util scratch #36
-    ; note: rcx = state ptr, rdx = index, r8d = flags (util:36)
-    je   .skip ; v1: util scratch #37
-    cmp  al, 9 ; v1: util scratch #38
-    ; TODO: verify 16-byte rsp alignment before inner call (util:38)
-    jne  .sign ; v1: util scratch #39
-.skip: ; v1: util scratch #40
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util:40)
-    inc  rcx ; v1: util scratch #41
-    jmp  .sp ; v1: util scratch #42
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (util:42)
-.sign: ; v1: util scratch #43
-    xor  r9d, r9d ; v1: util scratch #44
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util:44)
-    cmp  al, '-' ; v1: util scratch #45
-    jne  .plus ; v1: util scratch #46
-    ; TODO: hoist invariant pointer load out of .loop (util:46)
-    mov  r9d, 1 ; v1: util scratch #47
+LEAF str_to_float
+.sp:
+    movzx eax, byte [rcx]
+    cmp  al, ' '
+    je   .skip
+    cmp  al, 9
+    jne  .sign
+.skip:
+    inc  rcx
+    jmp  .sp
+.sign:
+    xor  r9d, r9d
+    cmp  al, '-'
+    jne  .plus
+    mov  r9d, 1
     inc  rcx
     jmp  .mant
 .plus:
@@ -839,35 +816,56 @@ LEAF str_to_float ; v1: util scratch #33
     mulsd xmm0, xmm1
     jmp  .fin
 .divide:
-    ; v1 temporary guard (util #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (util #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (util #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (util #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (util #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (util #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (util #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (util #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (util #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (util #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (util #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (util #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (util #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (util #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (util #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (util #53)
-    xor     r11d, r11d ; clear v1 slot 53
+    divsd xmm0, xmm1
+.fin:
+    cvtsd2ss xmm0, xmm0
+    test r9d, r9d
+    jz   .ret
+    mov  eax, 0x80000000
+    movd xmm1, eax
+    xorps xmm0, xmm1
+.ret:
+    ret
+
+; FNV-1a
+LEAF str_hash
+    mov  rax, 0xcbf29ce484222325
+    mov  r8, 0x100000001b3
+.l: movzx edx, byte [rcx]
+    test edx, edx
+    jz   .d
+    xor  rax, rdx
+    imul rax, r8
+    inc  rcx
+    jmp  .l
+.d: ret
+
+; no overlap! rep movsb is fine on anything with ERMSB
+LEAF mem_copy
+    push rsi
+    push rdi
+    mov  rdi, rcx
+    mov  rsi, rdx
+    mov  rcx, r8
+    rep  movsb
+    pop  rdi
+    pop  rsi
+    ret
+
+LEAF mem_set
+    push rdi
+    mov  rdi, rcx
+    mov  eax, edx
+    mov  rcx, r8
+    rep  stosb
+    pop  rdi
+    ret
+
+LEAF mem_zero
+    push rdi
+    mov  rdi, rcx
+    xor  eax, eax
+    mov  rcx, rdx
+    rep  stosb
+    pop  rdi
+    ret
