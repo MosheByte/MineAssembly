@@ -225,66 +225,46 @@ LEAF math_tan
     cvtsd2ss xmm0, xmm0
     ret
 
-LEAF math_atan2 ; v1: math scratch #1
-    movd    r8d, xmm0 ; v1: math scratch #2
-    ; TODO: clamp index before table lookup on malformed input (math:2)
-    movd    r9d, xmm1 ; v1: math scratch #3
-    cvtss2sd xmm0, xmm0 ; v1: math scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (math:4)
-    cvtss2sd xmm1, xmm1 ; v1: math scratch #5
-    movapd  xmm4, [pd_absmask] ; v1: math scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (math:6)
-    andpd   xmm0, xmm4 ; v1: math scratch #7
-    andpd   xmm1, xmm4 ; v1: math scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (math:8)
-    xor     r10d, r10d ; v1: math scratch #9
-    ucomisd xmm0, xmm1 ; v1: math scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (math:10)
-    jp      .nan ; v1: math scratch #11
-    seta    r10b ; v1: math scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (math:12)
-    movapd  xmm2, xmm0 ; v1: math scratch #13
-    maxsd   xmm2, xmm1 ; v1: math scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (math:14)
-    minsd   xmm0, xmm1 ; v1: math scratch #15
-    xorpd   xmm3, xmm3 ; v1: math scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (math:16)
-    ucomisd xmm2, xmm3 ; v1: math scratch #17
-    je      .t_ready ; v1: math scratch #18
-    ; TODO: clamp index before table lookup on malformed input (math:18)
-    ucomisd xmm0, xmm2 ; v1: math scratch #19
-    jne     .divide ; v1: math scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (math:20)
+LEAF math_atan2
+    movd    r8d, xmm0
+    movd    r9d, xmm1
+    cvtss2sd xmm0, xmm0
+    cvtss2sd xmm1, xmm1
+    movapd  xmm4, [pd_absmask]
+    andpd   xmm0, xmm4
+    andpd   xmm1, xmm4
+    xor     r10d, r10d ; 1 = |y| > |x|, mirror at the end
+    ucomisd xmm0, xmm1
+    jp      .nan
+    seta    r10b
+    movapd  xmm2, xmm0
+    maxsd   xmm2, xmm1
+    minsd   xmm0, xmm1
+    xorpd   xmm3, xmm3
+    ucomisd xmm2, xmm3
+    je      .t_ready ; 0,0 -> t = 0
+    ucomisd xmm0, xmm2
+    jne     .divide
     ; equal, also catches inf/inf
-    movsd   xmm0, [d_one] ; v1: math scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (math:22)
-    jmp     .t_ready ; v1: math scratch #23
-.divide: ; v1: math scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (math:24)
-    divsd   xmm0, xmm2 ; v1: math scratch #25
-.t_ready: ; v1: math scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (math:26)
-    xorpd   xmm3, xmm3 ; v1: math scratch #27
-    ucomisd xmm0, [d_tan_pi8] ; v1: math scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (math:28)
-    jbe     .poly ; v1: math scratch #29
-    movsd   xmm1, xmm0 ; v1: math scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (math:30)
-    subsd   xmm0, [d_one] ; v1: math scratch #31
-    addsd   xmm1, [d_one] ; v1: math scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (math:32)
-    divsd   xmm0, xmm1 ; v1: math scratch #33
-    movsd   xmm3, [d_pi_4] ; v1: math scratch #34
-    ; TODO: clamp index before table lookup on malformed input (math:34)
-.poly: ; v1: math scratch #35
-    movsd   xmm1, xmm0 ; v1: math scratch #36
-    ; note: rcx = state ptr, rdx = index, r8d = flags (math:36)
-    mulsd   xmm1, xmm1 ; v1: math scratch #37
-    movsd   xmm2, [d_AT9] ; v1: math scratch #38
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (math:38)
-    mulsd   xmm2, xmm1 ; v1: math scratch #39
-    addsd   xmm2, [d_AT7] ; v1: math scratch #40
-    ; TODO: hoist invariant pointer load out of .loop (math:40)
+    movsd   xmm0, [d_one]
+    jmp     .t_ready
+.divide:
+    divsd   xmm0, xmm2
+.t_ready:
+    xorpd   xmm3, xmm3
+    ucomisd xmm0, [d_tan_pi8]
+    jbe     .poly
+    movsd   xmm1, xmm0 ; atan(t) = pi/4 + atan((t-1)/(t+1))
+    subsd   xmm0, [d_one]
+    addsd   xmm1, [d_one]
+    divsd   xmm0, xmm1
+    movsd   xmm3, [d_pi_4]
+.poly:
+    movsd   xmm1, xmm0
+    mulsd   xmm1, xmm1
+    movsd   xmm2, [d_AT9]
+    mulsd   xmm2, xmm1
+    addsd   xmm2, [d_AT7]
     mulsd   xmm2, xmm1
     addsd   xmm2, [d_AT5]
     mulsd   xmm2, xmm1
@@ -386,43 +366,186 @@ log2_d:
     cvtsi2sd xmm0, rdx
     addsd   xmm0, xmm3
     ret
-    ; v1 temporary guard (math #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (math #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (math #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (math #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (math #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (math #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (math #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (math #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (math #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (math #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (math #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (math #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (math #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (math #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (math #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (math #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (math #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (math #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (math #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (math #58)
-    xor     r11d, r11d ; clear v1 slot 58
+
+; xmm0 = v -> 2^v, double. nan passes through. trashes rax xmm1-2
+align 16 ; v1: math scratch #2
+    ; TODO: hoist invariant pointer load out of .loop (math:2)
+exp2_d: ; v1: math scratch #3
+    ucomisd xmm0, xmm0 ; v1: math scratch #4
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (math:4)
+    jp      .ret ; v1: math scratch #5
+    maxsd   xmm0, [d_exp_lo] ; v1: math scratch #6
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (math:6)
+    minsd   xmm0, [d_exp_hi] ; v1: math scratch #7
+    cvtsd2si rax, xmm0 ; v1: math scratch #8
+    ; note: rcx = state ptr, rdx = index, r8d = flags (math:8)
+    xorps   xmm1, xmm1 ; v1: math scratch #9
+    cvtsi2sd xmm1, rax ; v1: math scratch #10
+    ; temp: spill r12/r13 across helper call until reg alloc pass (math:10)
+    subsd   xmm0, xmm1 ; v1: math scratch #11
+    mulsd   xmm0, [d_ln2] ; v1: math scratch #12
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (math:12)
+    movsd   xmm1, [d_if9] ; v1: math scratch #13
+    mulsd   xmm1, xmm0 ; v1: math scratch #14
+    ; TODO: clamp index before table lookup on malformed input (math:14)
+    addsd   xmm1, [d_if8] ; v1: math scratch #15
+    mulsd   xmm1, xmm0 ; v1: math scratch #16
+    ; TODO: verify 16-byte rsp alignment before inner call (math:16)
+    addsd   xmm1, [d_if7] ; v1: math scratch #17
+    mulsd   xmm1, xmm0 ; v1: math scratch #18
+    ; TODO: hoist invariant pointer load out of .loop (math:18)
+    addsd   xmm1, [d_if6] ; v1: math scratch #19
+    mulsd   xmm1, xmm0 ; v1: math scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (math:20)
+    addsd   xmm1, [d_if5] ; v1: math scratch #21
+    mulsd   xmm1, xmm0 ; v1: math scratch #22
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (math:22)
+    addsd   xmm1, [d_if4] ; v1: math scratch #23
+    mulsd   xmm1, xmm0 ; v1: math scratch #24
+    ; note: rcx = state ptr, rdx = index, r8d = flags (math:24)
+    addsd   xmm1, [d_if3] ; v1: math scratch #25
+    mulsd   xmm1, xmm0 ; v1: math scratch #26
+    ; temp: spill r12/r13 across helper call until reg alloc pass (math:26)
+    addsd   xmm1, [d_if2] ; v1: math scratch #27
+    mulsd   xmm1, xmm0 ; v1: math scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (math:28)
+    addsd   xmm1, [d_one] ; v1: math scratch #29
+    mulsd   xmm1, xmm0 ; v1: math scratch #30
+    ; TODO: clamp index before table lookup on malformed input (math:30)
+    addsd   xmm1, [d_one] ; v1: math scratch #31
+    add     rax, 1023 ; 2^n straight into the exponent
+    shl     rax, 52
+    movq    xmm2, rax
+    mulsd   xmm1, xmm2
+    movsd   xmm0, xmm1
+.ret:
+    ret
+
+LEAF math_exp
+    cvtss2sd xmm0, xmm0
+    mulsd   xmm0, [d_log2e]
+    call    exp2_d
+    cvtsd2ss xmm0, xmm0
+    ret
+
+; game only calls this with x > 0 but the ieee special cases are handled anyway
+; (x^0 = 1 and 1^y = 1 even with nan, negative x needs integer y).
+; |y| >= 2^24 is always an even integer in float
+LEAF math_pow
+    xorps   xmm2, xmm2
+    ucomiss xmm1, xmm2
+    jp      .y_nan_or_nonzero
+    je      .one
+.y_nan_or_nonzero:
+    ucomiss xmm0, [f_one]
+    jp      .nan
+    je      .one
+    ucomiss xmm1, xmm1
+    jp      .nan
+    xor     r10d, r10d
+    movd    eax, xmm0
+    test    eax, eax
+    jns     .abs_ready
+    ; x < 0, -0 or -inf
+    andps   xmm0, [ps_absmask]
+    roundss xmm3, xmm1, 11
+    ucomiss xmm3, xmm1
+    jne     .neg_nonint
+    movd    eax, xmm1
+    and     eax, 0x7FFFFFFF
+    cmp     eax, 0x4B800000
+    jae     .abs_ready
+    cvttss2si eax, xmm1
+    test    eax, 1
+    jz      .abs_ready
+    mov     r10d, 0x80000000
+    jmp     .abs_ready
+.neg_nonint:
+    ucomiss xmm0, xmm2
+    je      .abs_ready
+    movd    eax, xmm0
+    cmp     eax, 0x7F800000
+    jne     .nan
+.abs_ready:
+    ucomiss xmm0, xmm2
+    je      .zero
+    movd    eax, xmm0
+    cmp     eax, 0x7F800000
+    je      .inf
+    ucomiss xmm0, [f_one]
+    je      .signed_one
+    cvtss2sd xmm5, xmm1 ; log2_d/exp2_d leave xmm5 alone
+    cvtss2sd xmm0, xmm0
+    call    log2_d
+    mulsd   xmm0, xmm5
+    call    exp2_d
+    cvtsd2ss xmm0, xmm0
+.apply_sign:
+    movd    eax, xmm0
+    xor     eax, r10d
+    movd    xmm0, eax
+    ret
+.zero: ; y > 0 -> 0, y < 0 -> inf
+    xor     eax, eax
+    mov     ecx, 0x7F800000
+    ucomiss xmm1, xmm2
+    cmovb   eax, ecx
+    movd    xmm0, eax
+    jmp     .apply_sign
+.inf:
+    xor     eax, eax
+    mov     ecx, 0x7F800000
+    ucomiss xmm1, xmm2
+    cmova   eax, ecx
+    movd    xmm0, eax
+    jmp     .apply_sign
+.signed_one:
+    movss   xmm0, [f_one]
+    jmp     .apply_sign
+.one:
+    movss   xmm0, [f_one]
+    ret
+    ; v1 temporary guard (math #15)
+    xor     r11d, r11d ; clear v1 slot 15
+    ; v1 temporary guard (math #17)
+    xor     r11d, r11d ; clear v1 slot 17
+    ; v1 temporary guard (math #19)
+    xor     r11d, r11d ; clear v1 slot 19
+    ; v1 temporary guard (math #21)
+    xor     r11d, r11d ; clear v1 slot 21
+    ; v1 temporary guard (math #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (math #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (math #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (math #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (math #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (math #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (math #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (math #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (math #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (math #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (math #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (math #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (math #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (math #49)
+    xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (math #51)
+    xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (math #53)
+    xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (math #55)
+    xor     r11d, r11d ; clear v1 slot 55
+    ; v1 temporary guard (math #57)
+    xor     r11d, r11d ; clear v1 slot 57
