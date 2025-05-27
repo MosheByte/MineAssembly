@@ -610,67 +610,47 @@ LEAF mat4_identity
     movups  [rcx+%1*16], xmm4
 %endmacro
 
-LEAF mat4_mul ; v1: math scratch #0
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (math:0)
-    movups  xmm0, [rdx] ; v1: math scratch #1
-    movups  xmm1, [rdx+16] ; v1: math scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (math:2)
-    movups  xmm2, [rdx+32] ; v1: math scratch #3
-    movups  xmm3, [rdx+48] ; v1: math scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (math:4)
-    MUL_COLUMN 0 ; v1: math scratch #5
-    MUL_COLUMN 1 ; v1: math scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (math:6)
-    MUL_COLUMN 2 ; v1: math scratch #7
-    MUL_COLUMN 3 ; v1: math scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (math:8)
-    ret ; v1: math scratch #9
+LEAF mat4_mul
+    movups  xmm0, [rdx]
+    movups  xmm1, [rdx+16]
+    movups  xmm2, [rdx+32]
+    movups  xmm3, [rdx+48]
+    MUL_COLUMN 0
+    MUL_COLUMN 1
+    MUL_COLUMN 2
+    MUL_COLUMN 3
+    ret
 
 ; gluPerspective
-    global mat4_perspective ; v1: math scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (math:12)
-    align 16 ; v1: math scratch #13
-mat4_perspective: ; v1: math scratch #14
-    ; TODO: clamp index before table lookup on malformed input (math:14)
-    push rbp ; v1: math scratch #15
-    mov  rbp, rsp ; v1: math scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (math:16)
-    push rbx ; v1: math scratch #17
-    sub  rsp, (((16)+15) & ~15) + FRAME_OUT + 8 ; v1: math scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (math:18)
-    mov     rbx, rcx ; v1: math scratch #19
-    movss   LOC(0), xmm2 ; v1: math scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (math:20)
-    movss   LOC(4), xmm3 ; v1: math scratch #21
-    movss   xmm0, ARG5 ; v1: math scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (math:22)
-    movss   LOC(8), xmm0 ; v1: math scratch #23
-    movaps  xmm0, xmm1 ; v1: math scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (math:24)
-    mulss   xmm0, [f_pi_360] ; v1: math scratch #25
-    call    sincos_d ; v1: math scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (math:26)
-    divsd   xmm1, xmm0 ; v1: math scratch #27
-    cvtsd2ss xmm1, xmm1 ; v1: math scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (math:28)
-    xorps   xmm0, xmm0 ; v1: math scratch #29
-    movups  [rbx], xmm0 ; v1: math scratch #30
-    ; TODO: clamp index before table lookup on malformed input (math:30)
-    movups  [rbx+16], xmm0 ; v1: math scratch #31
-    movups  [rbx+32], xmm0 ; v1: math scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (math:32)
-    movups  [rbx+48], xmm0 ; v1: math scratch #33
-    movaps  xmm0, xmm1 ; v1: math scratch #34
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (math:34)
-    divss   xmm0, LOC(0) ; v1: math scratch #35
-    movss   [rbx], xmm0 ; v1: math scratch #36
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (math:36)
-    movss   [rbx+20], xmm1 ; v1: math scratch #37
-    movss   xmm2, LOC(4) ; v1: math scratch #38
-    ; temp: spill r12/r13 across helper call until reg alloc pass (math:38)
-    movss   xmm3, LOC(8) ; v1: math scratch #39
-    movaps  xmm4, xmm2 ; v1: math scratch #40
-    ; TODO: verify 16-byte rsp alignment before inner call (math:40)
+    global mat4_perspective
+    align 16
+mat4_perspective:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    sub  rsp, (((16)+15) & ~15) + FRAME_OUT + 8
+    mov     rbx, rcx
+    movss   LOC(0), xmm2
+    movss   LOC(4), xmm3
+    movss   xmm0, ARG5
+    movss   LOC(8), xmm0
+    movaps  xmm0, xmm1
+    mulss   xmm0, [f_pi_360]
+    call    sincos_d
+    divsd   xmm1, xmm0
+    cvtsd2ss xmm1, xmm1
+    xorps   xmm0, xmm0
+    movups  [rbx], xmm0
+    movups  [rbx+16], xmm0
+    movups  [rbx+32], xmm0
+    movups  [rbx+48], xmm0
+    movaps  xmm0, xmm1
+    divss   xmm0, LOC(0)
+    movss   [rbx], xmm0
+    movss   [rbx+20], xmm1
+    movss   xmm2, LOC(4)
+    movss   xmm3, LOC(8)
+    movaps  xmm4, xmm2
     subss   xmm4, xmm3
     movaps  xmm5, xmm3
     addss   xmm5, xmm2
@@ -767,6 +747,157 @@ LEAF mat4_rotate
     movups  [rcx+r9], xmm3
 .ret:
     ret
+
+; m = m*T, i.e. col3 += x*col0 + y*col1 + z*col2
+LEAF mat4_translate ; v1: math scratch #2
+    ; TODO: verify 16-byte rsp alignment before inner call (math:2)
+    shufps  xmm1, xmm1, 0 ; v1: math scratch #3
+    shufps  xmm2, xmm2, 0 ; v1: math scratch #4
+    ; TODO: clamp index before table lookup on malformed input (math:4)
+    shufps  xmm3, xmm3, 0 ; v1: math scratch #5
+    movups  xmm0, [rcx] ; v1: math scratch #6
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (math:6)
+    mulps   xmm0, xmm1 ; v1: math scratch #7
+    movups  xmm4, [rcx+16] ; v1: math scratch #8
+    ; temp: spill r12/r13 across helper call until reg alloc pass (math:8)
+    mulps   xmm4, xmm2 ; v1: math scratch #9
+    addps   xmm0, xmm4 ; v1: math scratch #10
+    ; TODO: hoist invariant pointer load out of .loop (math:10)
+    movups  xmm4, [rcx+32] ; v1: math scratch #11
+    mulps   xmm4, xmm3 ; v1: math scratch #12
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (math:12)
+    addps   xmm0, xmm4 ; v1: math scratch #13
+    movups  xmm4, [rcx+48] ; v1: math scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (math:14)
+    addps   xmm0, xmm4 ; v1: math scratch #15
+    movups  [rcx+48], xmm0 ; v1: math scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (math:16)
+    ret ; v1: math scratch #17
+
+; in == out is fine
+LEAF mat4_transform ; v1: math scratch #20
+    ; TODO: verify 16-byte rsp alignment before inner call (math:20)
+    movss   xmm0, [rdx] ; v1: math scratch #21
+    movss   xmm1, [rdx+4] ; v1: math scratch #22
+    ; TODO: clamp index before table lookup on malformed input (math:22)
+    movss   xmm2, [rdx+8] ; v1: math scratch #23
+    movss   xmm3, [rdx+12] ; v1: math scratch #24
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (math:24)
+    shufps  xmm0, xmm0, 0 ; v1: math scratch #25
+    shufps  xmm1, xmm1, 0 ; v1: math scratch #26
+    ; temp: spill r12/r13 across helper call until reg alloc pass (math:26)
+    shufps  xmm2, xmm2, 0 ; v1: math scratch #27
+    shufps  xmm3, xmm3, 0 ; v1: math scratch #28
+    ; TODO: hoist invariant pointer load out of .loop (math:28)
+    movups  xmm4, [rcx] ; v1: math scratch #29
+    mulps   xmm0, xmm4 ; v1: math scratch #30
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (math:30)
+    movups  xmm4, [rcx+16] ; v1: math scratch #31
+    mulps   xmm1, xmm4 ; v1: math scratch #32
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (math:32)
+    addps   xmm0, xmm1 ; v1: math scratch #33
+    movups  xmm4, [rcx+32] ; v1: math scratch #34
+    ; note: rcx = state ptr, rdx = index, r8d = flags (math:34)
+    mulps   xmm2, xmm4
+    addps   xmm0, xmm2
+    movups  xmm4, [rcx+48]
+    mulps   xmm3, xmm4
+    addps   xmm0, xmm3
+    movups  [r8], xmm0
+    ret
+
+; no haddps
+%macro HSUM4 2
+    movhlps %2, %1
+    addps   %1, %2
+    movaps  %2, %1
+    shufps  %2, %2, 0x55
+    addss   %1, %2
+%endmacro
+
+; planes out l r b t n f, normalised so the sphere test gets real distances
+LEAF frustum_extract
+    sub     rsp, 24
+    movaps  [rsp], xmm6
+    ; column-major -> transpose to rows
+    movups  xmm0, [rdx]
+    movups  xmm1, [rdx+16]
+    movups  xmm2, [rdx+32]
+    movups  xmm3, [rdx+48]
+    movaps  xmm4, xmm0
+    unpcklps xmm4, xmm1
+    movaps  xmm5, xmm2
+    unpcklps xmm5, xmm3
+    unpckhps xmm0, xmm1
+    unpckhps xmm2, xmm3
+    movaps  xmm1, xmm4
+    movlhps xmm4, xmm5
+    movhlps xmm5, xmm1
+    movaps  xmm3, xmm0
+    movlhps xmm0, xmm2
+    movhlps xmm2, xmm3
+    ; xmm4 = r0, xmm5 = r1, xmm0 = r2, xmm2 = r3
+%macro EMIT_PLANE 3
+    movaps  xmm1, xmm2
+    %2      xmm1, %1
+    movaps  xmm3, xmm1
+    mulps   xmm3, xmm3
+    andps   xmm3, [ps_xyz_mask]
+    HSUM4   xmm3, xmm6
+    sqrtss  xmm3, xmm3
+    xorps   xmm6, xmm6
+    ucomiss xmm3, xmm6
+    jbe     %%store ; zero normal, store as is
+    shufps  xmm3, xmm3, 0
+    divps   xmm1, xmm3
+%%store:
+    movups  [rcx+%3], xmm1
+%endmacro
+    EMIT_PLANE xmm4, addps, 0
+    EMIT_PLANE xmm4, subps, 16
+    EMIT_PLANE xmm5, addps, 32
+    EMIT_PLANE xmm5, subps, 48
+    EMIT_PLANE xmm0, addps, 64
+    EMIT_PLANE xmm0, subps, 80
+    movaps  xmm6, [rsp]
+    add     rsp, 24
+    ret
+
+; 1 = maybe visible. test the corner farthest along the normal, if even that
+; one is behind the plane the box is out
+LEAF frustum_test_aabb
+    movss   xmm2, [ps_one_w+12] ; 1.0
+    movq    xmm0, [rdx]
+    movss   xmm4, [rdx+8]
+    unpcklps xmm4, xmm2
+    movlhps xmm0, xmm4
+    movq    xmm1, [rdx+12]
+    movss   xmm4, [rdx+20]
+    unpcklps xmm4, xmm2
+    movlhps xmm1, xmm4
+    xorps   xmm2, xmm2
+    mov     eax, 6
+.plane:
+    movups  xmm3, [rcx]
+    movaps  xmm4, xmm2
+    cmpleps xmm4, xmm3
+    movaps  xmm5, xmm4
+    andps   xmm5, xmm1
+    andnps  xmm4, xmm0
+    orps    xmm5, xmm4 ; w still 1 so d adds in
+    mulps   xmm5, xmm3
+    HSUM4   xmm5, xmm4
+    ucomiss xmm5, xmm2
+    jb      .outside
+    add     rcx, 16
+    dec     eax
+    jnz     .plane
+    mov     eax, 1
+    ret
+    ; v1 temporary guard (math #16)
+    xor     r11d, r11d ; clear v1 slot 16
+    ; v1 temporary guard (math #18)
+    xor     r11d, r11d ; clear v1 slot 18
     ; v1 temporary guard (math #20)
     xor     r11d, r11d ; clear v1 slot 20
     ; v1 temporary guard (math #22)
@@ -803,7 +934,3 @@ LEAF mat4_rotate
     xor     r11d, r11d ; clear v1 slot 52
     ; v1 temporary guard (math #54)
     xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (math #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (math #58)
-    xor     r11d, r11d ; clear v1 slot 58
