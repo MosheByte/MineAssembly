@@ -110,65 +110,45 @@ next_token:
     mov  byte [rdx], 0
     mov  rax, rcx
     ret
-.none: ; v1: main scratch #0
-    ; TODO: clamp index before table lookup on malformed input (main:0)
-    xor  eax, eax ; v1: main scratch #1
-    ret ; v1: main scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (main:2)
+.none:
+    xor  eax, eax
+    ret
 
-%define M_TOKEN     LOC(0) ; v1: main scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (main:4)
-%define M_LAST      LOC(272) ; v1: main scratch #5
-%define M_FPS_T0    LOC(280) ; v1: main scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (main:6)
-%define M_FRAMES    LOC(288) ; v1: main scratch #7
-%define M_END       LOC(296) ; v1: main scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (main:8)
-%define M_TITLE     LOC(304) ; v1: main scratch #9
-FUNC main_entry, 384 ; v1: main scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (main:10)
-    call platform_early_init ; v1: main scratch #11
-    lea  rcx, [rel s_banner] ; v1: main scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (main:12)
-    call log_write ; v1: main scratch #13
-    call GetCommandLineA ; v1: main scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (main:14)
-    mov  rsi, rax ; v1: main scratch #15
-    lea  rcx, [rel s_cmdline] ; v1: main scratch #16
-    ; TODO: clamp index before table lookup on malformed input (main:16)
-    mov  rdx, rsi ; v1: main scratch #17
-    call log_printf ; v1: main scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (main:18)
+%define M_TOKEN     LOC(0)
+%define M_LAST      LOC(272)
+%define M_FPS_T0    LOC(280)
+%define M_FRAMES    LOC(288)
+%define M_END       LOC(296)
+%define M_TITLE     LOC(304)
+FUNC main_entry, 384
+    call platform_early_init
+    lea  rcx, [rel s_banner]
+    call log_write
+    call GetCommandLineA
+    mov  rsi, rax
+    lea  rcx, [rel s_cmdline]
+    mov  rdx, rsi
+    call log_printf
 
-    mov  rcx, rsi ; v1: main scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (main:20)
-    lea  rdx, M_TOKEN ; v1: main scratch #21
-    mov  r8d, 260 ; v1: main scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (main:22)
-    call next_token ; v1: main scratch #23
-    test rax, rax ; v1: main scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (main:24)
-    jz   .args_done ; v1: main scratch #25
-    mov  rsi, rax ; v1: main scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (main:26)
-.arg: ; v1: main scratch #27
-    mov  rcx, rsi ; v1: main scratch #28
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (main:28)
-    lea  rdx, M_TOKEN ; v1: main scratch #29
-    mov  r8d, 260 ; v1: main scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (main:30)
-    call next_token ; v1: main scratch #31
-    test rax, rax ; v1: main scratch #32
-    ; TODO: clamp index before table lookup on malformed input (main:32)
-    jz   .args_done ; v1: main scratch #33
-    mov  rsi, rax ; v1: main scratch #34
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (main:34)
-    lea  rcx, M_TOKEN ; v1: main scratch #35
-    lea  rdx, [rel s_arg_selftest] ; v1: main scratch #36
-    ; TODO: verify 16-byte rsp alignment before inner call (main:36)
-    call str_eq_nocase ; v1: main scratch #37
-    test eax, eax ; v1: main scratch #38
-    ; TODO: hoist invariant pointer load out of .loop (main:38)
+    mov  rcx, rsi                       ; eat argv[0]
+    lea  rdx, M_TOKEN
+    mov  r8d, 260
+    call next_token
+    test rax, rax
+    jz   .args_done
+    mov  rsi, rax
+.arg:
+    mov  rcx, rsi
+    lea  rdx, M_TOKEN
+    mov  r8d, 260
+    call next_token
+    test rax, rax
+    jz   .args_done
+    mov  rsi, rax
+    lea  rcx, M_TOKEN
+    lea  rdx, [rel s_arg_selftest]
+    call str_eq_nocase
+    test eax, eax
     jz   .not_selftest
     mov  dword [rel g_run_mode], 1
     jmp  .arg
@@ -280,35 +260,112 @@ FUNC main_entry, 384 ; v1: main scratch #10
     lea  rcx, [rel s_arg_unknown]
     lea  rdx, M_TOKEN
     call log_printf
-    ; v1 temporary guard (main #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (main #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (main #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (main #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (main #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (main #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (main #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (main #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (main #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (main #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (main #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (main #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (main #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (main #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (main #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (main #50)
-    xor     r11d, r11d ; clear v1 slot 50
+    jmp  .arg
+.missing:
+    lea  rcx, [rel s_arg_missing]
+    mov  rdx, rbx
+    call log_printf
+.args_done:
+    lea  rcx, [rel s_mode_fmt]
+    mov  edx, [rel g_run_mode]
+    mov  r8, [rel g_cmd_seed]
+    call log_printf
+
+    call platform_init
+    test eax, eax
+    jnz  .init_ok
+    cmp  dword [rel g_run_mode], 0
+    je   .init_fatal
+    lea  rcx, [rel s_init_fail_log]     ; headless: no messagebox, just exit 3
+    call log_write
+    mov  eax, 3
+    jmp  .ret
+.init_fatal:
+    lea  rcx, [rel s_init_fail]
+    call fatal_error                    ; noreturn
+.init_ok:
+    call game_init
+
+    call time_seconds
+    movsd M_LAST, xmm0
+    movsd M_FPS_T0, xmm0
+    mov  dword M_FRAMES, 0
+
+.frame:
+    call platform_pump
+    test eax, eax
+    jz   .quit
+    call time_seconds
+    movsd xmm1, xmm0
+    subsd xmm1, M_LAST
+    movsd M_LAST, xmm0
+    movsd [rel g_time_total], xmm0
+    maxsd xmm1, [rel dbl_zero]          ; clamp to 0.1s, a breakpoint = one giant step otherwise
+    minsd xmm1, [rel dbl_max_dt]
+    cvtsd2ss xmm0, xmm1
+    movss [rel g_frame_dt], xmm0
+    call game_frame
+    cmp  dword [rel g_state], ST_QUIT
+    je   .quit
+    call platform_swap
+
+    ; game has seen this frame's presses/releases, wipe them
+    lea  rcx, [rel g_keys_pressed]
+    mov  edx, 256
+    call mem_zero
+    xor  eax, eax
+    mov  [rel g_mouse_pressed], eax
+    mov  [rel g_mouse_released], eax
+    mov  [rel g_wheel], eax
+    mov  [rel g_char_count], eax
+    mov  [rel g_mouse_dx], eax
+    mov  [rel g_mouse_dy], eax
+    inc  qword [rel g_frame_count]
+    inc  dword M_FRAMES
+
+    call time_seconds
+    subsd xmm0, M_FPS_T0
+    comisd xmm0, [rel dbl_one]
+    jb   .throttle
+    movsd xmm2, M_FPS_T0
+    addsd xmm2, xmm0
+    movsd M_FPS_T0, xmm2
+    cvtsi2sd xmm1, dword M_FRAMES
+    divsd xmm1, xmm0
+    cvtsd2si eax, xmm1
+    mov  [rel g_fps], eax
+    mov  dword M_FRAMES, 0
+    lea  rcx, M_TITLE
+    lea  rdx, [rel s_title_fmt]
+    mov  r8d, eax
+    call str_format
+    lea  rcx, M_TITLE
+    call platform_set_title
+
+    ; don't burn a core while minimized / unfocused in a menu
+.throttle:
+    cmp  dword [rel g_screen_w], 0
+    je   .sleep
+    cmp  dword [rel g_run_mode], 0
+    jne  .frame
+    cmp  dword [rel g_window_focused], 0
+    jne  .frame
+    cmp  dword [rel g_state], ST_PLAYING
+    je   .frame
+.sleep:
+    mov  ecx, 15
+    call Sleep
+    jmp  .frame
+
+.quit:
+    call game_shutdown
+    call time_seconds
+    cvtsd2ss xmm0, xmm0
+    movd r9d, xmm0
+    lea  rcx, [rel s_exit_fmt]
+    mov  edx, [rel game_exit_code]
+    mov  r8, [rel g_frame_count]
+    call log_printf
+    mov  eax, [rel game_exit_code]
+.ret:
+    ENDP
