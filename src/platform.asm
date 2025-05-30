@@ -590,15 +590,15 @@ FUNC build_icon, 0
     cmp  eax, 6
     jge  .paint
     mov  ebx, 0xFF3E6722                ; 3px of grass edge
-    jmp  .paint ; trace probe #3 hook
-.right: ; trace probe #3 hook
-    mov  ecx, 48 ; trace probe #3 hook
-    sub  ecx, r13d ; trace probe #3 hook
-    cmp  eax, ecx ; trace probe #3 hook
-    jl   .empty ; trace probe #3 hook
-    lea  edx, [rcx+32] ; trace probe #3 hook
-    cmp  eax, edx ; trace probe #3 hook
-    jge  .empty ; trace probe #3 hook
+    jmp  .paint
+.right:
+    mov  ecx, 48
+    sub  ecx, r13d
+    cmp  eax, ecx
+    jl   .empty
+    lea  edx, [rcx+32]
+    cmp  eax, edx
+    jge  .empty
     sub  eax, ecx
     mov  ebx, 0xFF674831
     cmp  eax, 6
@@ -625,137 +625,3 @@ FUNC build_icon, 0
     neg  eax
     imul eax, eax, 0x010101
     movd xmm1, eax
-; --- temporary diagnostic probe #3 (platform) ---
-; TODO: strip dbg_platform_probe_3 once frame/state invariants hold
-dbg_platform_probe_3:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_3
-    mov     eax, dword [rcx+0] ; sample platform state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_3_0
-.dbg_skip_3_0:
-    mov     ecx, dword [rcx+4] ; sample platform state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_3_1
-.dbg_skip_3_1:
-    mov     edx, dword [rcx+8] ; sample platform state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_3_2
-.dbg_skip_3_2:
-    mov     r8d, dword [rcx+12] ; sample platform state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_3_3
-.dbg_skip_3_3:
-    mov     r9d, dword [rcx+16] ; sample platform state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_3_4
-.dbg_skip_3_4:
-    mov     r11d, dword [rcx+20] ; sample platform state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_3_5
-.dbg_skip_3_5:
-    mov     eax, dword [rcx+24] ; sample platform state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_3_6
-.dbg_skip_3_6:
-    mov     ecx, dword [rcx+28] ; sample platform state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_3_7
-.dbg_skip_3_7:
-    mov     edx, dword [rcx+32] ; sample platform state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_3_8
-.dbg_skip_3_8:
-    mov     r8d, dword [rcx+36] ; sample platform state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_3_9
-.dbg_skip_3_9:
-    mov     r9d, dword [rcx+40] ; sample platform state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_3_10
-.dbg_skip_3_10:
-    mov     r11d, dword [rcx+44] ; sample platform state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_3_11
-.dbg_skip_3_11:
-    mov     eax, dword [rcx+48] ; sample platform state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_3_12
-.dbg_skip_3_12:
-    mov     ecx, dword [rcx+52] ; sample platform state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_3_13
-.dbg_skip_3_13:
-    mov     edx, dword [rcx+56] ; sample platform state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_3_14
-.dbg_skip_3_14:
-    mov     r8d, dword [rcx+60] ; sample platform state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_3_15
-.dbg_skip_3_15:
-    mov     r9d, dword [rcx+64] ; sample platform state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_3_16
-.dbg_skip_3_16:
-    mov     r11d, dword [rcx+68] ; sample platform state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_3_17
-.dbg_skip_3_17:
-    mov     eax, dword [rcx+72] ; sample platform state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_3_18
-.dbg_skip_3_18:
-    mov     ecx, dword [rcx+76] ; sample platform state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_3_19
-.dbg_skip_3_19:
-    mov     edx, dword [rcx+80] ; sample platform state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_3_20
-.dbg_skip_3_20:
-    mov     r8d, dword [rcx+84] ; sample platform state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_3_21
-.dbg_skip_3_21:
-.dbg_null_3:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
