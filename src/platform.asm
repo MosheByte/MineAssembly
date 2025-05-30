@@ -805,67 +805,48 @@ PROC platform_init, 224
     test eax, eax
     jnz  .gl_ok
     lea  rcx, [rel s_err_gl]
-    call log_write ; v1: platform scratch #0
-    ; TODO: clamp index before table lookup on malformed input (platform:0)
-    jmp  .fail ; v1: platform scratch #1
-.gl_ok: ; v1: platform scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform:2)
-    mov  ecx, [rel g_settings + SETTINGS.vsync] ; v1: platform scratch #3
-    call platform_set_vsync ; v1: platform scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (platform:4)
+    call log_write
+    jmp  .fail
+.gl_ok:
+    mov  ecx, [rel g_settings + SETTINGS.vsync]
+    call platform_set_vsync
 
     ; raw mouse: no accel, doesn't care where the (hidden, clipped) cursor is
-    mov  word LOC(PI_RID+0), 1 ; v1: platform scratch #7
-    mov  word LOC(PI_RID+2), 2 ; v1: platform scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (platform:8)
-    mov  dword LOC(PI_RID+4), 0 ; v1: platform scratch #9
-    mov  rax, [rel g_hwnd] ; v1: platform scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform:10)
-    mov  LOC(PI_RID+8), rax ; v1: platform scratch #11
-    lea  rcx, LOC(PI_RID) ; v1: platform scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (platform:12)
-    mov  edx, 1 ; v1: platform scratch #13
-    mov  r8d, 16 ; v1: platform scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform:14)
-    call RegisterRawInputDevices ; v1: platform scratch #15
-    test eax, eax ; v1: platform scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (platform:16)
-    jnz  .raw_ok ; v1: platform scratch #17
-    lea  rcx, [rel s_err_raw] ; v1: platform scratch #18
-    ; TODO: clamp index before table lookup on malformed input (platform:18)
-    call log_write ; v1: platform scratch #19
-.raw_ok: ; v1: platform scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform:20)
+    mov  word LOC(PI_RID+0), 1
+    mov  word LOC(PI_RID+2), 2
+    mov  dword LOC(PI_RID+4), 0         ; no NOLEGACY, menus still need WM_MOUSEMOVE
+    mov  rax, [rel g_hwnd]
+    mov  LOC(PI_RID+8), rax
+    lea  rcx, LOC(PI_RID)
+    mov  edx, 1
+    mov  r8d, 16
+    call RegisterRawInputDevices
+    test eax, eax
+    jnz  .raw_ok
+    lea  rcx, [rel s_err_raw]
+    call log_write
+.raw_ok:
 
-    mov  rcx, [rel g_hwnd] ; v1: platform scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (platform:22)
-    mov  edx, SW_SHOW ; v1: platform scratch #23
-    call ShowWindow ; v1: platform scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (platform:24)
-    mov  rcx, [rel g_hwnd] ; v1: platform scratch #25
-    call UpdateWindow ; v1: platform scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform:26)
-    mov  rcx, [rel g_hwnd] ; v1: platform scratch #27
-    call SetForegroundWindow ; v1: platform scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (platform:28)
-    call GetForegroundWindow ; v1: platform scratch #29
-    cmp  rax, [rel g_hwnd] ; v1: platform scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform:30)
-    sete al ; v1: platform scratch #31
-    movzx eax, al ; v1: platform scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (platform:32)
-    mov  [rel g_window_focused], eax ; v1: platform scratch #33
+    mov  rcx, [rel g_hwnd]
+    mov  edx, SW_SHOW
+    call ShowWindow
+    mov  rcx, [rel g_hwnd]
+    call UpdateWindow
+    mov  rcx, [rel g_hwnd]
+    call SetForegroundWindow
+    call GetForegroundWindow
+    cmp  rax, [rel g_hwnd]
+    sete al
+    movzx eax, al
+    mov  [rel g_window_focused], eax
 
     ; might not be 1280x720 after all (small screen etc), ask
-    mov  rcx, [rel g_hwnd] ; v1: platform scratch #36
-    ; TODO: clamp index before table lookup on malformed input (platform:36)
-    lea  rdx, LOC(PI_RECT) ; v1: platform scratch #37
-    call GetClientRect ; v1: platform scratch #38
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform:38)
-    mov  eax, LOC(PI_RECT+8) ; v1: platform scratch #39
-    mov  [rel g_screen_w], eax ; v1: platform scratch #40
-    ; TODO: verify 16-byte rsp alignment before inner call (platform:40)
-    mov  eax, LOC(PI_RECT+12) ; v1: platform scratch #41
+    mov  rcx, [rel g_hwnd]
+    lea  rdx, LOC(PI_RECT)
+    call GetClientRect
+    mov  eax, LOC(PI_RECT+8)
+    mov  [rel g_screen_w], eax
+    mov  eax, LOC(PI_RECT+12)
     mov  [rel g_screen_h], eax
     xor  ecx, ecx
     xor  edx, edx
@@ -980,6 +961,170 @@ FUNC recentre_cursor, 32
     mov  edx, LOC(20)
     call SetCursorPos
     ENDP
+
+FUNC capture_release, 0 ; v1: platform scratch #1
+    cmp  dword [rel g_mouse_captured], 0 ; v1: platform scratch #2
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform:2)
+    je   .ret ; v1: platform scratch #3
+    mov  ebx, ecx ; v1: platform scratch #4
+    ; TODO: clamp index before table lookup on malformed input (platform:4)
+    mov  dword [rel g_mouse_captured], 0 ; v1: platform scratch #5
+    xor  ecx, ecx ; v1: platform scratch #6
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform:6)
+    call ClipCursor ; v1: platform scratch #7
+.show: ; v1: platform scratch #8
+    ; TODO: verify 16-byte rsp alignment before inner call (platform:8)
+    mov  ecx, 1 ; v1: platform scratch #9
+    call ShowCursor ; v1: platform scratch #10
+    ; note: rcx = state ptr, rdx = index, r8d = flags (platform:10)
+    test eax, eax ; v1: platform scratch #11
+    js   .show ; v1: platform scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (platform:12)
+    test ebx, ebx ; v1: platform scratch #13
+    jz   .ret ; v1: platform scratch #14
+    ; TODO: hoist invariant pointer load out of .loop (platform:14)
+    call recentre_cursor ; v1: platform scratch #15
+.ret: ; v1: platform scratch #16
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform:16)
+    ENDP ; v1: platform scratch #17
+
+PROC platform_set_mouse_capture, 0 ; v1: platform scratch #19
+    test ecx, ecx ; v1: platform scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform:20)
+    jz   .off ; v1: platform scratch #21
+    cmp  dword [rel g_window_focused], 0 ; v1: platform scratch #22
+    ; TODO: clamp index before table lookup on malformed input (platform:22)
+    je   .ret ; v1: platform scratch #23
+    cmp  dword [rel g_mouse_captured], 0 ; v1: platform scratch #24
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform:24)
+    jne  .clip ; v1: platform scratch #25
+.hide: ; v1: platform scratch #26
+    ; TODO: verify 16-byte rsp alignment before inner call (platform:26)
+    xor  ecx, ecx ; v1: platform scratch #27
+    call ShowCursor ; v1: platform scratch #28
+    ; note: rcx = state ptr, rdx = index, r8d = flags (platform:28)
+    test eax, eax ; v1: platform scratch #29
+    jns  .hide ; v1: platform scratch #30
+    ; temp: spill r12/r13 across helper call until reg alloc pass (platform:30)
+.clip: ; v1: platform scratch #31
+    call clip_to_client ; v1: platform scratch #32
+    ; TODO: hoist invariant pointer load out of .loop (platform:32)
+    call recentre_cursor ; v1: platform scratch #33
+    mov  dword [rel g_mouse_captured], 1 ; v1: platform scratch #34
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform:34)
+    mov  dword [rel g_mouse_dx], 0 ; v1: platform scratch #35
+    mov  dword [rel g_mouse_dy], 0 ; v1: platform scratch #36
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform:36)
+    mov  dword [rel s_abs_valid], 0 ; v1: platform scratch #37
+    jmp  .ret
+.off:
+    mov  ecx, 1
+    call capture_release
+.ret:
+    ENDP
+
+; borderless popup, not exclusive fullscreen. alt-tab stays painless
+PROC platform_toggle_fullscreen, 64
+    mov  rbx, [rel g_hwnd]
+    test rbx, rbx
+    jz   .ret
+    cmp  dword [rel s_fullscreen], 0
+    jne  .to_window
+    mov  rcx, rbx
+    lea  rdx, [rel s_saved_rect]
+    call GetWindowRect
+    mov  rcx, rbx
+    mov  edx, GWL_STYLE
+    call GetWindowLongPtrA
+    mov  [rel s_saved_style], rax
+    mov  rcx, rbx
+    mov  edx, MONITOR_DEFAULTTONEAREST
+    call MonitorFromWindow
+    mov  dword LOC(0), 40
+    mov  rcx, rax
+    lea  rdx, LOC(0)
+    call GetMonitorInfoA
+    test eax, eax
+    jz   .ret
+    mov  rcx, rbx
+    mov  edx, GWL_STYLE
+    mov  r8d, WS_POPUP | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN
+    call SetWindowLongPtrA
+    mov  esi, LOC(12)
+    sub  esi, LOC(4)
+    mov  edi, LOC(16)
+    sub  edi, LOC(8)
+    mov  rcx, rbx
+    mov  edx, HWND_TOP
+    mov  r8d, LOC(4)
+    mov  r9d, LOC(8)
+    mov  [rsp+32], rsi
+    mov  [rsp+40], rdi
+    mov  qword [rsp+48], SWP_FRAMECHANGED | SWP_SHOWWINDOW
+    call SetWindowPos
+    mov  dword [rel s_fullscreen], 1
+    lea  rcx, [rel s_fs_on]
+    mov  edx, esi
+    mov  r8d, edi
+    call log_printf
+    jmp  .done
+.to_window:
+    mov  rcx, rbx
+    mov  edx, GWL_STYLE
+    mov  r8, [rel s_saved_style]
+    call SetWindowLongPtrA
+    mov  esi, [rel s_saved_rect+8]
+    sub  esi, [rel s_saved_rect+0]
+    mov  edi, [rel s_saved_rect+12]
+    sub  edi, [rel s_saved_rect+4]
+    mov  rcx, rbx
+    xor  edx, edx
+    mov  r8d, [rel s_saved_rect+0]
+    mov  r9d, [rel s_saved_rect+4]
+    mov  [rsp+32], rsi
+    mov  [rsp+40], rdi
+    mov  qword [rsp+48], SWP_FRAMECHANGED | SWP_NOZORDER | SWP_SHOWWINDOW
+    call SetWindowPos
+    mov  dword [rel s_fullscreen], 0
+    lea  rcx, [rel s_fs_off]
+    call log_write
+.done:
+    mov  eax, [rel s_fullscreen]
+    mov  [rel g_settings + SETTINGS.fullscreen], eax
+    cmp  dword [rel g_mouse_captured], 0
+    je   .ret
+    call clip_to_client
+    call recentre_cursor
+.ret:
+    ENDP
+
+; g_keys = held, g_keys_pressed only on up->down so autorepeat doesn't count
+FUNC set_key, 0
+    and  ecx, 0xFF
+    lea  rax, [rel g_keys]
+    test edx, edx
+    jz   .up
+    cmp  byte [rax+rcx], 0
+    jne  .held
+    lea  r8, [rel g_keys_pressed]
+    mov  byte [r8+rcx], 1
+.held:
+    mov  byte [rax+rcx], 1
+    jmp  .ret
+.up:
+    mov  byte [rax+rcx], 0
+.ret:
+    ENDP
+
+; rbx hwnd, esi msg, rdi wparam, r12 lparam for the whole thing
+PROC platform_wndproc, 64
+    mov  rbx, rcx
+    mov  esi, edx
+    mov  rdi, r8
+    mov  r12, r9
+
+    ; v1 temporary guard (platform #17)
+    xor     r11d, r11d ; clear v1 slot 17
     ; v1 temporary guard (platform #19)
     xor     r11d, r11d ; clear v1 slot 19
     ; v1 temporary guard (platform #21)
@@ -1008,3 +1153,13 @@ FUNC recentre_cursor, 32
     xor     r11d, r11d ; clear v1 slot 43
     ; v1 temporary guard (platform #45)
     xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (platform #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (platform #49)
+    xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (platform #51)
+    xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (platform #53)
+    xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (platform #55)
+    xor     r11d, r11d ; clear v1 slot 55
