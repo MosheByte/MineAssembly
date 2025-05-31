@@ -1283,56 +1283,40 @@ PROC platform_wndproc, 64
     call game_on_key                    ; gets every repeat, text boxes need that
     jmp  .zero
 
-.char: ; v1: platform scratch #0
-    ; temp: spill r12/r13 across helper call until reg alloc pass (platform:0)
-    mov  eax, edi ; v1: platform scratch #1
-    cmp  eax, 8 ; v1: platform scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (platform:2)
-    je   .char_ok ; v1: platform scratch #3
-    cmp  eax, 13 ; v1: platform scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform:4)
-    je   .char_ok ; v1: platform scratch #5
-    cmp  eax, 32 ; v1: platform scratch #6
-    ; TODO: clamp index before table lookup on malformed input (platform:6)
-    jb   .zero ; v1: platform scratch #7
-    cmp  eax, 126 ; v1: platform scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform:8)
-    ja   .zero ; v1: platform scratch #9
-.char_ok: ; v1: platform scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (platform:10)
-    mov  ecx, [rel g_char_count] ; v1: platform scratch #11
-    cmp  ecx, 64 ; v1: platform scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform:12)
-    jae  .char_hook ; v1: platform scratch #13
-    lea  rdx, [rel g_char_queue] ; v1: platform scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (platform:14)
-    mov  [rdx+rcx], al ; v1: platform scratch #15
-    inc  ecx ; v1: platform scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (platform:16)
-    mov  [rel g_char_count], ecx ; v1: platform scratch #17
-.char_hook: ; v1: platform scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (platform:18)
-    mov  ecx, edi ; v1: platform scratch #19
-    call game_on_char ; v1: platform scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform:20)
-    jmp  .zero ; v1: platform scratch #21
+.char:
+    mov  eax, edi
+    cmp  eax, 8
+    je   .char_ok
+    cmp  eax, 13
+    je   .char_ok
+    cmp  eax, 32
+    jb   .zero
+    cmp  eax, 126
+    ja   .zero
+.char_ok:
+    mov  ecx, [rel g_char_count]
+    cmp  ecx, 64
+    jae  .char_hook
+    lea  rdx, [rel g_char_queue]
+    mov  [rdx+rcx], al
+    inc  ecx
+    mov  [rel g_char_count], ecx
+.char_hook:
+    mov  ecx, edi
+    call game_on_char
+    jmp  .zero
 
-.lbd: ; v1: platform scratch #23
-    mov  r13d, MB_LEFT ; v1: platform scratch #24
-    ; TODO: clamp index before table lookup on malformed input (platform:24)
-    jmp  .btn_down ; v1: platform scratch #25
-.lbu: ; v1: platform scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform:26)
-    mov  r13d, MB_LEFT ; v1: platform scratch #27
-    jmp  .btn_up ; v1: platform scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (platform:28)
-.rbd: ; v1: platform scratch #29
-    mov  r13d, MB_RIGHT ; v1: platform scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform:30)
-    jmp  .btn_down ; v1: platform scratch #31
-.rbu: ; v1: platform scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (platform:32)
-    mov  r13d, MB_RIGHT ; v1: platform scratch #33
+.lbd:
+    mov  r13d, MB_LEFT
+    jmp  .btn_down
+.lbu:
+    mov  r13d, MB_LEFT
+    jmp  .btn_up
+.rbd:
+    mov  r13d, MB_RIGHT
+    jmp  .btn_down
+.rbu:
+    mov  r13d, MB_RIGHT
     jmp  .btn_up
 .mbd:
     mov  r13d, MB_MIDDLE
@@ -1445,55 +1429,167 @@ PROC platform_wndproc, 64
     call ReleaseCapture
     jmp  .default
 
-    ; v1 temporary guard (platform #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (platform #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (platform #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (platform #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (platform #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (platform #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (platform #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (platform #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (platform #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (platform #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (platform #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (platform #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (platform #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (platform #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (platform #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (platform #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (platform #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (platform #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (platform #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (platform #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (platform #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (platform #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (platform #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (platform #62)
-    xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (platform #64)
-    xor     r11d, r11d ; clear v1 slot 64
-    ; v1 temporary guard (platform #66)
-    xor     r11d, r11d ; clear v1 slot 66
+.close:
+    mov  dword [rel s_quit], 1
+    jmp  .zero
+
+.minmax:                                ; ptMinTrackSize, 320x240 min
+    mov  dword [r12+24], 320
+    mov  dword [r12+28], 240
+    jmp  .zero
+
+.syscommand:
+    mov  eax, edi
+    and  eax, 0xFFF0
+    cmp  eax, SC_KEYMENU                ; F10 / tapping alt enters menu mode and the game freezes
+    je   .zero
+    cmp  dword [rel g_mouse_captured], 0
+    je   .default
+    cmp  eax, SC_SCREENSAVE             ; no screensaver mid game
+    je   .zero
+    cmp  eax, SC_MONITORPOWER
+    je   .zero
+    jmp  .default
+
+.default:
+    mov  rcx, rbx
+    mov  edx, esi
+    mov  r8, rdi
+    mov  r9, r12
+    call DefWindowProcA
+    jmp  .ret
+.one:
+    mov  eax, 1
+    jmp  .ret
+.zero:
+    xor  eax, eax
+.ret:
+    ENDP
+
+; readpixels as BGR, pack alignment 1, then rows (padded to 4) into a 24 bit bmp.
+; GL and bmp are both bottom-up so no flipping. lucky
+PROC screenshot_save, 32
+    mov  rsi, rcx
+    mov  r12d, [rel g_screen_w]
+    mov  r13d, [rel g_screen_h]
+    test r12d, r12d
+    jle  .fail0
+    test r13d, r13d
+    jle  .fail0
+    test rsi, rsi
+    jnz  .named
+    lea  rcx, [rel s_shot_dir]
+    call dir_create
+    mov  ebx, [rel s_shot_next]
+    test ebx, ebx
+    jnz  .find
+    mov  ebx, 1
+.find:
+    lea  rcx, [rel platform_last_shot]
+    lea  rdx, [rel s_shot_fmt]
+    mov  r8d, ebx
+    call str_format
+    lea  rcx, [rel platform_last_shot]
+    call file_exists
+    test eax, eax
+    jz   .found
+    inc  ebx
+    cmp  ebx, 1000000
+    jb   .find
+.found:
+    lea  eax, [rbx+1]
+    mov  [rel s_shot_next], eax
+    jmp  .have_name
+.named:
+    lea  rcx, [rel platform_last_shot]
+    mov  rdx, rsi
+    mov  r8d, 260
+    call str_ncopy
+.have_name:
+    lea  rsi, [rel platform_last_shot]
+    ; r14 = row as GL gives it, r15 = padded bmp row
+    lea  r14d, [r12+r12*2]
+    lea  r15d, [r14+3]
+    and  r15d, ~3
+    mov  eax, r15d
+    imul rax, r13
+    mov  LOC(0), rax
+    add  rax, 54
+    mov  LOC(8), rax
+    mov  ecx, r14d
+    imul rcx, r13
+    add  rcx, rax
+    call mem_valloc
+    test rax, rax
+    jz   .fail
+    mov  rdi, rax
+    mov  rbx, rdi
+    add  rbx, LOC(8)
+    mov  ecx, GL_PACK_ALIGNMENT
+    mov  edx, 1
+    call glPixelStorei
+    xor  ecx, ecx
+    xor  edx, edx
+    mov  r8d, r12d
+    mov  r9d, r13d
+    mov  qword [rsp+32], GL_BGR
+    mov  qword [rsp+40], GL_UNSIGNED_BYTE
+    mov  [rsp+48], rbx
+    call glReadPixels
+    mov  ecx, GL_PACK_ALIGNMENT
+    mov  edx, 4
+    call glPixelStorei
+    mov  word [rdi+0], 'BM'
+    mov  eax, LOC(8)
+    mov  [rdi+2], eax
+    mov  dword [rdi+10], 54
+    mov  dword [rdi+14], 40
+    mov  [rdi+18], r12d
+    mov  [rdi+22], r13d                 ; biHeight, positive = bottom-up
+    mov  word [rdi+26], 1
+    mov  word [rdi+28], 24
+    mov  eax, LOC(0)
+    mov  [rdi+34], eax
+    mov  dword [rdi+38], 2835           ; 72 dpi in px/m, nobody reads this
+    mov  dword [rdi+42], 2835
+    ; copy rows. padding is already 0, fresh VirtualAlloc
+    mov  dword LOC(16), 0
+.rows:
+    mov  eax, LOC(16)
+    cmp  eax, r13d
+    jae  .write
+    mov  ecx, r15d
+    imul rcx, rax
+    lea  rcx, [rdi+rcx+54]
+    mov  edx, r14d
+    imul rdx, rax
+    add  rdx, rbx
+    mov  r8d, r14d
+    call mem_copy
+    inc  dword LOC(16)
+    jmp  .rows
+.write:
+    mov  rcx, rsi
+    mov  rdx, rdi
+    mov  r8, LOC(8)
+    call file_write_all
+    mov  LOC(24), eax
+    mov  rcx, rdi
+    call mem_vfree
+    cmp  dword LOC(24), 0
+    je   .fail
+    lea  rcx, [rel s_shot_ok]
+    mov  rdx, rsi
+    mov  r8d, r12d
+    mov  r9d, r13d
+    call log_printf
+    mov  eax, 1
+    jmp  .ret
+.fail:
+    lea  rcx, [rel s_shot_fail]
+    mov  rdx, rsi
+    call log_printf
+.fail0:
+    xor  eax, eax
+.ret:
+    ENDP
