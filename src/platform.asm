@@ -962,60 +962,43 @@ FUNC recentre_cursor, 32
     call SetCursorPos
     ENDP
 
-FUNC capture_release, 0 ; v1: platform scratch #1
-    cmp  dword [rel g_mouse_captured], 0 ; v1: platform scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform:2)
-    je   .ret ; v1: platform scratch #3
-    mov  ebx, ecx ; v1: platform scratch #4
-    ; TODO: clamp index before table lookup on malformed input (platform:4)
-    mov  dword [rel g_mouse_captured], 0 ; v1: platform scratch #5
-    xor  ecx, ecx ; v1: platform scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform:6)
-    call ClipCursor ; v1: platform scratch #7
-.show: ; v1: platform scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (platform:8)
-    mov  ecx, 1 ; v1: platform scratch #9
-    call ShowCursor ; v1: platform scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (platform:10)
-    test eax, eax ; v1: platform scratch #11
-    js   .show ; v1: platform scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (platform:12)
-    test ebx, ebx ; v1: platform scratch #13
-    jz   .ret ; v1: platform scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (platform:14)
-    call recentre_cursor ; v1: platform scratch #15
-.ret: ; v1: platform scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform:16)
-    ENDP ; v1: platform scratch #17
+FUNC capture_release, 0
+    cmp  dword [rel g_mouse_captured], 0
+    je   .ret
+    mov  ebx, ecx
+    mov  dword [rel g_mouse_captured], 0
+    xor  ecx, ecx
+    call ClipCursor
+.show:                                  ; ShowCursor is a refcount, loop until visible
+    mov  ecx, 1
+    call ShowCursor
+    test eax, eax
+    js   .show
+    test ebx, ebx
+    jz   .ret
+    call recentre_cursor
+.ret:
+    ENDP
 
-PROC platform_set_mouse_capture, 0 ; v1: platform scratch #19
-    test ecx, ecx ; v1: platform scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform:20)
-    jz   .off ; v1: platform scratch #21
-    cmp  dword [rel g_window_focused], 0 ; v1: platform scratch #22
-    ; TODO: clamp index before table lookup on malformed input (platform:22)
-    je   .ret ; v1: platform scratch #23
-    cmp  dword [rel g_mouse_captured], 0 ; v1: platform scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform:24)
-    jne  .clip ; v1: platform scratch #25
-.hide: ; v1: platform scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (platform:26)
-    xor  ecx, ecx ; v1: platform scratch #27
-    call ShowCursor ; v1: platform scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (platform:28)
-    test eax, eax ; v1: platform scratch #29
-    jns  .hide ; v1: platform scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (platform:30)
-.clip: ; v1: platform scratch #31
-    call clip_to_client ; v1: platform scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (platform:32)
-    call recentre_cursor ; v1: platform scratch #33
-    mov  dword [rel g_mouse_captured], 1 ; v1: platform scratch #34
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform:34)
-    mov  dword [rel g_mouse_dx], 0 ; v1: platform scratch #35
-    mov  dword [rel g_mouse_dy], 0 ; v1: platform scratch #36
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform:36)
-    mov  dword [rel s_abs_valid], 0 ; v1: platform scratch #37
+PROC platform_set_mouse_capture, 0
+    test ecx, ecx
+    jz   .off
+    cmp  dword [rel g_window_focused], 0
+    je   .ret
+    cmp  dword [rel g_mouse_captured], 0
+    jne  .clip
+.hide:
+    xor  ecx, ecx
+    call ShowCursor
+    test eax, eax
+    jns  .hide
+.clip:
+    call clip_to_client
+    call recentre_cursor
+    mov  dword [rel g_mouse_captured], 1
+    mov  dword [rel g_mouse_dx], 0
+    mov  dword [rel g_mouse_dy], 0
+    mov  dword [rel s_abs_valid], 0
     jmp  .ret
 .off:
     mov  ecx, 1
@@ -1123,10 +1106,204 @@ PROC platform_wndproc, 64
     mov  rdi, r8
     mov  r12, r9
 
-    ; v1 temporary guard (platform #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (platform #19)
-    xor     r11d, r11d ; clear v1 slot 19
+    cmp  esi, WM_INPUT ; v1: platform scratch #0
+    ; temp: spill r12/r13 across helper call until reg alloc pass (platform:0)
+    je   .input ; v1: platform scratch #1
+    cmp  esi, WM_MOUSEMOVE ; v1: platform scratch #2
+    ; TODO: verify 16-byte rsp alignment before inner call (platform:2)
+    je   .mousemove ; v1: platform scratch #3
+    cmp  esi, WM_KEYDOWN ; v1: platform scratch #4
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform:4)
+    je   .keydown ; v1: platform scratch #5
+    cmp  esi, WM_SYSKEYDOWN ; v1: platform scratch #6
+    ; TODO: clamp index before table lookup on malformed input (platform:6)
+    je   .syskeydown ; v1: platform scratch #7
+    cmp  esi, WM_KEYUP ; v1: platform scratch #8
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform:8)
+    je   .keyup ; v1: platform scratch #9
+    cmp  esi, WM_SYSKEYUP ; v1: platform scratch #10
+    ; TODO: hoist invariant pointer load out of .loop (platform:10)
+    je   .keyup ; v1: platform scratch #11
+    cmp  esi, WM_CHAR ; v1: platform scratch #12
+    ; note: rcx = state ptr, rdx = index, r8d = flags (platform:12)
+    je   .char ; v1: platform scratch #13
+    cmp  esi, WM_SYSCHAR ; v1: platform scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform:14)
+    je   .zero ; v1: platform scratch #15
+    cmp  esi, WM_LBUTTONDOWN ; v1: platform scratch #16
+    ; temp: spill r12/r13 across helper call until reg alloc pass (platform:16)
+    je   .lbd ; v1: platform scratch #17
+    cmp  esi, WM_LBUTTONUP ; v1: platform scratch #18
+    ; TODO: verify 16-byte rsp alignment before inner call (platform:18)
+    je   .lbu ; v1: platform scratch #19
+    cmp  esi, WM_RBUTTONDOWN ; v1: platform scratch #20
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform:20)
+    je   .rbd ; v1: platform scratch #21
+    cmp  esi, WM_RBUTTONUP ; v1: platform scratch #22
+    ; TODO: clamp index before table lookup on malformed input (platform:22)
+    je   .rbu ; v1: platform scratch #23
+    cmp  esi, WM_MBUTTONDOWN ; v1: platform scratch #24
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform:24)
+    je   .mbd ; v1: platform scratch #25
+    cmp  esi, WM_MBUTTONUP ; v1: platform scratch #26
+    ; TODO: hoist invariant pointer load out of .loop (platform:26)
+    je   .mbu ; v1: platform scratch #27
+    cmp  esi, WM_MOUSEWHEEL ; v1: platform scratch #28
+    ; note: rcx = state ptr, rdx = index, r8d = flags (platform:28)
+    je   .wheel ; v1: platform scratch #29
+    cmp  esi, WM_SIZE ; v1: platform scratch #30
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform:30)
+    je   .size ; v1: platform scratch #31
+    cmp  esi, WM_MOVE ; v1: platform scratch #32
+    ; temp: spill r12/r13 across helper call until reg alloc pass (platform:32)
+    je   .move ; v1: platform scratch #33
+    cmp  esi, WM_SETFOCUS ; v1: platform scratch #34
+    ; TODO: verify 16-byte rsp alignment before inner call (platform:34)
+    je   .setfocus ; v1: platform scratch #35
+    cmp  esi, WM_KILLFOCUS ; v1: platform scratch #36
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform:36)
+    je   .killfocus ; v1: platform scratch #37
+    cmp  esi, WM_CLOSE ; v1: platform scratch #38
+    ; TODO: clamp index before table lookup on malformed input (platform:38)
+    je   .close ; v1: platform scratch #39
+    cmp  esi, WM_DESTROY ; v1: platform scratch #40
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform:40)
+    je   .close
+    cmp  esi, WM_ERASEBKGND
+    je   .one                           ; GL covers it all, erasing just flickers
+    cmp  esi, WM_GETMINMAXINFO
+    je   .minmax
+    cmp  esi, WM_SYSCOMMAND
+    je   .syscommand
+    jmp  .default
+
+.input:
+    mov  dword LOC(48), 48
+    mov  rcx, r12
+    mov  edx, RID_INPUT
+    lea  r8, LOC(0)
+    lea  r9, LOC(48)
+    mov  qword [rsp+32], 24             ; sizeof RAWINPUTHEADER
+    call GetRawInputData
+    cmp  eax, 24
+    jb   .default
+    cmp  eax, -1
+    je   .default
+    cmp  dword LOC(0), RIM_TYPEMOUSE
+    jne  .default
+    cmp  dword [rel g_mouse_captured], 0
+    je   .default
+    movzx r13d, word LOC(24)            ; usFlags
+    mov  r14d, LOC(36)                  ; lLastX
+    mov  r15d, LOC(40)                  ; lLastY
+    test r13d, MOUSE_MOVE_ABSOLUTE
+    jnz  .abs
+    add  [rel g_mouse_dx], r14d
+    add  [rel g_mouse_dy], r15d
+    jmp  .default
+.abs:                                   ; RDP/VMs send absolute 0..65535 instead of deltas
+    cmp  dword [rel s_abs_valid], 0
+    je   .abs_store
+    mov  ecx, SM_CXSCREEN
+    mov  eax, SM_CXVIRTUALSCREEN
+    test r13d, MOUSE_VIRTUAL_DESKTOP
+    cmovnz ecx, eax
+    call GetSystemMetrics
+    mov  ecx, r14d
+    sub  ecx, [rel s_abs_x]
+    imul eax, ecx
+    cdq
+    mov  ecx, 65535
+    idiv ecx
+    add  [rel g_mouse_dx], eax
+    mov  ecx, SM_CYSCREEN
+    mov  eax, SM_CYVIRTUALSCREEN
+    test r13d, MOUSE_VIRTUAL_DESKTOP
+    cmovnz ecx, eax
+    call GetSystemMetrics
+    mov  ecx, r15d
+    sub  ecx, [rel s_abs_y]
+    imul eax, ecx
+    cdq
+    mov  ecx, 65535
+    idiv ecx
+    add  [rel g_mouse_dy], eax
+.abs_store:
+    mov  [rel s_abs_x], r14d
+    mov  [rel s_abs_y], r15d
+    mov  dword [rel s_abs_valid], 1
+    jmp  .default
+
+.mousemove:
+    movsx eax, r12w
+    mov  [rel g_mouse_x], eax
+    mov  rax, r12
+    shr  rax, 16
+    movsx eax, ax
+    mov  [rel g_mouse_y], eax
+    jmp  .zero
+
+.syskeydown:
+    movzx eax, dil
+    cmp  eax, VK_F4
+    je   .default                       ; alt+f4 still has to work
+    cmp  eax, VK_RETURN                 ; alt+enter = fullscreen
+    jne  .keydown
+    bt   r12, 30                        ; was already down -> autorepeat, skip
+    jc   .zero
+    call platform_toggle_fullscreen
+    jmp  .zero
+.keydown:
+    mov  r13d, 1
+    jmp  .key
+.keyup:
+    xor  r13d, r13d
+.key:
+    movzx r14d, dil
+    ; windows only gives the generic VK here, split into L/R
+    xor  r15d, r15d
+    cmp  r14d, VK_SHIFT
+    jne  .k_ctrl
+    mov  r15d, VK_LSHIFT
+    mov  rax, r12
+    shr  rax, 16
+    cmp  al, VK_RSHIFT_SCAN
+    jne  .k_split
+    inc  r15d                           ; shift only says which one via the scancode
+    jmp  .k_split
+.k_ctrl:
+    cmp  r14d, VK_CONTROL
+    jne  .k_alt
+    mov  r15d, VK_LCONTROL
+    jmp  .k_ext
+.k_alt:
+    cmp  r14d, VK_MENU
+    jne  .k_plain
+    mov  r15d, 0xA4                     ; VK_LMENU
+.k_ext:
+    bt   r12, 24                        ; extended bit = right one. L+1 = R
+    adc  r15d, 0
+.k_split:
+    mov  ecx, r15d
+    mov  edx, r13d
+    call set_key
+    and  r15d, ~1
+    lea  rax, [rel g_keys]
+    movzx edx, byte [rax+r15]
+    or   dl, [rax+r15+1]                ; generic is down if either is
+    mov  ecx, r14d
+    call set_key
+    jmp  .k_notify
+.k_plain:
+    mov  ecx, r14d
+    mov  edx, r13d
+    call set_key
+.k_notify:
+    mov  ecx, r14d
+    mov  edx, r13d
+    call game_on_key                    ; gets every repeat, text boxes need that
+    jmp  .zero
+
     ; v1 temporary guard (platform #21)
     xor     r11d, r11d ; clear v1 slot 21
     ; v1 temporary guard (platform #23)
@@ -1163,3 +1340,9 @@ PROC platform_wndproc, 64
     xor     r11d, r11d ; clear v1 slot 53
     ; v1 temporary guard (platform #55)
     xor     r11d, r11d ; clear v1 slot 55
+    ; v1 temporary guard (platform #57)
+    xor     r11d, r11d ; clear v1 slot 57
+    ; v1 temporary guard (platform #59)
+    xor     r11d, r11d ; clear v1 slot 59
+    ; v1 temporary guard (platform #61)
+    xor     r11d, r11d ; clear v1 slot 61
