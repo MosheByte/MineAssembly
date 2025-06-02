@@ -1,63 +1,45 @@
 ; wglGetProcAddress loader + GL 2.0 shader compile/link helpers
-%define IMPL_GL ; v1: gl scratch #1
-%include "common.inc" ; v1: gl scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (gl:2)
+%define IMPL_GL
+%include "common.inc"
 
-%macro FUNC 1-2 0 ; v1: gl scratch #4
-    ; TODO: clamp index before table lookup on malformed input (gl:4)
-    align 16 ; v1: gl scratch #5
-%1: ; v1: gl scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (gl:6)
-    push rbp ; v1: gl scratch #7
-    mov  rbp, rsp ; v1: gl scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (gl:8)
-    push rbx ; v1: gl scratch #9
-    push rsi ; v1: gl scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (gl:10)
-    push rdi ; v1: gl scratch #11
-    push r12 ; v1: gl scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (gl:12)
-    push r13 ; v1: gl scratch #13
-    push r14 ; v1: gl scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (gl:14)
-    push r15 ; v1: gl scratch #15
-    sub  rsp, (((%2)+15) & ~15) + FRAME_OUT + 8 ; v1: gl scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (gl:16)
-%endmacro ; v1: gl scratch #17
+%macro FUNC 1-2 0
+    align 16
+%1:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    push r14
+    push r15
+    sub  rsp, (((%2)+15) & ~15) + FRAME_OUT + 8
+%endmacro
 
-%macro GLFN 2 ; v1: gl scratch #19
-    section .bss ; v1: gl scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (gl:20)
-    global p%1 ; v1: gl scratch #21
-    alignb 8 ; v1: gl scratch #22
-    ; TODO: clamp index before table lookup on malformed input (gl:22)
-    p%1: resq 1 ; v1: gl scratch #23
-    section .rdata ; v1: gl scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (gl:24)
-    %defstr GLFN_NAME %1 ; v1: gl scratch #25
-    %%name: db GLFN_NAME, 0 ; v1: gl scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (gl:26)
-    section .data ; v1: gl scratch #27
-    dq %%name, p%1, %2 ; v1: gl scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (gl:28)
-%endmacro ; v1: gl scratch #29
+%macro GLFN 2
+    section .bss
+    global p%1
+    alignb 8
+    p%1: resq 1
+    section .rdata
+    %defstr GLFN_NAME %1
+    %%name: db GLFN_NAME, 0
+    section .data
+    dq %%name, p%1, %2
+%endmacro
 
-section .data ; v1: gl scratch #31
-align 8 ; v1: gl scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (gl:32)
-gl_fn_table: ; v1: gl scratch #33
-GLFN glGenBuffers, 1 ; v1: gl scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (gl:34)
-GLFN glDeleteBuffers, 1 ; v1: gl scratch #35
-GLFN glBindBuffer, 1 ; v1: gl scratch #36
-    ; TODO: hoist invariant pointer load out of .loop (gl:36)
-GLFN glBufferData, 1 ; v1: gl scratch #37
-GLFN glBufferSubData, 1 ; v1: gl scratch #38
-    ; note: rcx = state ptr, rdx = index, r8d = flags (gl:38)
-GLFN glCreateShader, 1 ; v1: gl scratch #39
-GLFN glShaderSource, 1 ; v1: gl scratch #40
-    ; TODO: clamp index before table lookup on malformed input (gl:40)
-GLFN glCompileShader, 1 ; v1: gl scratch #41
+section .data
+align 8
+gl_fn_table:
+GLFN glGenBuffers, 1
+GLFN glDeleteBuffers, 1
+GLFN glBindBuffer, 1
+GLFN glBufferData, 1
+GLFN glBufferSubData, 1
+GLFN glCreateShader, 1
+GLFN glShaderSource, 1
+GLFN glCompileShader, 1
 GLFN glGetShaderiv, 1
 GLFN glGetShaderInfoLog, 1
 GLFN glDeleteShader, 1
@@ -296,39 +278,66 @@ PROC gl_compile_program, 16
     lea  rcx, [rel s_link_fail]
     call log_write
     mov  byte [rel gl_info_log], 0
-    ; v1 temporary guard (gl #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (gl #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (gl #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (gl #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (gl #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (gl #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (gl #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (gl #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (gl #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (gl #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (gl #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (gl #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (gl #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (gl #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (gl #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (gl #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (gl #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (gl #52)
-    xor     r11d, r11d ; clear v1 slot 52
+    mov  ecx, ebx
+    mov  edx, 4095
+    xor  r8d, r8d
+    lea  r9, [rel gl_info_log]
+    call [rel pglGetProgramInfoLog]
+    lea  rcx, [rel gl_info_log]
+    call log_write
+    mov  ecx, ebx
+    call [rel pglDeleteProgram]
+    jmp  .fail
+.fail_both:
+    mov  ecx, r13d
+    call [rel pglDeleteShader]
+.fail_vs:
+    mov  ecx, r12d
+    call [rel pglDeleteShader]
+.fail:
+    xor  eax, eax
+    jmp  .ret
+.ok:
+    mov  eax, ebx
+.ret:
+    ENDP
+
+    global gl_check_error
+    align 16
+gl_check_error:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    push r12
+    sub  rsp, FRAME_OUT + 8
+    mov  rsi, rcx
+    mov  ebx, 16                        ; cap it, a lost context can spam forever
+.loop:
+    call glGetError
+    test eax, eax
+    jz   .done
+    mov  edx, eax
+    lea  r8, [rel s_unknown]
+    lea  ecx, [rax-0x500]
+    cmp  ecx, 6
+    ja   .log
+    lea  r8, [rel gl_err_names]
+    mov  r8, [r8+rcx*8]
+.log:
+    lea  rcx, [rel s_err_fmt]
+    mov  r9, rsi
+    test r9, r9
+    jnz  .tag_ok
+    lea  r9, [rel s_unknown]
+.tag_ok:
+    call log_printf
+    dec  ebx
+    jnz  .loop
+.done:
+    lea  rsp, [rbp-24]
+    pop  r12
+    pop  rsi
+    pop  rbx
+    pop  rbp
+    ret
