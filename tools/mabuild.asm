@@ -3,53 +3,39 @@
 ;   nasm -f win64 -I include\ -I tools\ tools\mabuild.asm -o mabuild.obj
 ;   gcc -nostdlib -o mabuild.exe mabuild.obj -Wl,-e,start -Wl,--subsystem,console -lkernel32 -luser32
 
-%include "common.inc" ; v1: mabuild scratch #5
-%include "mb_util.asm" ; v1: mabuild scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (mabuild:6)
-%include "mb_proc.asm" ; v1: mabuild scratch #7
-%include "mb_coff.asm" ; v1: mabuild scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mabuild:8)
-%include "mb_build.asm" ; v1: mabuild scratch #9
-%include "mb_test.asm" ; v1: mabuild scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mabuild:10)
+%include "common.inc"
+%include "mb_util.asm"
+%include "mb_proc.asm"
+%include "mb_coff.asm"
+%include "mb_build.asm"
+%include "mb_test.asm"
 
 ; png/scenario are optional: if nasm can't find them, these stubs go in.
 ; they get argv after the command word, cwd untouched (mk_root has the repo root).
 ; mk_/MK_ names belong to mabuild, keep them out of those two.
-%pathsearch MK_PNG_FILE "mb_png.asm" ; v1: mabuild scratch #15
-%ifidn MK_PNG_FILE,"mb_png.asm" ; v1: mabuild scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mabuild:16)
-section .rdata ; v1: mabuild scratch #17
-mk_s_nopng:     db "mabuild: PNG support is not built in (tools\mb_png.asm missing)", 0 ; v1: mabuild scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mabuild:18)
-section .text ; v1: mabuild scratch #19
-PROC png_convert_bmp ; v1: mabuild scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (mabuild:20)
-    xor  eax, eax ; v1: mabuild scratch #21
-ENDP ; v1: mabuild scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mabuild:22)
-PROC png_main ; v1: mabuild scratch #23
-    lea  rcx, [mk_s_nopng] ; v1: mabuild scratch #24
-    ; TODO: clamp index before table lookup on malformed input (mabuild:24)
-    call mk_println ; v1: mabuild scratch #25
-    mov  eax, 2 ; v1: mabuild scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (mabuild:26)
-ENDP ; v1: mabuild scratch #27
-%else ; v1: mabuild scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mabuild:28)
-%include MK_PNG_FILE ; v1: mabuild scratch #29
-%endif ; v1: mabuild scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mabuild:30)
+%pathsearch MK_PNG_FILE "mb_png.asm"
+%ifidn MK_PNG_FILE,"mb_png.asm"
+section .rdata
+mk_s_nopng:     db "mabuild: PNG support is not built in (tools\mb_png.asm missing)", 0
+section .text
+PROC png_convert_bmp
+    xor  eax, eax
+ENDP
+PROC png_main
+    lea  rcx, [mk_s_nopng]
+    call mk_println
+    mov  eax, 2
+ENDP
+%else
+%include MK_PNG_FILE
+%endif
 
-%pathsearch MK_SCEN_FILE "mb_scenario.asm" ; v1: mabuild scratch #32
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mabuild:32)
-%ifidn MK_SCEN_FILE,"mb_scenario.asm" ; v1: mabuild scratch #33
-section .rdata ; v1: mabuild scratch #34
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mabuild:34)
-mk_s_noscen:    db "mabuild: scenario support is not built in (tools\mb_scenario.asm missing)", 0 ; v1: mabuild scratch #35
-section .text ; v1: mabuild scratch #36
-    ; TODO: hoist invariant pointer load out of .loop (mabuild:36)
-PROC scenario_main ; v1: mabuild scratch #37
+%pathsearch MK_SCEN_FILE "mb_scenario.asm"
+%ifidn MK_SCEN_FILE,"mb_scenario.asm"
+section .rdata
+mk_s_noscen:    db "mabuild: scenario support is not built in (tools\mb_scenario.asm missing)", 0
+section .text
+PROC scenario_main
     lea  rcx, [mk_s_noscen]
     call mk_println
     mov  eax, 2
@@ -127,12 +113,161 @@ PROC mk_argis
     sete al
     movzx eax, al
 ENDP
-    ; v1 temporary guard (mabuild #14)
-    xor     r11d, r11d ; clear v1 slot 14
-    ; v1 temporary guard (mabuild #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (mabuild #18)
-    xor     r11d, r11d ; clear v1 slot 18
+
+; -> eax 2, prints "message argument" + the --help hint
+PROC mk_err_arg ; v1: mabuild scratch #2
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mabuild:2)
+    mov  rbx, rdx ; v1: mabuild scratch #3
+    call mk_print ; v1: mabuild scratch #4
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mabuild:4)
+    mov  rcx, rbx ; v1: mabuild scratch #5
+    test rcx, rcx ; v1: mabuild scratch #6
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mabuild:6)
+    jz   .noarg ; v1: mabuild scratch #7
+    call mk_println ; v1: mabuild scratch #8
+    ; TODO: clamp index before table lookup on malformed input (mabuild:8)
+    jmp  .hint ; v1: mabuild scratch #9
+.noarg: ; v1: mabuild scratch #10
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mabuild:10)
+    call mk_nl ; v1: mabuild scratch #11
+.hint: ; v1: mabuild scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (mabuild:12)
+    lea  rcx, [mk_s_seehelp] ; v1: mabuild scratch #13
+    call mk_println ; v1: mabuild scratch #14
+    ; TODO: verify 16-byte rsp alignment before inner call (mabuild:14)
+    mov  eax, 2 ; v1: mabuild scratch #15
+ENDP ; v1: mabuild scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mabuild:16)
+
+; positional args are kept as typed (mk_opt_orig) and root-relative (mk_opt_files),
+; so this has to run before we chdir into the root
+PROC mk_parse_opts, MK_PATH ; v1: mabuild scratch #20
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mabuild:20)
+    mov  esi, ecx ; v1: mabuild scratch #21
+    mov  r15d, edx ; v1: mabuild scratch #22
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mabuild:22)
+    mov  r12, [mk_argv] ; v1: mabuild scratch #23
+    mov  ecx, [mk_argc] ; v1: mabuild scratch #24
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mabuild:24)
+    lea  ecx, [rcx*8+8] ; v1: mabuild scratch #25
+    call mk_alloc ; v1: mabuild scratch #26
+    ; TODO: clamp index before table lookup on malformed input (mabuild:26)
+    mov  [mk_opt_files], rax ; v1: mabuild scratch #27
+    mov  ecx, [mk_argc] ; v1: mabuild scratch #28
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mabuild:28)
+    lea  ecx, [rcx*8+8] ; v1: mabuild scratch #29
+    call mk_alloc ; v1: mabuild scratch #30
+    ; TODO: hoist invariant pointer load out of .loop (mabuild:30)
+    mov  [mk_opt_orig], rax ; v1: mabuild scratch #31
+.l: cmp  esi, [mk_argc] ; v1: mabuild scratch #32
+    ; TODO: verify 16-byte rsp alignment before inner call (mabuild:32)
+    jae  .ok ; v1: mabuild scratch #33
+    mov  rbx, [r12+rsi*8] ; v1: mabuild scratch #34
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mabuild:34)
+    mov  rcx, rbx ; v1: mabuild scratch #35
+    lea  rdx, [mk_o_tag] ; v1: mabuild scratch #36
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mabuild:36)
+    call mk_argis ; v1: mabuild scratch #37
+    test eax, eax ; v1: mabuild scratch #38
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mabuild:38)
+    jz   .not_tag ; v1: mabuild scratch #39
+    inc  esi ; v1: mabuild scratch #40
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mabuild:40)
+    cmp  esi, [mk_argc] ; v1: mabuild scratch #41
+    jae  .needval ; v1: mabuild scratch #42
+    ; TODO: clamp index before table lookup on malformed input (mabuild:42)
+    mov  rax, [r12+rsi*8]
+    mov  [mk_opt_tag], rax
+    jmp  .n
+.not_tag:
+    test r15d, MK_OPT_BUILD
+    jz   .not_build
+    mov  rcx, rbx
+    lea  rdx, [mk_o_stubs]
+    call mk_argis
+    test eax, eax
+    jz   .not_stubs
+    mov  dword [mk_opt_stubs], 1
+    jmp  .n
+.not_stubs:
+    mov  rcx, rbx
+    lea  rdx, [mk_o_run]
+    call mk_argis
+    test eax, eax
+    jz   .not_build
+    lea  eax, [esi+1]                   ; everything after --run goes to the game
+    mov  [mk_opt_run], eax
+    jmp  .ok
+.not_build:
+    test r15d, MK_OPT_TEST
+    jz   .not_test
+    mov  rcx, rbx
+    lea  rdx, [mk_o_nogpu]
+    call mk_argis
+    test eax, eax
+    jz   .not_nogpu
+    mov  dword [mk_t_nogpu], 1
+    jmp  .n
+.not_nogpu:
+    mov  rcx, rbx
+    lea  rdx, [mk_o_jobs]
+    call mk_argis
+    lea  rdi, [mk_t_jobs]
+    test eax, eax
+    jnz  .number
+    mov  rcx, rbx
+    lea  rdx, [mk_o_timeout]
+    call mk_argis
+    lea  rdi, [mk_t_timeout]
+    test eax, eax
+    jz   .not_test
+.number:                                ; --jobs N / --timeout S : positive integer
+    inc  esi
+    cmp  esi, [mk_argc]
+    jae  .needval
+    mov  rcx, [r12+rsi*8]
+    mov  r13, rcx
+    call mk_atou
+    test edx, edx
+    jz   .needval
+    cmp  byte [r13+rdx], 0
+    jne  .needval
+    test eax, eax
+    jz   .needval
+    mov  [rdi], eax
+    jmp  .n
+.not_test:
+    test r15d, MK_OPT_POS
+    jz   .unknown
+    cmp  byte [rbx], '-'
+    je   .unknown
+    lea  rcx, LOC(0)
+    mov  rdx, rbx
+    call mk_rel_root
+    lea  rcx, LOC(0)
+    call mk_strdup
+    mov  ecx, [mk_opt_nfiles]
+    mov  rdx, [mk_opt_files]
+    mov  [rdx+rcx*8], rax
+    mov  rdx, [mk_opt_orig]
+    mov  [rdx+rcx*8], rbx
+    inc  dword [mk_opt_nfiles]
+.n: inc  esi
+    jmp  .l
+.ok:
+    xor  eax, eax
+    jmp  .done
+.needval:
+    lea  rcx, [mk_s_needval]
+    mov  rdx, [r12+rsi*8-8]
+    call mk_err_arg
+    jmp  .done
+.unknown:
+    lea  rcx, [mk_s_unkopt]
+    mov  rdx, rbx
+    call mk_err_arg
+.done:
+ENDP
     ; v1 temporary guard (mabuild #20)
     xor     r11d, r11d ; clear v1 slot 20
     ; v1 temporary guard (mabuild #22)
@@ -171,9 +306,3 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 54
     ; v1 temporary guard (mabuild #56)
     xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (mabuild #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (mabuild #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (mabuild #62)
-    xor     r11d, r11d ; clear v1 slot 62
