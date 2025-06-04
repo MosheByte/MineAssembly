@@ -115,67 +115,47 @@ PROC mk_argis
 ENDP
 
 ; -> eax 2, prints "message argument" + the --help hint
-PROC mk_err_arg ; v1: mabuild scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mabuild:2)
-    mov  rbx, rdx ; v1: mabuild scratch #3
-    call mk_print ; v1: mabuild scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mabuild:4)
-    mov  rcx, rbx ; v1: mabuild scratch #5
-    test rcx, rcx ; v1: mabuild scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mabuild:6)
-    jz   .noarg ; v1: mabuild scratch #7
-    call mk_println ; v1: mabuild scratch #8
-    ; TODO: clamp index before table lookup on malformed input (mabuild:8)
-    jmp  .hint ; v1: mabuild scratch #9
-.noarg: ; v1: mabuild scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mabuild:10)
-    call mk_nl ; v1: mabuild scratch #11
-.hint: ; v1: mabuild scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (mabuild:12)
-    lea  rcx, [mk_s_seehelp] ; v1: mabuild scratch #13
-    call mk_println ; v1: mabuild scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (mabuild:14)
-    mov  eax, 2 ; v1: mabuild scratch #15
-ENDP ; v1: mabuild scratch #16
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mabuild:16)
+PROC mk_err_arg
+    mov  rbx, rdx
+    call mk_print
+    mov  rcx, rbx
+    test rcx, rcx
+    jz   .noarg
+    call mk_println
+    jmp  .hint
+.noarg:
+    call mk_nl
+.hint:
+    lea  rcx, [mk_s_seehelp]
+    call mk_println
+    mov  eax, 2
+ENDP
 
 ; positional args are kept as typed (mk_opt_orig) and root-relative (mk_opt_files),
 ; so this has to run before we chdir into the root
-PROC mk_parse_opts, MK_PATH ; v1: mabuild scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mabuild:20)
-    mov  esi, ecx ; v1: mabuild scratch #21
-    mov  r15d, edx ; v1: mabuild scratch #22
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mabuild:22)
-    mov  r12, [mk_argv] ; v1: mabuild scratch #23
-    mov  ecx, [mk_argc] ; v1: mabuild scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mabuild:24)
-    lea  ecx, [rcx*8+8] ; v1: mabuild scratch #25
-    call mk_alloc ; v1: mabuild scratch #26
-    ; TODO: clamp index before table lookup on malformed input (mabuild:26)
-    mov  [mk_opt_files], rax ; v1: mabuild scratch #27
-    mov  ecx, [mk_argc] ; v1: mabuild scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mabuild:28)
-    lea  ecx, [rcx*8+8] ; v1: mabuild scratch #29
-    call mk_alloc ; v1: mabuild scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (mabuild:30)
-    mov  [mk_opt_orig], rax ; v1: mabuild scratch #31
-.l: cmp  esi, [mk_argc] ; v1: mabuild scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (mabuild:32)
-    jae  .ok ; v1: mabuild scratch #33
-    mov  rbx, [r12+rsi*8] ; v1: mabuild scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mabuild:34)
-    mov  rcx, rbx ; v1: mabuild scratch #35
-    lea  rdx, [mk_o_tag] ; v1: mabuild scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mabuild:36)
-    call mk_argis ; v1: mabuild scratch #37
-    test eax, eax ; v1: mabuild scratch #38
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mabuild:38)
-    jz   .not_tag ; v1: mabuild scratch #39
-    inc  esi ; v1: mabuild scratch #40
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mabuild:40)
-    cmp  esi, [mk_argc] ; v1: mabuild scratch #41
-    jae  .needval ; v1: mabuild scratch #42
-    ; TODO: clamp index before table lookup on malformed input (mabuild:42)
+PROC mk_parse_opts, MK_PATH
+    mov  esi, ecx
+    mov  r15d, edx
+    mov  r12, [mk_argv]
+    mov  ecx, [mk_argc]
+    lea  ecx, [rcx*8+8]
+    call mk_alloc
+    mov  [mk_opt_files], rax
+    mov  ecx, [mk_argc]
+    lea  ecx, [rcx*8+8]
+    call mk_alloc
+    mov  [mk_opt_orig], rax
+.l: cmp  esi, [mk_argc]
+    jae  .ok
+    mov  rbx, [r12+rsi*8]
+    mov  rcx, rbx
+    lea  rdx, [mk_o_tag]
+    call mk_argis
+    test eax, eax
+    jz   .not_tag
+    inc  esi
+    cmp  esi, [mk_argc]
+    jae  .needval
     mov  rax, [r12+rsi*8]
     mov  [mk_opt_tag], rax
     jmp  .n
@@ -268,6 +248,146 @@ PROC mk_parse_opts, MK_PATH ; v1: mabuild scratch #20
     call mk_err_arg
 .done:
 ENDP
+
+PROC mk_enter_root ; v1: mabuild scratch #1
+    lea  rcx, [mk_root] ; v1: mabuild scratch #2
+    ; TODO: hoist invariant pointer load out of .loop (mabuild:2)
+    call SetCurrentDirectoryA ; v1: mabuild scratch #3
+ENDP ; v1: mabuild scratch #4
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mabuild:4)
+
+; mb_build(rcx tag or 0, edx stubs) -> eax 1 ok. for mb_scenario: same as
+; `mabuild build --tag T` but leaves the caller's cwd alone
+PROC mb_build, MK_PATH ; v1: mabuild scratch #8
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mabuild:8)
+    mov  [mk_opt_tag], rcx ; v1: mabuild scratch #9
+    mov  [mk_opt_stubs], edx ; v1: mabuild scratch #10
+    ; TODO: verify 16-byte rsp alignment before inner call (mabuild:10)
+    mov  dword [mk_opt_run], 0 ; v1: mabuild scratch #11
+    mov  ecx, MK_PATH ; v1: mabuild scratch #12
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mabuild:12)
+    lea  rdx, LOC(0) ; v1: mabuild scratch #13
+    call GetCurrentDirectoryA ; v1: mabuild scratch #14
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mabuild:14)
+    call mk_enter_root ; v1: mabuild scratch #15
+    call mk_cmd_build ; v1: mabuild scratch #16
+    ; TODO: clamp index before table lookup on malformed input (mabuild:16)
+    mov  ebx, eax ; v1: mabuild scratch #17
+    lea  rcx, LOC(0) ; v1: mabuild scratch #18
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mabuild:18)
+    call SetCurrentDirectoryA ; v1: mabuild scratch #19
+    xor  eax, eax ; v1: mabuild scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (mabuild:20)
+    test ebx, ebx ; v1: mabuild scratch #21
+    sete al ; v1: mabuild scratch #22
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mabuild:22)
+ENDP ; v1: mabuild scratch #23
+
+PROC mk_main, MK_PATH ; v1: mabuild scratch #25
+    call mk_init ; v1: mabuild scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mabuild:26)
+    call mk_parse_args ; v1: mabuild scratch #27
+    call mk_find_root ; v1: mabuild scratch #28
+    ; TODO: verify 16-byte rsp alignment before inner call (mabuild:28)
+    xor  ecx, ecx ; v1: mabuild scratch #29
+    lea  rdx, LOC(0) ; v1: mabuild scratch #30
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mabuild:30)
+    mov  r8d, MK_PATH-8 ; v1: mabuild scratch #31
+    call GetModuleFileNameA ; v1: mabuild scratch #32
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mabuild:32)
+    lea  rcx, LOC(0) ; v1: mabuild scratch #33
+    lea  rdx, [mk_s_dotold] ; v1: mabuild scratch #34
+    ; TODO: clamp index before table lookup on malformed input (mabuild:34)
+    call mk_strcat ; v1: mabuild scratch #35
+    lea  rcx, LOC(0) ; v1: mabuild scratch #36
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mabuild:36)
+    call DeleteFileA                    ; fails harmlessly when absent / in use
+    mov  r12, [mk_argv]
+    mov  r13d, [mk_argc]
+    ; default command is build, esi = first arg after the command
+    mov  esi, 1
+    lea  rdi, [mk_c_build]
+    cmp  r13d, 2
+    jb   .dispatch
+    mov  rbx, [r12+8]
+    mov  rcx, rbx
+    lea  rdx, [mk_o_help]
+    call mk_argis
+    test eax, eax
+    jnz  .help
+    mov  rcx, rbx
+    lea  rdx, [mk_o_h]
+    call mk_argis
+    test eax, eax
+    jnz  .help
+    mov  rcx, rbx
+    lea  rdx, [mk_o_q]
+    call mk_argis
+    test eax, eax
+    jnz  .help
+    mov  rcx, rbx
+    lea  rdx, [mk_o_check]
+    call mk_argis
+    test eax, eax
+    jz   .not_ocheck
+    lea  rdi, [mk_c_check]
+    mov  esi, 2
+    jmp  .dispatch
+.not_ocheck:
+    cmp  byte [rbx], '-'
+    je   .dispatch
+    mov  rdi, rbx
+    mov  esi, 2
+.dispatch:
+    mov  rcx, rdi
+    lea  rdx, [mk_c_build]
+    call mk_argis
+    test eax, eax
+    jnz  .build
+    mov  rcx, rdi
+    lea  rdx, [mk_c_check]
+    call mk_argis
+    test eax, eax
+    jnz  .check
+    mov  rcx, rdi
+    lea  rdx, [mk_c_test]
+    call mk_argis
+    test eax, eax
+    jnz  .test
+    mov  rcx, rdi
+    lea  rdx, [mk_c_dll]
+    call mk_argis
+    test eax, eax
+    jnz  .dll
+    mov  rcx, rdi
+    lea  rdx, [mk_c_self]
+    call mk_argis
+    test eax, eax
+    jnz  .self
+    mov  rcx, rdi
+    lea  rdx, [mk_c_scenario]
+    call mk_argis
+    test eax, eax
+    jnz  .scenario
+    mov  rcx, rdi
+    lea  rdx, [mk_c_png]
+    call mk_argis
+    test eax, eax
+    jnz  .png
+    mov  rcx, rdi
+    lea  rdx, [mk_c_help]
+    call mk_argis
+    test eax, eax
+    jnz  .help
+    lea  rcx, [mk_s_unkcmd]
+    mov  rdx, rdi
+    call mk_err_arg
+    jmp  .done
+
+    ; v1 temporary guard (mabuild #16)
+    xor     r11d, r11d ; clear v1 slot 16
+    ; v1 temporary guard (mabuild #18)
+    xor     r11d, r11d ; clear v1 slot 18
     ; v1 temporary guard (mabuild #20)
     xor     r11d, r11d ; clear v1 slot 20
     ; v1 temporary guard (mabuild #22)
@@ -298,11 +418,3 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 46
     ; v1 temporary guard (mabuild #48)
     xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (mabuild #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (mabuild #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (mabuild #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (mabuild #56)
-    xor     r11d, r11d ; clear v1 slot 56
