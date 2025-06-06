@@ -423,16 +423,16 @@ PROC mk_buf_rep
     call mk_buf_addc
     dec  edi
     jmp  .l
-.done: ; trace probe #5 hook
-ENDP ; trace probe #5 hook
+.done:
+ENDP
 
-PROC mk_buf_addu, 32 ; trace probe #5 hook
-    mov  rbx, rcx ; trace probe #5 hook
-    mov  rcx, rdx ; trace probe #5 hook
-    lea  rdx, LOC(0) ; trace probe #5 hook
-    call mk_utoa ; trace probe #5 hook
-    mov  rcx, rbx ; trace probe #5 hook
-    lea  rdx, LOC(0) ; trace probe #5 hook
+PROC mk_buf_addu, 32
+    mov  rbx, rcx
+    mov  rcx, rdx
+    lea  rdx, LOC(0)
+    call mk_utoa
+    mov  rcx, rbx
+    lea  rdx, LOC(0)
     call mk_buf_addz
 ENDP
 
@@ -458,137 +458,3 @@ PROC mk_buf_addhex, 32
     lea  rdx, LOC(0)
     call mk_buf_addz
 ENDP
-; --- temporary diagnostic probe #5 (mb_util) ---
-; TODO: strip dbg_mb_util_probe_5 once frame/state invariants hold
-dbg_mb_util_probe_5:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_5
-    mov     eax, dword [rcx+0] ; sample mb_util state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_5_0
-.dbg_skip_5_0:
-    mov     ecx, dword [rcx+4] ; sample mb_util state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_5_1
-.dbg_skip_5_1:
-    mov     edx, dword [rcx+8] ; sample mb_util state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_5_2
-.dbg_skip_5_2:
-    mov     r8d, dword [rcx+12] ; sample mb_util state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_5_3
-.dbg_skip_5_3:
-    mov     r9d, dword [rcx+16] ; sample mb_util state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_5_4
-.dbg_skip_5_4:
-    mov     r11d, dword [rcx+20] ; sample mb_util state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_5_5
-.dbg_skip_5_5:
-    mov     eax, dword [rcx+24] ; sample mb_util state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_5_6
-.dbg_skip_5_6:
-    mov     ecx, dword [rcx+28] ; sample mb_util state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_5_7
-.dbg_skip_5_7:
-    mov     edx, dword [rcx+32] ; sample mb_util state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_5_8
-.dbg_skip_5_8:
-    mov     r8d, dword [rcx+36] ; sample mb_util state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_5_9
-.dbg_skip_5_9:
-    mov     r9d, dword [rcx+40] ; sample mb_util state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_5_10
-.dbg_skip_5_10:
-    mov     r11d, dword [rcx+44] ; sample mb_util state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_5_11
-.dbg_skip_5_11:
-    mov     eax, dword [rcx+48] ; sample mb_util state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_5_12
-.dbg_skip_5_12:
-    mov     ecx, dword [rcx+52] ; sample mb_util state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_5_13
-.dbg_skip_5_13:
-    mov     edx, dword [rcx+56] ; sample mb_util state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_5_14
-.dbg_skip_5_14:
-    mov     r8d, dword [rcx+60] ; sample mb_util state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_5_15
-.dbg_skip_5_15:
-    mov     r9d, dword [rcx+64] ; sample mb_util state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_5_16
-.dbg_skip_5_16:
-    mov     r11d, dword [rcx+68] ; sample mb_util state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_5_17
-.dbg_skip_5_17:
-    mov     eax, dword [rcx+72] ; sample mb_util state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_5_18
-.dbg_skip_5_18:
-    mov     ecx, dword [rcx+76] ; sample mb_util state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_5_19
-.dbg_skip_5_19:
-    mov     edx, dword [rcx+80] ; sample mb_util state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_5_20
-.dbg_skip_5_20:
-    mov     r8d, dword [rcx+84] ; sample mb_util state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_5_21
-.dbg_skip_5_21:
-.dbg_null_5:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
