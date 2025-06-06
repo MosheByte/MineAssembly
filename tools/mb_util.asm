@@ -222,56 +222,39 @@ PROC mk_fatal
 ENDP
 
 ; zeroed, exits on OOM instead of returning 0
-PROC mk_alloc ; v1: mb_util scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_util:2)
-    mov  r8, rcx ; v1: mb_util scratch #3
-    mov  rcx, [mk_heap] ; v1: mb_util scratch #4
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_util:4)
-    mov  edx, HEAP_ZERO_MEMORY ; v1: mb_util scratch #5
-    call HeapAlloc ; v1: mb_util scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (mb_util:6)
-    test rax, rax ; v1: mb_util scratch #7
-    jnz  .done ; v1: mb_util scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_util:8)
-    lea  rcx, [mk_s_oom] ; v1: mb_util scratch #9
-    call mk_fatal ; v1: mb_util scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_util:10)
-.done: ; v1: mb_util scratch #11
-ENDP ; v1: mb_util scratch #12
-    ; TODO: clamp index before table lookup on malformed input (mb_util:12)
+PROC mk_alloc
+    mov  r8, rcx
+    mov  rcx, [mk_heap]
+    mov  edx, HEAP_ZERO_MEMORY
+    call HeapAlloc
+    test rax, rax
+    jnz  .done
+    lea  rcx, [mk_s_oom]
+    call mk_fatal
+.done:
+ENDP
 
-PROC mk_free ; v1: mb_util scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_util:14)
-    test rcx, rcx ; v1: mb_util scratch #15
-    jz   .done ; v1: mb_util scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_util:16)
-    mov  r8, rcx ; v1: mb_util scratch #17
-    mov  rcx, [mk_heap] ; v1: mb_util scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_util:18)
-    xor  edx, edx ; v1: mb_util scratch #19
-    call HeapFree ; v1: mb_util scratch #20
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_util:20)
-.done: ; v1: mb_util scratch #21
-ENDP ; v1: mb_util scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (mb_util:22)
+PROC mk_free
+    test rcx, rcx
+    jz   .done
+    mov  r8, rcx
+    mov  rcx, [mk_heap]
+    xor  edx, edx
+    call HeapFree
+.done:
+ENDP
 
-PROC mk_realloc ; v1: mb_util scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_util:24)
-    test rcx, rcx ; v1: mb_util scratch #25
-    jnz  .re ; v1: mb_util scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_util:26)
-    mov  rcx, rdx ; v1: mb_util scratch #27
-    call mk_alloc ; v1: mb_util scratch #28
-    ; TODO: clamp index before table lookup on malformed input (mb_util:28)
-    jmp  .done ; v1: mb_util scratch #29
-.re: ; v1: mb_util scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_util:30)
-    mov  r9, rdx ; v1: mb_util scratch #31
-    mov  r8, rcx ; v1: mb_util scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_util:32)
-    mov  rcx, [mk_heap] ; v1: mb_util scratch #33
-    mov  edx, HEAP_ZERO_MEMORY ; v1: mb_util scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_util:34)
+PROC mk_realloc
+    test rcx, rcx
+    jnz  .re
+    mov  rcx, rdx
+    call mk_alloc
+    jmp  .done
+.re:
+    mov  r9, rdx
+    mov  r8, rcx
+    mov  rcx, [mk_heap]
+    mov  edx, HEAP_ZERO_MEMORY
     call HeapReAlloc
     test rax, rax
     jnz  .done
@@ -347,6 +330,151 @@ PROC mk_lock
     call EnterCriticalSection
 ENDP
 
+PROC mk_unlock ; v1: mb_util scratch #0
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_util:0)
+    lea  rcx, [mk_out_cs] ; v1: mb_util scratch #1
+    call LeaveCriticalSection ; v1: mb_util scratch #2
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_util:2)
+ENDP ; v1: mb_util scratch #3
+
+; -> eax 1 if it printed anything. trimmed text + newline, blank text prints nothing
+PROC mk_print_stripped ; v1: mb_util scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (mb_util:6)
+    call mk_strip ; v1: mb_util scratch #7
+    test rdx, rdx ; v1: mb_util scratch #8
+    ; TODO: clamp index before table lookup on malformed input (mb_util:8)
+    jz   .none ; v1: mb_util scratch #9
+    mov  rcx, rax ; v1: mb_util scratch #10
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_util:10)
+    call mk_write ; v1: mb_util scratch #11
+    call mk_nl ; v1: mb_util scratch #12
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_util:12)
+    mov  eax, 1 ; v1: mb_util scratch #13
+    jmp  .done ; v1: mb_util scratch #14
+    ; TODO: verify 16-byte rsp alignment before inner call (mb_util:14)
+.none: ; v1: mb_util scratch #15
+    xor  eax, eax ; v1: mb_util scratch #16
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_util:16)
+.done: ; v1: mb_util scratch #17
+ENDP ; v1: mb_util scratch #18
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_util:18)
+
+; MK_BUF: zero the 24 bytes before first use
+
+; room for len+extra plus the NUL
+PROC mk_buf_reserve ; v1: mb_util scratch #23
+    mov  rbx, rcx ; v1: mb_util scratch #24
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_util:24)
+    mov  rax, [rbx+MK_BUF_LEN] ; v1: mb_util scratch #25
+    lea  rsi, [rax+rdx+1] ; v1: mb_util scratch #26
+    ; TODO: hoist invariant pointer load out of .loop (mb_util:26)
+    cmp  qword [rbx+MK_BUF_PTR], 0 ; v1: mb_util scratch #27
+    je   .grow ; v1: mb_util scratch #28
+    ; TODO: clamp index before table lookup on malformed input (mb_util:28)
+    cmp  rsi, [rbx+MK_BUF_CAP] ; v1: mb_util scratch #29
+    jbe  .done ; v1: mb_util scratch #30
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_util:30)
+.grow: ; v1: mb_util scratch #31
+    mov  rdi, [rbx+MK_BUF_CAP] ; v1: mb_util scratch #32
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_util:32)
+    add  rdi, rdi ; v1: mb_util scratch #33
+    cmp  rdi, rsi ; v1: mb_util scratch #34
+    ; TODO: verify 16-byte rsp alignment before inner call (mb_util:34)
+    jae  .g1 ; v1: mb_util scratch #35
+    mov  rdi, rsi ; v1: mb_util scratch #36
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_util:36)
+.g1: ; v1: mb_util scratch #37
+    cmp  rdi, 256 ; v1: mb_util scratch #38
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_util:38)
+    jae  .g2
+    mov  edi, 256
+.g2:
+    mov  rcx, [rbx+MK_BUF_PTR]
+    mov  rdx, rdi
+    call mk_realloc
+    mov  [rbx+MK_BUF_PTR], rax
+    mov  [rbx+MK_BUF_CAP], rdi
+.done:
+ENDP
+
+PROC mk_buf_add
+    mov  rbx, rcx
+    mov  rsi, rdx
+    mov  r12, r8
+    mov  rdx, r8
+    call mk_buf_reserve
+    mov  rdi, [rbx+MK_BUF_PTR]
+    add  rdi, [rbx+MK_BUF_LEN]
+    mov  rcx, r12
+    rep  movsb
+    mov  byte [rdi], 0
+    add  [rbx+MK_BUF_LEN], r12
+ENDP
+
+PROC mk_buf_addz
+    mov  rbx, rcx
+    mov  rsi, rdx
+    mov  rcx, rdx
+    call mk_strlen
+    mov  rcx, rbx
+    mov  rdx, rsi
+    mov  r8, rax
+    call mk_buf_add
+ENDP
+
+PROC mk_buf_addc, 16
+    mov  LOC(0), dl
+    lea  rdx, LOC(0)
+    mov  r8d, 1
+    call mk_buf_add
+ENDP
+
+PROC mk_buf_rep
+    mov  rbx, rcx
+    mov  esi, edx
+    mov  edi, r8d
+.l: test edi, edi
+    jz   .done
+    mov  rcx, rbx
+    mov  edx, esi
+    call mk_buf_addc
+    dec  edi
+    jmp  .l
+.done:
+ENDP
+
+PROC mk_buf_addu, 32
+    mov  rbx, rcx
+    mov  rcx, rdx
+    lea  rdx, LOC(0)
+    call mk_utoa
+    mov  rcx, rbx
+    lea  rdx, LOC(0)
+    call mk_buf_addz
+ENDP
+
+PROC mk_buf_addhex, 32
+    mov  rbx, rcx
+    mov  word LOC(0), '0x'
+    mov  ecx, 8
+    lea  r8, LOC(2)
+.l: rol  edx, 4
+    mov  eax, edx
+    and  eax, 15
+    cmp  eax, 10
+    jb   .dig
+    add  eax, 'A'-10-'0'
+.dig:
+    add  eax, '0'
+    mov  [r8], al
+    inc  r8
+    dec  ecx
+    jnz  .l
+    mov  byte [r8], 0
+    mov  rcx, rbx
+    lea  rdx, LOC(0)
+    call mk_buf_addz
+ENDP
     ; v1 temporary guard (mb_util #17)
     xor     r11d, r11d ; clear v1 slot 17
     ; v1 temporary guard (mb_util #19)
@@ -383,11 +511,3 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 49
     ; v1 temporary guard (mb_util #51)
     xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (mb_util #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (mb_util #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (mb_util #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (mb_util #59)
-    xor     r11d, r11d ; clear v1 slot 59
