@@ -148,65 +148,45 @@ PROC mk_api_load
     ja   .tt
     inc  rdi
     jmp  .tl
-.tt: ; v1: mb_coff scratch #0
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_coff:0)
-    cmp  byte [r12-1], ' ' ; v1: mb_coff scratch #1
-    ja   .ttd ; v1: mb_coff scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_coff:2)
-    dec  r12 ; v1: mb_coff scratch #3
-    jmp  .tt ; v1: mb_coff scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_coff:4)
-.ttd: ; v1: mb_coff scratch #5
-    mov  rax, r12 ; v1: mb_coff scratch #6
-    ; TODO: clamp index before table lookup on malformed input (mb_coff:6)
-    sub  rax, rdi ; v1: mb_coff scratch #7
-    cmp  rax, 7 ; v1: mb_coff scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_coff:8)
-    jb   .skipline ; v1: mb_coff scratch #9
-    cmp  dword [rdi], 'exte' ; v1: mb_coff scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (mb_coff:10)
-    jne  .skipline ; v1: mb_coff scratch #11
-    cmp  word [rdi+4], 'rn' ; v1: mb_coff scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_coff:12)
-    jne  .skipline ; v1: mb_coff scratch #13
-    cmp  byte [rdi+6], ' ' ; v1: mb_coff scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_coff:14)
-    jne  .skipline ; v1: mb_coff scratch #15
-    add  rdi, 7 ; v1: mb_coff scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_coff:16)
-.part: ; v1: mb_coff scratch #17
-    mov  r13, rdi ; v1: mb_coff scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_coff:18)
-.pe: ; v1: mb_coff scratch #19
-    cmp  r13, r12 ; v1: mb_coff scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_coff:20)
-    je   .pend ; v1: mb_coff scratch #21
-    cmp  byte [r13], ',' ; v1: mb_coff scratch #22
-    ; TODO: clamp index before table lookup on malformed input (mb_coff:22)
-    je   .pend ; v1: mb_coff scratch #23
-    inc  r13 ; v1: mb_coff scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_coff:24)
-    jmp  .pe ; v1: mb_coff scratch #25
-.pend: ; v1: mb_coff scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (mb_coff:26)
-    mov  r14, r13 ; v1: mb_coff scratch #27
-.p1: ; v1: mb_coff scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_coff:28)
-    cmp  rdi, r14 ; v1: mb_coff scratch #29
-    jae  .pempty ; v1: mb_coff scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_coff:30)
-    cmp  byte [rdi], ' ' ; v1: mb_coff scratch #31
-    ja   .p2 ; v1: mb_coff scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_coff:32)
-    inc  rdi ; v1: mb_coff scratch #33
-    jmp  .p1 ; v1: mb_coff scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_coff:34)
-.p2: ; v1: mb_coff scratch #35
-    cmp  byte [r14-1], ' ' ; v1: mb_coff scratch #36
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_coff:36)
-    ja   .p3 ; v1: mb_coff scratch #37
-    dec  r14 ; v1: mb_coff scratch #38
-    ; TODO: clamp index before table lookup on malformed input (mb_coff:38)
+.tt:
+    cmp  byte [r12-1], ' '
+    ja   .ttd
+    dec  r12
+    jmp  .tt
+.ttd:
+    mov  rax, r12
+    sub  rax, rdi
+    cmp  rax, 7
+    jb   .skipline
+    cmp  dword [rdi], 'exte'
+    jne  .skipline
+    cmp  word [rdi+4], 'rn'
+    jne  .skipline
+    cmp  byte [rdi+6], ' '
+    jne  .skipline
+    add  rdi, 7
+.part:                                  ; split the rest on ','
+    mov  r13, rdi
+.pe:
+    cmp  r13, r12
+    je   .pend
+    cmp  byte [r13], ','
+    je   .pend
+    inc  r13
+    jmp  .pe
+.pend:
+    mov  r14, r13
+.p1:
+    cmp  rdi, r14
+    jae  .pempty
+    cmp  byte [rdi], ' '
+    ja   .p2
+    inc  rdi
+    jmp  .p1
+.p2:
+    cmp  byte [r14-1], ' '
+    ja   .p3
+    dec  r14
     jmp  .p2
 .p3:
     mov  rcx, rdi
@@ -310,51 +290,146 @@ PROC mk_coff_mark, 32
     xor  eax, eax
 .done:
 ENDP
-    ; v1 temporary guard (mb_coff #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (mb_coff #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (mb_coff #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (mb_coff #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (mb_coff #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (mb_coff #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (mb_coff #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (mb_coff #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (mb_coff #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (mb_coff #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (mb_coff #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (mb_coff #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (mb_coff #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (mb_coff #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (mb_coff #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (mb_coff #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (mb_coff #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (mb_coff #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (mb_coff #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (mb_coff #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (mb_coff #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (mb_coff #62)
-    xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (mb_coff #64)
-    xor     r11d, r11d ; clear v1 slot 64
-    ; v1 temporary guard (mb_coff #66)
-    xor     r11d, r11d ; clear v1 slot 66
+
+; data-looking names (g_, blk_, ...) get a resb stub instead of a function
+PROC mk_is_data
+    mov  rbx, rcx
+    lea  rsi, [mk_data_hints]
+.l: mov  rdx, [rsi]
+    test rdx, rdx
+    jz   .no
+    mov  rcx, rbx
+    call mk_startswith
+    test eax, eax
+    jnz  .done
+    add  rsi, 8
+    jmp  .l
+.no:
+    xor  eax, eax
+.done:
+ENDP
+
+; mk_make_stubs(rcx objs, edx count, r8 out dir, r9 names buf or 0) -> eax missing count.
+; if nonzero writes <out dir>\stubs.asm (data: 256 KB of zeroes, functions: return 0)
+; and appends the missing names to r9. needs mk_api_load first.
+PROC mk_make_stubs, MK_PATH+64
+    mov  rbx, rcx
+    mov  r12d, edx
+    mov  r13, r8
+    mov  r14, r9
+    mov  ecx, [mk_api_count]
+    inc  ecx
+    call mk_alloc
+    mov  r15, rax                       ; defined flags
+    xor  esi, esi
+.o: cmp  esi, r12d
+    jae  .od
+    mov  rcx, [rbx+rsi*8]
+    mov  rdx, r15
+    call mk_coff_mark
+    inc  esi
+    jmp  .o
+.od:
+    xor  eax, eax
+    mov  LOC(0), rax
+    mov  LOC(8), rax
+    mov  LOC(16), rax
+    lea  rcx, LOC(0)
+    lea  rdx, [mk_s_stub_head]
+    call mk_buf_addz
+    xor  esi, esi
+    xor  edi, edi
+.d: cmp  esi, [mk_api_count]
+    jae  .dd
+    cmp  byte [r15+rsi], 0
+    jne  .dn
+    inc  edi
+    mov  rax, [mk_api_names]
+    mov  rax, [rax+rsi*8]
+    mov  LOC(24), rax
+    test r14, r14
+    jz   .nolist
+    cmp  qword [r14+MK_BUF_LEN], 0
+    je   .first
+    mov  rcx, r14
+    mov  edx, ' '
+    call mk_buf_addc
+.first:
+    mov  rcx, r14
+    mov  rdx, LOC(24)
+    call mk_buf_addz
+.nolist:
+    mov  rcx, LOC(24)
+    call mk_is_data
+    test eax, eax
+    jz   .dn
+    lea  rcx, LOC(0)
+    lea  rdx, [mk_s_global]
+    call mk_buf_addz
+    lea  rcx, LOC(0)
+    mov  rdx, LOC(24)
+    call mk_buf_addz
+    lea  rcx, LOC(0)
+    lea  rdx, [mk_s_alignb]
+    call mk_buf_addz
+    lea  rcx, LOC(0)
+    mov  rdx, LOC(24)
+    call mk_buf_addz
+    lea  rcx, LOC(0)
+    lea  rdx, [mk_s_resb]
+    call mk_buf_addz
+.dn:
+    inc  esi
+    jmp  .d
+.dd:
+    lea  rcx, LOC(0)
+    lea  rdx, [mk_s_stub_text]
+    call mk_buf_addz
+    xor  esi, esi
+.f: cmp  esi, [mk_api_count]
+    jae  .fd
+    cmp  byte [r15+rsi], 0
+    jne  .fn
+    mov  rax, [mk_api_names]
+    mov  rax, [rax+rsi*8]
+    mov  LOC(24), rax
+    mov  rcx, rax
+    call mk_is_data
+    test eax, eax
+    jnz  .fn
+    lea  rcx, LOC(0)
+    lea  rdx, [mk_s_global]
+    call mk_buf_addz
+    lea  rcx, LOC(0)
+    mov  rdx, LOC(24)
+    call mk_buf_addz
+    lea  rcx, LOC(0)
+    lea  rdx, [mk_s_crlf]
+    call mk_buf_addz
+    lea  rcx, LOC(0)
+    mov  rdx, LOC(24)
+    call mk_buf_addz
+    lea  rcx, LOC(0)
+    lea  rdx, [mk_s_fnbody]
+    call mk_buf_addz
+.fn:
+    inc  esi
+    jmp  .f
+.fd:
+    test edi, edi
+    jz   .nofile
+    lea  rcx, LOC(32)
+    mov  rdx, r13
+    lea  r8, [mk_s_stubs_asm]
+    call mk_path_join
+    lea  rcx, LOC(32)
+    mov  rdx, LOC(0)
+    mov  r8, LOC(8)
+    call mk_write_file
+.nofile:
+    lea  rcx, LOC(0)
+    call mk_buf_free
+    mov  rcx, r15
+    call mk_free
+    mov  eax, edi
+ENDP
