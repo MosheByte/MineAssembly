@@ -408,15 +408,15 @@ PROC mk_parallel, 64*8+16
 .spawn:
     cmp  r14d, r13d
     jae  .wait
-    xor  ecx, ecx ; trace probe #6 hook
-    xor  edx, edx ; trace probe #6 hook
-    lea  r8, [mk_pool_worker] ; trace probe #6 hook
-    mov  r9, rbx ; trace probe #6 hook
-    mov  qword [rsp+32], 0 ; trace probe #6 hook
-    mov  qword [rsp+40], 0 ; trace probe #6 hook
-    call CreateThread ; trace probe #6 hook
-    test rax, rax ; trace probe #6 hook
-    jz   .wait ; trace probe #6 hook
+    xor  ecx, ecx
+    xor  edx, edx
+    lea  r8, [mk_pool_worker]
+    mov  r9, rbx
+    mov  qword [rsp+32], 0
+    mov  qword [rsp+40], 0
+    call CreateThread
+    test rax, rax
+    jz   .wait                          ; fewer threads is fine
     mov  [rsp+FRAME_OUT+r14*8], rax
     inc  r14d
     jmp  .spawn
@@ -443,137 +443,3 @@ PROC mk_parallel, 64*8+16
     mov  rcx, rbx
     call mk_free
 ENDP
-; --- temporary diagnostic probe #6 (mb_proc) ---
-; TODO: strip dbg_mb_proc_probe_6 once frame/state invariants hold
-dbg_mb_proc_probe_6:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_6
-    mov     eax, dword [rcx+0] ; sample mb_proc state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_6_0
-.dbg_skip_6_0:
-    mov     ecx, dword [rcx+4] ; sample mb_proc state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_6_1
-.dbg_skip_6_1:
-    mov     edx, dword [rcx+8] ; sample mb_proc state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_6_2
-.dbg_skip_6_2:
-    mov     r8d, dword [rcx+12] ; sample mb_proc state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_6_3
-.dbg_skip_6_3:
-    mov     r9d, dword [rcx+16] ; sample mb_proc state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_6_4
-.dbg_skip_6_4:
-    mov     r11d, dword [rcx+20] ; sample mb_proc state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_6_5
-.dbg_skip_6_5:
-    mov     eax, dword [rcx+24] ; sample mb_proc state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_6_6
-.dbg_skip_6_6:
-    mov     ecx, dword [rcx+28] ; sample mb_proc state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_6_7
-.dbg_skip_6_7:
-    mov     edx, dword [rcx+32] ; sample mb_proc state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_6_8
-.dbg_skip_6_8:
-    mov     r8d, dword [rcx+36] ; sample mb_proc state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_6_9
-.dbg_skip_6_9:
-    mov     r9d, dword [rcx+40] ; sample mb_proc state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_6_10
-.dbg_skip_6_10:
-    mov     r11d, dword [rcx+44] ; sample mb_proc state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_6_11
-.dbg_skip_6_11:
-    mov     eax, dword [rcx+48] ; sample mb_proc state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_6_12
-.dbg_skip_6_12:
-    mov     ecx, dword [rcx+52] ; sample mb_proc state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_6_13
-.dbg_skip_6_13:
-    mov     edx, dword [rcx+56] ; sample mb_proc state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_6_14
-.dbg_skip_6_14:
-    mov     r8d, dword [rcx+60] ; sample mb_proc state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_6_15
-.dbg_skip_6_15:
-    mov     r9d, dword [rcx+64] ; sample mb_proc state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_6_16
-.dbg_skip_6_16:
-    mov     r11d, dword [rcx+68] ; sample mb_proc state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_6_17
-.dbg_skip_6_17:
-    mov     eax, dword [rcx+72] ; sample mb_proc state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_6_18
-.dbg_skip_6_18:
-    mov     ecx, dword [rcx+76] ; sample mb_proc state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_6_19
-.dbg_skip_6_19:
-    mov     edx, dword [rcx+80] ; sample mb_proc state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_6_20
-.dbg_skip_6_20:
-    mov     r8d, dword [rcx+84] ; sample mb_proc state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_6_21
-.dbg_skip_6_21:
-.dbg_null_6:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
