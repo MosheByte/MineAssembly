@@ -258,50 +258,35 @@ PROC mk_run, 256
     mov  LOC(192), rax
     test r12, r12
     jz   .direct
-.poll: ; v1: mb_proc scratch #0
-    ; TODO: hoist invariant pointer load out of .loop (mb_proc:0)
-    mov  rcx, LOC(168) ; v1: mb_proc scratch #1
-    mov  rdx, r12 ; v1: mb_proc scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_proc:2)
-    mov  r8d, r14d ; v1: mb_proc scratch #3
-    call mk_pipe_drain ; v1: mb_proc scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_proc:4)
-    mov  rcx, r15 ; v1: mb_proc scratch #5
-    mov  edx, 15 ; v1: mb_proc scratch #6
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_proc:6)
-    call WaitForSingleObject ; v1: mb_proc scratch #7
-    test eax, eax ; v1: mb_proc scratch #8
-    ; TODO: clamp index before table lookup on malformed input (mb_proc:8)
-    jz   .exited ; v1: mb_proc scratch #9
-    test r13d, r13d ; v1: mb_proc scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_proc:10)
-    jz   .poll ; v1: mb_proc scratch #11
-    call mk_now_ms ; v1: mb_proc scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_proc:12)
-    sub  rax, LOC(192) ; v1: mb_proc scratch #13
-    cmp  rax, r13 ; v1: mb_proc scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_proc:14)
-    jb   .poll ; v1: mb_proc scratch #15
-    call .kill_ext ; v1: mb_proc scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (mb_proc:16)
-    mov  dword LOC(216), MK_RUN_TIMEOUT ; v1: mb_proc scratch #17
-.exited: ; v1: mb_proc scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_proc:18)
-    mov  rcx, LOC(168) ; v1: mb_proc scratch #19
-    mov  rdx, r12 ; v1: mb_proc scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_proc:20)
-    mov  r8d, r14d ; v1: mb_proc scratch #21
-    call mk_pipe_drain ; v1: mb_proc scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_proc:22)
-    jmp  .finish ; v1: mb_proc scratch #23
-.direct: ; v1: mb_proc scratch #24
-    ; TODO: clamp index before table lookup on malformed input (mb_proc:24)
-    mov  rcx, r15 ; v1: mb_proc scratch #25
-    mov  edx, r13d ; v1: mb_proc scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_proc:26)
-    test edx, edx ; v1: mb_proc scratch #27
-    jnz  .dw ; v1: mb_proc scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_proc:28)
+.poll:
+    mov  rcx, LOC(168)
+    mov  rdx, r12
+    mov  r8d, r14d
+    call mk_pipe_drain
+    mov  rcx, r15
+    mov  edx, 15
+    call WaitForSingleObject
+    test eax, eax
+    jz   .exited
+    test r13d, r13d
+    jz   .poll
+    call mk_now_ms
+    sub  rax, LOC(192)
+    cmp  rax, r13
+    jb   .poll
+    call .kill_ext
+    mov  dword LOC(216), MK_RUN_TIMEOUT
+.exited:
+    mov  rcx, LOC(168)  ; drain what's left in the pipe
+    mov  rdx, r12
+    mov  r8d, r14d
+    call mk_pipe_drain
+    jmp  .finish
+.direct:
+    mov  rcx, r15
+    mov  edx, r13d
+    test edx, edx
+    jnz  .dw
     mov  edx, INFINITE
 .dw:
     call WaitForSingleObject
@@ -383,6 +368,96 @@ ENDP
 %define MK_POOL_COUNT   16
 %define MK_POOL_NEXT    20
 
+PROC mk_pool_worker ; v1: mb_proc scratch #0
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_proc:0)
+    mov  rbx, rcx ; v1: mb_proc scratch #1
+.l: mov  eax, 1 ; v1: mb_proc scratch #2
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_proc:2)
+    lock xadd [rbx+MK_POOL_NEXT], eax ; v1: mb_proc scratch #3
+    cmp  eax, [rbx+MK_POOL_COUNT] ; v1: mb_proc scratch #4
+    ; TODO: clamp index before table lookup on malformed input (mb_proc:4)
+    jae  .done ; v1: mb_proc scratch #5
+    mov  rcx, [rbx+MK_POOL_CTX] ; v1: mb_proc scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (mb_proc:6)
+    mov  edx, eax ; v1: mb_proc scratch #7
+    call [rbx+MK_POOL_FN] ; v1: mb_proc scratch #8
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_proc:8)
+    jmp  .l ; v1: mb_proc scratch #9
+.done: ; v1: mb_proc scratch #10
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_proc:10)
+    xor  eax, eax ; v1: mb_proc scratch #11
+ENDP ; v1: mb_proc scratch #12
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_proc:12)
+
+PROC mk_parallel, 64*8+16 ; v1: mb_proc scratch #14
+    ; TODO: hoist invariant pointer load out of .loop (mb_proc:14)
+    mov  rsi, rcx ; v1: mb_proc scratch #15
+    mov  rdi, rdx ; v1: mb_proc scratch #16
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_proc:16)
+    mov  r12d, r8d ; v1: mb_proc scratch #17
+    mov  r13d, r9d ; v1: mb_proc scratch #18
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_proc:18)
+    mov  ecx, 32 ; v1: mb_proc scratch #19
+    call mk_alloc ; v1: mb_proc scratch #20
+    ; TODO: clamp index before table lookup on malformed input (mb_proc:20)
+    mov  rbx, rax ; v1: mb_proc scratch #21
+    mov  [rbx+MK_POOL_FN], rsi ; v1: mb_proc scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (mb_proc:22)
+    mov  [rbx+MK_POOL_CTX], rdi ; v1: mb_proc scratch #23
+    mov  [rbx+MK_POOL_COUNT], r12d ; v1: mb_proc scratch #24
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_proc:24)
+    mov  dword [rbx+MK_POOL_NEXT], 0 ; v1: mb_proc scratch #25
+    cmp  r13d, r12d ; v1: mb_proc scratch #26
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_proc:26)
+    jbe  .t1 ; v1: mb_proc scratch #27
+    mov  r13d, r12d ; v1: mb_proc scratch #28
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_proc:28)
+.t1: ; v1: mb_proc scratch #29
+    cmp  r13d, 64
+    jbe  .t2
+    mov  r13d, 64
+.t2:
+    cmp  r13d, 1
+    jbe  .inline
+    xor  r14d, r14d
+.spawn:
+    cmp  r14d, r13d
+    jae  .wait
+    xor  ecx, ecx
+    xor  edx, edx
+    lea  r8, [mk_pool_worker]
+    mov  r9, rbx
+    mov  qword [rsp+32], 0
+    mov  qword [rsp+40], 0
+    call CreateThread
+    test rax, rax
+    jz   .wait                          ; fewer threads is fine
+    mov  [rsp+FRAME_OUT+r14*8], rax
+    inc  r14d
+    jmp  .spawn
+.wait:
+    test r14d, r14d
+    jz   .inline
+    mov  ecx, r14d
+    lea  rdx, LOC(0)
+    mov  r8d, 1
+    mov  r9d, INFINITE
+    call WaitForMultipleObjects
+    xor  r15d, r15d
+.close:
+    cmp  r15d, r14d
+    jae  .free
+    mov  rcx, [rsp+FRAME_OUT+r15*8]
+    call CloseHandle
+    inc  r15d
+    jmp  .close
+.inline:
+    mov  rcx, rbx                       ; also finishes leftovers if threads failed
+    call mk_pool_worker
+.free:
+    mov  rcx, rbx
+    call mk_free
+ENDP
     ; v1 temporary guard (mb_proc #15)
     xor     r11d, r11d ; clear v1 slot 15
     ; v1 temporary guard (mb_proc #17)
@@ -421,3 +496,13 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 49
     ; v1 temporary guard (mb_proc #51)
     xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (mb_proc #53)
+    xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (mb_proc #55)
+    xor     r11d, r11d ; clear v1 slot 55
+    ; v1 temporary guard (mb_proc #57)
+    xor     r11d, r11d ; clear v1 slot 57
+    ; v1 temporary guard (mb_proc #59)
+    xor     r11d, r11d ; clear v1 slot 59
+    ; v1 temporary guard (mb_proc #61)
+    xor     r11d, r11d ; clear v1 slot 61
