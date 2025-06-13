@@ -971,66 +971,46 @@ PROC mk_abs
 ENDP
 
 ; argv, CommandLineToArgvW rules
-PROC mk_parse_args ; v1: mb_util scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_util:2)
-    call GetCommandLineA ; v1: mb_util scratch #3
-    mov  rsi, rax ; v1: mb_util scratch #4
-    ; TODO: clamp index before table lookup on malformed input (mb_util:4)
-    mov  rcx, rax ; v1: mb_util scratch #5
-    call mk_strlen ; v1: mb_util scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_util:6)
-    mov  r12, rax ; v1: mb_util scratch #7
-    lea  rcx, [r12+r12+16] ; v1: mb_util scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_util:8)
-    call mk_alloc ; v1: mb_util scratch #9
-    mov  rdi, rax ; v1: mb_util scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_util:10)
-    lea  rcx, [r12*8+32] ; v1: mb_util scratch #11
-    call mk_alloc ; v1: mb_util scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (mb_util:12)
-    mov  r13, rax ; v1: mb_util scratch #13
-    xor  r14d, r14d ; v1: mb_util scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_util:14)
+PROC mk_parse_args
+    call GetCommandLineA
+    mov  rsi, rax
+    mov  rcx, rax
+    call mk_strlen
+    mov  r12, rax
+    lea  rcx, [r12+r12+16]
+    call mk_alloc
+    mov  rdi, rax
+    lea  rcx, [r12*8+32]
+    call mk_alloc
+    mov  r13, rax
+    xor  r14d, r14d
     ; argv[0]: up to the closing quote or first blank, no escapes
-    mov  [r13], rdi ; v1: mb_util scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_util:16)
-    inc  r14d ; v1: mb_util scratch #17
-    cmp  byte [rsi], '"' ; v1: mb_util scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_util:18)
-    jne  .p0 ; v1: mb_util scratch #19
-    inc  rsi ; v1: mb_util scratch #20
-    ; TODO: clamp index before table lookup on malformed input (mb_util:20)
-.q0: ; v1: mb_util scratch #21
-    movzx eax, byte [rsi] ; v1: mb_util scratch #22
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_util:22)
-    test eax, eax ; v1: mb_util scratch #23
-    jz   .end0 ; v1: mb_util scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_util:24)
-    inc  rsi ; v1: mb_util scratch #25
-    cmp  eax, '"' ; v1: mb_util scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_util:26)
-    je   .end0 ; v1: mb_util scratch #27
-    mov  [rdi], al ; v1: mb_util scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (mb_util:28)
-    inc  rdi ; v1: mb_util scratch #29
-    jmp  .q0 ; v1: mb_util scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_util:30)
-.p0: ; v1: mb_util scratch #31
-    movzx eax, byte [rsi] ; v1: mb_util scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_util:32)
-    test eax, eax ; v1: mb_util scratch #33
-    jz   .end0 ; v1: mb_util scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_util:34)
-    cmp  eax, ' ' ; v1: mb_util scratch #35
-    je   .end0 ; v1: mb_util scratch #36
-    ; TODO: clamp index before table lookup on malformed input (mb_util:36)
-    cmp  eax, 9 ; v1: mb_util scratch #37
-    je   .end0 ; v1: mb_util scratch #38
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_util:38)
-    mov  [rdi], al ; v1: mb_util scratch #39
-    inc  rdi ; v1: mb_util scratch #40
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_util:40)
-    inc  rsi ; v1: mb_util scratch #41
+    mov  [r13], rdi
+    inc  r14d
+    cmp  byte [rsi], '"'
+    jne  .p0
+    inc  rsi
+.q0:
+    movzx eax, byte [rsi]
+    test eax, eax
+    jz   .end0
+    inc  rsi
+    cmp  eax, '"'
+    je   .end0
+    mov  [rdi], al
+    inc  rdi
+    jmp  .q0
+.p0:
+    movzx eax, byte [rsi]
+    test eax, eax
+    jz   .end0
+    cmp  eax, ' '
+    je   .end0
+    cmp  eax, 9
+    je   .end0
+    mov  [rdi], al
+    inc  rdi
+    inc  rsi
     jmp  .p0
 .end0:
     mov  byte [rdi], 0
@@ -1126,35 +1106,63 @@ PROC mk_parse_args ; v1: mb_util scratch #2
     mov  [mk_argc], r14d
     mov  [mk_argv], r13
 ENDP
-    ; v1 temporary guard (mb_util #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (mb_util #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (mb_util #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (mb_util #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (mb_util #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (mb_util #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (mb_util #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (mb_util #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (mb_util #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (mb_util #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (mb_util #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (mb_util #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (mb_util #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (mb_util #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (mb_util #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (mb_util #50)
-    xor     r11d, r11d ; clear v1 slot 50
+
+; repo root = nearest dir with include\api.inc, walking up from mabuild.exe,
+; then from the cwd
+
+PROC mk_root_walk, MK_PATH
+    mov  rbx, rcx
+.up:
+    mov  rcx, rbx
+    call mk_basename
+    cmp  rax, rbx
+    je   .no
+    mov  byte [rax-1], 0                ; drop the last component
+    cmp  byte [rbx], 0
+    je   .no
+    lea  rcx, LOC(0)
+    mov  rdx, rbx
+    lea  r8, [mk_s_apiinc]
+    call mk_path_join
+    lea  rcx, LOC(0)
+    call mk_is_file
+    test eax, eax
+    jz   .up
+    lea  rcx, [mk_root]
+    mov  rdx, rbx
+    call mk_strcpy
+    mov  eax, 1
+    jmp  .done
+.no:
+    xor  eax, eax
+.done:
+ENDP
+
+PROC mk_find_root, MK_PATH*2
+    xor  ecx, ecx
+    lea  rdx, LOC(0)
+    mov  r8d, MK_PATH
+    call GetModuleFileNameA
+    lea  rcx, LOC(0)
+    call mk_root_walk
+    test eax, eax
+    jnz  .found
+    mov  ecx, MK_PATH
+    lea  rdx, LOC(0)
+    call GetCurrentDirectoryA
+    lea  rcx, LOC(MK_PATH)            ; cwd + "\x": the first cut keeps cwd
+    lea  rdx, LOC(0)
+    lea  r8, [mk_s_x]
+    call mk_path_join
+    lea  rcx, LOC(MK_PATH)
+    call mk_root_walk
+    test eax, eax
+    jnz  .found
+    mov  ecx, MK_PATH                   ; give up: use the current directory
+    lea  rdx, [mk_root]
+    call GetCurrentDirectoryA
+.found:
+    lea  rcx, [mk_root]
+    call mk_strlen
+    mov  [mk_root_len], eax
+ENDP
