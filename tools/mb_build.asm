@@ -279,77 +279,54 @@ PROC mk_list_src, 400+MK_PATH
 ENDP
 
 ; room for count+2 jobs
-PROC mk_new_jobs ; v1: mb_build scratch #2
-    ; TODO: clamp index before table lookup on malformed input (mb_build:2)
-    lea  eax, [edx+2] ; v1: mb_build scratch #3
-    imul ecx, eax, MK_AJ_SIZE ; v1: mb_build scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_build:4)
-    call mk_alloc ; v1: mb_build scratch #5
-ENDP ; v1: mb_build scratch #6
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_build:6)
+PROC mk_new_jobs
+    lea  eax, [edx+2]
+    imul ecx, eax, MK_AJ_SIZE
+    call mk_alloc
+ENDP
 
-PROC mk_job_objs ; v1: mb_build scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_build:8)
-    mov  rbx, rcx ; v1: mb_build scratch #9
-    mov  esi, edx ; v1: mb_build scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_build:10)
-    lea  ecx, [edx+2] ; v1: mb_build scratch #11
-    shl  ecx, 3 ; v1: mb_build scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_build:12)
-    call mk_alloc ; v1: mb_build scratch #13
-    xor  ecx, ecx ; v1: mb_build scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_build:14)
-.l: cmp  ecx, esi ; v1: mb_build scratch #15
-    jae  .done ; v1: mb_build scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (mb_build:16)
-    imul rdx, rcx, MK_AJ_SIZE ; v1: mb_build scratch #17
-    mov  rdx, [rbx+rdx+MK_AJ_OBJ] ; v1: mb_build scratch #18
-    ; TODO: clamp index before table lookup on malformed input (mb_build:18)
-    mov  [rax+rcx*8], rdx ; v1: mb_build scratch #19
-    inc  ecx ; v1: mb_build scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_build:20)
-    jmp  .l ; v1: mb_build scratch #21
-.done: ; v1: mb_build scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_build:22)
-ENDP ; v1: mb_build scratch #23
+PROC mk_job_objs
+    mov  rbx, rcx
+    mov  esi, edx
+    lea  ecx, [edx+2]
+    shl  ecx, 3
+    call mk_alloc
+    xor  ecx, ecx
+.l: cmp  ecx, esi
+    jae  .done
+    imul rdx, rcx, MK_AJ_SIZE
+    mov  rdx, [rbx+rdx+MK_AJ_OBJ]
+    mov  [rax+rcx*8], rdx
+    inc  ecx
+    jmp  .l
+.done:
+ENDP
 
-PROC mk_job_add_unique, MK_PATH ; v1: mb_build scratch #25
-    mov  rbx, rcx ; v1: mb_build scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_build:26)
-    mov  r12d, edx ; v1: mb_build scratch #27
-    mov  rsi, r8 ; v1: mb_build scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_build:28)
-    mov  r13, r9 ; v1: mb_build scratch #29
-    xor  edi, edi ; v1: mb_build scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_build:30)
-.dup: ; v1: mb_build scratch #31
-    cmp  edi, r12d ; v1: mb_build scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_build:32)
-    jae  .new ; v1: mb_build scratch #33
-    imul rax, rdi, MK_AJ_SIZE ; v1: mb_build scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (mb_build:34)
-    mov  rcx, [rbx+rax+MK_AJ_SRC] ; v1: mb_build scratch #35
-    mov  rdx, rsi ; v1: mb_build scratch #36
-    ; TODO: clamp index before table lookup on malformed input (mb_build:36)
-    call mk_stricmp ; v1: mb_build scratch #37
-    test eax, eax ; v1: mb_build scratch #38
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_build:38)
-    jz   .ret ; v1: mb_build scratch #39
-    inc  edi ; v1: mb_build scratch #40
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_build:40)
-    jmp  .dup ; v1: mb_build scratch #41
-.new: ; v1: mb_build scratch #42
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_build:42)
-    imul rdi, r12, MK_AJ_SIZE ; v1: mb_build scratch #43
-    add  rdi, rbx ; v1: mb_build scratch #44
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_build:44)
-    mov  [rdi+MK_AJ_SRC], rsi ; v1: mb_build scratch #45
-    mov  dword [rdi+MK_AJ_MODE], MK_NASM_GAME ; v1: mb_build scratch #46
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_build:46)
-    lea  rcx, LOC(0) ; v1: mb_build scratch #47
-    mov  rdx, r13 ; v1: mb_build scratch #48
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_build:48)
-    mov  r8, rsi ; v1: mb_build scratch #49
+PROC mk_job_add_unique, MK_PATH
+    mov  rbx, rcx
+    mov  r12d, edx
+    mov  rsi, r8
+    mov  r13, r9
+    xor  edi, edi
+.dup:
+    cmp  edi, r12d
+    jae  .new
+    imul rax, rdi, MK_AJ_SIZE
+    mov  rcx, [rbx+rax+MK_AJ_SRC]
+    mov  rdx, rsi
+    call mk_stricmp
+    test eax, eax
+    jz   .ret
+    inc  edi
+    jmp  .dup
+.new:
+    imul rdi, r12, MK_AJ_SIZE
+    add  rdi, rbx
+    mov  [rdi+MK_AJ_SRC], rsi
+    mov  dword [rdi+MK_AJ_MODE], MK_NASM_GAME
+    lea  rcx, LOC(0)
+    mov  rdx, r13
+    mov  r8, rsi
     call mk_obj_path
     lea  rcx, LOC(0)
     call mk_strdup
@@ -423,6 +400,179 @@ PROC mk_print_ok, MK_PATH
     lea  rcx, [mk_s_bytes]
     call mk_println
 ENDP
+
+PROC mk_cmd_build, 3*MK_PATH+160 ; v1: mb_build scratch #1
+    ; LOC(0) object dir, LOC(520) exe path, LOC(1040) scratch path,
+    ; LOC(1560) source list, LOC(1584) failed names, LOC(1608) missing names,
+    ; LOC(1632) link output, LOC(1656) command line
+    lea  rdi, LOC(1560) ; v1: mb_build scratch #5
+    xor  eax, eax ; v1: mb_build scratch #6
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_build:6)
+    mov  ecx, 120 ; v1: mb_build scratch #7
+    rep  stosb ; v1: mb_build scratch #8
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_build:8)
+    ; build\obj + MineAssembly.exe, or the _tag variants
+    mov  rax, [mk_opt_tag] ; v1: mb_build scratch #10
+    ; TODO: verify 16-byte rsp alignment before inner call (mb_build:10)
+    test rax, rax ; v1: mb_build scratch #11
+    jz   .notag ; v1: mb_build scratch #12
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_build:12)
+    lea  rcx, LOC(0) ; v1: mb_build scratch #13
+    lea  rdx, [mk_s_objtag] ; v1: mb_build scratch #14
+    ; TODO: clamp index before table lookup on malformed input (mb_build:14)
+    call mk_strcpy ; v1: mb_build scratch #15
+    mov  rcx, rax ; v1: mb_build scratch #16
+    ; TODO: hoist invariant pointer load out of .loop (mb_build:16)
+    mov  rdx, [mk_opt_tag] ; v1: mb_build scratch #17
+    call mk_strcpy ; v1: mb_build scratch #18
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_build:18)
+    lea  rcx, LOC(1040) ; v1: mb_build scratch #19
+    lea  rdx, [mk_s_build_bs] ; v1: mb_build scratch #20
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_build:20)
+    call mk_strcpy ; v1: mb_build scratch #21
+    mov  rcx, rax ; v1: mb_build scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_build:22)
+    mov  rdx, [mk_opt_tag] ; v1: mb_build scratch #23
+    call mk_strcpy ; v1: mb_build scratch #24
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_build:24)
+    lea  rcx, LOC(1040) ; v1: mb_build scratch #25
+    call mk_mkdirs ; v1: mb_build scratch #26
+    ; TODO: verify 16-byte rsp alignment before inner call (mb_build:26)
+    lea  rcx, LOC(520) ; v1: mb_build scratch #27
+    lea  rdx, LOC(1040) ; v1: mb_build scratch #28
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_build:28)
+    lea  r8, [mk_s_exename] ; v1: mb_build scratch #29
+    call mk_path_join ; v1: mb_build scratch #30
+    ; TODO: clamp index before table lookup on malformed input (mb_build:30)
+    jmp  .dirs ; v1: mb_build scratch #31
+.notag: ; v1: mb_build scratch #32
+    ; TODO: hoist invariant pointer load out of .loop (mb_build:32)
+    lea  rcx, LOC(0) ; v1: mb_build scratch #33
+    lea  rdx, [mk_s_buildobj] ; v1: mb_build scratch #34
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_build:34)
+    call mk_strcpy
+    lea  rcx, LOC(520)
+    lea  rdx, [mk_s_exename]
+    call mk_strcpy
+.dirs:
+    lea  rcx, LOC(0)
+    call mk_mkdirs
+    lea  rcx, LOC(1560)
+    call mk_list_src
+    mov  r12d, eax
+    test eax, eax
+    jnz  .have
+    lea  rcx, [mk_s_nosrc]
+    call mk_println
+    mov  eax, 1
+    jmp  .done
+.have:
+    mov  edx, r12d
+    call mk_new_jobs
+    mov  rbx, rax
+    xor  esi, esi
+.mk:
+    cmp  esi, r12d
+    jae  .mkd
+    imul rdi, rsi, MK_AJ_SIZE
+    add  rdi, rbx
+    mov  rax, LOC(1560)
+    mov  rax, [rax+rsi*8]
+    mov  [rdi+MK_AJ_SRC], rax
+    lea  rcx, LOC(1040)
+    lea  rdx, LOC(0)
+    mov  r8, rax
+    call mk_obj_path
+    lea  rcx, LOC(1040)
+    call mk_strdup
+    mov  [rdi+MK_AJ_OBJ], rax
+    mov  dword [rdi+MK_AJ_MODE], MK_NASM_GAME
+    inc  esi
+    jmp  .mk
+.mkd:
+    ; one nasm per logical cpu
+    lea  rcx, [mk_asm_job]
+    mov  rdx, rbx
+    mov  r8d, r12d
+    mov  r9d, [mk_ncpu]
+    call mk_parallel
+    ; report in source order so the output doesn't depend on which job finished first
+    xor  esi, esi
+.rep:
+    cmp  esi, r12d
+    jae  .repd
+    imul rdi, rsi, MK_AJ_SIZE
+    add  rdi, rbx
+    mov  rcx, [rdi+MK_AJ_OUT+MK_BUF_PTR]
+    mov  rdx, [rdi+MK_AJ_OUT+MK_BUF_LEN]
+    call mk_print_stripped
+    cmp  dword [rdi+MK_AJ_RC], 0
+    je   .repn
+    cmp  qword LOC(1584+MK_BUF_LEN), 0
+    je   .f1
+    lea  rcx, LOC(1584)
+    lea  rdx, [mk_s_comma]
+    call mk_buf_addz
+.f1:
+    mov  rcx, [rdi+MK_AJ_SRC]
+    call mk_basename
+    lea  rcx, LOC(1584)
+    mov  rdx, rax
+    call mk_buf_addz
+.repn:
+    inc  esi
+    jmp  .rep
+.repd:
+    cmp  qword LOC(1584+MK_BUF_LEN), 0
+    je   .asm_ok
+    lea  rcx, [mk_s_asmfail]
+    call mk_print
+    mov  rcx, LOC(1584+MK_BUF_PTR)
+    call mk_println
+    mov  eax, 1
+    jmp  .done
+.asm_ok:
+    mov  rcx, rbx
+    mov  edx, r12d
+    call mk_job_objs
+    mov  r15, rax
+    mov  r13d, r12d
+    cmp  dword [mk_opt_stubs], 0
+    je   .link
+    call mk_api_load
+    test eax, eax
+    jz   .fail1
+    mov  rcx, r15
+    mov  edx, r12d
+    lea  r8, LOC(0)
+    lea  r9, LOC(1608)
+    call mk_make_stubs
+    test eax, eax
+    jz   .link
+    mov  r14d, eax
+    lea  rcx, [mk_s_stubbed1]
+    call mk_print
+    mov  ecx, r14d
+    call mk_print_u
+    lea  rcx, [mk_s_stubbed2]
+    call mk_print
+    mov  rcx, LOC(1608+MK_BUF_PTR)
+    call mk_println
+    imul rdi, r12, MK_AJ_SIZE           ; extra job for stubs.asm
+    add  rdi, rbx
+    lea  rcx, LOC(1040)
+    lea  rdx, LOC(0)
+    lea  r8, [mk_s_stubs_asm]
+    call mk_path_join
+    lea  rcx, LOC(1040)
+    ; v1 temporary guard (mb_build #15)
+    xor     r11d, r11d ; clear v1 slot 15
+    ; v1 temporary guard (mb_build #17)
+    xor     r11d, r11d ; clear v1 slot 17
+    ; v1 temporary guard (mb_build #19)
+    xor     r11d, r11d ; clear v1 slot 19
+    ; v1 temporary guard (mb_build #21)
+    xor     r11d, r11d ; clear v1 slot 21
     ; v1 temporary guard (mb_build #23)
     xor     r11d, r11d ; clear v1 slot 23
     ; v1 temporary guard (mb_build #25)
@@ -455,11 +605,3 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 51
     ; v1 temporary guard (mb_build #53)
     xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (mb_build #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (mb_build #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (mb_build #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (mb_build #61)
-    xor     r11d, r11d ; clear v1 slot 61
