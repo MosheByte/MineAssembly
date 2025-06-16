@@ -700,61 +700,44 @@ PROC mk_cmd_check, 2*MK_PATH
     lea  rcx, [mk_s_colon_ok]
     call mk_println
 .rn:
-    inc  esi ; v1: mb_build scratch #0
-    ; TODO: hoist invariant pointer load out of .loop (mb_build:0)
-    jmp  .rep ; v1: mb_build scratch #1
-.repd: ; v1: mb_build scratch #2
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_build:2)
-    xor  eax, eax ; v1: mb_build scratch #3
-    test r13d, r13d ; v1: mb_build scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_build:4)
-    setnz al ; v1: mb_build scratch #5
-ENDP ; v1: mb_build scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_build:6)
+    inc  esi
+    jmp  .rep
+.repd:
+    xor  eax, eax
+    test r13d, r13d
+    setnz al
+ENDP
 
 ; build\test\NAME.dll: FILEs + src\globals.asm, api symbols nobody defines get
 ; stubbed, everything exported
-PROC mk_cmd_dll, 3*MK_PATH+32 ; v1: mb_build scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_build:10)
+PROC mk_cmd_dll, 3*MK_PATH+32
     ; LOC(0) out dir, LOC(520) scratch, LOC(1040) dll path, LOC(1560) link output
-    xor  eax, eax ; v1: mb_build scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_build:12)
-    mov  LOC(1560), rax ; v1: mb_build scratch #13
-    mov  LOC(1568), rax ; v1: mb_build scratch #14
-    ; TODO: clamp index before table lookup on malformed input (mb_build:14)
-    mov  LOC(1576), rax ; v1: mb_build scratch #15
-    lea  rcx, LOC(0) ; v1: mb_build scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_build:16)
-    lea  rdx, [mk_s_testdir] ; v1: mb_build scratch #17
-    call mk_strcpy ; v1: mb_build scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (mb_build:18)
-    mov  rcx, rax ; v1: mb_build scratch #19
-    mov  rdx, [mk_opt_name] ; v1: mb_build scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_build:20)
-    call mk_strcpy ; v1: mb_build scratch #21
-    lea  rcx, LOC(0) ; v1: mb_build scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_build:22)
-    call mk_mkdirs ; v1: mb_build scratch #23
+    xor  eax, eax
+    mov  LOC(1560), rax
+    mov  LOC(1568), rax
+    mov  LOC(1576), rax
+    lea  rcx, LOC(0)
+    lea  rdx, [mk_s_testdir]
+    call mk_strcpy
+    mov  rcx, rax
+    mov  rdx, [mk_opt_name]
+    call mk_strcpy
+    lea  rcx, LOC(0)
+    call mk_mkdirs
     ; sources = FILEs + src\globals.asm (duplicates dropped, order kept)
-    mov  r12d, [mk_opt_nfiles] ; v1: mb_build scratch #25
-    lea  edx, [r12d+1] ; v1: mb_build scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_build:26)
-    call mk_new_jobs ; v1: mb_build scratch #27
-    mov  rbx, rax ; v1: mb_build scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_build:28)
-    xor  r13d, r13d ; v1: mb_build scratch #29
-    xor  esi, esi ; v1: mb_build scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_build:30)
-.mk: ; v1: mb_build scratch #31
-    cmp  esi, r12d ; v1: mb_build scratch #32
-    ; TODO: clamp index before table lookup on malformed input (mb_build:32)
-    jae  .mk_glob ; v1: mb_build scratch #33
-    mov  rax, [mk_opt_files] ; v1: mb_build scratch #34
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_build:34)
-    mov  r8, [rax+rsi*8] ; v1: mb_build scratch #35
-    mov  rcx, rbx ; v1: mb_build scratch #36
-    ; TODO: hoist invariant pointer load out of .loop (mb_build:36)
-    mov  edx, r13d ; v1: mb_build scratch #37
+    mov  r12d, [mk_opt_nfiles]
+    lea  edx, [r12d+1]
+    call mk_new_jobs
+    mov  rbx, rax
+    xor  r13d, r13d
+    xor  esi, esi
+.mk:
+    cmp  esi, r12d
+    jae  .mk_glob
+    mov  rax, [mk_opt_files]
+    mov  r8, [rax+rsi*8]
+    mov  rcx, rbx
+    mov  edx, r13d
     lea  r9, LOC(0)
     call mk_job_add_unique
     mov  r13d, eax
@@ -867,41 +850,145 @@ PROC mk_cmd_dll, 3*MK_PATH+32 ; v1: mb_build scratch #10
     mov  rax, [rdi+MK_AJ_OBJ]
     mov  [r15+r13*8], rax
     inc  r13d
-    ; v1 temporary guard (mb_build #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (mb_build #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (mb_build #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (mb_build #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (mb_build #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (mb_build #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (mb_build #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (mb_build #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (mb_build #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (mb_build #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (mb_build #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (mb_build #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (mb_build #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (mb_build #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (mb_build #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (mb_build #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (mb_build #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (mb_build #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (mb_build #53)
-    xor     r11d, r11d ; clear v1 slot 53
+.link:
+    lea  rcx, LOC(1040)
+    lea  rdx, [mk_s_testdir]
+    call mk_strcpy
+    mov  rcx, rax
+    mov  rdx, [mk_opt_name]
+    call mk_strcpy
+    mov  rcx, rax
+    lea  rdx, [mk_s_dotdll]
+    call mk_strcpy
+    lea  rcx, [mk_t_gcc_dll]
+    lea  rdx, LOC(1040)
+    mov  r8, r15
+    mov  r9d, r13d
+    lea  rax, [mk_t_dll_tail]
+    mov  [rsp+32], rax
+    lea  rax, LOC(1560)
+    mov  [rsp+40], rax
+    call mk_link
+    test eax, eax
+    jz   .linked
+    mov  rcx, LOC(1560+MK_BUF_PTR)  ; linker output only shows on failure
+    mov  rdx, LOC(1560+MK_BUF_LEN)
+    call mk_print_stripped
+    lea  rcx, [mk_s_linkfail]
+    call mk_println
+    jmp  .fail1
+.linked:
+    lea  rcx, [mk_s_ok_arrow]
+    call mk_print
+    lea  rcx, LOC(520)
+    lea  rdx, LOC(1040)
+    call mk_abs
+    lea  rcx, LOC(520)
+    call mk_print
+    lea  rcx, [mk_s_paren]
+    call mk_print
+    mov  ecx, r14d
+    call mk_print_u
+    lea  rcx, [mk_s_dllstub]
+    call mk_println
+    xor  eax, eax
+    jmp  .done
+.fail1:
+    mov  eax, 1
+    jmp  .done
+
+.done:
+ENDP
+
+; mabuild self: moves the running exe to <exe>.old first (windows lets you
+; rename a running exe, just not overwrite it)
+PROC mk_cmd_self, 2*MK_PATH+64
+    ; LOC(0) own path, LOC(520) old path, LOC(1040) output buf, LOC(1064) cmd buf
+    xor  eax, eax
+    mov  LOC(1040), rax
+    mov  LOC(1048), rax
+    mov  LOC(1056), rax
+    mov  LOC(1064), rax
+    mov  LOC(1072), rax
+    mov  LOC(1080), rax
+    xor  ecx, ecx
+    lea  rdx, LOC(0)
+    mov  r8d, MK_PATH
+    call GetModuleFileNameA
+    lea  rcx, [mk_s_build]
+    call mk_mkdirs
+    lea  rcx, LOC(1064)
+    lea  rdx, [mk_s_selfsrc]
+    lea  r8, [mk_s_selfobj]
+    mov  r9d, MK_NASM_SELF
+    call mk_nasm_cmd
+    mov  rcx, LOC(1064)
+    xor  edx, edx
+    lea  r8, LOC(1040)
+    mov  r9d, MK_TOOL_TIMEOUT
+    mov  qword [rsp+32], 0
+    call mk_run
+    mov  ebx, eax
+    or   ebx, edx
+    mov  rcx, LOC(1040)
+    mov  rdx, LOC(1048)
+    call mk_print_stripped
+    test ebx, ebx
+    jz   .asm_ok
+    lea  rcx, [mk_s_selffail]
+    call mk_println
+    jmp  .fail1
+.asm_ok:
+    lea  rcx, LOC(1040)
+    call mk_buf_clear
+    lea  rcx, LOC(520)
+    lea  rdx, LOC(0)
+    call mk_strcpy
+    mov  rcx, rax
+    lea  rdx, [mk_s_dotold]
+    call mk_strcpy
+    lea  rcx, LOC(520)
+    call DeleteFileA
+    lea  rcx, LOC(0)
+    lea  rdx, LOC(520)
+    mov  r8d, MOVEFILE_REPLACE_EXISTING
+    call MoveFileExA
+    test eax, eax
+    jnz  .moved
+    lea  rcx, [mk_s_renfail]
+    call mk_println
+    jmp  .fail1
+.moved:
+    lea  rax, [mk_s_selfobj]
+    mov  LOC(1088), rax
+    lea  rcx, [mk_t_gcc_self]
+    lea  rdx, LOC(0)
+    lea  r8, LOC(1088)
+    mov  r9d, 1
+    lea  rax, [mk_t_self_tail]
+    mov  [rsp+32], rax
+    lea  rax, LOC(1040)
+    mov  [rsp+40], rax
+    call mk_link
+    mov  ebx, eax
+    mov  rcx, LOC(1040)
+    mov  rdx, LOC(1048)
+    call mk_print_stripped
+    test ebx, ebx
+    jz   .linked
+    lea  rcx, LOC(520)                ; put the old exe back
+    lea  rdx, LOC(0)
+    mov  r8d, MOVEFILE_REPLACE_EXISTING
+    call MoveFileExA
+    lea  rcx, [mk_s_linkfail]
+    call mk_println
+    jmp  .fail1
+.linked:
+    lea  rcx, LOC(0)
+    call mk_print_ok
+    xor  eax, eax
+    jmp  .done
+.fail1:
+    mov  eax, 1
+.done:
+ENDP
