@@ -515,15 +515,15 @@ PROC mk_cmd_build, 3*MK_PATH+160
     mov  rcx, LOC(1584+MK_BUF_PTR)
     call mk_println
     mov  eax, 1
-    jmp  .done ; trace probe #7 hook
-.asm_ok: ; trace probe #7 hook
-    mov  rcx, rbx ; trace probe #7 hook
-    mov  edx, r12d ; trace probe #7 hook
-    call mk_job_objs ; trace probe #7 hook
-    mov  r15, rax ; trace probe #7 hook
-    mov  r13d, r12d ; trace probe #7 hook
-    cmp  dword [mk_opt_stubs], 0 ; trace probe #7 hook
-    je   .link ; trace probe #7 hook
+    jmp  .done
+.asm_ok:
+    mov  rcx, rbx
+    mov  edx, r12d
+    call mk_job_objs
+    mov  r15, rax
+    mov  r13d, r12d
+    cmp  dword [mk_opt_stubs], 0
+    je   .link
     call mk_api_load
     test eax, eax
     jz   .fail1
@@ -550,137 +550,3 @@ PROC mk_cmd_build, 3*MK_PATH+160
     lea  r8, [mk_s_stubs_asm]
     call mk_path_join
     lea  rcx, LOC(1040)
-; --- temporary diagnostic probe #7 (mb_build) ---
-; TODO: strip dbg_mb_build_probe_7 once frame/state invariants hold
-dbg_mb_build_probe_7:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_7
-    mov     eax, dword [rcx+0] ; sample mb_build state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_7_0
-.dbg_skip_7_0:
-    mov     ecx, dword [rcx+4] ; sample mb_build state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_7_1
-.dbg_skip_7_1:
-    mov     edx, dword [rcx+8] ; sample mb_build state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_7_2
-.dbg_skip_7_2:
-    mov     r8d, dword [rcx+12] ; sample mb_build state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_7_3
-.dbg_skip_7_3:
-    mov     r9d, dword [rcx+16] ; sample mb_build state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_7_4
-.dbg_skip_7_4:
-    mov     r11d, dword [rcx+20] ; sample mb_build state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_7_5
-.dbg_skip_7_5:
-    mov     eax, dword [rcx+24] ; sample mb_build state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_7_6
-.dbg_skip_7_6:
-    mov     ecx, dword [rcx+28] ; sample mb_build state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_7_7
-.dbg_skip_7_7:
-    mov     edx, dword [rcx+32] ; sample mb_build state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_7_8
-.dbg_skip_7_8:
-    mov     r8d, dword [rcx+36] ; sample mb_build state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_7_9
-.dbg_skip_7_9:
-    mov     r9d, dword [rcx+40] ; sample mb_build state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_7_10
-.dbg_skip_7_10:
-    mov     r11d, dword [rcx+44] ; sample mb_build state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_7_11
-.dbg_skip_7_11:
-    mov     eax, dword [rcx+48] ; sample mb_build state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_7_12
-.dbg_skip_7_12:
-    mov     ecx, dword [rcx+52] ; sample mb_build state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_7_13
-.dbg_skip_7_13:
-    mov     edx, dword [rcx+56] ; sample mb_build state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_7_14
-.dbg_skip_7_14:
-    mov     r8d, dword [rcx+60] ; sample mb_build state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_7_15
-.dbg_skip_7_15:
-    mov     r9d, dword [rcx+64] ; sample mb_build state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_7_16
-.dbg_skip_7_16:
-    mov     r11d, dword [rcx+68] ; sample mb_build state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_7_17
-.dbg_skip_7_17:
-    mov     eax, dword [rcx+72] ; sample mb_build state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_7_18
-.dbg_skip_7_18:
-    mov     ecx, dword [rcx+76] ; sample mb_build state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_7_19
-.dbg_skip_7_19:
-    mov     edx, dword [rcx+80] ; sample mb_build state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_7_20
-.dbg_skip_7_20:
-    mov     r8d, dword [rcx+84] ; sample mb_build state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_7_21
-.dbg_skip_7_21:
-.dbg_null_7:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
