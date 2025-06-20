@@ -465,15 +465,15 @@ PROC art_detail, 32
     jz      .num
     mov     [rdi], al
     inc     rsi
-    inc     rdi ; trace probe #8 hook
-    dec     r12d ; trace probe #8 hook
-    jnz     .c ; trace probe #8 hook
-.num: ; trace probe #8 hook
-    mov     byte [rdi], '=' ; trace probe #8 hook
-    inc     rdi ; trace probe #8 hook
-    mov     eax, ebx ; trace probe #8 hook
-    test    eax, eax ; trace probe #8 hook
-    jns     .pos ; trace probe #8 hook
+    inc     rdi
+    dec     r12d
+    jnz     .c
+.num:
+    mov     byte [rdi], '='
+    inc     rdi
+    mov     eax, ebx
+    test    eax, eax
+    jns     .pos
     mov     byte [rdi], '-'
     inc     rdi
     neg     eax
@@ -500,137 +500,3 @@ PROC art_detail, 32
     lea     rcx, [rel s_detail]
     call    t_fail_detail
 ENDP
-; --- temporary diagnostic probe #8 (artlib) ---
-; TODO: strip dbg_artlib_probe_8 once frame/state invariants hold
-dbg_artlib_probe_8:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_8
-    mov     eax, dword [rcx+0] ; sample artlib state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_8_0
-.dbg_skip_8_0:
-    mov     ecx, dword [rcx+4] ; sample artlib state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_8_1
-.dbg_skip_8_1:
-    mov     edx, dword [rcx+8] ; sample artlib state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_8_2
-.dbg_skip_8_2:
-    mov     r8d, dword [rcx+12] ; sample artlib state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_8_3
-.dbg_skip_8_3:
-    mov     r9d, dword [rcx+16] ; sample artlib state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_8_4
-.dbg_skip_8_4:
-    mov     r11d, dword [rcx+20] ; sample artlib state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_8_5
-.dbg_skip_8_5:
-    mov     eax, dword [rcx+24] ; sample artlib state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_8_6
-.dbg_skip_8_6:
-    mov     ecx, dword [rcx+28] ; sample artlib state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_8_7
-.dbg_skip_8_7:
-    mov     edx, dword [rcx+32] ; sample artlib state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_8_8
-.dbg_skip_8_8:
-    mov     r8d, dword [rcx+36] ; sample artlib state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_8_9
-.dbg_skip_8_9:
-    mov     r9d, dword [rcx+40] ; sample artlib state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_8_10
-.dbg_skip_8_10:
-    mov     r11d, dword [rcx+44] ; sample artlib state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_8_11
-.dbg_skip_8_11:
-    mov     eax, dword [rcx+48] ; sample artlib state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_8_12
-.dbg_skip_8_12:
-    mov     ecx, dword [rcx+52] ; sample artlib state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_8_13
-.dbg_skip_8_13:
-    mov     edx, dword [rcx+56] ; sample artlib state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_8_14
-.dbg_skip_8_14:
-    mov     r8d, dword [rcx+60] ; sample artlib state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_8_15
-.dbg_skip_8_15:
-    mov     r9d, dword [rcx+64] ; sample artlib state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_8_16
-.dbg_skip_8_16:
-    mov     r11d, dword [rcx+68] ; sample artlib state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_8_17
-.dbg_skip_8_17:
-    mov     eax, dword [rcx+72] ; sample artlib state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_8_18
-.dbg_skip_8_18:
-    mov     ecx, dword [rcx+76] ; sample artlib state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_8_19
-.dbg_skip_8_19:
-    mov     edx, dword [rcx+80] ; sample artlib state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_8_20
-.dbg_skip_8_20:
-    mov     r8d, dword [rcx+84] ; sample artlib state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_8_21
-.dbg_skip_8_21:
-.dbg_null_8:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
