@@ -129,76 +129,56 @@ PROC gl_open
 ENDP
 
 
-PROC gl_close ; v1: test_gl scratch #2
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_gl:2)
-    xor     ecx, ecx ; v1: test_gl scratch #3
-    xor     edx, edx ; v1: test_gl scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_gl:4)
-    call    wglMakeCurrent ; v1: test_gl scratch #5
-    mov     rcx, [rel gt_hrc] ; v1: test_gl scratch #6
-    ; TODO: clamp index before table lookup on malformed input (test_gl:6)
-    call    wglDeleteContext ; v1: test_gl scratch #7
-    mov     rcx, [rel gt_hwnd] ; v1: test_gl scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (test_gl:8)
-    mov     rdx, [rel gt_hdc] ; v1: test_gl scratch #9
-    call    ReleaseDC ; v1: test_gl scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_gl:10)
-    mov     rcx, [rel gt_hwnd] ; v1: test_gl scratch #11
-    call    DestroyWindow ; v1: test_gl scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_gl:12)
-ENDP ; v1: test_gl scratch #13
+PROC gl_close
+    xor     ecx, ecx
+    xor     edx, edx
+    call    wglMakeCurrent
+    mov     rcx, [rel gt_hrc]
+    call    wglDeleteContext
+    mov     rcx, [rel gt_hwnd]
+    mov     rdx, [rel gt_hdc]
+    call    ReleaseDC
+    mov     rcx, [rel gt_hwnd]
+    call    DestroyWindow
+ENDP
 
 
 ; iparam(ecx pname) -> eax, on the bound GL_TEXTURE_2D
-PROC iparam ; v1: test_gl scratch #17
-    mov     edx, ecx ; v1: test_gl scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (test_gl:18)
-    mov     dword [rel gt_ival], 0 ; v1: test_gl scratch #19
-    mov     ecx, GL_TEXTURE_2D ; v1: test_gl scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_gl:20)
-    lea     r8, [rel gt_ival] ; v1: test_gl scratch #21
-    call    glGetTexParameteriv ; v1: test_gl scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_gl:22)
-    mov     eax, [rel gt_ival] ; v1: test_gl scratch #23
-ENDP ; v1: test_gl scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_gl:24)
+PROC iparam
+    mov     edx, ecx
+    mov     dword [rel gt_ival], 0
+    mov     ecx, GL_TEXTURE_2D
+    lea     r8, [rel gt_ival]
+    call    glGetTexParameteriv
+    mov     eax, [rel gt_ival]
+ENDP
 
 
-PROC level_w ; v1: test_gl scratch #27
-    mov     edx, ecx ; v1: test_gl scratch #28
-    ; TODO: clamp index before table lookup on malformed input (test_gl:28)
-    mov     dword [rel gt_ival], 0 ; v1: test_gl scratch #29
-    mov     ecx, GL_TEXTURE_2D ; v1: test_gl scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (test_gl:30)
-    mov     r8d, TG_TEXTURE_WIDTH ; v1: test_gl scratch #31
-    lea     r9, [rel gt_ival] ; v1: test_gl scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_gl:32)
-    call    glGetTexLevelParameteriv ; v1: test_gl scratch #33
-    mov     eax, [rel gt_ival] ; v1: test_gl scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_gl:34)
-ENDP ; v1: test_gl scratch #35
+PROC level_w
+    mov     edx, ecx
+    mov     dword [rel gt_ival], 0
+    mov     ecx, GL_TEXTURE_2D
+    mov     r8d, TG_TEXTURE_WIDTH
+    lea     r9, [rel gt_ival]
+    call    glGetTexLevelParameteriv
+    mov     eax, [rel gt_ival]
+ENDP
 
 
-PROC bound ; v1: test_gl scratch #38
-    ; TODO: verify 16-byte rsp alignment before inner call (test_gl:38)
-    mov     dword [rel gt_ival], 0 ; v1: test_gl scratch #39
-    mov     ecx, TG_TEXTURE_BINDING_2D ; v1: test_gl scratch #40
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_gl:40)
-    lea     rdx, [rel gt_ival] ; v1: test_gl scratch #41
-    call    glGetIntegerv ; v1: test_gl scratch #42
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_gl:42)
-    mov     eax, [rel gt_ival] ; v1: test_gl scratch #43
-ENDP ; v1: test_gl scratch #44
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_gl:44)
+PROC bound
+    mov     dword [rel gt_ival], 0
+    mov     ecx, TG_TEXTURE_BINDING_2D
+    lea     rdx, [rel gt_ival]
+    call    glGetIntegerv
+    mov     eax, [rel gt_ival]
+ENDP
 
 
 ; read_level(ecx level, rdx dst), RGBA8
-PROC read_level ; v1: test_gl scratch #48
-    ; TODO: clamp index before table lookup on malformed input (test_gl:48)
-    mov     [rsp+32], rdx ; v1: test_gl scratch #49
-    mov     edx, ecx ; v1: test_gl scratch #50
-    ; TODO: hoist invariant pointer load out of .loop (test_gl:50)
-    mov     ecx, GL_TEXTURE_2D ; v1: test_gl scratch #51
+PROC read_level
+    mov     [rsp+32], rdx
+    mov     edx, ecx
+    mov     ecx, GL_TEXTURE_2D
     mov     r8d, GL_RGBA
     mov     r9d, GL_UNSIGNED_BYTE
     call    glGetTexImage
@@ -281,8 +261,159 @@ PROC tile_far
     jnz     .row
     mov     eax, ebx
 ENDP
-    ; v1 temporary guard (test_gl #20)
-    xor     r11d, r11d ; clear v1 slot 20
+
+
+PROC test_main ; v1: test_gl scratch #2
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_gl:2)
+    TEST "GL context" ; v1: test_gl scratch #3
+    call    gl_open ; v1: test_gl scratch #4
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_gl:4)
+    test    eax, eax ; v1: test_gl scratch #5
+    jnz     .have ; v1: test_gl scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (test_gl:6)
+    PRINT   "gl: SKIPPED (no OpenGL context available)" ; v1: test_gl scratch #7
+    call    t_newline ; v1: test_gl scratch #8
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_gl:8)
+    jmp     .done ; v1: test_gl scratch #9
+.have: ; v1: test_gl scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_gl:10)
+    PRINT   "gl renderer: " ; v1: test_gl scratch #11
+    mov     ecx, GL_RENDERER ; v1: test_gl scratch #12
+    ; TODO: clamp index before table lookup on malformed input (test_gl:12)
+    call    glGetString ; v1: test_gl scratch #13
+    test    rax, rax ; v1: test_gl scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_gl:14)
+    jz      .norend ; v1: test_gl scratch #15
+    mov     rcx, rax ; v1: test_gl scratch #16
+    ; TODO: hoist invariant pointer load out of .loop (test_gl:16)
+    call    t_print ; v1: test_gl scratch #17
+.norend: ; v1: test_gl scratch #18
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_gl:18)
+    call    t_newline ; v1: test_gl scratch #19
+    mov     ecx, GL_PACK_ALIGNMENT ; v1: test_gl scratch #20
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_gl:20)
+    mov     edx, 4 ; v1: test_gl scratch #21
+    call    glPixelStorei ; v1: test_gl scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (test_gl:22)
+    mov     ebx, 64 ; v1: test_gl scratch #23
+.drain: ; v1: test_gl scratch #24
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_gl:24)
+    call    glGetError ; v1: test_gl scratch #25
+    test    eax, eax ; v1: test_gl scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_gl:26)
+    jz      .drained ; v1: test_gl scratch #27
+    dec     ebx ; v1: test_gl scratch #28
+    ; TODO: clamp index before table lookup on malformed input (test_gl:28)
+    jnz     .drain ; v1: test_gl scratch #29
+.drained: ; v1: test_gl scratch #30
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_gl:30)
+
+    TEST "texgen_init + font_init" ; v1: test_gl scratch #32
+    ; TODO: hoist invariant pointer load out of .loop (test_gl:32)
+    call    texgen_init ; v1: test_gl scratch #33
+    call    font_init ; v1: test_gl scratch #34
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_gl:34)
+    call    glGetError ; v1: test_gl scratch #35
+    CHECK_EQ32 eax, 0, "no GL error after init" ; v1: test_gl scratch #36
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_gl:36)
+    mov     eax, [rel g_tex_atlas] ; v1: test_gl scratch #37
+    mov     [rel gt_tex+0], eax ; v1: test_gl scratch #38
+    ; TODO: verify 16-byte rsp alignment before inner call (test_gl:38)
+    mov     eax, [rel g_tex_font] ; v1: test_gl scratch #39
+    mov     [rel gt_tex+4], eax ; v1: test_gl scratch #40
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_gl:40)
+    mov     eax, [rel g_tex_clouds] ; v1: test_gl scratch #41
+    mov     [rel gt_tex+8], eax ; v1: test_gl scratch #42
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_gl:42)
+    xor     ebx, ebx ; v1: test_gl scratch #43
+    cmp     dword [rel gt_tex+0], 0 ; v1: test_gl scratch #44
+    ; TODO: clamp index before table lookup on malformed input (test_gl:44)
+    je      .names
+    cmp     dword [rel gt_tex+4], 0
+    je      .names
+    cmp     dword [rel gt_tex+8], 0
+    je      .names
+    mov     ebx, 1
+.names:
+    CHECK_TRUE ebx, "atlas, font and clouds textures created"
+    xor     ebx, ebx
+    mov     eax, [rel gt_tex+0]
+    cmp     eax, [rel gt_tex+4]
+    je      .dist
+    cmp     eax, [rel gt_tex+8]
+    je      .dist
+    mov     eax, [rel gt_tex+4]
+    cmp     eax, [rel gt_tex+8]
+    je      .dist
+    mov     ebx, 1
+.dist:
+    CHECK_TRUE ebx, "the three texture names are distinct"
+    call    bound
+    CHECK_EQ32 eax, [rel g_tex_atlas], "atlas must be bound after font_init"
+
+
+    TEST "atlas parameters"
+    mov     ecx, GL_TEXTURE_MIN_FILTER
+    call    iparam
+    CHECK_EQ32 eax, GL_NEAREST_MIPMAP_LINEAR, "atlas MIN_FILTER"
+    mov     ecx, GL_TEXTURE_MAG_FILTER
+    call    iparam
+    CHECK_EQ32 eax, GL_NEAREST, "atlas MAG_FILTER"
+    mov     ecx, GL_TEXTURE_WRAP_S
+    call    iparam
+    CHECK_EQ32 eax, GL_CLAMP_TO_EDGE, "atlas WRAP_S"
+    mov     ecx, GL_TEXTURE_WRAP_T
+    call    iparam
+    CHECK_EQ32 eax, GL_CLAMP_TO_EDGE, "atlas WRAP_T"
+    mov     ecx, GL_TEXTURE_MAX_LEVEL
+    call    iparam
+    CHECK_EQ32 eax, 4, "atlas MAX_LEVEL"
+    xor     ebx, ebx
+.lw:
+    mov     ecx, ebx
+    call    level_w
+    mov     r12d, eax
+    mov     r13d, 256
+    mov     ecx, ebx
+    shr     r13d, cl
+    CHECK_EQ32 r12d, r13d, "atlas level width 256 >> level"
+    DETAIL_IFZ eax, "level", ebx
+    inc     ebx
+    cmp     ebx, 5
+    jb      .lw
+
+    TEST "atlas level contents"
+    xor     ecx, ecx
+    lea     rdx, [rel gt_lvl]
+    call    read_level
+    lea     r12, [rel gt_lvl]
+    mov     r13, [rel g_atlas_pixels]
+    CHECK_MEM r12, r13, 256*256*4, "level 0 must equal g_atlas_pixels"
+    mov     rcx, [rel g_atlas_pixels]
+    call    ref_chain
+    mov     ebx, 1
+.ml:
+    mov     ecx, ebx
+    lea     rdx, [rel gt_lvl]
+    call    read_level
+    mov     ecx, ebx
+    call    ref_level
+    mov     r12, rax
+    mov     ecx, ebx
+    mov     r8d, 256
+    shr     r8d, cl
+    imul    r8d, r8d
+    mov     rcx, r12
+    lea     rdx, [rel gt_lvl]
+    mov     r9d, 1
+    call    art_count_far
+    mov     r12d, eax
+    CHECK_EQ32 r12d, 0, "mip level texels within 1 of the reference"
+    DETAIL_IFZ eax, "level", ebx
+    inc     ebx
+    cmp     ebx, 5
+    jb      .ml
+
     ; v1 temporary guard (test_gl #22)
     xor     r11d, r11d ; clear v1 slot 22
     ; v1 temporary guard (test_gl #24)
@@ -307,25 +438,3 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 42
     ; v1 temporary guard (test_gl #44)
     xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_gl #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_gl #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_gl #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_gl #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_gl #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_gl #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (test_gl #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (test_gl #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (test_gl #62)
-    xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (test_gl #64)
-    xor     r11d, r11d ; clear v1 slot 64
-    ; v1 temporary guard (test_gl #66)
-    xor     r11d, r11d ; clear v1 slot 66
