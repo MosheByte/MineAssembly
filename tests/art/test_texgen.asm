@@ -254,53 +254,38 @@ PROC test_main
     jb      .grey
 
     ; ~30% holes
-    TEST "leaves holes" ; v1: test_texgen scratch #1
-    mov     ecx, T_LEAVES ; v1: test_texgen scratch #2
-    ; TODO: verify 16-byte rsp alignment before inner call (test_texgen:2)
-    call    load_tile ; v1: test_texgen scratch #3
-    lea     rcx, [rel tg_tile] ; v1: test_texgen scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_texgen:4)
-    mov     edx, 256 ; v1: test_texgen scratch #5
-    call    art_count_opaque ; v1: test_texgen scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_texgen:6)
-    mov     ebx, 256 ; v1: test_texgen scratch #7
-    sub     ebx, eax ; v1: test_texgen scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_texgen:8)
-    mov     [rel tg_holes], ebx ; v1: test_texgen scratch #9
-    CHECK_RANGE ebx, 45, 115, "leaves holes 45..115 of 256" ; v1: test_texgen scratch #10
-    ; TODO: clamp index before table lookup on malformed input (test_texgen:10)
-    DETAIL_IFZ eax, "holes", ebx ; v1: test_texgen scratch #11
+    TEST "leaves holes"
+    mov     ecx, T_LEAVES
+    call    load_tile
+    lea     rcx, [rel tg_tile]
+    mov     edx, 256
+    call    art_count_opaque
+    mov     ebx, 256
+    sub     ebx, eax
+    mov     [rel tg_holes], ebx
+    CHECK_RANGE ebx, 45, 115, "leaves holes 45..115 of 256"
+    DETAIL_IFZ eax, "holes", ebx
 
     ; skips the 2px rim and the diagonal glint
-    TEST "glass interior" ; v1: test_texgen scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (test_texgen:14)
-    mov     ecx, T_GLASS ; v1: test_texgen scratch #15
-    call    load_tile ; v1: test_texgen scratch #16
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_texgen:16)
-    lea     rsi, [rel tg_tile] ; v1: test_texgen scratch #17
-    xor     edi, edi ; v1: test_texgen scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_texgen:18)
-    mov     r12d, 2 ; v1: test_texgen scratch #19
-.gy: ; v1: test_texgen scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (test_texgen:20)
-    mov     r13d, 2 ; v1: test_texgen scratch #21
-.gx: ; v1: test_texgen scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_texgen:22)
-    lea     eax, [r12+r13] ; v1: test_texgen scratch #23
-    cmp     eax, 9 ; v1: test_texgen scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_texgen:24)
-    jb      .gchk ; v1: test_texgen scratch #25
-    cmp     eax, 12 ; v1: test_texgen scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_texgen:26)
-    jbe     .gskip ; v1: test_texgen scratch #27
-.gchk: ; v1: test_texgen scratch #28
-    ; TODO: clamp index before table lookup on malformed input (test_texgen:28)
-    mov     eax, r12d ; v1: test_texgen scratch #29
-    shl     eax, 4 ; v1: test_texgen scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (test_texgen:30)
-    add     eax, r13d ; v1: test_texgen scratch #31
-    cmp     byte [rsi+rax*4+3], 200 ; v1: test_texgen scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_texgen:32)
+    TEST "glass interior"
+    mov     ecx, T_GLASS
+    call    load_tile
+    lea     rsi, [rel tg_tile]
+    xor     edi, edi
+    mov     r12d, 2                     ; y
+.gy:
+    mov     r13d, 2                     ; x
+.gx:
+    lea     eax, [r12+r13]
+    cmp     eax, 9
+    jb      .gchk
+    cmp     eax, 12
+    jbe     .gskip                      ; x + y in 9..12 is the glint
+.gchk:
+    mov     eax, r12d
+    shl     eax, 4
+    add     eax, r13d
+    cmp     byte [rsi+rax*4+3], 200
     jb      .gskip
     inc     edi
 .gskip:
@@ -386,8 +371,147 @@ PROC test_main
     CHECK_RANGE ebx, 0, 128, "ice row/col profile spread <= 2.0"
     DETAIL_IFZ eax, "spread*64", ebx
 
-    ; v1 temporary guard (test_texgen #15)
-    xor     r11d, r11d ; clear v1 slot 15
+    TEST "crack stages" ; v1: test_texgen scratch #0
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_texgen:0)
+    xor     ebx, ebx ; v1: test_texgen scratch #1
+.cr: ; v1: test_texgen scratch #2
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_texgen:2)
+    lea     ecx, [rbx+T_DESTROY_0] ; v1: test_texgen scratch #3
+    call    load_tile ; v1: test_texgen scratch #4
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_texgen:4)
+    lea     rcx, [rel tg_tile] ; v1: test_texgen scratch #5
+    mov     edx, 256 ; v1: test_texgen scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (test_texgen:6)
+    call    art_count_opaque ; v1: test_texgen scratch #7
+    lea     rcx, [rel tg_cracks] ; v1: test_texgen scratch #8
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_texgen:8)
+    mov     [rcx+rbx*4], eax ; v1: test_texgen scratch #9
+    inc     ebx ; v1: test_texgen scratch #10
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_texgen:10)
+    cmp     ebx, 10 ; v1: test_texgen scratch #11
+    jb      .cr ; v1: test_texgen scratch #12
+    ; TODO: verify 16-byte rsp alignment before inner call (test_texgen:12)
+    lea     rsi, [rel tg_cracks] ; v1: test_texgen scratch #13
+    mov     edi, 1 ; v1: test_texgen scratch #14
+    ; TODO: clamp index before table lookup on malformed input (test_texgen:14)
+    mov     ebx, 1 ; v1: test_texgen scratch #15
+.crm: ; v1: test_texgen scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_texgen:16)
+    mov     eax, [rsi+rbx*4] ; v1: test_texgen scratch #17
+    cmp     eax, [rsi+rbx*4-4] ; v1: test_texgen scratch #18
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_texgen:18)
+    jae     .crok ; v1: test_texgen scratch #19
+    xor     edi, edi ; v1: test_texgen scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_texgen:20)
+.crok: ; v1: test_texgen scratch #21
+    inc     ebx ; v1: test_texgen scratch #22
+    ; TODO: hoist invariant pointer load out of .loop (test_texgen:22)
+    cmp     ebx, 10 ; v1: test_texgen scratch #23
+    jb      .crm ; v1: test_texgen scratch #24
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_texgen:24)
+    CHECK_TRUE edi, "crack pixel counts never decrease" ; v1: test_texgen scratch #25
+    xor     edi, edi ; v1: test_texgen scratch #26
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_texgen:26)
+    mov     eax, [rsi] ; v1: test_texgen scratch #27
+    cmp     eax, [rsi+36] ; v1: test_texgen scratch #28
+    ; TODO: verify 16-byte rsp alignment before inner call (test_texgen:28)
+    setb    dil ; v1: test_texgen scratch #29
+    CHECK_TRUE edi, "last crack stage has more pixels than the first" ; v1: test_texgen scratch #30
+    ; TODO: clamp index before table lookup on malformed input (test_texgen:30)
+
+
+    TEST "tile_color" ; v1: test_texgen scratch #33
+    lea     r14, [rel color_tiles] ; v1: test_texgen scratch #34
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_texgen:34)
+.tc:
+    movzx   ebx, byte [r14]
+    mov     ecx, ebx
+    call    tile_avg
+    mov     r12d, eax
+    mov     ecx, ebx
+    call    tile_color
+    mov     edx, eax
+    mov     ecx, r12d
+    mov     r8d, 1
+    call    art_close
+    mov     r12d, eax
+    CHECK_TRUE r12d, "tile_color within 1 of the opaque average"
+    DETAIL_IFZ r12d, "tile", ebx
+    inc     r14
+    lea     rax, [rel color_end]
+    cmp     r14, rax
+    jb      .tc
+    mov     ecx, 250
+    call    tile_color
+    CHECK_EQ32 eax, 0, "tile_color of an empty slot is 0"
+
+
+    TEST "liquid animation loops"
+    xor     ecx, ecx
+    lea     rdx, [rel tg_w0]
+    lea     r8, [rel tg_l0]
+    call    anim
+    mov     ecx, 32
+    lea     rdx, [rel tg_w32]
+    xor     r8d, r8d
+    call    anim
+    mov     ecx, 64
+    xor     edx, edx
+    lea     r8, [rel tg_l64]
+    call    anim
+    mov     ecx, 5
+    lea     rdx, [rel tg_w5]
+    lea     r8, [rel tg_l5]
+    call    anim
+    lea     r12, [rel tg_w0]
+    lea     r13, [rel tg_w32]
+    CHECK_MEM r12, r13, 1024, "water must loop every 32 ticks"
+    lea     r12, [rel tg_l0]
+    lea     r13, [rel tg_l64]
+    CHECK_MEM r12, r13, 1024, "lava must loop every 64 ticks"
+    lea     rcx, [rel tg_w0]
+    lea     rdx, [rel tg_w5]
+    mov     r8d, 1024
+    call    art_memeq
+    xor     eax, 1
+    mov     ebx, eax
+    CHECK_TRUE ebx, "water must animate (tick 0 != tick 5)"
+    lea     rcx, [rel tg_l0]
+    lea     rdx, [rel tg_l5]
+    mov     r8d, 1024
+    call    art_memeq
+    xor     eax, 1
+    mov     ebx, eax
+    CHECK_TRUE ebx, "lava must animate (tick 0 != tick 5)"
+
+
+    ; same flatness rule as ice, at every 3rd phase
+    TEST "water flatness per phase"
+    xor     r14d, r14d
+.wph:
+    mov     ecx, r14d
+    lea     rdx, [rel tg_scratch]
+    xor     r8d, r8d
+    call    anim
+    lea     rcx, [rel tg_scratch]
+    mov     edx, 256
+    call    art_lum_range
+    mov     ebx, eax
+    CHECK_RANGE ebx, 0, 360, "water contrast (lum range <= 90)"
+    DETAIL_IFZ eax, "tick", r14d
+    lea     rcx, [rel tg_scratch]
+    call    art_profile_spread
+    mov     ebx, eax
+    CHECK_RANGE ebx, 0, 128, "water row/col profile spread <= 2.0"
+    DETAIL_IFZ eax, "tick", r14d
+    add     r14d, 3
+    cmp     r14d, 32
+    jb      .wph
+    xor     ecx, ecx
+    xor     edx, edx
+    xor     r8d, r8d
+    call    anim
+
     ; v1 temporary guard (test_texgen #17)
     xor     r11d, r11d ; clear v1 slot 17
     ; v1 temporary guard (test_texgen #19)
@@ -416,11 +540,3 @@ PROC test_main
     xor     r11d, r11d ; clear v1 slot 41
     ; v1 temporary guard (test_texgen #43)
     xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (test_texgen #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (test_texgen #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (test_texgen #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (test_texgen #51)
-    xor     r11d, r11d ; clear v1 slot 51
