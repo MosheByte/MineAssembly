@@ -495,3 +495,176 @@ PROC test_main
     xor     r8d, r8d
     call    anim
 
+    TEST "deterministic"
+    lea     rcx, [rel tg_atlas2]
+    call    texgen_build_cpu
+    lea     rax, [rel tg_atlas]
+    mov     [rel g_atlas_pixels], rax   ; the build just repointed it at atlas2
+    lea     r12, [rel tg_atlas2]
+    lea     r13, [rel tg_atlas]
+    CHECK_MEM r12, r13, 256*256*4, "generation must be deterministic"
+
+
+    TEST "clouds"
+    lea     rcx, [rel tg_clouds]
+    call    texgen_build_clouds_cpu
+    lea     rcx, [rel tg_clouds]
+    mov     edx, 256*256
+    call    art_count_opaque
+    mov     ebx, eax
+    mov     [rel tg_cover], ebx
+    CHECK_RANGE ebx, 13108, 39321, "cloud coverage between 20% and 60%"
+    DETAIL_IFZ eax, "opaque", ebx
+    lea     rsi, [rel tg_clouds]
+    xor     edi, edi
+    xor     ecx, ecx
+.cw:
+    mov     eax, [rsi+rcx*4]
+    and     eax, 0x00FFFFFF
+    cmp     eax, 0x00FFFFFF
+    je      .cwok
+    inc     edi
+.cwok:
+    inc     ecx
+    cmp     ecx, 256*256
+    jb      .cw
+    CHECK_EQ32 edi, 0, "cloud texels are white"
+
+
+
+    TEST "mip_down reference"
+    lea     rcx, [rel tg_atlas]
+    lea     rdx, [rel tg_mip]
+    mov     r8d, 128
+    mov     r9d, 256
+    call    texgen_mip_down
+    lea     r14, [rel mip_points]
+.mp:
+    movzx   r12d, byte [r14]            ; x
+    movzx   r13d, byte [r14+1]          ; y
+    mov     eax, r13d
+    shl     eax, 9                      ; 2y * 256
+    lea     eax, [rax+r12*2]
+    lea     rsi, [rel tg_atlas]
+    lea     rsi, [rsi+rax*4]
+    movzx   edi, byte [rsi+3]           ; sum of alphas
+    movzx   eax, byte [rsi+7]
+    add     edi, eax
+    movzx   eax, byte [rsi+1024+3]
+    add     edi, eax
+    movzx   eax, byte [rsi+1024+7]
+    add     edi, eax
+    mov     ecx, [rsi]
+    mov     edx, [rsi+4]
+    mov     r8d, [rsi+1024]
+    mov     r9d, [rsi+1028]
+    call    art_ref_avg4
+    mov     r15d, eax                   ; expected
+    mov     eax, r13d
+    shl     eax, 7
+    add     eax, r12d
+    lea     rcx, [rel tg_mip]
+    mov     ebx, [rcx+rax*4]            ; got
+    test    edi, edi
+    jnz     .mpw
+    ; fully transparent block, rgb doesn't matter
+    shr     ebx, 24
+    CHECK_EQ32 ebx, 0, "transparent 2x2 block stays transparent"
+    DETAIL_IFZ eax, "x", r12d
+    jmp     .mpn
+.mpw:
+    mov     ecx, r15d
+    mov     edx, ebx
+    mov     r8d, 1
+    call    art_close
+    mov     ebx, eax
+    CHECK_TRUE ebx, "mip texel within 1 of the alpha-weighted average"
+    DETAIL_IFZ ebx, "x", r12d
+.mpn:
+    add     r14, 2
+    lea     rax, [rel mip_end]
+    cmp     r14, rax
+    jb      .mp
+
+    ; leaf holes must not darken the mip: |mean red of mip - mean red of the
+    ; full tile| < 12 over opaque texels, cross-multiplied to stay integer
+    TEST "alpha-aware leaf mip"
+    xor     r12, r12                    ; full: red sum
+    xor     r13, r13                    ; full: count
+    mov     ecx, T_LEAVES
+    call    load_tile
+    lea     rsi, [rel tg_tile]
+    xor     ecx, ecx
+.lf:
+    mov     eax, [rsi+rcx*4]
+    cmp     eax, 0x01000000
+    jb      .lfn
+    movzx   eax, al
+    add     r12, rax
+    inc     r13
+.lfn:
+    inc     ecx
+    cmp     ecx, 256
+    jb      .lf
+    xor     r14, r14                    ; mip: red sum
+    xor     r15, r15                    ; mip: count
+    lea     rsi, [rel tg_mip]
+    add     rsi, ((T_LEAVES >> 4) * 8 * 128 + (T_LEAVES & 15) * 8) * 4
+    xor     ebx, ebx
+.lmy:
+    xor     ecx, ecx
+.lmx:
+    mov     eax, ebx
+    shl     eax, 7
+    add     eax, ecx
+    mov     eax, [rsi+rax*4]
+    cmp     eax, 0x01000000
+    jb      .lmn
+    movzx   eax, al
+    add     r14, rax
+    inc     r15
+.lmn:
+    inc     ecx
+    cmp     ecx, 8
+    jb      .lmx
+    inc     ebx
+    cmp     ebx, 8
+    jb      .lmy
+    xor     edi, edi
+    test    r15, r15
+    jz      .lres
+    test    r13, r13
+    jz      .lres
+    mov     rax, r14
+    imul    rax, r13                    ; sum_m * n_f
+    mov     rdx, r12
+    imul    rdx, r15                    ; sum_f * n_m
+    sub     rax, rdx
+    mov     rdx, rax
+    neg     rdx
+    cmovs   rdx, rax
+    mov     rax, r13
+    imul    rax, r15
+    imul    rax, rax, 12
+    cmp     rdx, rax
+    setl    dil
+.lres:
+    CHECK_TRUE edi, "alpha-aware mip keeps the leaf colour (mean red within 12)"
+    PRINT "texgen: leaf holes "
+    mov     ecx, [rel tg_holes]
+    call    t_print_int
+    PRINT "/256, cloud cover "
+    mov     ecx, [rel tg_cover]
+    call    t_print_int
+    PRINT "/65536, cracks"
+    xor     ebx, ebx
+.cp:
+    PRINT " "
+    lea     rax, [rel tg_cracks]
+    mov     ecx, [rax+rbx*4]
+    call    t_print_int
+    inc     ebx
+    cmp     ebx, 10
+    jb      .cp
+    call    t_newline
+ENDP
