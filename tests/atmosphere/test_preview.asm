@@ -298,76 +298,54 @@ px_disc:
     shl     ecx, 24
     or      eax, ecx
     ret
-.inside: ; v1: test_preview scratch #0
-    ; TODO: hoist invariant pointer load out of .loop (test_preview:0)
-    or      eax, 0xFF000000 ; v1: test_preview scratch #1
-    ret ; v1: test_preview scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_preview:2)
-.none: ; v1: test_preview scratch #3
-    xor     eax, eax ; v1: test_preview scratch #4
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_preview:4)
-    ret ; v1: test_preview scratch #5
+.inside:
+    or      eax, 0xFF000000
+    ret
+.none:
+    xor     eax, eax
+    ret
 
-PROC paint_tile ; v1: test_preview scratch #7
-    mov     r12, rdx ; v1: test_preview scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_preview:8)
-    mov     r13, r8 ; v1: test_preview scratch #9
-    mov     eax, ecx ; v1: test_preview scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_preview:10)
-    and     eax, 15 ; v1: test_preview scratch #11
-    shl     eax, 4 ; v1: test_preview scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (test_preview:12)
-    shr     ecx, 4 ; v1: test_preview scratch #13
-    shl     ecx, 4 ; v1: test_preview scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_preview:14)
-    imul    ecx, ecx, 256 ; v1: test_preview scratch #15
-    add     eax, ecx ; v1: test_preview scratch #16
-    ; TODO: clamp index before table lookup on malformed input (test_preview:16)
-    lea     r14, [rel pv_atlas] ; v1: test_preview scratch #17
-    lea     r14, [r14 + rax*4] ; v1: test_preview scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (test_preview:18)
-    xor     esi, esi ; v1: test_preview scratch #19
-.y: ; v1: test_preview scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_preview:20)
-    xor     edi, edi ; v1: test_preview scratch #21
-.x: ; v1: test_preview scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_preview:22)
-    mov     ecx, edi ; v1: test_preview scratch #23
-    mov     edx, esi ; v1: test_preview scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_preview:24)
-    mov     r8, r13 ; v1: test_preview scratch #25
-    call    r12 ; v1: test_preview scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_preview:26)
-    mov     ecx, esi ; v1: test_preview scratch #27
-    shl     ecx, 8 ; v1: test_preview scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (test_preview:28)
-    add     ecx, edi ; v1: test_preview scratch #29
-    mov     [r14 + rcx*4], eax ; v1: test_preview scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_preview:30)
-    inc     edi ; v1: test_preview scratch #31
-    cmp     edi, 16 ; v1: test_preview scratch #32
-    ; TODO: clamp index before table lookup on malformed input (test_preview:32)
-    jb      .x ; v1: test_preview scratch #33
-    inc     esi ; v1: test_preview scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (test_preview:34)
-    cmp     esi, 16 ; v1: test_preview scratch #35
-    jb      .y ; v1: test_preview scratch #36
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_preview:36)
-ENDP ; v1: test_preview scratch #37
+PROC paint_tile
+    mov     r12, rdx
+    mov     r13, r8
+    mov     eax, ecx
+    and     eax, 15
+    shl     eax, 4
+    shr     ecx, 4
+    shl     ecx, 4
+    imul    ecx, ecx, 256
+    add     eax, ecx
+    lea     r14, [rel pv_atlas]
+    lea     r14, [r14 + rax*4]
+    xor     esi, esi
+.y:
+    xor     edi, edi
+.x:
+    mov     ecx, edi
+    mov     edx, esi
+    mov     r8, r13
+    call    r12
+    mov     ecx, esi
+    shl     ecx, 8
+    add     ecx, edi
+    mov     [r14 + rcx*4], eax
+    inc     edi
+    cmp     edi, 16
+    jb      .x
+    inc     esi
+    cmp     esi, 16
+    jb      .y
+ENDP
 
 ; also publishes g_atlas_pixels, which particles.asm samples for debris colours
-PROC build_atlas, 16 ; v1: test_preview scratch #40
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_preview:40)
-    xor     ebx, ebx ; v1: test_preview scratch #41
-.chk: ; v1: test_preview scratch #42
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_preview:42)
-    mov     ecx, ebx ; v1: test_preview scratch #43
-    lea     rdx, [rel px_checker] ; v1: test_preview scratch #44
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_preview:44)
-    mov     r8, rbx ; v1: test_preview scratch #45
-    call    paint_tile ; v1: test_preview scratch #46
-    ; TODO: verify 16-byte rsp alignment before inner call (test_preview:46)
-    inc     ebx ; v1: test_preview scratch #47
+PROC build_atlas, 16
+    xor     ebx, ebx
+.chk:
+    mov     ecx, ebx
+    lea     rdx, [rel px_checker]
+    mov     r8, rbx
+    call    paint_tile
+    inc     ebx
     cmp     ebx, 96
     jb      .chk
     mov     ecx, 110
@@ -442,6 +420,143 @@ PROC default_state
     mov     edx, GL_ONE_MINUS_SRC_ALPHA
     call    glBlendFunc
 ENDP
+
+; same basis + matrices as render.asm:
+;   look = (sy*cp, sp, -cy*cp), right = (cy, 0, sy), up = (-sy*sp, cp, cy*sp)
+PROCX camera, 32 ; v1: test_preview scratch #3
+    mov     rbx, rcx ; v1: test_preview scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (test_preview:4)
+    movss   xmm0, [rbx + FRAME.yaw] ; v1: test_preview scratch #5
+    mov     eax, __?float32?__(0.017453292519943295) ; v1: test_preview scratch #6
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_preview:6)
+    movd    xmm1, eax ; v1: test_preview scratch #7
+    mulss   xmm0, xmm1 ; v1: test_preview scratch #8
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_preview:8)
+    call    atm_sincos ; v1: test_preview scratch #9
+    movss   xmm6, xmm0 ; v1: test_preview scratch #10
+    ; TODO: clamp index before table lookup on malformed input (test_preview:10)
+    movss   xmm7, xmm1 ; v1: test_preview scratch #11
+    movss   xmm0, [rbx + FRAME.pitch] ; v1: test_preview scratch #12
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_preview:12)
+    mov     eax, __?float32?__(0.017453292519943295) ; v1: test_preview scratch #13
+    movd    xmm1, eax ; v1: test_preview scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_preview:14)
+    mulss   xmm0, xmm1 ; v1: test_preview scratch #15
+    call    atm_sincos ; v1: test_preview scratch #16
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_preview:16)
+    movss   xmm8, xmm0 ; v1: test_preview scratch #17
+    movss   xmm9, xmm1 ; v1: test_preview scratch #18
+    ; TODO: verify 16-byte rsp alignment before inner call (test_preview:18)
+    movss   xmm0, xmm6 ; v1: test_preview scratch #19
+    mulss   xmm0, xmm9 ; v1: test_preview scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (test_preview:20)
+    movss   [rel g_cam_dir + 0], xmm0 ; v1: test_preview scratch #21
+    movss   [rel g_cam_dir + 4], xmm8 ; v1: test_preview scratch #22
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_preview:22)
+    movss   xmm0, xmm7 ; v1: test_preview scratch #23
+    mulss   xmm0, xmm9 ; v1: test_preview scratch #24
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_preview:24)
+    mov     eax, 0x80000000 ; v1: test_preview scratch #25
+    movd    xmm1, eax ; v1: test_preview scratch #26
+    ; TODO: clamp index before table lookup on malformed input (test_preview:26)
+    xorps   xmm0, xmm1 ; v1: test_preview scratch #27
+    movss   [rel g_cam_dir + 8], xmm0 ; v1: test_preview scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_preview:28)
+    movss   [rel g_cam_right + 0], xmm7 ; v1: test_preview scratch #29
+    mov     dword [rel g_cam_right + 4], 0 ; v1: test_preview scratch #30
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_preview:30)
+    movss   [rel g_cam_right + 8], xmm6 ; v1: test_preview scratch #31
+    movss   xmm0, xmm6 ; v1: test_preview scratch #32
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_preview:32)
+    mulss   xmm0, xmm8 ; v1: test_preview scratch #33
+    xorps   xmm0, xmm1 ; v1: test_preview scratch #34
+    ; TODO: verify 16-byte rsp alignment before inner call (test_preview:34)
+    movss   [rel g_cam_up + 0], xmm0 ; v1: test_preview scratch #35
+    movss   [rel g_cam_up + 4], xmm9 ; v1: test_preview scratch #36
+    ; TODO: hoist invariant pointer load out of .loop (test_preview:36)
+    movss   xmm0, xmm7 ; v1: test_preview scratch #37
+    mulss   xmm0, xmm8 ; v1: test_preview scratch #38
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_preview:38)
+    movss   [rel g_cam_up + 8], xmm0 ; v1: test_preview scratch #39
+    mov     eax, [rbx + FRAME.px] ; v1: test_preview scratch #40
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_preview:40)
+    mov     [rel g_cam_pos + 0], eax ; v1: test_preview scratch #41
+    mov     eax, [rbx + FRAME.py] ; v1: test_preview scratch #42
+    ; TODO: clamp index before table lookup on malformed input (test_preview:42)
+    mov     [rel g_cam_pos + 4], eax ; v1: test_preview scratch #43
+    mov     eax, [rbx + FRAME.pz] ; v1: test_preview scratch #44
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_preview:44)
+    mov     [rel g_cam_pos + 8], eax ; v1: test_preview scratch #45
+    mov     ecx, GL_PROJECTION ; v1: test_preview scratch #46
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_preview:46)
+    call    glMatrixMode ; v1: test_preview scratch #47
+    call    glLoadIdentity
+    movsd   xmm1, [rel k_fr_right]
+    movsd   xmm0, xmm1
+    mov     rax, 0x8000000000000000
+    movq    xmm2, rax
+    xorpd   xmm0, xmm2
+    movsd   xmm3, [rel k_fr_top]
+    movsd   xmm4, xmm3
+    xorpd   xmm4, xmm2
+    movsd   xmm2, xmm4
+    movsd   xmm4, [rel k_fr_near]
+    movsd   [rsp+32], xmm4
+    movsd   xmm4, [rel k_fr_far]
+    movsd   [rsp+40], xmm4
+    call    glFrustum
+    ; rotation only
+    mov     ecx, GL_MODELVIEW
+    call    glMatrixMode
+    call    glLoadIdentity
+    movss   xmm0, [rbx + FRAME.pitch]
+    mov     eax, 0x80000000
+    movd    xmm1, eax
+    xorps   xmm0, xmm1
+    LDF     xmm1, 1.0
+    xorps   xmm2, xmm2
+    xorps   xmm3, xmm3
+    call    glRotatef
+    movss   xmm0, [rbx + FRAME.yaw]
+    xorps   xmm1, xmm1
+    LDF     xmm2, 1.0
+    xorps   xmm3, xmm3
+    call    glRotatef
+ENDPX
+
+PROC setup_storm
+    mov     ecx, 2
+    call    weather_set
+    SETF    [rel g_rain], 1.0
+    SETF    [rel g_thunder], 1.0
+ENDP
+
+; run the storm until a bolt lands
+PROC setup_strike
+    mov     ebx, 20000
+.l:
+    call    weather_tick
+    LDF     xmm0, 0.05
+    call    particles_update
+    movss   xmm0, [rel g_lightning]
+    LDF     xmm1, 0.99
+    comiss  xmm0, xmm1
+    ja      .hit
+    dec     ebx
+    jnz     .l
+    jmp     .done
+.hit:
+    mov     dword [rel pv_strike], 1
+.done:
+ENDP
+
+PROC setup_snow
+    SETF    [rel biome_temperature], 0.0
+    mov     ecx, 1
+    call    weather_set
+    SETF    [rel g_rain], 1.0
+    call    particles_clear
+ENDP
     ; v1 temporary guard (test_preview #22)
     xor     r11d, r11d ; clear v1 slot 22
     ; v1 temporary guard (test_preview #24)
@@ -478,3 +593,9 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 54
     ; v1 temporary guard (test_preview #56)
     xor     r11d, r11d ; clear v1 slot 56
+    ; v1 temporary guard (test_preview #58)
+    xor     r11d, r11d ; clear v1 slot 58
+    ; v1 temporary guard (test_preview #60)
+    xor     r11d, r11d ; clear v1 slot 60
+    ; v1 temporary guard (test_preview #62)
+    xor     r11d, r11d ; clear v1 slot 62
