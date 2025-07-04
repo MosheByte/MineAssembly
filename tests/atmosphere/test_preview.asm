@@ -537,67 +537,48 @@ PROC setup_snow
 ENDP
 
 ; explosion in front of the camera + 6 broken blocks
-PROC setup_boom ; v1: test_preview scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_preview:2)
-    call    particles_clear ; v1: test_preview scratch #3
-    xorps   xmm0, xmm0 ; v1: test_preview scratch #4
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_preview:4)
-    LDF     xmm1, 78.0 ; v1: test_preview scratch #5
-    LDF     xmm2, -12.0 ; v1: test_preview scratch #6
-    ; TODO: clamp index before table lookup on malformed input (test_preview:6)
-    LDF     xmm3, 4.0 ; v1: test_preview scratch #7
-    call    particles_spawn_explosion ; v1: test_preview scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_preview:8)
-    mov     ebx, -6 ; v1: test_preview scratch #9
-.l: ; v1: test_preview scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (test_preview:10)
-    mov     ecx, ebx ; v1: test_preview scratch #11
-    mov     edx, 76 ; v1: test_preview scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_preview:12)
-    mov     r8d, -8 ; v1: test_preview scratch #13
-    mov     r9d, 2 ; v1: test_preview scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_preview:14)
-    call    particles_spawn_block_break ; v1: test_preview scratch #15
-    add     ebx, 2 ; v1: test_preview scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (test_preview:16)
-    cmp     ebx, 6 ; v1: test_preview scratch #17
-    jl      .l ; v1: test_preview scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_preview:18)
-ENDP ; v1: test_preview scratch #19
+PROC setup_boom
+    call    particles_clear
+    xorps   xmm0, xmm0
+    LDF     xmm1, 78.0
+    LDF     xmm2, -12.0
+    LDF     xmm3, 4.0
+    call    particles_spawn_explosion
+    mov     ebx, -6
+.l:
+    mov     ecx, ebx
+    mov     edx, 76
+    mov     r8d, -8
+    mov     r9d, 2
+    call    particles_spawn_block_break
+    add     ebx, 2
+    cmp     ebx, 6
+    jl      .l
+ENDP
 
 ; simulate, render, read back, save the bmp. leaves avg rgb in pv_avg and
 ; the gl error in pv_err
-PROCX frame, 32 ; v1: test_preview scratch #23
-    mov     rbx, rcx ; v1: test_preview scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_preview:24)
-    mov     eax, [rbx + FRAME.tod] ; v1: test_preview scratch #25
-    mov     [rel g_time_of_day], eax ; v1: test_preview scratch #26
-    ; TODO: clamp index before table lookup on malformed input (test_preview:26)
-    imul    eax, [rbx + FRAME.day], 24000 ; v1: test_preview scratch #27
-    add     eax, [rbx + FRAME.tod] ; v1: test_preview scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_preview:28)
-    mov     [rel g_world_time], rax ; v1: test_preview scratch #29
-    mov     rax, [rbx + FRAME.setup] ; v1: test_preview scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (test_preview:30)
-    test    rax, rax ; v1: test_preview scratch #31
-    jz      .no_setup ; v1: test_preview scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_preview:32)
-    call    rax ; v1: test_preview scratch #33
-.no_setup: ; v1: test_preview scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_preview:34)
-    mov     r12d, [rbx + FRAME.ticks] ; v1: test_preview scratch #35
-.tick: ; v1: test_preview scratch #36
-    ; TODO: verify 16-byte rsp alignment before inner call (test_preview:36)
-    test    r12d, r12d ; v1: test_preview scratch #37
-    jz      .ticked ; v1: test_preview scratch #38
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_preview:38)
-    call    weather_tick ; v1: test_preview scratch #39
-    LDF     xmm0, 0.05 ; v1: test_preview scratch #40
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_preview:40)
-    call    particles_update ; v1: test_preview scratch #41
-    dec     r12d ; v1: test_preview scratch #42
-    ; TODO: clamp index before table lookup on malformed input (test_preview:42)
-    jmp     .tick ; v1: test_preview scratch #43
+PROCX frame, 32
+    mov     rbx, rcx
+    mov     eax, [rbx + FRAME.tod]
+    mov     [rel g_time_of_day], eax
+    imul    eax, [rbx + FRAME.day], 24000
+    add     eax, [rbx + FRAME.tod]
+    mov     [rel g_world_time], rax
+    mov     rax, [rbx + FRAME.setup]
+    test    rax, rax
+    jz      .no_setup
+    call    rax
+.no_setup:
+    mov     r12d, [rbx + FRAME.ticks]
+.tick:
+    test    r12d, r12d
+    jz      .ticked
+    call    weather_tick
+    LDF     xmm0, 0.05
+    call    particles_update
+    dec     r12d
+    jmp     .tick
 .ticked:
     mov     rcx, rbx
     call    camera
@@ -704,51 +685,98 @@ PROCX frame, 32 ; v1: test_preview scratch #23
     PRINT   ")"
     call    t_newline
     CHECK_TRUE r15d, "frame BMP written"
-    ; v1 temporary guard (test_preview #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (test_preview #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (test_preview #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (test_preview #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (test_preview #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (test_preview #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (test_preview #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (test_preview #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (test_preview #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (test_preview #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (test_preview #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (test_preview #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (test_preview #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (test_preview #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (test_preview #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (test_preview #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (test_preview #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (test_preview #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (test_preview #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (test_preview #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (test_preview #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (test_preview #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (test_preview #63)
-    xor     r11d, r11d ; clear v1 slot 63
-    ; v1 temporary guard (test_preview #65)
-    xor     r11d, r11d ; clear v1 slot 65
+    CHECK_EQ32 [rel pv_err], 0, "no GL error while rendering the frame"
+ENDPX
+
+; xmm0 = r + g + b of the last frame's average
+brightness:
+    movss   xmm0, [rel pv_avg + 0]
+    addss   xmm0, [rel pv_avg + 4]
+    addss   xmm0, [rel pv_avg + 8]
+    ret
+
+%macro RENDER 1
+    lea     rcx, [rel %1]
+    call    frame
+%endmacro
+
+; label, file, setup, tod, day, yaw, pitch, px, py, pz, ticks
+FRAMEDEF fr_noon,       "atmo_noon.bmp",        0,             6000,  0,  30.0, 15.0, 0.0, 80.0,  0.0, 0
+FRAMEDEF fr_afternoon,  "atmo_afternoon.bmp",   0,             9500,  0, -60.0,  8.0, 0.0, 80.0,  0.0, 0
+FRAMEDEF fr_sunset,     "atmo_sunset.bmp",      0,             12150, 0, -90.0,  6.0, 0.0, 80.0,  0.0, 0
+FRAMEDEF fr_dusk_east,  "atmo_dusk_east.bmp",   0,             12150, 0,  90.0,  6.0, 0.0, 80.0,  0.0, 0
+FRAMEDEF fr_night,      "atmo_night.bmp",       0,             18000, 0,  90.0, 75.0, 0.0, 80.0,  0.0, 0
+FRAMEDEF fr_moon_phase, "atmo_moon_phase.bmp",  0,             17000, 2,  90.0, 55.0, 0.0, 80.0,  0.0, 0
+FRAMEDEF fr_sunrise,    "atmo_sunrise.bmp",     0,             23900, 0,  90.0,  4.0, 0.0, 80.0,  0.0, 0
+FRAMEDEF fr_flat,       "atmo_flat_clouds.bmp", 0,             7000,  0,   0.0, 25.0, 0.0, 80.0,  0.0, 0
+FRAMEDEF fr_in_clouds,  "atmo_in_clouds.bmp",   0,             7000,  0,   0.0, 10.0, 0.0, 108.0, 0.0, 0
+FRAMEDEF fr_storm,      "atmo_storm.bmp",       setup_storm,   8000,  0,  20.0,  5.0, 0.0, 80.0,  0.0, 40
+FRAMEDEF fr_lightning,  "atmo_lightning.bmp",   setup_strike,  8000,  0,  20.0,  5.0, 0.0, 80.0,  0.0, 0
+FRAMEDEF fr_snow,       "atmo_snow.bmp",        setup_snow,    7000,  0,   0.0,  0.0, 0.0, 80.0,  0.0, 60
+FRAMEDEF fr_explosion,  "atmo_explosion.bmp",   setup_boom,    6000,  0,   0.0,-10.0, 0.0, 80.0,  0.0, 4
+FRAMEDEF fr_underwater, "atmo_underwater.bmp",  0,             6000,  0,   0.0, 10.0, 0.0, 80.0,  0.0, 0
+
+PROCX test_main, 32
+    TEST "atmosphere preview frames"
+    call    gl_open
+    test    eax, eax
+    jnz     .have_gl
+    PRINT   "  no GL context available - preview skipped"
+    call    t_newline
+    CHECK_TRUE 1, "skipped without GL"
+    jmp     .done
+.have_gl:
+    call    default_state
+    call    build_atlas
+    call    atmo_reset_env
+    call    sky_init
+    call    particles_init
+    mov     dword [rel g_world_active], 1
+    SETF    [rel g_player + PLAYER.y], 78.0
+    SETF    [rel biome_temperature], 0.8
+
+    RENDER  fr_noon
+    call    brightness
+    movss   xmm6, xmm0
+    movss   xmm0, [rel g_daylight]
+    LDF     xmm1, 0.9
+    CHECK_GT xmm0, xmm1, "noon daylight > 0.9"
+    RENDER  fr_afternoon
+    RENDER  fr_sunset
+    RENDER  fr_dusk_east
+    RENDER  fr_night
+    call    brightness
+    CHECK_GT xmm6, xmm0, "noon frame brighter than the night frame"
+    RENDER  fr_moon_phase
+    RENDER  fr_sunrise
+    mov     dword [rel g_settings + SETTINGS.clouds], 1
+    RENDER  fr_flat
+    mov     dword [rel g_settings + SETTINGS.clouds], 2
+    RENDER  fr_in_clouds
+    RENDER  fr_storm
+    mov     eax, [rel g_particle_count]
+    CHECK_TRUE eax, "storm frame has rain particles"
+    RENDER  fr_lightning
+    CHECK_TRUE [rel pv_strike], "a lightning bolt landed within 20000 storm ticks"
+    RENDER  fr_snow
+    COUNT_TYPE PT_SNOW
+    CHECK_TRUE eax, "snow frame has snow flakes"
+    SETF    [rel biome_temperature], 0.8
+    xor     ecx, ecx
+    call    weather_set
+    xor     eax, eax
+    mov     [rel g_rain], eax
+    mov     [rel g_thunder], eax
+    mov     [rel g_lightning], eax
+    RENDER  fr_explosion
+    mov     eax, [rel g_particle_count]
+    CHECK_TRUE eax, "explosion frame has particles"
+    mov     dword [rel g_player + PLAYER.eye_in_water], 1
+    RENDER  fr_underwater
+    movss   xmm0, [rel pv_avg + 8]
+    movss   xmm1, [rel pv_avg + 0]
+    CHECK_GT xmm0, xmm1, "underwater frame is blue (avg b > avg r)"
+    mov     dword [rel g_player + PLAYER.eye_in_water], 0
+    call    gl_close
+.done:
+ENDPX
