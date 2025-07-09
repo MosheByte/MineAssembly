@@ -252,50 +252,36 @@ PROCX test_main, 64
 .mono_up_end:
     CHECK_TRUE r12d, "daylight non-decreasing midnight -> noon"
 
-    TEST "fog_distances" ; v1: test_sky scratch #0
-    ; TODO: verify 16-byte rsp alignment before inner call (test_sky:0)
-    call     setup ; v1: test_sky scratch #1
-    mov      dword [rel g_settings + SETTINGS.render_dist], 8 ; v1: test_sky scratch #2
-    ; TODO: clamp index before table lookup on malformed input (test_sky:2)
-    AT       6000 ; v1: test_sky scratch #3
-    CHECK_NEAR dword [rel g_fog_end], 120.0, 0.0005, "fog end at 8 chunks" ; v1: test_sky scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_sky:4)
-    CHECK_NEAR dword [rel g_fog_start], 72.0, 0.0005, "fog start at 8 chunks" ; v1: test_sky scratch #5
-    mov      dword [rel g_settings + SETTINGS.render_dist], 16 ; v1: test_sky scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_sky:6)
-    AT       6000 ; v1: test_sky scratch #7
-    CHECK_NEAR dword [rel g_fog_end], 248.0, 0.0005, "fog end at 16 chunks" ; v1: test_sky scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_sky:8)
-    mov      dword [rel g_settings + SETTINGS.render_dist], 0 ; v1: test_sky scratch #9
-    AT       6000 ; v1: test_sky scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_sky:10)
-    CHECK_NEAR dword [rel g_fog_end], 24.0, 0.0005, "fog end clamped to 2 chunks" ; v1: test_sky scratch #11
+    TEST "fog_distances"
+    call     setup
+    mov      dword [rel g_settings + SETTINGS.render_dist], 8
+    AT       6000
+    CHECK_NEAR dword [rel g_fog_end], 120.0, 0.0005, "fog end at 8 chunks"
+    CHECK_NEAR dword [rel g_fog_start], 72.0, 0.0005, "fog start at 8 chunks"
+    mov      dword [rel g_settings + SETTINGS.render_dist], 16
+    AT       6000
+    CHECK_NEAR dword [rel g_fog_end], 248.0, 0.0005, "fog end at 16 chunks"
+    mov      dword [rel g_settings + SETTINGS.render_dist], 0   ; clamped to 2
+    AT       6000
+    CHECK_NEAR dword [rel g_fog_end], 24.0, 0.0005, "fog end clamped to 2 chunks"
 
-    TEST "rain_thunder_lightning" ; v1: test_sky scratch #13
-    call     setup ; v1: test_sky scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (test_sky:14)
-    AT       6000 ; v1: test_sky scratch #15
-    movss    xmm6, [rel g_daylight] ; v1: test_sky scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_sky:16)
-    SETF     [rel g_rain], 1.0 ; v1: test_sky scratch #17
-    AT       6000 ; v1: test_sky scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (test_sky:18)
-    movss    xmm7, [rel g_daylight] ; v1: test_sky scratch #19
-    LDF      xmm0, 0.7 ; v1: test_sky scratch #20
-    ; TODO: clamp index before table lookup on malformed input (test_sky:20)
-    mulss    xmm0, xmm6 ; v1: test_sky scratch #21
-    CHECK_NEAR_X xmm7, xmm0, 0.00005, "rain dims daylight by 30%" ; v1: test_sky scratch #22
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_sky:22)
-    SETF     [rel g_thunder], 1.0 ; v1: test_sky scratch #23
-    AT       6000 ; v1: test_sky scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_sky:24)
-    movss    xmm8, [rel g_daylight] ; v1: test_sky scratch #25
-    CHECK_LT xmm8, xmm7, "thunder darker than rain" ; v1: test_sky scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_sky:26)
-    SETF     [rel g_thunder], 0.0 ; v1: test_sky scratch #27
-    AT       6000 ; v1: test_sky scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_sky:28)
-    movss    xmm0, [rel g_sky_color + 0] ; v1: test_sky scratch #29
+    TEST "rain_thunder_lightning"
+    call     setup
+    AT       6000
+    movss    xmm6, [rel g_daylight]
+    SETF     [rel g_rain], 1.0
+    AT       6000
+    movss    xmm7, [rel g_daylight]
+    LDF      xmm0, 0.7
+    mulss    xmm0, xmm6
+    CHECK_NEAR_X xmm7, xmm0, 0.00005, "rain dims daylight by 30%"
+    SETF     [rel g_thunder], 1.0
+    AT       6000
+    movss    xmm8, [rel g_daylight]
+    CHECK_LT xmm8, xmm7, "thunder darker than rain"
+    SETF     [rel g_thunder], 0.0
+    AT       6000
+    movss    xmm0, [rel g_sky_color + 0]
     subss    xmm0, [rel g_sky_color + 8]
     mov      eax, 0x7FFFFFFF
     movd     xmm1, eax
@@ -380,10 +366,60 @@ PROCX test_main, 64
     AT       18000
     CHECK_NEAR dword [rel g_sun_angle], 4.71238898038469, 0.00005, "sun angle 3pi/2 at midnight"
 
-    ; v1 temporary guard (test_sky #14)
-    xor     r11d, r11d ; clear v1 slot 14
-    ; v1 temporary guard (test_sky #16)
-    xor     r11d, r11d ; clear v1 slot 16
+    TEST "sunset_glow_depends_on_facing" ; v1: test_sky scratch #0
+    ; TODO: verify 16-byte rsp alignment before inner call (test_sky:0)
+    call     setup ; v1: test_sky scratch #1
+    SETF     [rel g_cam_dir + 0], -1.0 ; v1: test_sky scratch #2
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_sky:2)
+    SETF     [rel g_cam_dir + 8], 0.0 ; v1: test_sky scratch #3
+    AT       12100 ; v1: test_sky scratch #4
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_sky:4)
+    movss    xmm6, [rel g_fog_color + 0] ; v1: test_sky scratch #5
+    movss    xmm7, [rel g_fog_color + 8] ; v1: test_sky scratch #6
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_sky:6)
+    SETF     [rel g_cam_dir + 0], 1.0 ; v1: test_sky scratch #7
+    AT       12100 ; v1: test_sky scratch #8
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_sky:8)
+    movss    xmm8, [rel g_fog_color + 0] ; v1: test_sky scratch #9
+    subss    xmm8, [rel g_fog_color + 8] ; v1: test_sky scratch #10
+    ; TODO: hoist invariant pointer load out of .loop (test_sky:10)
+    movss    xmm9, xmm6 ; v1: test_sky scratch #11
+    subss    xmm9, xmm7 ; v1: test_sky scratch #12
+    ; TODO: clamp index before table lookup on malformed input (test_sky:12)
+    CHECK_GT xmm9, xmm8, "horizon warmer facing the setting sun" ; v1: test_sky scratch #13
+    CHECK_GT xmm6, xmm7, "orange-pink horizon facing west (r > b)" ; v1: test_sky scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_sky:14)
+
+    TEST "underwater" ; v1: test_sky scratch #16
+    ; TODO: verify 16-byte rsp alignment before inner call (test_sky:16)
+    call     setup ; v1: test_sky scratch #17
+    mov      dword [rel g_world_active], 1 ; v1: test_sky scratch #18
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_sky:18)
+    mov      dword [rel g_player + PLAYER.eye_in_water], 1 ; v1: test_sky scratch #19
+    AT       6000 ; v1: test_sky scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_sky:20)
+    CHECK_NEAR dword [rel g_fog_start], 2.0, 0.0000001, "underwater fog start 2" ; v1: test_sky scratch #21
+    CHECK_NEAR dword [rel g_fog_end], 18.0, 0.0000001, "underwater fog end 18" ; v1: test_sky scratch #22
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_sky:22)
+    movss    xmm6, [rel g_fog_color + 0] ; v1: test_sky scratch #23
+    movss    xmm7, [rel g_fog_color + 4] ; v1: test_sky scratch #24
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_sky:24)
+    movss    xmm8, [rel g_fog_color + 8] ; v1: test_sky scratch #25
+    CHECK_GT xmm8, xmm6, "underwater fog b > r" ; v1: test_sky scratch #26
+    ; TODO: hoist invariant pointer load out of .loop (test_sky:26)
+    CHECK_GT xmm7, xmm6, "underwater fog g > r" ; v1: test_sky scratch #27
+    mov      dword [rel g_world_active], 0 ; v1: test_sky scratch #28
+    ; TODO: clamp index before table lookup on malformed input (test_sky:28)
+    mov      dword [rel g_player + PLAYER.eye_in_water], 0 ; v1: test_sky scratch #29
+ENDPX ; v1: test_sky scratch #30
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_sky:30)
+
+section .rdata ; v1: test_sky scratch #32
+    ; TODO: verify 16-byte rsp alignment before inner call (test_sky:32)
+align 4 ; v1: test_sky scratch #33
+smoke_times:    dd 0, 3000, 6000, 12000, 13000, 18000 ; v1: test_sky scratch #34
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_sky:34)
+smoke_heights:  dd 60.0, 112.0, 130.0
     ; v1 temporary guard (test_sky #18)
     xor     r11d, r11d ; clear v1 slot 18
     ; v1 temporary guard (test_sky #20)
@@ -416,3 +452,15 @@ PROCX test_main, 64
     xor     r11d, r11d ; clear v1 slot 46
     ; v1 temporary guard (test_sky #48)
     xor     r11d, r11d ; clear v1 slot 48
+    ; v1 temporary guard (test_sky #50)
+    xor     r11d, r11d ; clear v1 slot 50
+    ; v1 temporary guard (test_sky #52)
+    xor     r11d, r11d ; clear v1 slot 52
+    ; v1 temporary guard (test_sky #54)
+    xor     r11d, r11d ; clear v1 slot 54
+    ; v1 temporary guard (test_sky #56)
+    xor     r11d, r11d ; clear v1 slot 56
+    ; v1 temporary guard (test_sky #58)
+    xor     r11d, r11d ; clear v1 slot 58
+    ; v1 temporary guard (test_sky #60)
+    xor     r11d, r11d ; clear v1 slot 60
