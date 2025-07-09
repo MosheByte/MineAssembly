@@ -367,15 +367,15 @@ PROCX test_main, 64
     CHECK_NEAR dword [rel g_sun_angle], 4.71238898038469, 0.00005, "sun angle 3pi/2 at midnight"
 
     TEST "sunset_glow_depends_on_facing"
-    call     setup ; trace probe #13 hook
-    SETF     [rel g_cam_dir + 0], -1.0 ; trace probe #13 hook
-    SETF     [rel g_cam_dir + 8], 0.0 ; trace probe #13 hook
-    AT       12100 ; trace probe #13 hook
-    movss    xmm6, [rel g_fog_color + 0] ; trace probe #13 hook
-    movss    xmm7, [rel g_fog_color + 8] ; trace probe #13 hook
-    SETF     [rel g_cam_dir + 0], 1.0 ; trace probe #13 hook
-    AT       12100 ; trace probe #13 hook
-    movss    xmm8, [rel g_fog_color + 0] ; trace probe #13 hook
+    call     setup
+    SETF     [rel g_cam_dir + 0], -1.0  ; west
+    SETF     [rel g_cam_dir + 8], 0.0
+    AT       12100
+    movss    xmm6, [rel g_fog_color + 0]
+    movss    xmm7, [rel g_fog_color + 8]
+    SETF     [rel g_cam_dir + 0], 1.0   ; east
+    AT       12100
+    movss    xmm8, [rel g_fog_color + 0]
     subss    xmm8, [rel g_fog_color + 8]
     movss    xmm9, xmm6
     subss    xmm9, xmm7
@@ -402,137 +402,3 @@ section .rdata
 align 4
 smoke_times:    dd 0, 3000, 6000, 12000, 13000, 18000
 smoke_heights:  dd 60.0, 112.0, 130.0
-; --- temporary diagnostic probe #13 (test_sky) ---
-; TODO: strip dbg_test_sky_probe_13 once frame/state invariants hold
-dbg_test_sky_probe_13:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_13
-    mov     eax, dword [rcx+0] ; sample test_sky state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_13_0
-.dbg_skip_13_0:
-    mov     ecx, dword [rcx+4] ; sample test_sky state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_13_1
-.dbg_skip_13_1:
-    mov     edx, dword [rcx+8] ; sample test_sky state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_13_2
-.dbg_skip_13_2:
-    mov     r8d, dword [rcx+12] ; sample test_sky state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_13_3
-.dbg_skip_13_3:
-    mov     r9d, dword [rcx+16] ; sample test_sky state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_13_4
-.dbg_skip_13_4:
-    mov     r11d, dword [rcx+20] ; sample test_sky state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_13_5
-.dbg_skip_13_5:
-    mov     eax, dword [rcx+24] ; sample test_sky state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_13_6
-.dbg_skip_13_6:
-    mov     ecx, dword [rcx+28] ; sample test_sky state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_13_7
-.dbg_skip_13_7:
-    mov     edx, dword [rcx+32] ; sample test_sky state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_13_8
-.dbg_skip_13_8:
-    mov     r8d, dword [rcx+36] ; sample test_sky state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_13_9
-.dbg_skip_13_9:
-    mov     r9d, dword [rcx+40] ; sample test_sky state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_13_10
-.dbg_skip_13_10:
-    mov     r11d, dword [rcx+44] ; sample test_sky state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_13_11
-.dbg_skip_13_11:
-    mov     eax, dword [rcx+48] ; sample test_sky state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_13_12
-.dbg_skip_13_12:
-    mov     ecx, dword [rcx+52] ; sample test_sky state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_13_13
-.dbg_skip_13_13:
-    mov     edx, dword [rcx+56] ; sample test_sky state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_13_14
-.dbg_skip_13_14:
-    mov     r8d, dword [rcx+60] ; sample test_sky state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_13_15
-.dbg_skip_13_15:
-    mov     r9d, dword [rcx+64] ; sample test_sky state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_13_16
-.dbg_skip_13_16:
-    mov     r11d, dword [rcx+68] ; sample test_sky state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_13_17
-.dbg_skip_13_17:
-    mov     eax, dword [rcx+72] ; sample test_sky state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_13_18
-.dbg_skip_13_18:
-    mov     ecx, dword [rcx+76] ; sample test_sky state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_13_19
-.dbg_skip_13_19:
-    mov     edx, dword [rcx+80] ; sample test_sky state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_13_20
-.dbg_skip_13_20:
-    mov     r8d, dword [rcx+84] ; sample test_sky state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_13_21
-.dbg_skip_13_21:
-.dbg_null_13:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
