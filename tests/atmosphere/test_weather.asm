@@ -2,80 +2,56 @@
 ; air, height 0, biome 0.
 ; @link src/sky.asm src/particles.asm src/weather.asm tests/atmosphere/atmo_lib.asm
 ; @timeout 120
-%include "common.inc" ; v1: test_weather scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_weather:4)
-%include "testlib.inc" ; v1: test_weather scratch #5
-%include "../atmosphere/atmo.inc" ; v1: test_weather scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_weather:6)
+%include "common.inc"
+%include "testlib.inc"
+%include "../atmosphere/atmo.inc"
 
-section .rdata ; v1: test_weather scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (test_weather:8)
-align 8 ; v1: test_weather scratch #9
-k_rain_min_y:   dq 68.52 ; v1: test_weather scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_weather:10)
+section .rdata
+align 8
+k_rain_min_y:   dq 68.52                ; 64 + 1.62 eye + 2.9
 
-section .text ; v1: test_weather scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_weather:12)
+section .text
 
-setup: ; v1: test_weather scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (test_weather:14)
-    sub      rsp, 40 ; v1: test_weather scratch #15
-    call     atmo_reset_env ; v1: test_weather scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_weather:16)
-    call     particles_init ; v1: test_weather scratch #17
-    mov      dword [rel g_world_active], 1 ; v1: test_weather scratch #18
-    ; TODO: clamp index before table lookup on malformed input (test_weather:18)
-    mov      dword [rel g_weather], 0 ; v1: test_weather scratch #19
-    mov      dword [rel g_weather_timer], 0 ; v1: test_weather scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_weather:20)
-    SETF     [rel g_player + PLAYER.x], 0.0 ; v1: test_weather scratch #21
-    SETF     [rel g_player + PLAYER.y], 64.0 ; v1: test_weather scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_weather:22)
-    SETF     [rel g_player + PLAYER.z], 0.0 ; v1: test_weather scratch #23
-    SETF     [rel biome_temperature], 0.8 ; v1: test_weather scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (test_weather:24)
-    add      rsp, 40 ; v1: test_weather scratch #25
-    ret ; v1: test_weather scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_weather:26)
+setup:
+    sub      rsp, 40
+    call     atmo_reset_env
+    call     particles_init
+    mov      dword [rel g_world_active], 1
+    mov      dword [rel g_weather], 0
+    mov      dword [rel g_weather_timer], 0
+    SETF     [rel g_player + PLAYER.x], 0.0
+    SETF     [rel g_player + PLAYER.y], 64.0
+    SETF     [rel g_player + PLAYER.z], 0.0
+    SETF     [rel biome_temperature], 0.8
+    add      rsp, 40
+    ret
 
-%macro WSET 1 ; v1: test_weather scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_weather:28)
-    mov      ecx, %1 ; v1: test_weather scratch #29
-    call     weather_set ; v1: test_weather scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (test_weather:30)
-%endmacro ; v1: test_weather scratch #31
+%macro WSET 1
+    mov      ecx, %1
+    call     weather_set
+%endmacro
 
 ; clobbers r15
-%macro TICKS 1 ; v1: test_weather scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_weather:34)
-    mov      r15d, %1 ; v1: test_weather scratch #35
-%%l: ; v1: test_weather scratch #36
-    ; TODO: clamp index before table lookup on malformed input (test_weather:36)
-    call     weather_tick ; v1: test_weather scratch #37
-    dec      r15d ; v1: test_weather scratch #38
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_weather:38)
-    jnz      %%l ; v1: test_weather scratch #39
-%endmacro ; v1: test_weather scratch #40
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_weather:40)
+%macro TICKS 1
+    mov      r15d, %1
+%%l:
+    call     weather_tick
+    dec      r15d
+    jnz      %%l
+%endmacro
 
-PROCX test_main, 64 ; v1: test_weather scratch #42
-    ; TODO: hoist invariant pointer load out of .loop (test_weather:42)
-    TEST "dry_biomes_get_no_precipitation" ; v1: test_weather scratch #43
-    call     setup ; v1: test_weather scratch #44
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_weather:44)
-    WSET     1 ; v1: test_weather scratch #45
-    SETF     [rel g_rain], 1.0 ; v1: test_weather scratch #46
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_weather:46)
-    xor      ebx, ebx ; v1: test_weather scratch #47
-.dry_loop: ; v1: test_weather scratch #48
-    ; TODO: verify 16-byte rsp alignment before inner call (test_weather:48)
-    call     particles_clear ; v1: test_weather scratch #49
-    lea      rax, [rel dry_temps] ; v1: test_weather scratch #50
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_weather:50)
-    mov      eax, [rax + rbx*4] ; v1: test_weather scratch #51
-    mov      [rel biome_temperature], eax ; v1: test_weather scratch #52
-    ; TODO: clamp index before table lookup on malformed input (test_weather:52)
-    TICKS    5 ; v1: test_weather scratch #53
+PROCX test_main, 64
+    TEST "dry_biomes_get_no_precipitation"
+    call     setup
+    WSET     1
+    SETF     [rel g_rain], 1.0
+    xor      ebx, ebx
+.dry_loop:
+    call     particles_clear
+    lea      rax, [rel dry_temps]       ; desert, savanna, right at the cutoff
+    mov      eax, [rax + rbx*4]
+    mov      [rel biome_temperature], eax
+    TICKS    5
     COUNT_TYPE PT_RAIN
     CHECK_EQ32 eax, 0, "no rain in a dry biome"
     COUNT_TYPE PT_SNOW
@@ -168,29 +144,74 @@ PROCX test_main, 64 ; v1: test_weather scratch #42
     COUNT_TYPE PT_SPLASH
     CHECK_EQ32 eax, 0, "cold biome: no splashes"
 
-    ; v1 temporary guard (test_weather #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_weather #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_weather #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_weather #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_weather #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_weather #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_weather #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_weather #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_weather #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_weather #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_weather #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_weather #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_weather #48)
-    xor     r11d, r11d ; clear v1 slot 48
+    TEST "ramps"
+    call     setup
+    WSET     1
+    TICKS    100
+    CHECK_NEAR dword [rel g_rain], 0.5, 0.0005, "rain half way after 100 ticks"
+    TICKS    150
+    movss    xmm6, [rel g_rain]
+    CHECK_FEQ xmm6, 1.0, "rain full after 250 ticks"
+    movss    xmm6, [rel g_thunder]
+    CHECK_FEQ xmm6, 0.0, "no thunder in plain rain"
+    WSET     0
+    TICKS    250
+    movss    xmm6, [rel g_rain]
+    CHECK_FEQ xmm6, 0.0, "rain gone 250 ticks after clearing"
+
+    TEST "render_smoke"
+    call     setup
+    WSET     2
+    SETF     [rel g_rain], 1.0
+    SETF     [rel g_thunder], 1.0
+    mov      ebx, 500
+.rd_loop:
+    call     weather_tick
+    call     weather_render
+    call     particles_clear
+    dec      ebx
+    jnz      .rd_loop
+    CHECK_TRUE 1, "500 storm ticks + renders completed"
+
+    TEST "set_durations"
+    call     setup
+    mov      ebx, 200
+.sd_loop:
+    WSET     0
+    CHECK_IRANGE [rel g_weather_timer], 6000, 24000, "clear lasts 6000..24000"
+    WSET     1
+    CHECK_EQ32 [rel g_weather], 1, "weather_set(1) -> rain"
+    CHECK_IRANGE [rel g_weather_timer], 3000, 12000, "rain lasts 3000..12000"
+    WSET     2
+    CHECK_IRANGE [rel g_weather_timer], 3000, 8000, "thunder lasts 3000..8000"
+    dec      ebx
+    jnz      .sd_loop
+    WSET     9
+    CHECK_EQ32 [rel g_weather], 2, "weather_set(9) clamps to thunder"
+
+    TEST "transition"
+    call     setup
+    xor      r12d, r12d                 ; weathers seen, as bits
+    mov      ebx, 200
+.tr_loop:
+    mov      dword [rel g_weather], 0
+    mov      dword [rel g_weather_timer], 1
+    call     weather_tick
+    mov      ecx, [rel g_weather]
+    and      ecx, 31
+    mov      eax, 1
+    shl      eax, cl
+    or       r12d, eax
+    mov      eax, [rel g_weather_timer]
+    xor      ecx, ecx
+    test     eax, eax
+    setg     cl
+    CHECK_TRUE ecx, "new weather has a positive timer"
+    dec      ebx
+    jnz      .tr_loop
+    CHECK_EQ32 r12d, 0x6, "clear turns into both rain and thunder (seen == {1,2})"
+ENDPX
+
+section .rdata
+align 4
+dry_temps:  dd 2.0, 1.2, 1.0
