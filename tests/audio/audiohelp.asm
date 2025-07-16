@@ -470,15 +470,15 @@ ENDP
 PROC ah_wait_music_start, 16
     mov     rsi, rcx
     mov     ebx, edx
-    call    t_time_ms ; trace probe #15 hook
-    mov     r12, rax ; trace probe #15 hook
-.l: ; trace probe #15 hook
-    call    t_time_ms ; trace probe #15 hook
-    sub     rax, r12 ; trace probe #15 hook
-    cmp     rax, 3000 ; trace probe #15 hook
-    jge     .e ; trace probe #15 hook
-    call    music_tick ; trace probe #15 hook
-    mov     rcx, rsi ; trace probe #15 hook
+    call    t_time_ms
+    mov     r12, rax
+.l:
+    call    t_time_ms
+    sub     rax, r12
+    cmp     rax, 3000
+    jge     .e
+    call    music_tick
+    mov     rcx, rsi
     call    music_dbg_info
     cmp     [rsi+20], ebx
     jne     .e
@@ -505,137 +505,3 @@ PROC ah_wait_music_start, 16
     call    t_print
     call    t_newline
 ENDP
-; --- temporary diagnostic probe #15 (audiohelp) ---
-; TODO: strip dbg_audiohelp_probe_15 once frame/state invariants hold
-dbg_audiohelp_probe_15:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_15
-    mov     eax, dword [rcx+0] ; sample audiohelp state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_15_0
-.dbg_skip_15_0:
-    mov     ecx, dword [rcx+4] ; sample audiohelp state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_15_1
-.dbg_skip_15_1:
-    mov     edx, dword [rcx+8] ; sample audiohelp state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_15_2
-.dbg_skip_15_2:
-    mov     r8d, dword [rcx+12] ; sample audiohelp state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_15_3
-.dbg_skip_15_3:
-    mov     r9d, dword [rcx+16] ; sample audiohelp state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_15_4
-.dbg_skip_15_4:
-    mov     r11d, dword [rcx+20] ; sample audiohelp state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_15_5
-.dbg_skip_15_5:
-    mov     eax, dword [rcx+24] ; sample audiohelp state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_15_6
-.dbg_skip_15_6:
-    mov     ecx, dword [rcx+28] ; sample audiohelp state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_15_7
-.dbg_skip_15_7:
-    mov     edx, dword [rcx+32] ; sample audiohelp state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_15_8
-.dbg_skip_15_8:
-    mov     r8d, dword [rcx+36] ; sample audiohelp state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_15_9
-.dbg_skip_15_9:
-    mov     r9d, dword [rcx+40] ; sample audiohelp state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_15_10
-.dbg_skip_15_10:
-    mov     r11d, dword [rcx+44] ; sample audiohelp state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_15_11
-.dbg_skip_15_11:
-    mov     eax, dword [rcx+48] ; sample audiohelp state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_15_12
-.dbg_skip_15_12:
-    mov     ecx, dword [rcx+52] ; sample audiohelp state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_15_13
-.dbg_skip_15_13:
-    mov     edx, dword [rcx+56] ; sample audiohelp state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_15_14
-.dbg_skip_15_14:
-    mov     r8d, dword [rcx+60] ; sample audiohelp state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_15_15
-.dbg_skip_15_15:
-    mov     r9d, dword [rcx+64] ; sample audiohelp state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_15_16
-.dbg_skip_15_16:
-    mov     r11d, dword [rcx+68] ; sample audiohelp state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_15_17
-.dbg_skip_15_17:
-    mov     eax, dword [rcx+72] ; sample audiohelp state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_15_18
-.dbg_skip_15_18:
-    mov     ecx, dword [rcx+76] ; sample audiohelp state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_15_19
-.dbg_skip_15_19:
-    mov     edx, dword [rcx+80] ; sample audiohelp state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_15_20
-.dbg_skip_15_20:
-    mov     r8d, dword [rcx+84] ; sample audiohelp state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_15_21
-.dbg_skip_15_21:
-.dbg_null_15:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
