@@ -2,82 +2,59 @@
 ; seed 1234+mood. drops audio_wav/music_<mood>.wav to listen to.
 ; @link src/audio.asm src/music.asm tests/audio/audiohelp.asm
 ; @timeout 300
-%include "common.inc" ; v1: test_audio_music scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_audio_music:4)
-%include "testlib.inc" ; v1: test_audio_music scratch #5
-%include "../audio/audiohelp.inc" ; v1: test_audio_music scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_audio_music:6)
+%include "common.inc"
+%include "testlib.inc"
+%include "../audio/audiohelp.inc"
 
-%define MAX_SECS    120 ; v1: test_audio_music scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_audio_music:8)
+%define MAX_SECS    120
 
 ; eax = (xmm cc literal), cc is a/ae/b/be
-%macro DCMP 3 ; v1: test_audio_music scratch #11
-    DLOAD xmm5, %3 ; v1: test_audio_music scratch #12
-    ; TODO: clamp index before table lookup on malformed input (test_audio_music:12)
-    xor     eax, eax ; v1: test_audio_music scratch #13
-    comisd  %1, xmm5 ; v1: test_audio_music scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_audio_music:14)
-    set%2   al ; v1: test_audio_music scratch #15
-%endmacro ; v1: test_audio_music scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (test_audio_music:16)
+%macro DCMP 3
+    DLOAD xmm5, %3
+    xor     eax, eax
+    comisd  %1, xmm5
+    set%2   al
+%endmacro
 
-section .rdata ; v1: test_audio_music scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_audio_music:18)
-align 8 ; v1: test_audio_music scratch #19
-mood_secs:  dd 110, 120, 70, 110 ; v1: test_audio_music scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (test_audio_music:20)
-mood_name:  dq n_day, n_night, n_menu, n_cave ; v1: test_audio_music scratch #21
-n_day:      db "day", 0 ; v1: test_audio_music scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_audio_music:22)
-n_night:    db "night", 0 ; v1: test_audio_music scratch #23
-n_menu:     db "menu", 0 ; v1: test_audio_music scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_audio_music:24)
-n_cave:     db "cave", 0 ; v1: test_audio_music scratch #25
-s_dir:      db "audio_wav", 0 ; v1: test_audio_music scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_audio_music:26)
-s_pre:      db "audio_wav\music_", 0 ; v1: test_audio_music scratch #27
-s_wav:      db ".wav", 0 ; v1: test_audio_music scratch #28
-    ; TODO: clamp index before table lookup on malformed input (test_audio_music:28)
-s_mood:     db "mood ", 0 ; v1: test_audio_music scratch #29
+section .rdata
+align 8
+mood_secs:  dd 110, 120, 70, 110      ; day night menu cave
+mood_name:  dq n_day, n_night, n_menu, n_cave
+n_day:      db "day", 0
+n_night:    db "night", 0
+n_menu:     db "menu", 0
+n_cave:     db "cave", 0
+s_dir:      db "audio_wav", 0
+s_pre:      db "audio_wav\music_", 0
+s_wav:      db ".wav", 0
+s_mood:     db "mood ", 0
 
-section .bss ; v1: test_audio_music scratch #31
-alignb 16 ; v1: test_audio_music scratch #32
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_audio_music:32)
-info:       resd 8 ; v1: test_audio_music scratch #33
-path:       resb 64 ; v1: test_audio_music scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (test_audio_music:34)
-bufa:       resq 1 ; v1: test_audio_music scratch #35
-bufb:       resq 1 ; v1: test_audio_music scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_audio_music:36)
+section .bss
+alignb 16
+info:       resd 8
+path:       resb 64
+bufa:       resq 1
+bufb:       resq 1
 
-section .text ; v1: test_audio_music scratch #38
-    ; TODO: hoist invariant pointer load out of .loop (test_audio_music:38)
+section .text
 
-PROC test_main ; v1: test_audio_music scratch #40
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_audio_music:40)
-    lea     rcx, [rel s_dir] ; v1: test_audio_music scratch #41
-    call    ah_mkdir ; v1: test_audio_music scratch #42
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_audio_music:42)
-    mov     ecx, MAX_SECS*FS*2*4 ; v1: test_audio_music scratch #43
-    call    t_alloc ; v1: test_audio_music scratch #44
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_audio_music:44)
-    mov     [rel bufa], rax ; v1: test_audio_music scratch #45
-    mov     ecx, 10*FS*2*4 ; v1: test_audio_music scratch #46
-    ; TODO: clamp index before table lookup on malformed input (test_audio_music:46)
-    call    t_alloc ; v1: test_audio_music scratch #47
-    mov     [rel bufb], rax ; v1: test_audio_music scratch #48
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_audio_music:48)
-    call    music_moods ; v1: test_audio_music scratch #49
-    call    music_seeds ; v1: test_audio_music scratch #50
-    ; TODO: verify 16-byte rsp alignment before inner call (test_audio_music:50)
-ENDP ; v1: test_audio_music scratch #51
+PROC test_main
+    lea     rcx, [rel s_dir]
+    call    ah_mkdir
+    mov     ecx, MAX_SECS*FS*2*4
+    call    t_alloc
+    mov     [rel bufa], rax
+    mov     ecx, 10*FS*2*4
+    call    t_alloc
+    mov     [rel bufb], rax
+    call    music_moods
+    call    music_seeds
+ENDP
 
 ; r12d mood, r13d frames, r15 name, xmm6 peak, xmm7 rms, xmm8 audible-until s,
 ; LOC(0) state, LOC(4) failure count before this mood
-PROCX music_moods, 64 ; v1: test_audio_music scratch #55
-    TEST "music" ; v1: test_audio_music scratch #56
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_audio_music:56)
+PROCX music_moods, 64
+    TEST "music"
     FLOAD   xmm0, 1.0
     call    ah_set_music
     mov     rsi, [rel bufa]
@@ -166,25 +143,98 @@ PROCX music_moods, 64 ; v1: test_audio_music scratch #55
     PRINT   " ms"
     call    t_newline
 
-    ; v1 temporary guard (test_audio_music #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (test_audio_music #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (test_audio_music #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (test_audio_music #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (test_audio_music #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (test_audio_music #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (test_audio_music #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (test_audio_music #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (test_audio_music #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (test_audio_music #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (test_audio_music #43)
-    xor     r11d, r11d ; clear v1 slot 43
+    DCMP    xmm6, a, 0.05
+    CHECK_TRUE eax, "music silent (peak <= 0.05)"
+    DCMP    xmm6, b, 0.98
+    CHECK_TRUE eax, "music clips (peak >= 0.98)"
+    DCMP    xmm7, a, 0.004
+    CHECK_TRUE eax, "music too quiet (rms <= 0.004)"
+    CHECK_EQ32 LOC(0), 0, "music piece did not finish within the render length"
+    DCMP    xmm8, a, 25.0
+    CHECK_TRUE eax, "music piece too short (audible <= 25 s)"
+    mov     rcx, rsi
+    lea     rdx, [rsi+4]
+    mov     r8d, r13d
+    mov     r9d, 2
+    call    ah_allclose_f
+    xor     eax, 1
+    CHECK_TRUE eax, "music has no stereo (L == R)"
+    ; tag failures with the mood name
+    mov     eax, [rel t_failures]
+    cmp     eax, LOC(4)
+    je      .wav
+    lea     rcx, [rel path]
+    lea     rdx, [rel s_mood]
+    call    ah_scpy
+    mov     rcx, rax
+    mov     rdx, r15
+    call    ah_scpy
+    lea     rcx, [rel path]
+    call    t_fail_detail
+.wav:
+    lea     rcx, [rel path]
+    lea     rdx, [rel s_pre]
+    call    ah_scpy
+    mov     rcx, rax
+    mov     rdx, r15
+    call    ah_scpy
+    mov     rcx, rax
+    lea     rdx, [rel s_wav]
+    call    ah_scpy
+    lea     rcx, [rel path]
+    mov     rdx, rsi
+    lea     r8d, [r13+r13]
+    mov     r9d, 2
+    mov     qword [rsp+32], 1
+    call    ah_write_wav
+    inc     r12d
+    jmp     .mood
+.done:
+ENDPX
+
+PROC music_seeds, 0
+    TEST "music seeds and volume"
+    mov     rsi, [rel bufa]
+    mov     rdi, [rel bufb]
+    xor     ecx, ecx
+    mov     edx, 77
+    mov     r8, rsi
+    mov     r9d, FS*10
+    call    music_dbg_render
+    xor     ecx, ecx
+    mov     edx, 77
+    mov     r8, rdi
+    mov     r9d, FS*10
+    call    music_dbg_render
+    CHECK_MEM rsi, rdi, FS*10*2*4, "music not deterministic for a seed"
+    xor     ecx, ecx
+    mov     edx, 78
+    mov     r8, rdi
+    mov     r9d, FS*10
+    call    music_dbg_render
+    mov     rcx, rsi
+    mov     rdx, rdi
+    mov     r8d, FS*10*2
+    mov     r9d, 1
+    call    ah_allclose_f
+    xor     eax, 1
+    CHECK_TRUE eax, "different seeds give the same piece"
+    xorps   xmm0, xmm0
+    call    ah_set_music
+    mov     ecx, 2
+    mov     edx, 5
+    mov     r8, rsi
+    mov     r9d, FS*5
+    call    music_dbg_render
+    mov     rcx, rsi
+    mov     edx, FS*5*2
+    call    ah_peak_f
+    xorpd   xmm1, xmm1
+    xor     eax, eax
+    comisd  xmm0, xmm1
+    sete    al
+    jnp     .c                      ; nan is not silence
+    xor     eax, eax
+.c:
+    CHECK_TRUE eax, "music_vol 0 is not silent"
+ENDP
