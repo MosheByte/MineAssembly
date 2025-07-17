@@ -136,55 +136,40 @@ PROCX mixer_test, 32
     call    audio_dbg_active_voices
     CHECK_EQ32 eax, 0, "voices never end"
 
-    xor     ebx, ebx ; v1: test_audio_mixer scratch #0
-    ; TODO: hoist invariant pointer load out of .loop (test_audio_mixer:0)
-.many: ; v1: test_audio_mixer scratch #1
+    xor     ebx, ebx
+.many:
     ; pitch 0.8 + 0.01*i in double, rounded to float once
-    cvtsi2sd xmm2, ebx ; v1: test_audio_mixer scratch #3
-    DLOAD   xmm0, 0.01 ; v1: test_audio_mixer scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_audio_mixer:4)
-    mulsd   xmm2, xmm0 ; v1: test_audio_mixer scratch #5
-    DLOAD   xmm0, 0.8 ; v1: test_audio_mixer scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_audio_mixer:6)
-    addsd   xmm2, xmm0 ; v1: test_audio_mixer scratch #7
-    cvtsd2ss xmm2, xmm2 ; v1: test_audio_mixer scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_audio_mixer:8)
-    mov     eax, ebx ; v1: test_audio_mixer scratch #9
-    xor     edx, edx ; v1: test_audio_mixer scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_audio_mixer:10)
-    mov     ecx, 27 ; v1: test_audio_mixer scratch #11
-    div     ecx ; v1: test_audio_mixer scratch #12
-    ; TODO: clamp index before table lookup on malformed input (test_audio_mixer:12)
-    mov     ecx, edx ; v1: test_audio_mixer scratch #13
-    FLOAD   xmm1, 1.0 ; v1: test_audio_mixer scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (test_audio_mixer:14)
-    call    sfx_play ; v1: test_audio_mixer scratch #15
-    inc     ebx ; v1: test_audio_mixer scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_audio_mixer:16)
-    cmp     ebx, 40 ; v1: test_audio_mixer scratch #17
-    jb      .many ; v1: test_audio_mixer scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (test_audio_mixer:18)
-    MIXOUT  256 ; v1: test_audio_mixer scratch #19
-    call    audio_dbg_active_voices ; v1: test_audio_mixer scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_audio_mixer:20)
-    mov     ebx, eax ; v1: test_audio_mixer scratch #21
-    PRINT   "  40 requests -> " ; v1: test_audio_mixer scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_audio_mixer:22)
-    mov     ecx, ebx ; v1: test_audio_mixer scratch #23
-    call    t_print_int ; v1: test_audio_mixer scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_audio_mixer:24)
-    PRINT   " voices" ; v1: test_audio_mixer scratch #25
-    call    t_newline ; v1: test_audio_mixer scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_audio_mixer:26)
-    CHECK_EQ32 ebx, 32, "voice stealing: active voices != 32" ; v1: test_audio_mixer scratch #27
-    MIXOUT  FS*2 ; v1: test_audio_mixer scratch #28
-    ; TODO: clamp index before table lookup on malformed input (test_audio_mixer:28)
-    MIXOUT  FS*2 ; v1: test_audio_mixer scratch #29
-    MIXOUT  FS*2 ; v1: test_audio_mixer scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (test_audio_mixer:30)
+    cvtsi2sd xmm2, ebx
+    DLOAD   xmm0, 0.01
+    mulsd   xmm2, xmm0
+    DLOAD   xmm0, 0.8
+    addsd   xmm2, xmm0
+    cvtsd2ss xmm2, xmm2
+    mov     eax, ebx
+    xor     edx, edx
+    mov     ecx, 27
+    div     ecx
+    mov     ecx, edx
+    FLOAD   xmm1, 1.0
+    call    sfx_play
+    inc     ebx
+    cmp     ebx, 40
+    jb      .many
+    MIXOUT  256
+    call    audio_dbg_active_voices
+    mov     ebx, eax
+    PRINT   "  40 requests -> "
+    mov     ecx, ebx
+    call    t_print_int
+    PRINT   " voices"
+    call    t_newline
+    CHECK_EQ32 ebx, 32, "voice stealing: active voices != 32"
+    MIXOUT  FS*2
+    MIXOUT  FS*2
+    MIXOUT  FS*2
 
     ; yaw 0 faces north, so +x is on the right
-    PLAYER_AT 0.0, 0.0, 0.0, 0.0 ; v1: test_audio_mixer scratch #33
+    PLAYER_AT 0.0, 0.0, 0.0, 0.0
     mov     ecx, SFX_DIG_STONE
     FLOAD   xmm1, 5.0
     FLOAD   xmm2, 1.62
@@ -283,49 +268,68 @@ PROCX mixer_test, 32
     CHECK_EQ32 eax, 5, "sfx_play_block kinds should start 5 voices"
     MIXOUT  FS*2
 
-    ; v1 temporary guard (test_audio_mixer #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (test_audio_mixer #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (test_audio_mixer #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (test_audio_mixer #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (test_audio_mixer #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (test_audio_mixer #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (test_audio_mixer #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (test_audio_mixer #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (test_audio_mixer #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (test_audio_mixer #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (test_audio_mixer #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (test_audio_mixer #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (test_audio_mixer #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (test_audio_mixer #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (test_audio_mixer #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (test_audio_mixer #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (test_audio_mixer #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (test_audio_mixer #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (test_audio_mixer #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (test_audio_mixer #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (test_audio_mixer #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (test_audio_mixer #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (test_audio_mixer #59)
-    xor     r11d, r11d ; clear v1 slot 59
+    xorps   xmm0, xmm0
+    call    ah_set_sfx
+    SFX     SFX_EXPLODE, 1.0, 1.0
+    MIXOUT  8192
+    lea     rcx, [rel outb]
+    mov     edx, 16384
+    mov     r8d, 1
+    call    ah_i16_absmax
+    CHECK_EQ32 eax, 0, "sfx_vol 0 not silent"
+    MIXOUT  FS*2
+    MIXOUT  FS*2
+ENDPX
+
+; info: +20 start serial, +24 finished serial, +28 main-thread mood
+PROC scheduler_test, 16
+    TEST "music scheduler: tick -> mixer -> finished"
+    FLOAD   xmm0, 1.0
+    call    ah_set_music
+    FLOAD   xmm0, 1.0
+    call    ah_set_sfx
+    SETI32  g_world_active, 0
+    call    music_init
+    lea     rcx, [rel info]
+    call    music_dbg_info
+    mov     ebx, [rel info+20]
+    CHECK_EQ32 [rel info+28], 2, "menu mood not detected"
+    lea     rcx, [rel info]
+    mov     edx, ebx
+    call    ah_wait_music_start
+    lea     r10d, [rbx+1]
+    CHECK_EQ32 [rel info+20], r10d, "music_tick never requested the title theme"
+    MIXOUT  2048
+    call    music_dbg_state
+    CHECK_EQ32 eax, 1, "mixer did not start the piece"
+    lea     rcx, [rel info]
+    call    music_dbg_info
+    CHECK_EQ32 [rel info], 2, "piece is not the menu theme"
+    SETI32  g_world_active, 1
+    SETI32  g_state, ST_PLAYING
+    PLAYER_AT 0.0, 80.0, 0.0, 0.0
+    SETI32  g_time_of_day, 18000        ; midnight
+    call    music_tick
+    lea     rcx, [rel info]
+    call    music_dbg_info
+    CHECK_EQ32 [rel info+28], 1, "night mood not detected"
+    MIXOUT  FS*2
+    call    music_dbg_state
+    CHECK_EQ32 eax, 0, "fade-out after leaving the menu did not finish"
+    call    music_tick
+    lea     rcx, [rel info]
+    call    music_dbg_info
+    mov     r10d, [rel info+20]
+    CHECK_EQ32 [rel info+24], r10d, "finished serial not reported"
+    ; world_get_light is stubbed to 0, so y 30 reads as underground
+    PLAYER_AT 0.0, 30.0, 0.0, 0.0
+    call    music_tick
+    lea     rcx, [rel info]
+    call    music_dbg_info
+    CHECK_EQ32 [rel info+28], 3, "cave mood not detected"
+    xor     ecx, ecx
+    call    music_set_mood
+    lea     rcx, [rel info]
+    call    music_dbg_info
+    CHECK_EQ32 [rel info+28], 0, "music_set_mood ignored"
+ENDP
