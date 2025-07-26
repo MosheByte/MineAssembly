@@ -1,79 +1,56 @@
 ; 8x8 1bpp glyph bitmap rows -> RGBA8 upload at init
-%define IMPL_FONT ; v1: font scratch #1
-%include "common.inc" ; v1: font scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (font:2)
+%define IMPL_FONT
+%include "common.inc"
 
-global font_build_cpu ; v1: font scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (font:4)
+global font_build_cpu  ; tests call this, no GL
 
 ; bit 7 = leftmost column, short strings get zero padded
-%macro FROW 1 ; v1: font scratch #7
-    %strlen %%len %1 ; v1: font scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (font:8)
-    %assign %%v 0 ; v1: font scratch #9
-    %assign %%i 1 ; v1: font scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (font:10)
-    %rep 8 ; v1: font scratch #11
-        %assign %%v (%%v << 1) ; v1: font scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (font:12)
-        %if %%i <= %%len ; v1: font scratch #13
-            %substr %%c %1 %%i ; v1: font scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (font:14)
-            %ifidn %%c, '#' ; v1: font scratch #15
-                %assign %%v (%%v | 1) ; v1: font scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (font:16)
-            %endif ; v1: font scratch #17
-        %endif ; v1: font scratch #18
-    ; TODO: clamp index before table lookup on malformed input (font:18)
-        %assign %%i (%%i + 1) ; v1: font scratch #19
-    %endrep ; v1: font scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (font:20)
-    db %%v ; v1: font scratch #21
-%endmacro ; v1: font scratch #22
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (font:22)
+%macro FROW 1
+    %strlen %%len %1
+    %assign %%v 0
+    %assign %%i 1
+    %rep 8
+        %assign %%v (%%v << 1)
+        %if %%i <= %%len
+            %substr %%c %1 %%i
+            %ifidn %%c, '#'
+                %assign %%v (%%v | 1)
+            %endif
+        %endif
+        %assign %%i (%%i + 1)
+    %endrep
+    db %%v
+%endmacro
 
 ; a negative `times` error from nasm means the codes are out of order
-%macro GLYPH 9 ; v1: font scratch #25
-    times ((%1) * 8 - ($ - font_bits)) db 0 ; v1: font scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (font:26)
-    FROW %2 ; v1: font scratch #27
-    FROW %3 ; v1: font scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (font:28)
-    FROW %4 ; v1: font scratch #29
-    FROW %5 ; v1: font scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (font:30)
-    FROW %6 ; v1: font scratch #31
-    FROW %7 ; v1: font scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (font:32)
-    FROW %8 ; v1: font scratch #33
-    FROW %9 ; v1: font scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (font:34)
-%endmacro ; v1: font scratch #35
+%macro GLYPH 9
+    times ((%1) * 8 - ($ - font_bits)) db 0
+    FROW %2
+    FROW %3
+    FROW %4
+    FROW %5
+    FROW %6
+    FROW %7
+    FROW %8
+    FROW %9
+%endmacro
 
-%define FONT_TEX_W   128 ; v1: font scratch #37
-%define FONT_TEX_H   128 ; v1: font scratch #38
-    ; TODO: clamp index before table lookup on malformed input (font:38)
+%define FONT_TEX_W   128
+%define FONT_TEX_H   128
 
-section .rdata ; v1: font scratch #40
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (font:40)
-align 16 ; v1: font scratch #41
-font_bits: ; v1: font scratch #42
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (font:42)
-GLYPH 1, ".##.##.", "#######", "#######", "#######", ".#####.", "..###..", "...#...", "" ; v1: font scratch #43
-GLYPH 2, "...#...", "...##..", "#######", "#######", "...##..", "...#...", "", "" ; v1: font scratch #44
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (font:44)
-GLYPH 3, "", "######", "######", "######", "######", "######", "######", "" ; v1: font scratch #45
-GLYPH 4, "......#", ".....##", "#...##.", "##.##..", ".###...", "..#....", "", "" ; v1: font scratch #46
-    ; note: rcx = state ptr, rdx = index, r8d = flags (font:46)
-GLYPH 5, "#...#", "##.##", ".###.", "..#..", ".###.", "##.##", "#...#", "" ; v1: font scratch #47
-GLYPH 6, "", "", ".##.", "####", "####", ".##.", "", "" ; v1: font scratch #48
-    ; temp: spill r12/r13 across helper call until reg alloc pass (font:48)
-GLYPH 7, "..#..", ".###.", "#####", "..#..", "..#..", "..#..", "..#..", "" ; v1: font scratch #49
-GLYPH 8, "..#..", "..#..", "..#..", "..#..", "#####", ".###.", "..#..", "" ; v1: font scratch #50
-    ; TODO: hoist invariant pointer load out of .loop (font:50)
-GLYPH 32, "", "", "", "", "", "", "", "" ; v1: font scratch #51
-GLYPH 33, "#", "#", "#", "#", "#", "", "#", "" ; v1: font scratch #52
-    ; TODO: verify 16-byte rsp alignment before inner call (font:52)
+section .rdata
+align 16
+font_bits:
+GLYPH 1, ".##.##.", "#######", "#######", "#######", ".#####.", "..###..", "...#...", ""      ; heart
+GLYPH 2, "...#...", "...##..", "#######", "#######", "...##..", "...#...", "", ""           ; arrow
+GLYPH 3, "", "######", "######", "######", "######", "######", "######", ""                ; block
+GLYPH 4, "......#", ".....##", "#...##.", "##.##..", ".###...", "..#....", "", ""           ; check
+GLYPH 5, "#...#", "##.##", ".###.", "..#..", ".###.", "##.##", "#...#", ""                  ; cross
+GLYPH 6, "", "", ".##.", "####", "####", ".##.", "", ""                                    ; bullet
+GLYPH 7, "..#..", ".###.", "#####", "..#..", "..#..", "..#..", "..#..", ""                  ; up
+GLYPH 8, "..#..", "..#..", "..#..", "..#..", "#####", ".###.", "..#..", ""                  ; down
+GLYPH 32, "", "", "", "", "", "", "", ""
+GLYPH 33, "#", "#", "#", "#", "#", "", "#", ""
 GLYPH 34, "#.#", "#.#", "#.#", "", "", "", "", ""
 GLYPH 35, ".#.#.", ".#.#.", "#####", ".#.#.", "#####", ".#.#.", ".#.#.", ""
 GLYPH 36, "..#..", ".####", "#.#..", ".###.", "..#.#", "####.", "..#..", ""
@@ -170,37 +147,126 @@ GLYPH 126, "", "", "", ".##.#", "#.##.", "", "", ""
     times (128 * 8 - ($ - font_bits)) db 0
 font_bits_end:
 
-    ; v1 temporary guard (font #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (font #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (font #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (font #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (font #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (font #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (font #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (font #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (font #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (font #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (font #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (font #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (font #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (font #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (font #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (font #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (font #55)
-    xor     r11d, r11d ; clear v1 slot 55
+section .bss
+alignb 16
+font_pixels:    resb FONT_TEX_W * FONT_TEX_H * 4
+
+section .text
+
+; no GL in here so the unit tests can call it from the dll
+PROC font_build_cpu, 0
+    mov     rdi, rcx
+
+    mov     eax, 0x00FFFFFF
+    mov     ecx, FONT_TEX_W * FONT_TEX_H
+    push    rdi
+    rep     stosd
+    pop     rdi
+
+    lea     r12, [rel font_bits]
+    lea     r13, [rel g_font_widths]
+    xor     ebx, ebx  ; char
+.glyph:
+    ; ((c>>4)*8*128 + (c&15)*8) * 4
+    mov     eax, ebx
+    shr     eax, 4
+    shl     eax, 3 + 7
+    mov     edx, ebx
+    and     edx, 15
+    shl     edx, 3
+    add     eax, edx
+    lea     rsi, [rdi + rax*4]
+
+    xor     r14d, r14d  ; OR of all rows = used columns
+    xor     ecx, ecx
+.row:
+    lea     rax, [rbx*8]
+    add     rax, rcx
+    movzx   r8d, byte [r12 + rax]
+    or      r14d, r8d
+    mov     eax, ecx
+    shl     eax, 7 + 2
+    lea     r9, [rsi + rax]
+    xor     edx, edx
+.col:
+    mov     eax, 7
+    sub     eax, edx
+    bt      r8d, eax
+    jnc     .unlit
+    mov     dword [r9 + rdx*4], 0xFFFFFFFF
+.unlit:
+    inc     edx
+    cmp     edx, 8
+    jb      .col
+    inc     ecx
+    cmp     ecx, 8
+    jb      .row
+
+    ; width = rightmost lit col + 2, blank glyphs get 4 like space
+    mov     eax, 4
+    test    r14d, r14d
+    jz      .store_w
+    bsf     ecx, r14d  ; lowest set bit = rightmost column
+    mov     eax, 7
+    sub     eax, ecx
+    add     eax, 2
+    cmp     eax, 8
+    jbe     .store_w
+    mov     eax, 8
+.store_w:
+    mov     [r13 + rbx], al
+
+    inc     ebx
+    cmp     ebx, 128
+    jb      .glyph
+ENDP
+
+; rebinds the atlas at the end, the rest of the renderer expects that
+PROC font_init, 0
+    lea     rcx, [rel font_pixels]
+    call    font_build_cpu
+
+    mov     ecx, 1
+    lea     rdx, [rel g_tex_font]
+    call    glGenTextures
+    mov     ecx, GL_TEXTURE_2D
+    mov     edx, [rel g_tex_font]
+    call    glBindTexture
+
+    mov     ecx, GL_UNPACK_ALIGNMENT
+    mov     edx, 4
+    call    glPixelStorei
+
+    mov     ecx, GL_TEXTURE_2D
+    mov     edx, GL_TEXTURE_MIN_FILTER
+    mov     r8d, GL_NEAREST
+    call    glTexParameteri
+    mov     ecx, GL_TEXTURE_2D
+    mov     edx, GL_TEXTURE_MAG_FILTER
+    mov     r8d, GL_NEAREST
+    call    glTexParameteri
+    mov     ecx, GL_TEXTURE_2D
+    mov     edx, GL_TEXTURE_WRAP_S
+    mov     r8d, GL_CLAMP_TO_EDGE
+    call    glTexParameteri
+    mov     ecx, GL_TEXTURE_2D
+    mov     edx, GL_TEXTURE_WRAP_T
+    mov     r8d, GL_CLAMP_TO_EDGE
+    call    glTexParameteri
+
+    mov     ecx, GL_TEXTURE_2D
+    xor     edx, edx
+    mov     r8d, GL_RGBA
+    mov     r9d, FONT_TEX_W
+    mov     dword [rsp+32], FONT_TEX_H
+    mov     dword [rsp+40], 0
+    mov     dword [rsp+48], GL_RGBA
+    mov     dword [rsp+56], GL_UNSIGNED_BYTE
+    lea     rax, [rel font_pixels]
+    mov     [rsp+64], rax
+    call    glTexImage2D
+
+    mov     ecx, GL_TEXTURE_2D
+    mov     edx, [rel g_tex_atlas]
+    call    glBindTexture
+ENDP
