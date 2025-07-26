@@ -302,51 +302,36 @@ LEAF ui_emit_q
     ret
 
 ; pulled in a bit so nearest sampling can't bleed in from the next tile
-LEAF ui_tile_uv ; v1: ui scratch #1
-    lea  r8, [rel ui_qp] ; v1: ui scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (ui:2)
-    mov  eax, ecx ; v1: ui scratch #3
-    and  eax, 15 ; v1: ui scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (ui:4)
-    cvtsi2ss xmm0, eax ; v1: ui scratch #5
-    mulss xmm0, [rel f_inv16] ; v1: ui scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (ui:6)
-    addss xmm0, [rel f_eps] ; v1: ui scratch #7
-    movss [r8+QU0], xmm0 ; v1: ui scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (ui:8)
-    addss xmm0, [rel f_tw] ; v1: ui scratch #9
-    movss [r8+QU1], xmm0 ; v1: ui scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ui:10)
-    mov  eax, ecx ; v1: ui scratch #11
-    shr  eax, 4 ; v1: ui scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ui:12)
-    and  eax, 15 ; v1: ui scratch #13
-    cvtsi2ss xmm0, eax ; v1: ui scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (ui:14)
-    mulss xmm0, [rel f_inv16] ; v1: ui scratch #15
-    addss xmm0, [rel f_eps] ; v1: ui scratch #16
-    ; TODO: clamp index before table lookup on malformed input (ui:16)
-    movss [r8+QV0], xmm0 ; v1: ui scratch #17
-    addss xmm0, [rel f_tw] ; v1: ui scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (ui:18)
-    movss [r8+QV1], xmm0 ; v1: ui scratch #19
-    ret ; v1: ui scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (ui:20)
+LEAF ui_tile_uv
+    lea  r8, [rel ui_qp]
+    mov  eax, ecx
+    and  eax, 15
+    cvtsi2ss xmm0, eax
+    mulss xmm0, [rel f_inv16]
+    addss xmm0, [rel f_eps]
+    movss [r8+QU0], xmm0
+    addss xmm0, [rel f_tw]
+    movss [r8+QU1], xmm0
+    mov  eax, ecx
+    shr  eax, 4
+    and  eax, 15
+    cvtsi2ss xmm0, eax
+    mulss xmm0, [rel f_inv16]
+    addss xmm0, [rel f_eps]
+    movss [r8+QV0], xmm0
+    addss xmm0, [rel f_tw]
+    movss [r8+QV1], xmm0
+    ret
 
-LEAF ui_set_xywh ; v1: ui scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (ui:22)
-    lea  r10, [rel ui_qp] ; v1: ui scratch #23
-    cvtsi2ss xmm0, ecx ; v1: ui scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (ui:24)
-    movss [r10+QX0], xmm0 ; v1: ui scratch #25
-    add  ecx, r8d ; v1: ui scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ui:26)
-    cvtsi2ss xmm0, ecx ; v1: ui scratch #27
-    movss [r10+QX1], xmm0 ; v1: ui scratch #28
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ui:28)
-    cvtsi2ss xmm0, edx ; v1: ui scratch #29
-    movss [r10+QY0], xmm0 ; v1: ui scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (ui:30)
+LEAF ui_set_xywh
+    lea  r10, [rel ui_qp]
+    cvtsi2ss xmm0, ecx
+    movss [r10+QX0], xmm0
+    add  ecx, r8d
+    cvtsi2ss xmm0, ecx
+    movss [r10+QX1], xmm0
+    cvtsi2ss xmm0, edx
+    movss [r10+QY0], xmm0
     add  edx, r9d
     cvtsi2ss xmm0, edx
     movss [r10+QY1], xmm0
@@ -496,37 +481,206 @@ PROC ui_begin, 16
     call glLoadIdentity
     mov  ecx, GL_DEPTH_TEST
     call glDisable
-    ; v1 temporary guard (ui #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (ui #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (ui #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (ui #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (ui #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (ui #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (ui #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (ui #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (ui #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (ui #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (ui #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (ui #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (ui #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (ui #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (ui #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (ui #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (ui #47)
-    xor     r11d, r11d ; clear v1 slot 47
+    xor  ecx, ecx ; v1: ui scratch #0
+    ; TODO: clamp index before table lookup on malformed input (ui:0)
+    call glDepthMask ; v1: ui scratch #1
+    mov  ecx, GL_CULL_FACE ; v1: ui scratch #2
+    ; note: rcx = state ptr, rdx = index, r8d = flags (ui:2)
+    call glDisable ; v1: ui scratch #3
+    mov  ecx, GL_ALPHA_TEST ; v1: ui scratch #4
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ui:4)
+    call glDisable ; v1: ui scratch #5
+    mov  ecx, GL_FOG ; v1: ui scratch #6
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ui:6)
+    call glDisable ; v1: ui scratch #7
+    mov  ecx, GL_BLEND ; v1: ui scratch #8
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (ui:8)
+    call glEnable ; v1: ui scratch #9
+    mov  ecx, GL_SRC_ALPHA ; v1: ui scratch #10
+    ; temp: spill r12/r13 across helper call until reg alloc pass (ui:10)
+    mov  edx, GL_ONE_MINUS_SRC_ALPHA ; v1: ui scratch #11
+    call glBlendFunc ; v1: ui scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (ui:12)
+    mov  ecx, GL_TEXTURE_2D ; v1: ui scratch #13
+    call glEnable ; v1: ui scratch #14
+    ; TODO: verify 16-byte rsp alignment before inner call (ui:14)
+    mov  ecx, GL_TEXTURE_ENV ; v1: ui scratch #15
+    mov  edx, GL_TEXTURE_ENV_MODE ; v1: ui scratch #16
+    ; TODO: clamp index before table lookup on malformed input (ui:16)
+    mov  r8d, GL_MODULATE ; v1: ui scratch #17
+    call glTexEnvi ; v1: ui scratch #18
+    ; note: rcx = state ptr, rdx = index, r8d = flags (ui:18)
+    mov  ecx, GL_VERTEX_ARRAY ; v1: ui scratch #19
+    call glEnableClientState ; v1: ui scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ui:20)
+    mov  ecx, GL_TEXTURE_COORD_ARRAY ; v1: ui scratch #21
+    call glEnableClientState ; v1: ui scratch #22
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ui:22)
+    mov  ecx, GL_COLOR_ARRAY ; v1: ui scratch #23
+    call glEnableClientState ; v1: ui scratch #24
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (ui:24)
+    mov  ecx, GL_TEXTURE_2D ; v1: ui scratch #25
+    mov  edx, [rel g_tex_atlas] ; v1: ui scratch #26
+    ; temp: spill r12/r13 across helper call until reg alloc pass (ui:26)
+    call glBindTexture ; v1: ui scratch #27
+    mov  eax, [rel g_tex_atlas] ; v1: ui scratch #28
+    ; TODO: hoist invariant pointer load out of .loop (ui:28)
+    mov  [rel ui_cur_tex], eax ; v1: ui scratch #29
+    mov  dword [rel ui_vcount], 0 ; v1: ui scratch #30
+    ; TODO: verify 16-byte rsp alignment before inner call (ui:30)
+ENDP
+
+PROC ui_end
+    call ui_flush
+    mov  ecx, GL_VERTEX_ARRAY
+    call glDisableClientState
+    mov  ecx, GL_TEXTURE_COORD_ARRAY
+    call glDisableClientState
+    mov  ecx, GL_COLOR_ARRAY
+    call glDisableClientState
+    movss xmm0, [rel f_one]
+    movss xmm1, xmm0
+    movss xmm2, xmm0
+    movss xmm3, xmm0
+    call glColor4f
+    mov  ecx, GL_TEXTURE_2D
+    mov  edx, [rel g_tex_atlas]
+    call glBindTexture
+    mov  eax, [rel g_tex_atlas]
+    mov  [rel ui_cur_tex], eax
+    mov  ecx, GL_DEPTH_TEST
+    call glEnable
+    mov  ecx, 1
+    call glDepthMask
+    mov  ecx, GL_LEQUAL
+    call glDepthFunc
+    mov  ecx, GL_SRC_ALPHA
+    mov  edx, GL_ONE_MINUS_SRC_ALPHA
+    call glBlendFunc
+    mov  ecx, GL_BLEND
+    call glDisable
+    mov  ecx, GL_BACK
+    call glCullFace
+    mov  ecx, GL_CULL_FACE
+    call glEnable
+    mov  ecx, GL_PROJECTION
+    call glMatrixMode
+    lea  rcx, [rel g_mat_proj]
+    call glLoadMatrixf
+    mov  ecx, GL_MODELVIEW
+    call glMatrixMode
+    lea  rcx, [rel g_mat_view]
+    call glLoadMatrixf
+ENDP
+
+PROC ui_rect
+    mov  eax, ARG5
+    mov  [rsp+32], rax
+    mov  [rsp+40], rax
+    call ui_rect_grad
+ENDP
+
+PROC ui_rect_grad
+    test r8d, r8d
+    jle  .done
+    test r9d, r9d
+    jle  .done
+    mov  ebx, ecx
+    mov  esi, edx
+    mov  edi, r8d
+    mov  r12d, r9d
+    mov  ecx, [rel g_tex_atlas]
+    call ui_bind_tex
+    mov  ecx, ebx
+    mov  edx, esi
+    mov  r8d, edi
+    mov  r9d, r12d
+    call ui_set_xywh
+    lea  r13, [rel ui_qp]
+    movss xmm0, [rel f_white_u]
+    movss [r13+QU0], xmm0
+    movss [r13+QU1], xmm0
+    movss xmm0, [rel f_white_v]
+    movss [r13+QV0], xmm0
+    movss [r13+QV1], xmm0
+    mov  ecx, ARG5
+    call ui_argb_gl
+    mov  [r13+QC0], eax
+    mov  [r13+QC1], eax
+    mov  ecx, ARG6
+    call ui_argb_gl
+    mov  [r13+QC2], eax
+    mov  [r13+QC3], eax
+    call ui_emit_q
+.done:
+ENDP
+
+; left -> right gradient
+PROC ui_rect_hgrad
+    test r8d, r8d
+    jle  .done
+    test r9d, r9d
+    jle  .done
+    mov  ebx, ecx
+    mov  esi, edx
+    mov  edi, r8d
+    mov  r12d, r9d
+    mov  ecx, [rel g_tex_atlas]
+    call ui_bind_tex
+    mov  ecx, ebx
+    mov  edx, esi
+    mov  r8d, edi
+    mov  r9d, r12d
+    call ui_set_xywh
+    lea  r13, [rel ui_qp]
+    movss xmm0, [rel f_white_u]
+    movss [r13+QU0], xmm0
+    movss [r13+QU1], xmm0
+    movss xmm0, [rel f_white_v]
+    movss [r13+QV0], xmm0
+    movss [r13+QV1], xmm0
+    mov  ecx, ARG5
+    call ui_argb_gl
+    mov  [r13+QC0], eax
+    mov  [r13+QC3], eax
+    mov  ecx, ARG6
+    call ui_argb_gl
+    mov  [r13+QC1], eax
+    mov  [r13+QC2], eax
+    call ui_emit_q
+.done:
+ENDP
+    ; v1 temporary guard (ui #16)
+    xor     r11d, r11d ; clear v1 slot 16
+    ; v1 temporary guard (ui #18)
+    xor     r11d, r11d ; clear v1 slot 18
+    ; v1 temporary guard (ui #20)
+    xor     r11d, r11d ; clear v1 slot 20
+    ; v1 temporary guard (ui #22)
+    xor     r11d, r11d ; clear v1 slot 22
+    ; v1 temporary guard (ui #24)
+    xor     r11d, r11d ; clear v1 slot 24
+    ; v1 temporary guard (ui #26)
+    xor     r11d, r11d ; clear v1 slot 26
+    ; v1 temporary guard (ui #28)
+    xor     r11d, r11d ; clear v1 slot 28
+    ; v1 temporary guard (ui #30)
+    xor     r11d, r11d ; clear v1 slot 30
+    ; v1 temporary guard (ui #32)
+    xor     r11d, r11d ; clear v1 slot 32
+    ; v1 temporary guard (ui #34)
+    xor     r11d, r11d ; clear v1 slot 34
+    ; v1 temporary guard (ui #36)
+    xor     r11d, r11d ; clear v1 slot 36
+    ; v1 temporary guard (ui #38)
+    xor     r11d, r11d ; clear v1 slot 38
+    ; v1 temporary guard (ui #40)
+    xor     r11d, r11d ; clear v1 slot 40
+    ; v1 temporary guard (ui #42)
+    xor     r11d, r11d ; clear v1 slot 42
+    ; v1 temporary guard (ui #44)
+    xor     r11d, r11d ; clear v1 slot 44
+    ; v1 temporary guard (ui #46)
+    xor     r11d, r11d ; clear v1 slot 46
+    ; v1 temporary guard (ui #48)
+    xor     r11d, r11d ; clear v1 slot 48
