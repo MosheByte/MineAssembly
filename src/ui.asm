@@ -1108,71 +1108,49 @@ PROC ui_item_icon, 16
     cmp  r14d, TINT_GRASS  ; grass: top face only
     jne  .tinted
     mov  ecx, 0xFFFFFFFF
-.tinted: ; v1: ui scratch #0
-    ; TODO: hoist invariant pointer load out of .loop (ui:0)
-    lea  rax, [rel iso_shade] ; v1: ui scratch #1
-    mov  edx, [rax+rdi*4] ; v1: ui scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ui:2)
-    call ui_col_scale ; v1: ui scratch #3
-    mov  ecx, eax ; v1: ui scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (ui:4)
-    call ui_argb_gl ; v1: ui scratch #5
-    mov  r15d, eax ; v1: ui scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (ui:6)
-    mov  dword LOC(0), 0 ; v1: ui scratch #7
-.vert: ; v1: ui scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (ui:8)
-    mov  eax, edi ; v1: ui scratch #9
-    shl  eax, 2 ; v1: ui scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (ui:10)
-    add  eax, LOC(0) ; v1: ui scratch #11
-    shl  eax, 4 ; v1: ui scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ui:12)
-    lea  rdx, [rel iso_tab] ; v1: ui scratch #13
-    add  rdx, rax ; v1: ui scratch #14
-    ; TODO: clamp index before table lookup on malformed input (ui:14)
-    cvtsi2ss xmm0, ebx ; v1: ui scratch #15
-    addss xmm0, [rdx] ; v1: ui scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (ui:16)
-    cvtsi2ss xmm1, esi ; v1: ui scratch #17
-    addss xmm1, [rdx+4] ; v1: ui scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ui:18)
-    movss xmm2, [rdx+8] ; v1: ui scratch #19
-    mulss xmm2, [rel f_tw] ; v1: ui scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (ui:20)
-    addss xmm2, [rel ui_qp+QU0] ; v1: ui scratch #21
-    movss xmm3, [rdx+12] ; v1: ui scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (ui:22)
-    mulss xmm3, [rel f_tw] ; v1: ui scratch #23
-    addss xmm3, [rel ui_qp+QV0] ; v1: ui scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (ui:24)
-    mov  ecx, r15d ; v1: ui scratch #25
-    call ui_put_vert ; v1: ui scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (ui:26)
-    inc  dword LOC(0) ; v1: ui scratch #27
-    cmp  dword LOC(0), 4 ; v1: ui scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ui:28)
-    jb   .vert ; v1: ui scratch #29
-    inc  edi ; v1: ui scratch #30
-    ; TODO: clamp index before table lookup on malformed input (ui:30)
-    cmp  edi, 3 ; v1: ui scratch #31
-    jb   .face ; v1: ui scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (ui:32)
-    jmp  .done ; v1: ui scratch #33
-.sprite: ; v1: ui scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ui:34)
-    imul ecx, r12d, 6 ; v1: ui scratch #35
-    add  ecx, FACE_PX ; v1: ui scratch #36
-    ; note: rcx = state ptr, rdx = index, r8d = flags (ui:36)
-    lea  rax, [rel blk_tex] ; v1: ui scratch #37
-    movzx r9d, byte [rax+rcx] ; v1: ui scratch #38
-    ; temp: spill r12/r13 across helper call until reg alloc pass (ui:38)
-    mov  [rsp+32], r13 ; v1: ui scratch #39
-    jmp  .flat_tint ; v1: ui scratch #40
-    ; TODO: verify 16-byte rsp alignment before inner call (ui:40)
-.done: ; v1: ui scratch #41
-ENDP ; v1: ui scratch #42
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (ui:42)
+.tinted:
+    lea  rax, [rel iso_shade]
+    mov  edx, [rax+rdi*4]
+    call ui_col_scale
+    mov  ecx, eax
+    call ui_argb_gl
+    mov  r15d, eax
+    mov  dword LOC(0), 0
+.vert:
+    mov  eax, edi
+    shl  eax, 2
+    add  eax, LOC(0)
+    shl  eax, 4
+    lea  rdx, [rel iso_tab]
+    add  rdx, rax
+    cvtsi2ss xmm0, ebx
+    addss xmm0, [rdx]
+    cvtsi2ss xmm1, esi
+    addss xmm1, [rdx+4]
+    movss xmm2, [rdx+8]
+    mulss xmm2, [rel f_tw]
+    addss xmm2, [rel ui_qp+QU0]
+    movss xmm3, [rdx+12]
+    mulss xmm3, [rel f_tw]
+    addss xmm3, [rel ui_qp+QV0]
+    mov  ecx, r15d
+    call ui_put_vert
+    inc  dword LOC(0)
+    cmp  dword LOC(0), 4
+    jb   .vert
+    inc  edi
+    cmp  edi, 3
+    jb   .face
+    jmp  .done
+.sprite:
+    imul ecx, r12d, 6
+    add  ecx, FACE_PX
+    lea  rax, [rel blk_tex]
+    movzx r9d, byte [rax+rcx]
+    mov  [rsp+32], r13
+    jmp  .flat_tint
+.done:
+ENDP
 
 PROC ui_item_stack, 48
     test r8, r8
@@ -1274,6 +1252,208 @@ LEAF ui_press_in
     mov  eax, 1
 .no:
     ret
+
+; click = press and release both inside, so dragging off cancels it
+PROC ui_button, 48 ; v1: ui scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (ui:2)
+    mov  ebx, ecx ; v1: ui scratch #3
+    mov  esi, edx ; v1: ui scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (ui:4)
+    mov  edi, r8d ; v1: ui scratch #5
+    mov  r12d, r9d ; v1: ui scratch #6
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (ui:6)
+    xor  r15d, r15d ; v1: ui scratch #7
+    xor  r14d, r14d ; v1: ui scratch #8
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ui:8)
+    cmp  dword ARG6, 0 ; v1: ui scratch #9
+    je   .draw ; v1: ui scratch #10
+    ; TODO: verify 16-byte rsp alignment before inner call (ui:10)
+    call ui_mouse_in ; v1: ui scratch #11
+    mov  r14d, eax ; v1: ui scratch #12
+    ; note: rcx = state ptr, rdx = index, r8d = flags (ui:12)
+    test eax, eax ; v1: ui scratch #13
+    jz   .draw ; v1: ui scratch #14
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ui:14)
+    test dword [rel g_mouse_released], MB_LEFT ; v1: ui scratch #15
+    jz   .draw ; v1: ui scratch #16
+    ; TODO: clamp index before table lookup on malformed input (ui:16)
+    mov  ecx, ebx ; v1: ui scratch #17
+    mov  edx, esi ; v1: ui scratch #18
+    ; temp: spill r12/r13 across helper call until reg alloc pass (ui:18)
+    mov  r8d, edi ; v1: ui scratch #19
+    mov  r9d, r12d ; v1: ui scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (ui:20)
+    call ui_press_in ; v1: ui scratch #21
+    test eax, eax ; v1: ui scratch #22
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (ui:22)
+    jz   .draw ; v1: ui scratch #23
+    mov  r15d, 1 ; v1: ui scratch #24
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ui:24)
+    mov  ecx, SFX_CLICK ; v1: ui scratch #25
+    movss xmm1, [rel f_one] ; v1: ui scratch #26
+    ; TODO: verify 16-byte rsp alignment before inner call (ui:26)
+    movss xmm2, [rel f_one] ; v1: ui scratch #27
+    call sfx_play ; v1: ui scratch #28
+    ; note: rcx = state ptr, rdx = index, r8d = flags (ui:28)
+.draw: ; v1: ui scratch #29
+; LOC 0..20: border, top, bottom, highlight, shade, text
+    cmp  dword ARG6, 0
+    je   .disabled
+    test r14d, r14d
+    jnz  .hover
+    mov  dword LOC(0), 0xFF0C0C10
+    mov  dword LOC(4), 0xFF7D8290
+    mov  dword LOC(8), 0xFF5A5F6C
+    mov  dword LOC(12), 0xFFA8ADBA
+    mov  dword LOC(16), 0xFF3C3F48
+    mov  dword LOC(20), 0xFFE8E8E8
+    jmp  .paint
+.hover:
+    mov  dword LOC(0), 0xFFFFFFFF
+    mov  dword LOC(4), 0xFF8496CC
+    mov  dword LOC(8), 0xFF5C6CA4
+    mov  dword LOC(12), 0xFFB8C6F0
+    mov  dword LOC(16), 0xFF3A4470
+    mov  dword LOC(20), 0xFFFFFFA0
+    jmp  .paint
+.disabled:
+    mov  dword LOC(0), 0xFF0C0C10
+    mov  dword LOC(4), 0xFF4A4A4E
+    mov  dword LOC(8), 0xFF3C3C40
+    mov  dword LOC(12), 0xFF58585C
+    mov  dword LOC(16), 0xFF2E2E32
+    mov  dword LOC(20), 0xFF9A9A9A
+.paint:
+    RECT ebx, esi, edi, r12d, LOC(0)
+    lea  eax, [rbx+1]
+    mov  LOC(24), eax
+    lea  eax, [rsi+1]
+    mov  LOC(28), eax
+    lea  eax, [rdi-2]
+    mov  LOC(32), eax
+    lea  eax, [r12-2]
+    mov  LOC(36), eax
+    RECTG LOC(24), LOC(28), LOC(32), LOC(36), LOC(4), LOC(8)
+    RECT LOC(24), LOC(28), LOC(32), 1, LOC(12)
+    lea  eax, [r12-3]
+    mov  LOC(36), eax
+    RECT LOC(24), LOC(28), 1, LOC(36), LOC(12)
+    lea  eax, [rsi+r12-2]
+    mov  LOC(28), eax
+    RECT LOC(24), LOC(28), LOC(32), 1, LOC(16)
+    lea  eax, [rbx+rdi-2]
+    mov  LOC(24), eax
+    lea  eax, [rsi+2]
+    mov  LOC(28), eax
+    RECT LOC(24), LOC(28), 1, LOC(36), LOC(16)
+    mov  r13, ARG5
+    test r13, r13
+    jz   .ret
+    mov  ecx, edi
+    shr  ecx, 1
+    add  ecx, ebx
+    mov  edx, r12d
+    sub  edx, 7
+    sar  edx, 1
+    add  edx, esi
+    mov  r8, r13
+    mov  r9d, LOC(20)
+    mov  qword [rsp+32], 1
+    call ui_text_centered_ex
+.ret:
+    mov  eax, r15d
+ENDP
+
+; does fmt want an int? lets slider labels use %d or %f
+LEAF ui_fmt_is_int
+    xor  eax, eax
+    test rcx, rcx
+    jz   .r
+.lp:
+    movzx edx, byte [rcx]
+    inc  rcx
+    test edx, edx
+    jz   .r
+    cmp  edx, '%'
+    jne  .lp
+.spec:
+    movzx edx, byte [rcx]
+    inc  rcx
+    test edx, edx
+    jz   .r
+    cmp  edx, '%'
+    je   .lp
+    cmp  edx, 'd'
+    je   .int
+    cmp  edx, 'i'
+    je   .int
+    cmp  edx, 'u'
+    je   .int
+    cmp  edx, 'f'
+    je   .r
+    jmp  .spec
+.int:
+    mov  eax, 1
+.r: ret
+
+; r9 float* value, ARG5/ARG6 min/max as float bits, ARG7 label fmt
+; keeps dragging while the button is held even off the widget
+PROCX ui_slider, 48
+    mov  ebx, ecx
+    mov  esi, edx
+    mov  edi, r8d
+    mov  r12, r9
+    xor  r15d, r15d
+    movd xmm6, ARG5
+    movd xmm7, ARG6
+    cmp  edi, 16
+    jge  .wok
+    mov  edi, 16
+.wok:
+    mov  r8d, edi
+    mov  r9d, 20
+    call ui_mouse_in
+    mov  r14d, eax
+    test dword [rel g_mouse_pressed], MB_LEFT
+    jz   .nopress
+    test r14d, r14d
+    jz   .nopress
+    mov  [rel ui_active_slider], r12
+.nopress:
+    cmp  [rel ui_active_slider], r12
+    jne  .draw
+    mov  r14d, 1
+; press+release in the same frame should still move the knob
+    test dword [rel g_mouse_buttons], MB_LEFT
+    jnz  .track
+    test dword [rel g_mouse_pressed], MB_LEFT
+    jz   .release
+.track:
+; t = clamp((mx - x - 4) / (w - 8), 0, 1)
+    mov  eax, [rel g_ui_mx]
+    sub  eax, ebx
+    sub  eax, 4
+    cvtsi2ss xmm0, eax
+    lea  eax, [rdi-8]
+    cvtsi2ss xmm1, eax
+    divss xmm0, xmm1
+    xorps xmm1, xmm1
+    maxss xmm0, xmm1
+    minss xmm0, [rel f_one]
+    movss xmm1, xmm7
+    subss xmm1, xmm6
+    mulss xmm0, xmm1
+    addss xmm0, xmm6
+    test r12, r12
+    jz   .tracked
+    ; v1 temporary guard (ui #14)
+    xor     r11d, r11d ; clear v1 slot 14
+    ; v1 temporary guard (ui #16)
+    xor     r11d, r11d ; clear v1 slot 16
+    ; v1 temporary guard (ui #18)
+    xor     r11d, r11d ; clear v1 slot 18
+    ; v1 temporary guard (ui #20)
+    xor     r11d, r11d ; clear v1 slot 20
     ; v1 temporary guard (ui #22)
     xor     r11d, r11d ; clear v1 slot 22
     ; v1 temporary guard (ui #24)
@@ -1310,5 +1490,3 @@ LEAF ui_press_in
     xor     r11d, r11d ; clear v1 slot 54
     ; v1 temporary guard (ui #56)
     xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (ui #58)
-    xor     r11d, r11d ; clear v1 slot 58
