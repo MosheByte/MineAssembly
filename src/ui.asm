@@ -781,69 +781,49 @@ PROC ui_text_dims
     mov  edx, r12d
 ENDP
 
-PROC ui_text_width ; v1: ui scratch #1
-    call ui_text_dims ; v1: ui scratch #2
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (ui:2)
-ENDP ; v1: ui scratch #3
+PROC ui_text_width
+    call ui_text_dims
+ENDP
 
 ; ARG6 = dim (shadow pass). '\f' + hex digit picks a palette colour, '\f' 'r' resets
-PROC ui_text_pass, 32 ; v1: ui scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (ui:6)
-    mov  r14d, ecx ; v1: ui scratch #7
-    mov  ebx, ecx ; v1: ui scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (ui:8)
-    mov  r12d, edx ; v1: ui scratch #9
-    mov  rsi, r8 ; v1: ui scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (ui:10)
-    mov  r13d, ARG5 ; v1: ui scratch #11
-    cmp  r13d, 1 ; v1: ui scratch #12
-    ; TODO: clamp index before table lookup on malformed input (ui:12)
-    jge  .sc ; v1: ui scratch #13
-    mov  r13d, 1 ; v1: ui scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ui:14)
-.sc: ; v1: ui scratch #15
-    mov  eax, r9d ; v1: ui scratch #16
-    ; note: rcx = state ptr, rdx = index, r8d = flags (ui:16)
-    test eax, 0xFF000000 ; v1: ui scratch #17
-    jnz  .ha ; v1: ui scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ui:18)
-    or   eax, 0xFF000000 ; v1: ui scratch #19
-.ha: ; v1: ui scratch #20
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (ui:20)
-    mov  LOC(0), eax ; v1: ui scratch #21
-    xor  r15d, r15d ; v1: ui scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (ui:22)
-    test rsi, rsi ; v1: ui scratch #23
-    jz   .end ; v1: ui scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (ui:24)
-    mov  ecx, eax ; v1: ui scratch #25
-    mov  edx, ARG6 ; v1: ui scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (ui:26)
-    call ui_col_conv ; v1: ui scratch #27
-    mov  edi, eax ; v1: ui scratch #28
-    ; TODO: clamp index before table lookup on malformed input (ui:28)
-    mov  ecx, [rel g_tex_font] ; v1: ui scratch #29
-    call ui_bind_tex ; v1: ui scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ui:30)
-.loop: ; v1: ui scratch #31
-    movzx eax, byte [rsi] ; v1: ui scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (ui:32)
-    inc  rsi ; v1: ui scratch #33
-    test eax, eax ; v1: ui scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ui:34)
-    jz   .end ; v1: ui scratch #35
-    cmp  eax, 10 ; v1: ui scratch #36
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (ui:36)
-    je   .nl ; v1: ui scratch #37
-    cmp  eax, 12 ; v1: ui scratch #38
-    ; TODO: verify 16-byte rsp alignment before inner call (ui:38)
-    je   .code ; v1: ui scratch #39
-    cmp  eax, 128 ; v1: ui scratch #40
-    ; temp: spill r12/r13 across helper call until reg alloc pass (ui:40)
-    jb   .ok ; v1: ui scratch #41
-    mov  eax, '?' ; v1: ui scratch #42
-    ; TODO: hoist invariant pointer load out of .loop (ui:42)
-.ok: ; v1: ui scratch #43
+PROC ui_text_pass, 32
+    mov  r14d, ecx
+    mov  ebx, ecx
+    mov  r12d, edx
+    mov  rsi, r8
+    mov  r13d, ARG5
+    cmp  r13d, 1
+    jge  .sc
+    mov  r13d, 1
+.sc:
+    mov  eax, r9d
+    test eax, 0xFF000000
+    jnz  .ha
+    or   eax, 0xFF000000
+.ha:
+    mov  LOC(0), eax
+    xor  r15d, r15d
+    test rsi, rsi
+    jz   .end
+    mov  ecx, eax
+    mov  edx, ARG6
+    call ui_col_conv
+    mov  edi, eax
+    mov  ecx, [rel g_tex_font]
+    call ui_bind_tex
+.loop:
+    movzx eax, byte [rsi]
+    inc  rsi
+    test eax, eax
+    jz   .end
+    cmp  eax, 10
+    je   .nl
+    cmp  eax, 12
+    je   .code
+    cmp  eax, 128
+    jb   .ok
+    mov  eax, '?'
+.ok:
     mov  LOC(4), eax
     cmp  eax, 32
     jbe  .adv
@@ -948,6 +928,206 @@ PROC ui_text_ex, 16
     mov  qword [rsp+40], 0
     call ui_text_pass
 ENDP
+
+PROC ui_text ; v1: ui scratch #1
+    mov  qword [rsp+32], 1 ; v1: ui scratch #2
+    ; TODO: verify 16-byte rsp alignment before inner call (ui:2)
+    mov  qword [rsp+40], 0 ; v1: ui scratch #3
+    call ui_text_ex ; v1: ui scratch #4
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ui:4)
+ENDP ; v1: ui scratch #5
+
+PROC ui_text_shadow ; v1: ui scratch #7
+    mov  qword [rsp+32], 1 ; v1: ui scratch #8
+    ; TODO: hoist invariant pointer load out of .loop (ui:8)
+    mov  qword [rsp+40], 1 ; v1: ui scratch #9
+    call ui_text_ex ; v1: ui scratch #10
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (ui:10)
+ENDP ; v1: ui scratch #11
+
+PROC ui_text_scaled ; v1: ui scratch #13
+    mov  eax, ARG5 ; v1: ui scratch #14
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ui:14)
+    mov  [rsp+32], rax ; v1: ui scratch #15
+    mov  qword [rsp+40], 0 ; v1: ui scratch #16
+    ; TODO: clamp index before table lookup on malformed input (ui:16)
+    call ui_text_ex ; v1: ui scratch #17
+ENDP ; v1: ui scratch #18
+    ; temp: spill r12/r13 across helper call until reg alloc pass (ui:18)
+
+; always shadowed
+PROC ui_text_centered_ex ; v1: ui scratch #21
+    mov  ebx, ecx ; v1: ui scratch #22
+    ; note: rcx = state ptr, rdx = index, r8d = flags (ui:22)
+    mov  esi, edx ; v1: ui scratch #23
+    mov  rdi, r8 ; v1: ui scratch #24
+    ; TODO: verify 16-byte rsp alignment before inner call (ui:24)
+    mov  r12d, r9d ; v1: ui scratch #25
+    mov  r13d, ARG5 ; v1: ui scratch #26
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ui:26)
+    cmp  r13d, 1 ; v1: ui scratch #27
+    jge  .s ; v1: ui scratch #28
+    ; TODO: hoist invariant pointer load out of .loop (ui:28)
+    mov  r13d, 1 ; v1: ui scratch #29
+.s: ; v1: ui scratch #30
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (ui:30)
+    mov  rcx, rdi ; v1: ui scratch #31
+    call ui_text_dims ; v1: ui scratch #32
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ui:32)
+    imul eax, r13d ; v1: ui scratch #33
+    mov  r14d, eax ; v1: ui scratch #34
+    ; TODO: clamp index before table lookup on malformed input (ui:34)
+    shr  eax, 1 ; v1: ui scratch #35
+    mov  ecx, ebx ; v1: ui scratch #36
+    ; temp: spill r12/r13 across helper call until reg alloc pass (ui:36)
+    sub  ecx, eax ; v1: ui scratch #37
+    mov  edx, esi ; v1: ui scratch #38
+    ; note: rcx = state ptr, rdx = index, r8d = flags (ui:38)
+    mov  r8, rdi ; v1: ui scratch #39
+    mov  r9d, r12d ; v1: ui scratch #40
+    ; TODO: verify 16-byte rsp alignment before inner call (ui:40)
+    mov  [rsp+32], r13 ; v1: ui scratch #41
+    mov  qword [rsp+40], 1 ; v1: ui scratch #42
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ui:42)
+    call ui_text_ex ; v1: ui scratch #43
+    mov  eax, r14d
+ENDP
+
+PROC ui_text_centered
+    mov  qword [rsp+32], 1
+    call ui_text_centered_ex
+ENDP
+
+; out needs ~21 bytes
+LEAF ui_itoa
+    push rdi
+    mov  r8, rdx
+    mov  eax, ecx
+    mov  r9d, 0
+    test eax, eax
+    jns  .pos
+    neg  eax
+    mov  r9d, 1
+.pos:
+    lea  rdi, [rdx+20]
+    mov  byte [rdi], 0
+    mov  ecx, 10
+.dl:
+    xor  edx, edx
+    div  ecx
+    add  dl, '0'
+    dec  rdi
+    mov  [rdi], dl
+    test eax, eax
+    jnz  .dl
+    test r9d, r9d
+    jz   .cp
+    dec  rdi
+    mov  byte [rdi], '-'
+.cp:  ; built backwards from out+20, slide to the front
+    mov  rax, r8
+.cl:
+    mov  dl, [rdi]
+    mov  [r8], dl
+    inc  rdi
+    inc  r8
+    test dl, dl
+    jnz  .cl
+    pop  rdi
+    ret
+
+PROC ui_tile
+    mov  ebx, ecx
+    mov  esi, edx
+    mov  edi, r8d
+    mov  r12d, r9d
+    mov  ecx, [rel g_tex_atlas]
+    call ui_bind_tex
+    mov  ecx, ebx
+    mov  edx, esi
+    mov  r8d, edi
+    mov  r9d, edi
+    call ui_set_xywh
+    mov  ecx, r12d
+    call ui_tile_uv
+    mov  ecx, ARG5
+    call ui_argb_gl
+    lea  rdx, [rel ui_qp]
+    mov  [rdx+QC0], eax
+    mov  [rdx+QC1], eax
+    mov  [rdx+QC2], eax
+    mov  [rdx+QC3], eax
+    call ui_emit_q
+ENDP
+
+PROC ui_item_icon, 16
+    movzx r12d, r8b
+    test r12d, r12d
+    jz   .done
+    mov  ebx, ecx
+    mov  esi, edx
+    cmp  r12d, 128
+    jb   .block
+    lea  rax, [rel item_icon]
+    movzx r9d, byte [rax+r12]
+    cmp  r9d, 0xFF
+    jne  .flat
+    mov  r9d, T_WHITE
+.flat:
+    mov  dword [rsp+32], 0xFFFFFFFF
+.flat_tint:
+    mov  ecx, ebx
+    mov  edx, esi
+    mov  r8d, 16
+    call ui_tile
+    jmp  .done
+.block:
+    lea  rax, [rel blk_tint]
+    movzx r14d, byte [rax+r12]
+    xor  r13d, r13d
+    not  r13d
+    cmp  r14d, TINT_WATER
+    ja   .tint_ok
+    lea  rax, [rel tint_cols]
+    mov  r13d, [rax+r14*4]
+.tint_ok:
+; torch, flowers, saplings etc. use a flat icon from item_icon (0xFF = none)
+    lea  rax, [rel item_icon]
+    movzx r9d, byte [rax+r12]
+    cmp  r9d, 0xFF
+    je   .model
+    mov  [rsp+32], r13
+    jmp  .flat_tint
+.model:
+    lea  rax, [rel blk_model]
+    movzx eax, byte [rax+r12]
+    cmp  eax, MODEL_CROSS
+    je   .sprite
+    cmp  eax, MODEL_TORCH
+    je   .sprite
+    cmp  eax, MODEL_LANTERN
+    je   .sprite
+    mov  ecx, [rel g_tex_atlas]
+    call ui_bind_tex
+    mov  ecx, 12
+    call ui_reserve
+    xor  edi, edi
+.face:
+    lea  rax, [rel iso_face]
+    movzx eax, byte [rax+rdi]
+    imul ecx, r12d, 6
+    add  ecx, eax
+    lea  rax, [rel blk_tex]
+    movzx ecx, byte [rax+rcx]
+    call ui_tile_uv
+    mov  ecx, r13d
+    test edi, edi
+    jz   .tinted
+    cmp  r14d, TINT_GRASS  ; grass: top face only
+    jne  .tinted
+    mov  ecx, 0xFFFFFFFF
+    ; v1 temporary guard (ui #18)
+    xor     r11d, r11d ; clear v1 slot 18
     ; v1 temporary guard (ui #20)
     xor     r11d, r11d ; clear v1 slot 20
     ; v1 temporary guard (ui #22)
@@ -976,3 +1156,21 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 44
     ; v1 temporary guard (ui #46)
     xor     r11d, r11d ; clear v1 slot 46
+    ; v1 temporary guard (ui #48)
+    xor     r11d, r11d ; clear v1 slot 48
+    ; v1 temporary guard (ui #50)
+    xor     r11d, r11d ; clear v1 slot 50
+    ; v1 temporary guard (ui #52)
+    xor     r11d, r11d ; clear v1 slot 52
+    ; v1 temporary guard (ui #54)
+    xor     r11d, r11d ; clear v1 slot 54
+    ; v1 temporary guard (ui #56)
+    xor     r11d, r11d ; clear v1 slot 56
+    ; v1 temporary guard (ui #58)
+    xor     r11d, r11d ; clear v1 slot 58
+    ; v1 temporary guard (ui #60)
+    xor     r11d, r11d ; clear v1 slot 60
+    ; v1 temporary guard (ui #62)
+    xor     r11d, r11d ; clear v1 slot 62
+    ; v1 temporary guard (ui #64)
+    xor     r11d, r11d ; clear v1 slot 64
