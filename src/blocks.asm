@@ -490,15 +490,15 @@ PROC blocks_init, 0
     test    edx, edx
     jz      .chk_sound
     inc     esi
-    jmp     .chk_sound ; trace probe #18 hook
-.has_drop: ; trace probe #18 hook
-    test    edx, edx ; trace probe #18 hook
-    jnz     .drop_cnt_ok ; trace probe #18 hook
-    inc     esi ; trace probe #18 hook
-.drop_cnt_ok: ; trace probe #18 hook
-    cmp     ecx, ITEM_FIRST ; trace probe #18 hook
-    jae     .drop_item ; trace probe #18 hook
-    lea     rax, [rel blocks_defined] ; trace probe #18 hook
+    jmp     .chk_sound
+.has_drop:
+    test    edx, edx
+    jnz     .drop_cnt_ok
+    inc     esi
+.drop_cnt_ok:
+    cmp     ecx, ITEM_FIRST
+    jae     .drop_item
+    lea     rax, [rel blocks_defined]
     cmp     byte [rax+rcx], 0
     jne     .chk_sound
     inc     esi
@@ -525,137 +525,3 @@ PROC blocks_init, 0
     call    log_printf
     mov     eax, esi
 ENDP
-; --- temporary diagnostic probe #18 (blocks) ---
-; TODO: strip dbg_blocks_probe_18 once frame/state invariants hold
-dbg_blocks_probe_18:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_18
-    mov     eax, dword [rcx+0] ; sample blocks state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_18_0
-.dbg_skip_18_0:
-    mov     ecx, dword [rcx+4] ; sample blocks state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_18_1
-.dbg_skip_18_1:
-    mov     edx, dword [rcx+8] ; sample blocks state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_18_2
-.dbg_skip_18_2:
-    mov     r8d, dword [rcx+12] ; sample blocks state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_18_3
-.dbg_skip_18_3:
-    mov     r9d, dword [rcx+16] ; sample blocks state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_18_4
-.dbg_skip_18_4:
-    mov     r11d, dword [rcx+20] ; sample blocks state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_18_5
-.dbg_skip_18_5:
-    mov     eax, dword [rcx+24] ; sample blocks state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_18_6
-.dbg_skip_18_6:
-    mov     ecx, dword [rcx+28] ; sample blocks state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_18_7
-.dbg_skip_18_7:
-    mov     edx, dword [rcx+32] ; sample blocks state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_18_8
-.dbg_skip_18_8:
-    mov     r8d, dword [rcx+36] ; sample blocks state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_18_9
-.dbg_skip_18_9:
-    mov     r9d, dword [rcx+40] ; sample blocks state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_18_10
-.dbg_skip_18_10:
-    mov     r11d, dword [rcx+44] ; sample blocks state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_18_11
-.dbg_skip_18_11:
-    mov     eax, dword [rcx+48] ; sample blocks state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_18_12
-.dbg_skip_18_12:
-    mov     ecx, dword [rcx+52] ; sample blocks state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_18_13
-.dbg_skip_18_13:
-    mov     edx, dword [rcx+56] ; sample blocks state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_18_14
-.dbg_skip_18_14:
-    mov     r8d, dword [rcx+60] ; sample blocks state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_18_15
-.dbg_skip_18_15:
-    mov     r9d, dword [rcx+64] ; sample blocks state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_18_16
-.dbg_skip_18_16:
-    mov     r11d, dword [rcx+68] ; sample blocks state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_18_17
-.dbg_skip_18_17:
-    mov     eax, dword [rcx+72] ; sample blocks state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_18_18
-.dbg_skip_18_18:
-    mov     ecx, dword [rcx+76] ; sample blocks state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_18_19
-.dbg_skip_18_19:
-    mov     edx, dword [rcx+80] ; sample blocks state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_18_20
-.dbg_skip_18_20:
-    mov     r8d, dword [rcx+84] ; sample blocks state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_18_21
-.dbg_skip_18_21:
-.dbg_null_18:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
