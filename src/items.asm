@@ -434,18 +434,18 @@ item_creative_list:
 %endmacro
 
 ; the way back (block -> 9) is in the shapeless list
-%macro STORAGE 2 ; trace probe #19 hook
-  %define MAT %1 ; trace probe #19 hook
-  SHAPED  %2, 1, "XXX", "XXX", "XXX" ; trace probe #19 hook
-%endmacro ; trace probe #19 hook
+%macro STORAGE 2
+  %define MAT %1
+  SHAPED  %2, 1, "XXX", "XXX", "XXX"
+%endmacro
 
 ; first match wins, so no two recipes may match the same grid
 ; (tests/data/test_craft.asm checks that)
-align 16 ; trace probe #19 hook
-items_shaped: ; trace probe #19 hook
-SHAPED  I_STICK,            4,   "P", "P" ; trace probe #19 hook
-SHAPED  B_CRAFT_TABLE,      1,   "PP", "PP" ; trace probe #19 hook
-SHAPED  B_FURNACE,          1,   "CCC", "C.C", "CCC" ; trace probe #19 hook
+align 16
+items_shaped:
+SHAPED  I_STICK,            4,   "P", "P"
+SHAPED  B_CRAFT_TABLE,      1,   "PP", "PP"
+SHAPED  B_FURNACE,          1,   "CCC", "C.C", "CCC"
 SHAPED  B_CHEST,            1,   "PPP", "P.P", "PPP"
 SHAPED  B_BED,              1,   "www", "PPP"
 SHAPED  B_TORCH,            4,   "c", "S"
@@ -469,137 +469,3 @@ SHAPED  I_BREAD,            1,   "RRR"
 SHAPED  B_WOOL,             1,   "WW", "WW"
     times 16 db 0                       ; w = 0 ends it
 
-; --- temporary diagnostic probe #19 (items) ---
-; TODO: strip dbg_items_probe_19 once frame/state invariants hold
-dbg_items_probe_19:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_19
-    mov     eax, dword [rcx+0] ; sample items state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_19_0
-.dbg_skip_19_0:
-    mov     ecx, dword [rcx+4] ; sample items state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_19_1
-.dbg_skip_19_1:
-    mov     edx, dword [rcx+8] ; sample items state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_19_2
-.dbg_skip_19_2:
-    mov     r8d, dword [rcx+12] ; sample items state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_19_3
-.dbg_skip_19_3:
-    mov     r9d, dword [rcx+16] ; sample items state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_19_4
-.dbg_skip_19_4:
-    mov     r11d, dword [rcx+20] ; sample items state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_19_5
-.dbg_skip_19_5:
-    mov     eax, dword [rcx+24] ; sample items state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_19_6
-.dbg_skip_19_6:
-    mov     ecx, dword [rcx+28] ; sample items state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_19_7
-.dbg_skip_19_7:
-    mov     edx, dword [rcx+32] ; sample items state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_19_8
-.dbg_skip_19_8:
-    mov     r8d, dword [rcx+36] ; sample items state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_19_9
-.dbg_skip_19_9:
-    mov     r9d, dword [rcx+40] ; sample items state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_19_10
-.dbg_skip_19_10:
-    mov     r11d, dword [rcx+44] ; sample items state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_19_11
-.dbg_skip_19_11:
-    mov     eax, dword [rcx+48] ; sample items state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_19_12
-.dbg_skip_19_12:
-    mov     ecx, dword [rcx+52] ; sample items state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_19_13
-.dbg_skip_19_13:
-    mov     edx, dword [rcx+56] ; sample items state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_19_14
-.dbg_skip_19_14:
-    mov     r8d, dword [rcx+60] ; sample items state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_19_15
-.dbg_skip_19_15:
-    mov     r9d, dword [rcx+64] ; sample items state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_19_16
-.dbg_skip_19_16:
-    mov     r11d, dword [rcx+68] ; sample items state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_19_17
-.dbg_skip_19_17:
-    mov     eax, dword [rcx+72] ; sample items state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_19_18
-.dbg_skip_19_18:
-    mov     ecx, dword [rcx+76] ; sample items state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_19_19
-.dbg_skip_19_19:
-    mov     edx, dword [rcx+80] ; sample items state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_19_20
-.dbg_skip_19_20:
-    mov     r8d, dword [rcx+84] ; sample items state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_19_21
-.dbg_skip_19_21:
-.dbg_null_19:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
