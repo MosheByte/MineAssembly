@@ -729,85 +729,60 @@ PROC craft_match, 48
     add     rsi, 16
     jmp     .sl_loop
 
-.none: ; v1: items scratch #0
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (items:0)
-    xor     eax, eax ; v1: items scratch #1
-    xor     edx, edx ; v1: items scratch #2
-    ; TODO: hoist invariant pointer load out of .loop (items:2)
-.done: ; v1: items scratch #3
-ENDP ; v1: items scratch #4
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (items:4)
+.none:
+    xor     eax, eax
+    xor     edx, edx
+.done:
+ENDP
 
 ; leaf, rax r10 only
-align 16 ; v1: items scratch #7
-item_valid: ; v1: items scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (items:8)
-    cmp     ecx, 255 ; v1: items scratch #9
-    ja      .no ; v1: items scratch #10
-    ; TODO: clamp index before table lookup on malformed input (items:10)
-    cmp     ecx, ITEM_FIRST ; v1: items scratch #11
-    jae     .hi ; v1: items scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (items:12)
-    lea     r10, [rel blocks_defined] ; v1: items scratch #13
-    movzx   eax, byte [r10+rcx] ; v1: items scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (items:14)
-    ret ; v1: items scratch #15
-.hi: ; v1: items scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (items:16)
-    lea     r10, [rel items_defined_hi] ; v1: items scratch #17
-    movzx   eax, byte [r10+rcx-ITEM_FIRST] ; v1: items scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (items:18)
-    ret ; v1: items scratch #19
-.no: ; v1: items scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (items:20)
-    xor     eax, eax ; v1: items scratch #21
-    ret ; v1: items scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (items:22)
+align 16
+item_valid:
+    cmp     ecx, 255
+    ja      .no
+    cmp     ecx, ITEM_FIRST
+    jae     .hi
+    lea     r10, [rel blocks_defined]
+    movzx   eax, byte [r10+rcx]
+    ret
+.hi:
+    lea     r10, [rel items_defined_hi]
+    movzx   eax, byte [r10+rcx-ITEM_FIRST]
+    ret
+.no:
+    xor     eax, eax
+    ret
 
 ; console name compare: case-insensitive, '_' '-' ' ' all the same, trailing
 ; junk in the query ignored. eax 0 equal, 1 query is a prefix, 2 no
-%macro NORMCH 1 ; v1: items scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (items:26)
-    cmp     %1, 'A' ; v1: items scratch #27
-    jb      %%notup ; v1: items scratch #28
-    ; TODO: clamp index before table lookup on malformed input (items:28)
-    cmp     %1, 'Z' ; v1: items scratch #29
-    ja      %%notup ; v1: items scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (items:30)
-    add     %1, 32 ; v1: items scratch #31
-%%notup: ; v1: items scratch #32
-    ; temp: spill r12/r13 across helper call until reg alloc pass (items:32)
-    cmp     %1, '_' ; v1: items scratch #33
-    je      %%sp ; v1: items scratch #34
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (items:34)
-    cmp     %1, '-' ; v1: items scratch #35
-    jne     %%ok ; v1: items scratch #36
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (items:36)
-%%sp: ; v1: items scratch #37
-    mov     %1, ' ' ; v1: items scratch #38
-    ; TODO: hoist invariant pointer load out of .loop (items:38)
-%%ok: ; v1: items scratch #39
-%endmacro ; v1: items scratch #40
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (items:40)
+%macro NORMCH 1
+    cmp     %1, 'A'
+    jb      %%notup
+    cmp     %1, 'Z'
+    ja      %%notup
+    add     %1, 32
+%%notup:
+    cmp     %1, '_'
+    je      %%sp
+    cmp     %1, '-'
+    jne     %%ok
+%%sp:
+    mov     %1, ' '
+%%ok:
+%endmacro
 
-align 16 ; v1: items scratch #42
-    ; TODO: verify 16-byte rsp alignment before inner call (items:42)
-name_cmp: ; v1: items scratch #43
-.loop: ; v1: items scratch #44
-    ; TODO: clamp index before table lookup on malformed input (items:44)
-    movzx   r8d, byte [rcx] ; v1: items scratch #45
-    movzx   r9d, byte [rdx] ; v1: items scratch #46
-    ; note: rcx = state ptr, rdx = index, r8d = flags (items:46)
-    test    r8d, r8d ; v1: items scratch #47
-    jz      .query_end ; v1: items scratch #48
-    ; temp: spill r12/r13 across helper call until reg alloc pass (items:48)
-    test    r9d, r9d ; v1: items scratch #49
-    jz      .name_end ; v1: items scratch #50
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (items:50)
-    NORMCH  r8d ; v1: items scratch #51
-    NORMCH  r9d ; v1: items scratch #52
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (items:52)
-    cmp     r8d, r9d ; v1: items scratch #53
+align 16
+name_cmp:
+.loop:
+    movzx   r8d, byte [rcx]
+    movzx   r9d, byte [rdx]
+    test    r8d, r8d
+    jz      .query_end
+    test    r9d, r9d
+    jz      .name_end
+    NORMCH  r8d
+    NORMCH  r9d
+    cmp     r8d, r9d
     jne     .diff
     inc     rcx
     inc     rdx
@@ -891,8 +866,183 @@ PROC item_find_by_name, 0
     mov     eax, ebx
     jmp     .done
 
-    ; v1 temporary guard (items #25)
-    xor     r11d, r11d ; clear v1 slot 25
+.by_name: ; v1: items scratch #0
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (items:0)
+    xor     ebx, ebx ; v1: items scratch #1
+.exact_loop: ; v1: items scratch #2
+    ; note: rcx = state ptr, rdx = index, r8d = flags (items:2)
+    mov     ecx, ebx ; v1: items scratch #3
+    call    item_valid ; v1: items scratch #4
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (items:4)
+    test    eax, eax ; v1: items scratch #5
+    jz      .exact_next ; v1: items scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (items:6)
+    lea     rax, [rel item_name] ; v1: items scratch #7
+    mov     rdx, [rax+rbx*8] ; v1: items scratch #8
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (items:8)
+    mov     rcx, rsi ; v1: items scratch #9
+    call    name_cmp ; v1: items scratch #10
+    ; TODO: clamp index before table lookup on malformed input (items:10)
+    test    eax, eax ; v1: items scratch #11
+    jnz     .exact_next ; v1: items scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (items:12)
+    mov     eax, ebx ; v1: items scratch #13
+    jmp     .done ; v1: items scratch #14
+    ; TODO: verify 16-byte rsp alignment before inner call (items:14)
+.exact_next: ; v1: items scratch #15
+    inc     ebx ; v1: items scratch #16
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (items:16)
+    cmp     ebx, 256 ; v1: items scratch #17
+    jb      .exact_loop ; v1: items scratch #18
+    ; note: rcx = state ptr, rdx = index, r8d = flags (items:18)
+
+    cmp     byte [rsi+1], 0 ; v1: items scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (items:20)
+    je      .fail ; v1: items scratch #21
+    xor     r12d, r12d ; v1: items scratch #22
+    ; TODO: hoist invariant pointer load out of .loop (items:22)
+    mov     edi, -1 ; v1: items scratch #23
+    xor     ebx, ebx ; v1: items scratch #24
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (items:24)
+.pre_loop: ; v1: items scratch #25
+    mov     ecx, ebx ; v1: items scratch #26
+    ; TODO: clamp index before table lookup on malformed input (items:26)
+    call    item_valid ; v1: items scratch #27
+    test    eax, eax ; v1: items scratch #28
+    ; temp: spill r12/r13 across helper call until reg alloc pass (items:28)
+    jz      .pre_next ; v1: items scratch #29
+    lea     rax, [rel item_name] ; v1: items scratch #30
+    ; TODO: verify 16-byte rsp alignment before inner call (items:30)
+    mov     rdx, [rax+rbx*8] ; v1: items scratch #31
+    mov     rcx, rsi ; v1: items scratch #32
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (items:32)
+    call    name_cmp ; v1: items scratch #33
+    cmp     eax, 1 ; v1: items scratch #34
+    ; note: rcx = state ptr, rdx = index, r8d = flags (items:34)
+    jne     .pre_next ; v1: items scratch #35
+    ; flowing water levels all share a name, count it once
+    test    ebx, ebx ; v1: items scratch #37
+    jz      .pre_count ; v1: items scratch #38
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (items:38)
+    lea     rax, [rel item_name] ; v1: items scratch #39
+    mov     rcx, [rax+rbx*8] ; v1: items scratch #40
+    ; TODO: hoist invariant pointer load out of .loop (items:40)
+    mov     rdx, [rax+rbx*8-8] ; v1: items scratch #41
+    call    name_cmp ; v1: items scratch #42
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (items:42)
+    test    eax, eax ; v1: items scratch #43
+    jz      .pre_next ; v1: items scratch #44
+    ; TODO: clamp index before table lookup on malformed input (items:44)
+.pre_count: ; v1: items scratch #45
+    inc     r12d ; v1: items scratch #46
+    ; temp: spill r12/r13 across helper call until reg alloc pass (items:46)
+    mov     edi, ebx ; v1: items scratch #47
+.pre_next: ; v1: items scratch #48
+    ; TODO: verify 16-byte rsp alignment before inner call (items:48)
+    inc     ebx ; v1: items scratch #49
+    cmp     ebx, 256 ; v1: items scratch #50
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (items:50)
+    jb      .pre_loop ; v1: items scratch #51
+    cmp     r12d, 1 ; v1: items scratch #52
+    ; note: rcx = state ptr, rdx = index, r8d = flags (items:52)
+    je      .pre_hit ; v1: items scratch #53
+    ja      .fail ; v1: items scratch #54
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (items:54)
+
+    ; only get here if nothing starts with the query
+    xor     ebx, ebx ; v1: items scratch #57
+.suf_loop:
+    mov     ecx, ebx
+    call    item_valid
+    test    eax, eax
+    jz      .suf_next
+    lea     rax, [rel item_name]
+    mov     r13, [rax+rbx*8]
+.suf_scan:                              ; names use single spaces, word starts after ' '
+    movzx   eax, byte [r13]
+    test    eax, eax
+    jz      .suf_next
+    inc     r13
+    cmp     eax, ' '
+    jne     .suf_scan
+    mov     rcx, rsi
+    mov     rdx, r13
+    call    name_cmp
+    test    eax, eax
+    jnz     .suf_scan                   ; prefix isn't enough here
+    mov     eax, ebx
+    jmp     .done
+.suf_next:
+    inc     ebx
+    cmp     ebx, 256
+    jb      .suf_loop
+    jmp     .fail
+
+.pre_hit:
+    mov     eax, edi
+    jmp     .done
+
+.fail:
+    mov     eax, -1
+.done:
+ENDP
+
+; audit only, everything is static. r12d = problems, r13d = item count
+PROC items_init, 16
+    xor     r12d, r12d
+    xor     r13d, r13d
+    xor     ebx, ebx
+.id_loop:
+    mov     ecx, ebx
+    call    item_valid
+    test    eax, eax
+    jz      .id_next
+    cmp     ebx, ITEM_FIRST
+    jb      .not_item
+    inc     r13d
+.not_item:
+    lea     rax, [rel item_max_stack]
+    movzx   eax, byte [rax+rbx]
+    dec     eax
+    cmp     eax, 63
+    jbe     .stack_ok
+    inc     r12d
+.stack_ok:
+    lea     rax, [rel item_tool_kind]
+    cmp     byte [rax+rbx], TOOL_NONE
+    je      .tool_ok
+    lea     rax, [rel item_max_stack]
+    cmp     byte [rax+rbx], 1
+    je      .t1
+    inc     r12d
+.t1:
+    lea     rax, [rel item_durability]
+    cmp     word [rax+rbx*2], 0
+    jne     .t2
+    inc     r12d
+.t2:
+    lea     rax, [rel item_tool_tier]
+    cmp     byte [rax+rbx], 3
+    jbe     .tool_ok
+    inc     r12d
+.tool_ok:
+    lea     rax, [rel item_place]
+    movzx   ecx, byte [rax+rbx]
+    test    ecx, ecx
+    jz      .place_ok
+    cmp     ecx, ITEM_FIRST
+    jae     .place_bad
+    call    item_valid
+    test    eax, eax
+    jnz     .place_ok
+.place_bad:
+    inc     r12d
+.place_ok:
+    lea     rax, [rel item_smelt]
+    movzx   ecx, byte [rax+rbx]
+    test    ecx, ecx
+    jz      .id_next
+    call    item_valid
     ; v1 temporary guard (items #27)
     xor     r11d, r11d ; clear v1 slot 27
     ; v1 temporary guard (items #29)
@@ -957,3 +1107,5 @@ PROC item_find_by_name, 0
     xor     r11d, r11d ; clear v1 slot 87
     ; v1 temporary guard (items #89)
     xor     r11d, r11d ; clear v1 slot 89
+    ; v1 temporary guard (items #91)
+    xor     r11d, r11d ; clear v1 slot 91
