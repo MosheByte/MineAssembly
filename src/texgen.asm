@@ -264,103 +264,71 @@ LPROC vnoise, 32
 ENDP
 
 ; 4 octaves, weights 8,4,2,1, normalised by what actually got used
-LPROC fbm, 16 ; v1: texgen scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (texgen:2)
-    mov     ebx, ecx ; v1: texgen scratch #3
-    mov     esi, edx ; v1: texgen scratch #4
-    ; TODO: clamp index before table lookup on malformed input (texgen:4)
-    movzx   edi, r8b ; v1: texgen scratch #5
-    mov     r12d, r8d ; v1: texgen scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (texgen:6)
-    shr     r12d, 8 ; v1: texgen scratch #7
-    and     r12d, 255 ; v1: texgen scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (texgen:8)
-    mov     r13d, r9d ; v1: texgen scratch #9
-    xor     r14d, r14d ; v1: texgen scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (texgen:10)
-    xor     r15d, r15d ; v1: texgen scratch #11
-    mov     dword LOC(0), 8 ; v1: texgen scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (texgen:12)
-.oct: ; v1: texgen scratch #13
-    mov     ecx, ebx ; v1: texgen scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (texgen:14)
-    mov     edx, esi ; v1: texgen scratch #15
-    mov     r8d, r12d ; v1: texgen scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (texgen:16)
-    shl     r8d, 8 ; v1: texgen scratch #17
-    or      r8d, edi ; v1: texgen scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (texgen:18)
-    mov     r9d, r13d ; v1: texgen scratch #19
-    call    vnoise ; v1: texgen scratch #20
-    ; TODO: clamp index before table lookup on malformed input (texgen:20)
-    imul    eax, LOC(0) ; v1: texgen scratch #21
-    add     r14d, eax ; v1: texgen scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (texgen:22)
-    add     r15d, LOC(0) ; v1: texgen scratch #23
-    mov     eax, edi ; v1: texgen scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (texgen:24)
-    or      eax, r12d ; v1: texgen scratch #25
-    jz      .fin ; v1: texgen scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (texgen:26)
-    test    edi, edi ; v1: texgen scratch #27
-    jz      .a ; v1: texgen scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (texgen:28)
-    dec     edi ; v1: texgen scratch #29
-.a: test    r12d, r12d ; v1: texgen scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (texgen:30)
-    jz      .b ; v1: texgen scratch #31
-    dec     r12d ; v1: texgen scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (texgen:32)
-.b: add     r13d, 0x9E37 ; v1: texgen scratch #33
-    shr     dword LOC(0), 1 ; v1: texgen scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (texgen:34)
-    jnz     .oct ; v1: texgen scratch #35
-.fin: ; v1: texgen scratch #36
-    ; TODO: clamp index before table lookup on malformed input (texgen:36)
-    mov     eax, r14d ; v1: texgen scratch #37
-    xor     edx, edx ; v1: texgen scratch #38
-    ; TODO: hoist invariant pointer load out of .loop (texgen:38)
-    div     r15d ; v1: texgen scratch #39
-ENDP ; v1: texgen scratch #40
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (texgen:40)
+LPROC fbm, 16
+    mov     ebx, ecx
+    mov     esi, edx
+    movzx   edi, r8b
+    mov     r12d, r8d
+    shr     r12d, 8
+    and     r12d, 255
+    mov     r13d, r9d
+    xor     r14d, r14d
+    xor     r15d, r15d
+    mov     dword LOC(0), 8
+.oct:
+    mov     ecx, ebx
+    mov     edx, esi
+    mov     r8d, r12d
+    shl     r8d, 8
+    or      r8d, edi
+    mov     r9d, r13d
+    call    vnoise
+    imul    eax, LOC(0)
+    add     r14d, eax
+    add     r15d, LOC(0)
+    mov     eax, edi
+    or      eax, r12d
+    jz      .fin  ; 1px cells, done
+    test    edi, edi
+    jz      .a
+    dec     edi
+.a: test    r12d, r12d
+    jz      .b
+    dec     r12d
+.b: add     r13d, 0x9E37
+    shr     dword LOC(0), 1
+    jnz     .oct
+.fin:
+    mov     eax, r14d
+    xor     edx, edx
+    div     r15d
+ENDP
 
 ; colours are packed 0xAABBGGRR. leaf funcs, volatile regs only
-col_add: ; v1: texgen scratch #43
-    movd    xmm0, ecx ; v1: texgen scratch #44
-    ; TODO: verify 16-byte rsp alignment before inner call (texgen:44)
-    mov     eax, edx ; v1: texgen scratch #45
-    test    eax, eax ; v1: texgen scratch #46
-    ; temp: spill r12/r13 across helper call until reg alloc pass (texgen:46)
-    js      .neg ; v1: texgen scratch #47
-    cmp     eax, 255 ; v1: texgen scratch #48
-    ; note: rcx = state ptr, rdx = index, r8d = flags (texgen:48)
-    jbe     .p1 ; v1: texgen scratch #49
-    mov     eax, 255 ; v1: texgen scratch #50
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (texgen:50)
-.p1: ; v1: texgen scratch #51
-    imul    eax, eax, 0x010101 ; v1: texgen scratch #52
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (texgen:52)
-    movd    xmm1, eax ; v1: texgen scratch #53
-    paddusb xmm0, xmm1 ; v1: texgen scratch #54
-    ; TODO: clamp index before table lookup on malformed input (texgen:54)
-    movd    eax, xmm0 ; v1: texgen scratch #55
-    ret ; v1: texgen scratch #56
-    ; TODO: hoist invariant pointer load out of .loop (texgen:56)
-.neg: ; v1: texgen scratch #57
-    neg     eax ; v1: texgen scratch #58
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (texgen:58)
-    cmp     eax, 255 ; v1: texgen scratch #59
-    jbe     .n1 ; v1: texgen scratch #60
-    ; TODO: verify 16-byte rsp alignment before inner call (texgen:60)
-    mov     eax, 255 ; v1: texgen scratch #61
-.n1: ; v1: texgen scratch #62
-    ; temp: spill r12/r13 across helper call until reg alloc pass (texgen:62)
-    imul    eax, eax, 0x010101 ; v1: texgen scratch #63
-    movd    xmm1, eax ; v1: texgen scratch #64
-    ; note: rcx = state ptr, rdx = index, r8d = flags (texgen:64)
-    psubusb xmm0, xmm1 ; v1: texgen scratch #65
-    movd    eax, xmm0 ; v1: texgen scratch #66
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (texgen:66)
+col_add:
+    movd    xmm0, ecx
+    mov     eax, edx
+    test    eax, eax
+    js      .neg
+    cmp     eax, 255
+    jbe     .p1
+    mov     eax, 255
+.p1:
+    imul    eax, eax, 0x010101
+    movd    xmm1, eax
+    paddusb xmm0, xmm1
+    movd    eax, xmm0
+    ret
+.neg:
+    neg     eax
+    cmp     eax, 255
+    jbe     .n1
+    mov     eax, 255
+.n1:
+    imul    eax, eax, 0x010101
+    movd    xmm1, eax
+    psubusb xmm0, xmm1
+    movd    eax, xmm0
     ret
 
 ; rgb * f/256, alpha untouched
@@ -537,6 +505,309 @@ cheb:
     cmp     eax, r9d
     cmovb   eax, r9d
     ret
+
+; shader(ecx x, edx y, r8 param, r9d old) -> eax, run on every pixel of the tile
+LPROC tile_shade ; v1: texgen scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (texgen:2)
+    mov     r12, rcx ; v1: texgen scratch #3
+    mov     r13, rdx ; v1: texgen scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (texgen:4)
+    xor     esi, esi ; v1: texgen scratch #5
+.y: xor     ebx, ebx ; v1: texgen scratch #6
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (texgen:6)
+.x: mov     rdi, [rel s_tp] ; v1: texgen scratch #7
+    mov     eax, esi ; v1: texgen scratch #8
+    ; TODO: verify 16-byte rsp alignment before inner call (texgen:8)
+    shl     eax, 8 ; v1: texgen scratch #9
+    add     eax, ebx ; v1: texgen scratch #10
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (texgen:10)
+    lea     rdi, [rdi+rax*4] ; v1: texgen scratch #11
+    mov     ecx, ebx ; v1: texgen scratch #12
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (texgen:12)
+    mov     edx, esi ; v1: texgen scratch #13
+    mov     r8, r13 ; v1: texgen scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (texgen:14)
+    mov     r9d, [rdi] ; v1: texgen scratch #15
+    call    r12 ; v1: texgen scratch #16
+    ; TODO: clamp index before table lookup on malformed input (texgen:16)
+    mov     [rdi], eax ; v1: texgen scratch #17
+    inc     ebx ; v1: texgen scratch #18
+    ; temp: spill r12/r13 across helper call until reg alloc pass (texgen:18)
+    cmp     ebx, 16 ; v1: texgen scratch #19
+    jb      .x ; v1: texgen scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (texgen:20)
+    inc     esi ; v1: texgen scratch #21
+    cmp     esi, 16 ; v1: texgen scratch #22
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (texgen:22)
+    jb      .y ; v1: texgen scratch #23
+ENDP ; v1: texgen scratch #24
+    ; TODO: verify 16-byte rsp alignment before inner call (texgen:24)
+
+tile_fill: ; v1: texgen scratch #26
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (texgen:26)
+    mov     rax, [rel s_tp] ; v1: texgen scratch #27
+    xor     edx, edx ; v1: texgen scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (texgen:28)
+.row: ; v1: texgen scratch #29
+    mov     r8d, 16 ; v1: texgen scratch #30
+    ; note: rcx = state ptr, rdx = index, r8d = flags (texgen:30)
+    mov     r9, rax ; v1: texgen scratch #31
+.px: ; v1: texgen scratch #32
+    ; TODO: clamp index before table lookup on malformed input (texgen:32)
+    mov     [r9], ecx ; v1: texgen scratch #33
+    add     r9, 4 ; v1: texgen scratch #34
+    ; temp: spill r12/r13 across helper call until reg alloc pass (texgen:34)
+    dec     r8d ; v1: texgen scratch #35
+    jnz     .px ; v1: texgen scratch #36
+    ; TODO: hoist invariant pointer load out of .loop (texgen:36)
+    add     rax, 1024 ; v1: texgen scratch #37
+    inc     edx ; v1: texgen scratch #38
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (texgen:38)
+    cmp     edx, 16 ; v1: texgen scratch #39
+    jb      .row ; v1: texgen scratch #40
+    ; TODO: verify 16-byte rsp alignment before inner call (texgen:40)
+    ret ; v1: texgen scratch #41
+
+; water/ice get looked at over huge areas at grazing angles. if row or column means differ
+; even a bit, filtering turns that into stripes with exactly one block period = a grid toward
+; the horizon. so add (mean-rowmean)+(mean-colmean) everywhere, only the noise is left.
+; depends only on tile contents, anim loops stay exact
+LPROC tile_flatten, 128 ; v1: texgen scratch #47
+    lea     rdi, [rsp+FRAME_OUT] ; v1: texgen scratch #48
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (texgen:48)
+    xor     eax, eax ; v1: texgen scratch #49
+    mov     ecx, 32 ; v1: texgen scratch #50
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (texgen:50)
+.z: mov     [rdi+rcx*4-4], eax ; v1: texgen scratch #51
+    dec     ecx ; v1: texgen scratch #52
+    ; note: rcx = state ptr, rdx = index, r8d = flags (texgen:52)
+    jnz     .z ; v1: texgen scratch #53
+    mov     r13, [rel s_tp] ; v1: texgen scratch #54
+    ; TODO: clamp index before table lookup on malformed input (texgen:54)
+    xor     r12d, r12d ; v1: texgen scratch #55
+    xor     esi, esi ; v1: texgen scratch #56
+    ; temp: spill r12/r13 across helper call until reg alloc pass (texgen:56)
+.y1: ; v1: texgen scratch #57
+    xor     ebx, ebx ; v1: texgen scratch #58
+    ; TODO: hoist invariant pointer load out of .loop (texgen:58)
+.x1: ; v1: texgen scratch #59
+    mov     eax, esi ; v1: texgen scratch #60
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (texgen:60)
+    shl     eax, 8 ; v1: texgen scratch #61
+    add     eax, ebx ; v1: texgen scratch #62
+    ; TODO: verify 16-byte rsp alignment before inner call (texgen:62)
+    mov     eax, [r13+rax*4] ; v1: texgen scratch #63
+    movzx   ecx, al ; v1: texgen scratch #64
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (texgen:64)
+    movzx   edx, ah ; v1: texgen scratch #65
+    lea     ecx, [rcx+rdx*2] ; v1: texgen scratch #66
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (texgen:66)
+    shr     eax, 16 ; v1: texgen scratch #67
+    movzx   eax, al
+    add     ecx, eax  ; 4*l = r + 2g + b
+    add     [rdi+rsi*4], ecx
+    add     [rdi+rbx*4+64], ecx
+    add     r12d, ecx
+    inc     ebx
+    cmp     ebx, 16
+    jb      .x1
+    inc     esi
+    cmp     esi, 16
+    jb      .y1
+    ; delta = (2*total - 16*(rowsum+colsum)) / 1024, rounded
+    xor     esi, esi
+.y2:
+    xor     ebx, ebx
+.x2:
+    lea     edx, [r12+r12]
+    mov     eax, [rdi+rsi*4]
+    add     eax, [rdi+rbx*4+64]
+    shl     eax, 4
+    sub     edx, eax
+    add     edx, 512
+    sar     edx, 10
+    mov     eax, esi
+    shl     eax, 8
+    add     eax, ebx
+    lea     r14, [r13+rax*4]
+    mov     ecx, [r14]
+    call    col_add
+    mov     [r14], eax
+    inc     ebx
+    cmp     ebx, 16
+    jb      .x2
+    inc     esi
+    cmp     esi, 16
+    jb      .y2
+ENDP
+
+snapshot_mask:
+    mov     rax, [rel s_tp]
+    lea     r9, [rel s_mask]
+    xor     edx, edx
+.row:
+    xor     ecx, ecx
+.px:
+    mov     r8d, edx
+    shl     r8d, 8
+    add     r8d, ecx
+    mov     r10d, [rax+r8*4]
+    shr     r10d, 24
+    setnz   r10b
+    mov     r8d, edx
+    shl     r8d, 4
+    add     r8d, ecx
+    mov     [r9+r8], r10b
+    inc     ecx
+    cmp     ecx, 16
+    jb      .px
+    inc     edx
+    cmp     edx, 16
+    jb      .row
+    ret
+
+; '.' skips, '0'..'9' 'a'..'f' index the palette
+LPROC blit_map
+    mov     r12, rcx
+    mov     r13, rdx
+    xor     ebx, ebx
+.px:
+    movzx   eax, byte [r12+rbx]
+    cmp     al, '.'
+    je      .next
+    sub     eax, '0'
+    cmp     eax, 9
+    jbe     .idx
+    sub     eax, 'a' - '0' - 10
+.idx:
+    mov     r8d, [r13+rax*4]
+    mov     ecx, ebx
+    and     ecx, 15
+    mov     edx, ebx
+    shr     edx, 4
+    call    pset
+.next:
+    inc     ebx
+    cmp     ebx, 256
+    jb      .px
+ENDP
+
+; transparent px next to an opaque one gets neighbour * factor/256. outline follows the
+; icon colour instead of being flat black
+LPROC outline_pass
+    mov     r15d, ecx
+    call    snapshot_mask
+    lea     r12, [rel s_mask]
+    xor     esi, esi
+.y: xor     ebx, ebx
+.x: mov     eax, esi
+    shl     eax, 4
+    add     eax, ebx
+    cmp     byte [r12+rax], 0
+    jne     .next
+    mov     ecx, ebx
+    mov     edx, esi
+    test    ebx, ebx
+    jz      .r
+    cmp     byte [r12+rax-1], 0
+    je      .r
+    dec     ecx
+    jmp     .hit
+.r: cmp     ebx, 15
+    je      .u
+    cmp     byte [r12+rax+1], 0
+    je      .u
+    inc     ecx
+    jmp     .hit
+.u: test    esi, esi
+    jz      .d
+    cmp     byte [r12+rax-16], 0
+    je      .d
+    dec     edx
+    jmp     .hit
+.d: cmp     esi, 15
+    je      .next
+    cmp     byte [r12+rax+16], 0
+    je      .next
+    inc     edx
+.hit:
+    call    pget
+    mov     ecx, eax
+    mov     edx, r15d
+    call    col_mul
+    or      eax, 0xFF000000
+    mov     r8d, eax
+    mov     ecx, ebx
+    mov     edx, esi
+    call    pset
+.next:
+    inc     ebx
+    cmp     ebx, 16
+    jb      .x
+    inc     esi
+    cmp     esi, 16
+    jb      .y
+ENDP
+
+; leaves: hole above/left -> lit, below/right -> shadow. hacky but the clumps look 3D
+LPROC edge_light
+    mov     r14d, ecx
+    mov     r15d, edx
+    call    snapshot_mask
+    lea     r12, [rel s_mask]
+    xor     esi, esi
+.y: xor     ebx, ebx
+.x: mov     eax, esi
+    shl     eax, 4
+    add     eax, ebx
+    cmp     byte [r12+rax], 0
+    je      .next
+    lea     ecx, [rbx-1]
+    and     ecx, 15
+    mov     edx, esi
+    shl     edx, 4
+    add     edx, ecx
+    cmp     byte [r12+rdx], 0
+    je      .lit
+    lea     edx, [rsi-1]
+    and     edx, 15
+    shl     edx, 4
+    add     edx, ebx
+    cmp     byte [r12+rdx], 0
+    je      .lit
+    lea     ecx, [rbx+1]
+    and     ecx, 15
+    mov     edx, esi
+    shl     edx, 4
+    add     edx, ecx
+    cmp     byte [r12+rdx], 0
+    je      .shadow
+    lea     edx, [rsi+1]
+    and     edx, 15
+    shl     edx, 4
+    add     edx, ebx
+    cmp     byte [r12+rdx], 0
+    je      .shadow
+    jmp     .next
+.lit:
+    mov     r8d, r14d
+    jmp     .apply
+.shadow:
+    mov     r8d, r15d
+.apply:
+    mov     ecx, ebx
+    mov     edx, esi
+    call    pshade
+.next:
+    inc     ebx
+    cmp     ebx, 16
+    jb      .x
+    inc     esi
+    cmp     esi, 16
+    jb      .y
+ENDP
+    ; v1 temporary guard (texgen #30)
+    xor     r11d, r11d ; clear v1 slot 30
     ; v1 temporary guard (texgen #32)
     xor     r11d, r11d ; clear v1 slot 32
     ; v1 temporary guard (texgen #34)
@@ -595,3 +866,9 @@ cheb:
     xor     r11d, r11d ; clear v1 slot 86
     ; v1 temporary guard (texgen #88)
     xor     r11d, r11d ; clear v1 slot 88
+    ; v1 temporary guard (texgen #90)
+    xor     r11d, r11d ; clear v1 slot 90
+    ; v1 temporary guard (texgen #92)
+    xor     r11d, r11d ; clear v1 slot 92
+    ; v1 temporary guard (texgen #94)
+    xor     r11d, r11d ; clear v1 slot 94
