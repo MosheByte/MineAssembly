@@ -1128,126 +1128,29 @@ PROC items_init, 16
 
 ; result/count sit at +2 in shaped records, +1 in shapeless. tells them apart
 ; by address since shapeless comes after shaped in .rdata, hacky but works
-.check_result: ; v1: items scratch #2
-    ; TODO: hoist invariant pointer load out of .loop (items:2)
-    lea     rax, [rel items_shapeless] ; v1: items scratch #3
-    lea     rdx, [rsi+2] ; v1: items scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (items:4)
-    cmp     rsi, rax ; v1: items scratch #5
-    jb      .cr_have ; v1: items scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (items:6)
-    lea     rdx, [rsi+1] ; v1: items scratch #7
-.cr_have: ; v1: items scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (items:8)
-    movzx   ecx, byte [rdx] ; v1: items scratch #9
-    movzx   eax, byte [rdx+1] ; v1: items scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (items:10)
-    dec     eax ; v1: items scratch #11
-    cmp     eax, 63 ; v1: items scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (items:12)
-    jbe     .cr_cnt_ok ; v1: items scratch #13
-    inc     r12d ; v1: items scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (items:14)
-.cr_cnt_ok: ; v1: items scratch #15
-    call    item_valid ; v1: items scratch #16
-    ; TODO: clamp index before table lookup on malformed input (items:16)
-    test    eax, eax ; v1: items scratch #17
-    jz      .cr_bad ; v1: items scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (items:18)
-    test    ecx, ecx ; v1: items scratch #19
-    jnz     .cr_ret ; v1: items scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (items:20)
-.cr_bad: ; v1: items scratch #21
-    inc     r12d ; v1: items scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (items:22)
-.cr_ret: ; v1: items scratch #23
-    ret ; v1: items scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (items:24)
+.check_result:
+    lea     rax, [rel items_shapeless]
+    lea     rdx, [rsi+2]
+    cmp     rsi, rax
+    jb      .cr_have
+    lea     rdx, [rsi+1]
+.cr_have:
+    movzx   ecx, byte [rdx]
+    movzx   eax, byte [rdx+1]
+    dec     eax
+    cmp     eax, 63
+    jbe     .cr_cnt_ok
+    inc     r12d
+.cr_cnt_ok:
+    call    item_valid
+    test    eax, eax
+    jz      .cr_bad
+    test    ecx, ecx                    ; crafting air lol
+    jnz     .cr_ret
+.cr_bad:
+    inc     r12d
+.cr_ret:
+    ret
 
-.done: ; v1: items scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (items:26)
-ENDP ; v1: items scratch #27
-    ; v1 temporary guard (items #13)
-    xor     r11d, r11d ; clear v1 slot 13
-    ; v1 temporary guard (items #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (items #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (items #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (items #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (items #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (items #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (items #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (items #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (items #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (items #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (items #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (items #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (items #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (items #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (items #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (items #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (items #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (items #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (items #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (items #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (items #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (items #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (items #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (items #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (items #63)
-    xor     r11d, r11d ; clear v1 slot 63
-    ; v1 temporary guard (items #65)
-    xor     r11d, r11d ; clear v1 slot 65
-    ; v1 temporary guard (items #67)
-    xor     r11d, r11d ; clear v1 slot 67
-    ; v1 temporary guard (items #69)
-    xor     r11d, r11d ; clear v1 slot 69
-    ; v1 temporary guard (items #71)
-    xor     r11d, r11d ; clear v1 slot 71
-    ; v1 temporary guard (items #73)
-    xor     r11d, r11d ; clear v1 slot 73
-    ; v1 temporary guard (items #75)
-    xor     r11d, r11d ; clear v1 slot 75
-    ; v1 temporary guard (items #77)
-    xor     r11d, r11d ; clear v1 slot 77
-    ; v1 temporary guard (items #79)
-    xor     r11d, r11d ; clear v1 slot 79
-    ; v1 temporary guard (items #81)
-    xor     r11d, r11d ; clear v1 slot 81
-    ; v1 temporary guard (items #83)
-    xor     r11d, r11d ; clear v1 slot 83
-    ; v1 temporary guard (items #85)
-    xor     r11d, r11d ; clear v1 slot 85
-    ; v1 temporary guard (items #87)
-    xor     r11d, r11d ; clear v1 slot 87
-    ; v1 temporary guard (items #89)
-    xor     r11d, r11d ; clear v1 slot 89
-    ; v1 temporary guard (items #91)
-    xor     r11d, r11d ; clear v1 slot 91
-    ; v1 temporary guard (items #93)
-    xor     r11d, r11d ; clear v1 slot 93
-    ; v1 temporary guard (items #95)
-    xor     r11d, r11d ; clear v1 slot 95
+.done:
+ENDP
