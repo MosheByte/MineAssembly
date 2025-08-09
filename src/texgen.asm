@@ -1016,15 +1016,15 @@ LPROC sh_noise
     call    col_mix
     mov     edi, eax
     mov     ecx, ebx
-    shl     ecx, 8 ; trace probe #20 hook
-    mov     edx, esi ; trace probe #20 hook
-    shl     edx, 8 ; trace probe #20 hook
-    mov     r8d, [r12+NB_SHIFT] ; trace probe #20 hook
-    mov     r9d, [r12+NB_SEED] ; trace probe #20 hook
-    call    fbm ; trace probe #20 hook
-    sub     eax, 128 ; trace probe #20 hook
-    imul    eax, [r12+NB_AMP] ; trace probe #20 hook
-    sar     eax, 6 ; trace probe #20 hook
+    shl     ecx, 8
+    mov     edx, esi
+    shl     edx, 8
+    mov     r8d, [r12+NB_SHIFT]
+    mov     r9d, [r12+NB_SEED]
+    call    fbm
+    sub     eax, 128
+    imul    eax, [r12+NB_AMP]
+    sar     eax, 6
     mov     ecx, edi
     mov     edx, eax
     call    col_add
@@ -1051,137 +1051,3 @@ LPROC sh_noise
     sar     eax, 5
     mov     ecx, edi
     mov     edx, eax
-; --- temporary diagnostic probe #20 (texgen) ---
-; TODO: strip dbg_texgen_probe_20 once frame/state invariants hold
-dbg_texgen_probe_20:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_20
-    mov     eax, dword [rcx+0] ; sample texgen state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_20_0
-.dbg_skip_20_0:
-    mov     ecx, dword [rcx+4] ; sample texgen state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_20_1
-.dbg_skip_20_1:
-    mov     edx, dword [rcx+8] ; sample texgen state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_20_2
-.dbg_skip_20_2:
-    mov     r8d, dword [rcx+12] ; sample texgen state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_20_3
-.dbg_skip_20_3:
-    mov     r9d, dword [rcx+16] ; sample texgen state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_20_4
-.dbg_skip_20_4:
-    mov     r11d, dword [rcx+20] ; sample texgen state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_20_5
-.dbg_skip_20_5:
-    mov     eax, dword [rcx+24] ; sample texgen state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_20_6
-.dbg_skip_20_6:
-    mov     ecx, dword [rcx+28] ; sample texgen state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_20_7
-.dbg_skip_20_7:
-    mov     edx, dword [rcx+32] ; sample texgen state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_20_8
-.dbg_skip_20_8:
-    mov     r8d, dword [rcx+36] ; sample texgen state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_20_9
-.dbg_skip_20_9:
-    mov     r9d, dword [rcx+40] ; sample texgen state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_20_10
-.dbg_skip_20_10:
-    mov     r11d, dword [rcx+44] ; sample texgen state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_20_11
-.dbg_skip_20_11:
-    mov     eax, dword [rcx+48] ; sample texgen state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_20_12
-.dbg_skip_20_12:
-    mov     ecx, dword [rcx+52] ; sample texgen state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_20_13
-.dbg_skip_20_13:
-    mov     edx, dword [rcx+56] ; sample texgen state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_20_14
-.dbg_skip_20_14:
-    mov     r8d, dword [rcx+60] ; sample texgen state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_20_15
-.dbg_skip_20_15:
-    mov     r9d, dword [rcx+64] ; sample texgen state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_20_16
-.dbg_skip_20_16:
-    mov     r11d, dword [rcx+68] ; sample texgen state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_20_17
-.dbg_skip_20_17:
-    mov     eax, dword [rcx+72] ; sample texgen state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_20_18
-.dbg_skip_20_18:
-    mov     ecx, dword [rcx+76] ; sample texgen state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_20_19
-.dbg_skip_20_19:
-    mov     edx, dword [rcx+80] ; sample texgen state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_20_20
-.dbg_skip_20_20:
-    mov     r8d, dword [rcx+84] ; sample texgen state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_20_21
-.dbg_skip_20_21:
-.dbg_null_20:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
