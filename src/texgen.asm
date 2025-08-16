@@ -4683,70 +4683,49 @@ pal_player_face: dd TR, RGB(66,42,22), RGB(92,62,34), RGB(244,244,244), RGB(52,9
 pal_player_cloth: dd TR, TR, TR, TR, TR, RGB(60,40,26), RGB(212,180,72), RGB(92,62,34), RGB(208,154,120), RGB(130,40,32)
 
 ; 16x16 sprite maps, '.' = transparent. squint a bit and it's pixel art
-map_tall_grass: ; v1: texgen scratch #1
-    SROW "................" ; v1: texgen scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (texgen:2)
-    SROW "................" ; v1: texgen scratch #3
-    SROW ".......4........" ; v1: texgen scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (texgen:4)
-    SROW "..4....4.....3.." ; v1: texgen scratch #5
-    SROW "..3...44.....4.." ; v1: texgen scratch #6
-    ; TODO: clamp index before table lookup on malformed input (texgen:6)
-    SROW "..34..43....43.." ; v1: texgen scratch #7
-    SROW "...3..33...43..." ; v1: texgen scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (texgen:8)
-    SROW "...43.3..4.3..4." ; v1: texgen scratch #9
-    SROW "4...3.34.3.3.43." ; v1: texgen scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (texgen:10)
-    SROW "34..434..3333.3." ; v1: texgen scratch #11
-    SROW ".3..43.3.33.3.3." ; v1: texgen scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (texgen:12)
-    SROW ".33.33.33.3.33.." ; v1: texgen scratch #13
-    SROW "..3.3.3.33..3..." ; v1: texgen scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (texgen:14)
-    SROW "..333..333.33..." ; v1: texgen scratch #15
-    SROW "...33.3.33.33..." ; v1: texgen scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (texgen:16)
-    SROW "...3333.3333...." ; v1: texgen scratch #17
-map_flower_red: ; v1: texgen scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (texgen:18)
-    SROW "................" ; v1: texgen scratch #19
-    SROW "................" ; v1: texgen scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (texgen:20)
-    SROW "................" ; v1: texgen scratch #21
-    SROW ".....3.4.3......" ; v1: texgen scratch #22
-    ; TODO: clamp index before table lookup on malformed input (texgen:22)
-    SROW "....3443443....." ; v1: texgen scratch #23
-    SROW "....3344433....." ; v1: texgen scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (texgen:24)
-    SROW "....2334332....." ; v1: texgen scratch #25
-    SROW ".....23332......" ; v1: texgen scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (texgen:26)
-    SROW "......222......." ; v1: texgen scratch #27
-    SROW ".......7........" ; v1: texgen scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (texgen:28)
-    SROW "....77.7........" ; v1: texgen scratch #29
-    SROW ".....777..77...." ; v1: texgen scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (texgen:30)
-    SROW ".......7.77....." ; v1: texgen scratch #31
-    SROW ".......777......" ; v1: texgen scratch #32
-    ; temp: spill r12/r13 across helper call until reg alloc pass (texgen:32)
-    SROW ".......7........" ; v1: texgen scratch #33
-    SROW ".......7........" ; v1: texgen scratch #34
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (texgen:34)
-map_flower_yellow: ; v1: texgen scratch #35
-    SROW "................" ; v1: texgen scratch #36
-    ; TODO: verify 16-byte rsp alignment before inner call (texgen:36)
-    SROW "................" ; v1: texgen scratch #37
-    SROW "................" ; v1: texgen scratch #38
-    ; TODO: clamp index before table lookup on malformed input (texgen:38)
-    SROW "................" ; v1: texgen scratch #39
-    SROW "......44........" ; v1: texgen scratch #40
-    ; note: rcx = state ptr, rdx = index, r8d = flags (texgen:40)
-    SROW ".....4334......." ; v1: texgen scratch #41
-    SROW "...44.33.44....." ; v1: texgen scratch #42
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (texgen:42)
-    SROW "..4335225334...." ; v1: texgen scratch #43
+map_tall_grass:
+    SROW "................"
+    SROW "................"
+    SROW ".......4........"
+    SROW "..4....4.....3.."
+    SROW "..3...44.....4.."
+    SROW "..34..43....43.."
+    SROW "...3..33...43..."
+    SROW "...43.3..4.3..4."
+    SROW "4...3.34.3.3.43."
+    SROW "34..434..3333.3."
+    SROW ".3..43.3.33.3.3."
+    SROW ".33.33.33.3.33.."
+    SROW "..3.3.3.33..3..."
+    SROW "..333..333.33..."
+    SROW "...33.3.33.33..."
+    SROW "...3333.3333...."
+map_flower_red:
+    SROW "................"
+    SROW "................"
+    SROW "................"
+    SROW ".....3.4.3......"
+    SROW "....3443443....."
+    SROW "....3344433....."
+    SROW "....2334332....."
+    SROW ".....23332......"
+    SROW "......222......."
+    SROW ".......7........"
+    SROW "....77.7........"
+    SROW ".....777..77...."
+    SROW ".......7.77....."
+    SROW ".......777......"
+    SROW ".......7........"
+    SROW ".......7........"
+map_flower_yellow:
+    SROW "................"
+    SROW "................"
+    SROW "................"
+    SROW "................"
+    SROW "......44........"
+    SROW ".....4334......."
+    SROW "...44.33.44....."
+    SROW "..4335225334...."
     SROW "..4335225334...."
     SROW "...44.33.44....."
     SROW ".....4334......."
@@ -4977,83 +4956,374 @@ map_snowflake:
     SROW "................"
     SROW "................"
 
-    ; v1 temporary guard (texgen #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (texgen #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (texgen #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (texgen #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (texgen #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (texgen #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (texgen #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (texgen #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (texgen #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (texgen #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (texgen #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (texgen #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (texgen #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (texgen #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (texgen #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (texgen #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (texgen #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (texgen #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (texgen #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (texgen #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (texgen #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (texgen #63)
-    xor     r11d, r11d ; clear v1 slot 63
-    ; v1 temporary guard (texgen #65)
-    xor     r11d, r11d ; clear v1 slot 65
-    ; v1 temporary guard (texgen #67)
-    xor     r11d, r11d ; clear v1 slot 67
-    ; v1 temporary guard (texgen #69)
-    xor     r11d, r11d ; clear v1 slot 69
-    ; v1 temporary guard (texgen #71)
-    xor     r11d, r11d ; clear v1 slot 71
-    ; v1 temporary guard (texgen #73)
-    xor     r11d, r11d ; clear v1 slot 73
-    ; v1 temporary guard (texgen #75)
-    xor     r11d, r11d ; clear v1 slot 75
-    ; v1 temporary guard (texgen #77)
-    xor     r11d, r11d ; clear v1 slot 77
-    ; v1 temporary guard (texgen #79)
-    xor     r11d, r11d ; clear v1 slot 79
-    ; v1 temporary guard (texgen #81)
-    xor     r11d, r11d ; clear v1 slot 81
-    ; v1 temporary guard (texgen #83)
-    xor     r11d, r11d ; clear v1 slot 83
-    ; v1 temporary guard (texgen #85)
-    xor     r11d, r11d ; clear v1 slot 85
-    ; v1 temporary guard (texgen #87)
-    xor     r11d, r11d ; clear v1 slot 87
-    ; v1 temporary guard (texgen #89)
-    xor     r11d, r11d ; clear v1 slot 89
-    ; v1 temporary guard (texgen #91)
-    xor     r11d, r11d ; clear v1 slot 91
-    ; v1 temporary guard (texgen #93)
-    xor     r11d, r11d ; clear v1 slot 93
-    ; v1 temporary guard (texgen #95)
-    xor     r11d, r11d ; clear v1 slot 95
-    ; v1 temporary guard (texgen #97)
-    xor     r11d, r11d ; clear v1 slot 97
-    ; v1 temporary guard (texgen #99)
-    xor     r11d, r11d ; clear v1 slot 99
+map_stick: ; v1: texgen scratch #0
+    ; temp: spill r12/r13 across helper call until reg alloc pass (texgen:0)
+    SROW "................" ; v1: texgen scratch #1
+    SROW "................" ; v1: texgen scratch #2
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (texgen:2)
+    SROW "............54.." ; v1: texgen scratch #3
+    SROW "...........543.." ; v1: texgen scratch #4
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (texgen:4)
+    SROW "..........543..." ; v1: texgen scratch #5
+    SROW ".........543...." ; v1: texgen scratch #6
+    ; note: rcx = state ptr, rdx = index, r8d = flags (texgen:6)
+    SROW "........543....." ; v1: texgen scratch #7
+    SROW ".......543......" ; v1: texgen scratch #8
+    ; TODO: clamp index before table lookup on malformed input (texgen:8)
+    SROW "......543......." ; v1: texgen scratch #9
+    SROW ".....543........" ; v1: texgen scratch #10
+    ; TODO: verify 16-byte rsp alignment before inner call (texgen:10)
+    SROW "....543........." ; v1: texgen scratch #11
+    SROW "...543.........." ; v1: texgen scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (texgen:12)
+    SROW "..543..........." ; v1: texgen scratch #13
+    SROW "..43............" ; v1: texgen scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (texgen:14)
+    SROW "................" ; v1: texgen scratch #15
+    SROW "................" ; v1: texgen scratch #16
+    ; temp: spill r12/r13 across helper call until reg alloc pass (texgen:16)
+map_coal: ; v1: texgen scratch #17
+    SROW "................" ; v1: texgen scratch #18
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (texgen:18)
+    SROW "................" ; v1: texgen scratch #19
+    SROW "................" ; v1: texgen scratch #20
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (texgen:20)
+    SROW "......2332......" ; v1: texgen scratch #21
+    SROW "....23443322...." ; v1: texgen scratch #22
+    ; note: rcx = state ptr, rdx = index, r8d = flags (texgen:22)
+    SROW "...2344332222..." ; v1: texgen scratch #23
+    SROW "...2343322212..." ; v1: texgen scratch #24
+    ; TODO: clamp index before table lookup on malformed input (texgen:24)
+    SROW "..23433222112..." ; v1: texgen scratch #25
+    SROW "..23332221112..." ; v1: texgen scratch #26
+    ; TODO: verify 16-byte rsp alignment before inner call (texgen:26)
+    SROW "..22322211122..." ; v1: texgen scratch #27
+    SROW "...222211122...." ; v1: texgen scratch #28
+    ; TODO: hoist invariant pointer load out of .loop (texgen:28)
+    SROW "....2211112....." ; v1: texgen scratch #29
+    SROW ".....22112......" ; v1: texgen scratch #30
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (texgen:30)
+    SROW "................" ; v1: texgen scratch #31
+    SROW "................" ; v1: texgen scratch #32
+    ; temp: spill r12/r13 across helper call until reg alloc pass (texgen:32)
+    SROW "................" ; v1: texgen scratch #33
+map_ingot: ; v1: texgen scratch #34
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (texgen:34)
+    SROW "................" ; v1: texgen scratch #35
+    SROW "................" ; v1: texgen scratch #36
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (texgen:36)
+    SROW "................" ; v1: texgen scratch #37
+    SROW "................" ; v1: texgen scratch #38
+    ; note: rcx = state ptr, rdx = index, r8d = flags (texgen:38)
+    SROW "......55555543.." ; v1: texgen scratch #39
+    SROW ".....5444444432." ; v1: texgen scratch #40
+    ; TODO: clamp index before table lookup on malformed input (texgen:40)
+    SROW "....54444444432." ; v1: texgen scratch #41
+    SROW "...54444444432.." ; v1: texgen scratch #42
+    ; TODO: verify 16-byte rsp alignment before inner call (texgen:42)
+    SROW "..5444444444322." ; v1: texgen scratch #43
+    SROW "..3333333333322." ; v1: texgen scratch #44
+    ; TODO: hoist invariant pointer load out of .loop (texgen:44)
+    SROW "..333333333332.." ; v1: texgen scratch #45
+    SROW "..22222222222..." ; v1: texgen scratch #46
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (texgen:46)
+    SROW "................"
+    SROW "................"
+    SROW "................"
+    SROW "................"
+map_diamond:
+    SROW "................"
+    SROW "................"
+    SROW "................"
+    SROW ".....555544....."
+    SROW "....54444443...."
+    SROW "...5445544433..."
+    SROW "..544554444333.."
+    SROW "..333333333332.."
+    SROW "...3333333332..."
+    SROW "....33333332...."
+    SROW ".....333332....."
+    SROW "......3332......"
+    SROW ".......32......."
+    SROW "................"
+    SROW "................"
+    SROW "................"
+map_apple:
+    SROW "................"
+    SROW "................"
+    SROW "........7......."
+    SROW ".......7.88....."
+    SROW "....3337888....."
+    SROW "...3443733333..."
+    SROW "..344333333332.."
+    SROW "..343333333332.."
+    SROW "..333333333322.."
+    SROW "..333333333322.."
+    SROW "..233333333222.."
+    SROW "...2333333222..."
+    SROW "....22222222...."
+    SROW ".....222..22...."
+    SROW "................"
+    SROW "................"
+map_meat:
+    SROW "................"
+    SROW "................"
+    SROW "................"
+    SROW ".....333333....."
+    SROW "...3344554433..."
+    SROW "..344455544443.."
+    SROW "..344554444663.."
+    SROW ".3444444466663.."
+    SROW ".3444446666633.."
+    SROW ".3344466663333.."
+    SROW "..33366333333..."
+    SROW "...333333333...."
+    SROW ".....33333......"
+    SROW "................"
+    SROW "................"
+    SROW "................"
+map_rotten:
+    SROW "................"
+    SROW "................"
+    SROW "................"
+    SROW "......4444......"
+    SROW "....44554344...."
+    SROW "...4455443364..."
+    SROW "..445544336644.."
+    SROW "..454433664455.."
+    SROW "...44336644554.."
+    SROW "...3366445544..."
+    SROW "....66445543...."
+    SROW ".....445533....."
+    SROW "......4433......"
+    SROW "................"
+    SROW "................"
+    SROW "................"
+map_flint:
+    SROW "................"
+    SROW "................"
+    SROW "................"
+    SROW ".......3........"
+    SROW "......334......."
+    SROW ".....33344......"
+    SROW "....3332344....."
+    SROW "...333222344...."
+    SROW "...3322222334..."
+    SROW "...33222222334.."
+    SROW "....332222233..."
+    SROW ".....33222233..."
+    SROW "......333333...."
+    SROW "................"
+    SROW "................"
+    SROW "................"
+map_bread:
+    SROW "................"
+    SROW "................"
+    SROW "................"
+    SROW "................"
+    SROW "................"
+    SROW ".....444444....."
+    SROW "...4455455544..."
+    SROW "..445354535344.."
+    SROW "..433333333334.."
+    SROW "..333333333332.."
+    SROW "..233333333322.."
+    SROW "...2222222222..."
+    SROW "................"
+    SROW "................"
+    SROW "................"
+    SROW "................"
+map_string:
+    SROW "................"
+    SROW "................"
+    SROW "............4..."
+    SROW "...........4.4.."
+    SROW "..........4...4."
+    SROW "..........4..4.."
+    SROW "...........44..."
+    SROW "..........4....."
+    SROW ".........4......"
+    SROW "....44..4......."
+    SROW "...4..44........"
+    SROW "..4............."
+    SROW "..4..4.........."
+    SROW "...44..........."
+    SROW "................"
+    SROW "................"
+map_bucket:
+    SROW "................"
+    SROW "....33333333...."
+    SROW "...3........3..."
+    SROW "...4555555554..."
+    SROW "..466666666664.."
+    SROW "..346666666643.."
+    SROW "...3444444443..."
+    SROW "...3444444443..."
+    SROW "...3444444433..."
+    SROW "...3344444433..."
+    SROW "....34444433...."
+    SROW "....33444433...."
+    SROW "....33444333...."
+    SROW ".....333333....."
+    SROW "................"
+    SROW "................"
+map_flintsteel:
+    SROW "................"
+    SROW "................"
+    SROW "...44444........"
+    SROW "..45....4......."
+    SROW "..4......4......"
+    SROW "..4......4......"
+    SROW "..45....54......"
+    SROW "...455554......."
+    SROW ".....44........."
+    SROW "................"
+    SROW "..........22...."
+    SROW ".........2332..."
+    SROW "........23322..."
+    SROW ".........222...."
+    SROW "................"
+    SROW "................"
+map_pick:
+    SROW "................"
+    SROW ".....555544....."
+    SROW "...5544444443..."
+    SROW "..544333333443.."
+    SROW "..43.....78.343."
+    SROW "..3.....78...43."
+    SROW ".......78....43."
+    SROW "......78.....43."
+    SROW ".....78.......3."
+    SROW "....78.........."
+    SROW "...78..........."
+    SROW "..78............"
+    SROW ".78............."
+    SROW "................"
+    SROW "................"
+    SROW "................"
+map_axe:
+    SROW "................"
+    SROW "......5555...78."
+    SROW ".....544445.78.."
+    SROW "....544444378..."
+    SROW "....54443378...."
+    SROW "....5443378....."
+    SROW ".....53378......"
+    SROW "......378......."
+    SROW "......78........"
+    SROW ".....78........."
+    SROW "....78.........."
+    SROW "...78..........."
+    SROW "..78............"
+    SROW ".78............."
+    SROW "................"
+    SROW "................"
+map_shovel:
+    SROW "................"
+    SROW "...........555.."
+    SROW "..........55444."
+    SROW ".........544443."
+    SROW ".........544433."
+    SROW "..........4433.."
+    SROW ".........78....."
+    SROW "........78......"
+    SROW ".......78......."
+    SROW "......78........"
+    SROW ".....78........."
+    SROW "....78.........."
+    SROW "...78..........."
+    SROW "..78............"
+    SROW ".78............."
+    SROW "................"
+map_sword:
+    SROW "................"
+    SROW ".............55."
+    SROW "............543."
+    SROW "...........543.."
+    SROW "..........543..."
+    SROW ".........543...."
+    SROW "........543....."
+    SROW "..33...543......"
+    SROW "...343543......."
+    SROW "....3443........"
+    SROW "....78.33......."
+    SROW "...78...3......."
+    SROW "..78............"
+    SROW ".87............."
+    SROW "................"
+    SROW "................"
+map_heart:
+    SROW "................"
+    SROW "................"
+    ; v1 temporary guard (texgen #24)
+    xor     r11d, r11d ; clear v1 slot 24
+    ; v1 temporary guard (texgen #26)
+    xor     r11d, r11d ; clear v1 slot 26
+    ; v1 temporary guard (texgen #28)
+    xor     r11d, r11d ; clear v1 slot 28
+    ; v1 temporary guard (texgen #30)
+    xor     r11d, r11d ; clear v1 slot 30
+    ; v1 temporary guard (texgen #32)
+    xor     r11d, r11d ; clear v1 slot 32
+    ; v1 temporary guard (texgen #34)
+    xor     r11d, r11d ; clear v1 slot 34
+    ; v1 temporary guard (texgen #36)
+    xor     r11d, r11d ; clear v1 slot 36
+    ; v1 temporary guard (texgen #38)
+    xor     r11d, r11d ; clear v1 slot 38
+    ; v1 temporary guard (texgen #40)
+    xor     r11d, r11d ; clear v1 slot 40
+    ; v1 temporary guard (texgen #42)
+    xor     r11d, r11d ; clear v1 slot 42
+    ; v1 temporary guard (texgen #44)
+    xor     r11d, r11d ; clear v1 slot 44
+    ; v1 temporary guard (texgen #46)
+    xor     r11d, r11d ; clear v1 slot 46
+    ; v1 temporary guard (texgen #48)
+    xor     r11d, r11d ; clear v1 slot 48
+    ; v1 temporary guard (texgen #50)
+    xor     r11d, r11d ; clear v1 slot 50
+    ; v1 temporary guard (texgen #52)
+    xor     r11d, r11d ; clear v1 slot 52
+    ; v1 temporary guard (texgen #54)
+    xor     r11d, r11d ; clear v1 slot 54
+    ; v1 temporary guard (texgen #56)
+    xor     r11d, r11d ; clear v1 slot 56
+    ; v1 temporary guard (texgen #58)
+    xor     r11d, r11d ; clear v1 slot 58
+    ; v1 temporary guard (texgen #60)
+    xor     r11d, r11d ; clear v1 slot 60
+    ; v1 temporary guard (texgen #62)
+    xor     r11d, r11d ; clear v1 slot 62
+    ; v1 temporary guard (texgen #64)
+    xor     r11d, r11d ; clear v1 slot 64
+    ; v1 temporary guard (texgen #66)
+    xor     r11d, r11d ; clear v1 slot 66
+    ; v1 temporary guard (texgen #68)
+    xor     r11d, r11d ; clear v1 slot 68
+    ; v1 temporary guard (texgen #70)
+    xor     r11d, r11d ; clear v1 slot 70
+    ; v1 temporary guard (texgen #72)
+    xor     r11d, r11d ; clear v1 slot 72
+    ; v1 temporary guard (texgen #74)
+    xor     r11d, r11d ; clear v1 slot 74
+    ; v1 temporary guard (texgen #76)
+    xor     r11d, r11d ; clear v1 slot 76
+    ; v1 temporary guard (texgen #78)
+    xor     r11d, r11d ; clear v1 slot 78
+    ; v1 temporary guard (texgen #80)
+    xor     r11d, r11d ; clear v1 slot 80
+    ; v1 temporary guard (texgen #82)
+    xor     r11d, r11d ; clear v1 slot 82
+    ; v1 temporary guard (texgen #84)
+    xor     r11d, r11d ; clear v1 slot 84
+    ; v1 temporary guard (texgen #86)
+    xor     r11d, r11d ; clear v1 slot 86
+    ; v1 temporary guard (texgen #88)
+    xor     r11d, r11d ; clear v1 slot 88
+    ; v1 temporary guard (texgen #90)
+    xor     r11d, r11d ; clear v1 slot 90
+    ; v1 temporary guard (texgen #92)
+    xor     r11d, r11d ; clear v1 slot 92
+    ; v1 temporary guard (texgen #94)
+    xor     r11d, r11d ; clear v1 slot 94
