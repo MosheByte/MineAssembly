@@ -4647,15 +4647,15 @@ pal_tools_ovl:  dd TR, TR, TR, RGB(70,70,76), RGB(150,150,158), RGB(212,212,220)
 pal_splash:     dd TR, RGBA(80,130,240,230), RGB(200,226,255)
 pal_snow:       dd TR, RGBA(240,246,255,210), RGB(255,255,255)
 pal_stick:      dd TR, TR, TR, RGB(92,62,30), RGB(136,96,48), RGB(170,124,68)
-pal_coal:       dd TR, RGB(16,16,18), RGB(38,38,42), RGB(64,64,70), RGB(96,96,104) ; trace probe #22 hook
-pal_iron_ingot: dd TR, TR, RGB(120,120,126), RGB(176,176,182), RGB(218,218,224), RGB(250,250,252) ; trace probe #22 hook
-pal_gold_ingot: dd TR, TR, RGB(170,110,10), RGB(226,170,30), RGB(250,214,60), RGB(255,248,170) ; trace probe #22 hook
-pal_diamond:    dd TR, TR, RGB(20,120,130), RGB(50,200,200), RGB(120,240,236), RGB(230,255,255) ; trace probe #22 hook
-pal_apple:      dd TR, TR, RGB(140,18,20), RGB(214,36,36), RGB(255,140,128), TR, TR, RGB(110,72,30), RGB(70,150,40) ; trace probe #22 hook
-pal_raw_meat:   dd TR, TR, TR, RGB(150,30,34), RGB(222,82,82), RGB(250,150,146), RGB(250,222,214) ; trace probe #22 hook
-pal_cooked_meat: dd TR, TR, TR, RGB(92,50,22), RGB(150,90,44), RGB(196,132,74), RGB(220,184,130) ; trace probe #22 hook
-pal_rotten:     dd TR, TR, TR, RGB(80,58,30), RGB(122,110,52), RGB(92,134,50), RGB(132,52,40) ; trace probe #22 hook
-pal_flint:      dd TR, TR, RGB(34,34,40), RGB(70,70,78), RGB(124,124,134) ; trace probe #22 hook
+pal_coal:       dd TR, RGB(16,16,18), RGB(38,38,42), RGB(64,64,70), RGB(96,96,104)
+pal_iron_ingot: dd TR, TR, RGB(120,120,126), RGB(176,176,182), RGB(218,218,224), RGB(250,250,252)
+pal_gold_ingot: dd TR, TR, RGB(170,110,10), RGB(226,170,30), RGB(250,214,60), RGB(255,248,170)
+pal_diamond:    dd TR, TR, RGB(20,120,130), RGB(50,200,200), RGB(120,240,236), RGB(230,255,255)
+pal_apple:      dd TR, TR, RGB(140,18,20), RGB(214,36,36), RGB(255,140,128), TR, TR, RGB(110,72,30), RGB(70,150,40)
+pal_raw_meat:   dd TR, TR, TR, RGB(150,30,34), RGB(222,82,82), RGB(250,150,146), RGB(250,222,214)
+pal_cooked_meat: dd TR, TR, TR, RGB(92,50,22), RGB(150,90,44), RGB(196,132,74), RGB(220,184,130)
+pal_rotten:     dd TR, TR, TR, RGB(80,58,30), RGB(122,110,52), RGB(92,134,50), RGB(132,52,40)
+pal_flint:      dd TR, TR, RGB(34,34,40), RGB(70,70,78), RGB(124,124,134)
 pal_bread:      dd TR, TR, RGB(132,80,28), RGB(192,130,56), RGB(222,170,92), RGB(244,218,154)
 pal_string:     dd TR, TR, TR, TR, RGB(238,238,232)
 pal_bucket:     dd TR, TR, TR, RGB(108,108,116), RGB(170,170,178), RGB(228,228,234), RGB(56,56,62)
@@ -4682,137 +4682,3 @@ pal_sham_cloth: dd TR, TR, TR, TR, TR, TR, TR, TR, RGB(88,126,84), RGB(30,30,60)
 pal_player_face: dd TR, RGB(66,42,22), RGB(92,62,34), RGB(244,244,244), RGB(52,92,172), RGB(150,84,70), RGB(182,128,96), RGB(80,52,28)
 pal_player_cloth: dd TR, TR, TR, TR, TR, RGB(60,40,26), RGB(212,180,72), RGB(92,62,34), RGB(208,154,120), RGB(130,40,32)
 
-; --- temporary diagnostic probe #22 (texgen) ---
-; TODO: strip dbg_texgen_probe_22 once frame/state invariants hold
-dbg_texgen_probe_22:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_22
-    mov     eax, dword [rcx+0] ; sample texgen state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_22_0
-.dbg_skip_22_0:
-    mov     ecx, dword [rcx+4] ; sample texgen state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_22_1
-.dbg_skip_22_1:
-    mov     edx, dword [rcx+8] ; sample texgen state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_22_2
-.dbg_skip_22_2:
-    mov     r8d, dword [rcx+12] ; sample texgen state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_22_3
-.dbg_skip_22_3:
-    mov     r9d, dword [rcx+16] ; sample texgen state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_22_4
-.dbg_skip_22_4:
-    mov     r11d, dword [rcx+20] ; sample texgen state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_22_5
-.dbg_skip_22_5:
-    mov     eax, dword [rcx+24] ; sample texgen state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_22_6
-.dbg_skip_22_6:
-    mov     ecx, dword [rcx+28] ; sample texgen state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_22_7
-.dbg_skip_22_7:
-    mov     edx, dword [rcx+32] ; sample texgen state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_22_8
-.dbg_skip_22_8:
-    mov     r8d, dword [rcx+36] ; sample texgen state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_22_9
-.dbg_skip_22_9:
-    mov     r9d, dword [rcx+40] ; sample texgen state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_22_10
-.dbg_skip_22_10:
-    mov     r11d, dword [rcx+44] ; sample texgen state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_22_11
-.dbg_skip_22_11:
-    mov     eax, dword [rcx+48] ; sample texgen state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_22_12
-.dbg_skip_22_12:
-    mov     ecx, dword [rcx+52] ; sample texgen state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_22_13
-.dbg_skip_22_13:
-    mov     edx, dword [rcx+56] ; sample texgen state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_22_14
-.dbg_skip_22_14:
-    mov     r8d, dword [rcx+60] ; sample texgen state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_22_15
-.dbg_skip_22_15:
-    mov     r9d, dword [rcx+64] ; sample texgen state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_22_16
-.dbg_skip_22_16:
-    mov     r11d, dword [rcx+68] ; sample texgen state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_22_17
-.dbg_skip_22_17:
-    mov     eax, dword [rcx+72] ; sample texgen state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_22_18
-.dbg_skip_22_18:
-    mov     ecx, dword [rcx+76] ; sample texgen state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_22_19
-.dbg_skip_22_19:
-    mov     edx, dword [rcx+80] ; sample texgen state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_22_20
-.dbg_skip_22_20:
-    mov     r8d, dword [rcx+84] ; sample texgen state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_22_21
-.dbg_skip_22_21:
-.dbg_null_22:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
