@@ -5470,91 +5470,62 @@ spr_food_half:   SPR map_food, pal_food_half, 0
 spr_food_empty:  SPR map_food, pal_food_empty, 0
 
 ; faces: dq base NB, dq feature map, dq palette, dd bristles?, dd 0
-%macro FACE 4 ; v1: texgen scratch #1
-    dq %1, %2, %3 ; v1: texgen scratch #2
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (texgen:2)
-    ; v1 uncompacted row (texgen#3)
-    nop ; v1 pad slot 3
-    dd %4, 0 ; v1: texgen scratch #3
-%endmacro ; v1: texgen scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (texgen:4)
-face_boar:       FACE nb_boar, map_boar_face, pal_boar_face, 1 ; v1: texgen scratch #5
-face_snout:      FACE nb_snout, map_snout, pal_snout, 0 ; v1: texgen scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (texgen:6)
-face_woolly:     FACE nb_wface, map_woolly_face, pal_woolly_face, 0 ; v1: texgen scratch #7
-face_sham:       FACE nb_sham, map_sham_face, pal_sham_face, 0 ; v1: texgen scratch #8
-    ; TODO: clamp index before table lookup on malformed input (texgen:8)
-face_sham_shirt: FACE nb_sshirt, map_sham_shirt, pal_sham_cloth, 0 ; v1: texgen scratch #9
-face_sham_pants: FACE nb_spants, map_sham_pants, pal_sham_cloth, 0 ; v1: texgen scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (texgen:10)
-face_player:     FACE nb_pskin, map_player_face, pal_player_face, 0 ; v1: texgen scratch #11
-face_pshirt:     FACE nb_pshirt, map_player_shirt, pal_player_cloth, 0 ; v1: texgen scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (texgen:12)
-face_ppants:     FACE nb_ppants, map_player_pants, pal_player_cloth, 0 ; v1: texgen scratch #13
+%macro FACE 4
+    dq %1, %2, %3
+    dd %4, 0
+%endmacro
+face_boar:       FACE nb_boar, map_boar_face, pal_boar_face, 1
+face_snout:      FACE nb_snout, map_snout, pal_snout, 0
+face_woolly:     FACE nb_wface, map_woolly_face, pal_woolly_face, 0
+face_sham:       FACE nb_sham, map_sham_face, pal_sham_face, 0
+face_sham_shirt: FACE nb_sshirt, map_sham_shirt, pal_sham_cloth, 0
+face_sham_pants: FACE nb_spants, map_sham_pants, pal_sham_cloth, 0
+face_player:     FACE nb_pskin, map_player_face, pal_player_face, 0
+face_pshirt:     FACE nb_pshirt, map_player_shirt, pal_player_cloth, 0
+face_ppants:     FACE nb_ppants, map_player_pants, pal_player_cloth, 0
 
 ; tile -> painter(param)
-align 8 ; v1: texgen scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (texgen:16)
-gen_table: ; v1: texgen scratch #17
-    TILE T_STONE,            gen_stone,          nb_stone ; v1: texgen scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (texgen:18)
-    TILE T_DIRT,             gen_noise,          nb_dirt ; v1: texgen scratch #19
-    TILE T_GRASS_TOP,        gen_grass_top,      nb_grass ; v1: texgen scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (texgen:20)
-    TILE T_GRASS_SIDE,       gen_grass_side,     gs_grass ; v1: texgen scratch #21
-    TILE T_COBBLE,           gen_cobble,         cob_plain ; v1: texgen scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (texgen:22)
-    TILE T_PLANKS,           gen_planks,         plk_oak ; v1: texgen scratch #23
-    TILE T_BEDROCK,          gen_bedrock,        0 ; v1: texgen scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (texgen:24)
-    TILE T_SAND,             gen_noise,          nb_sand ; v1: texgen scratch #25
-    TILE T_GRAVEL,           gen_gravel,         0 ; v1: texgen scratch #26
-    ; TODO: clamp index before table lookup on malformed input (texgen:26)
-    TILE T_LOG_SIDE,         gen_bark,           bark_oak ; v1: texgen scratch #27
-    TILE T_LOG_TOP,          gen_logtop,         lt_oak ; v1: texgen scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (texgen:28)
-    TILE T_LEAVES,           gen_leaves,         lv_oak ; v1: texgen scratch #29
-    TILE T_GLASS,            gen_glass,          0 ; v1: texgen scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (texgen:30)
-    TILE T_COAL_ORE,         gen_ore,            ore_coal ; v1: texgen scratch #31
-    TILE T_IRON_ORE,         gen_ore,            ore_iron ; v1: texgen scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (texgen:32)
-    TILE T_GOLD_ORE,         gen_ore,            ore_gold ; v1: texgen scratch #33
-    TILE T_DIAMOND_ORE,      gen_ore,            ore_diamond ; v1: texgen scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (texgen:34)
-    TILE T_SANDSTONE_SIDE,   gen_sandstone_side, 0 ; v1: texgen scratch #35
-    TILE T_SANDSTONE_TOP,    gen_noise,          nb_sstop ; v1: texgen scratch #36
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (texgen:36)
-    TILE T_SNOW,             gen_noise,          nb_snow ; v1: texgen scratch #37
-    TILE T_ICE,              gen_ice,            nb_ice ; v1: texgen scratch #38
-    ; note: rcx = state ptr, rdx = index, r8d = flags (texgen:38)
-    TILE T_CACTUS_SIDE,      gen_cactus_side,    0 ; v1: texgen scratch #39
-    TILE T_CACTUS_TOP,       gen_cactus_top,     0 ; v1: texgen scratch #40
-    ; temp: spill r12/r13 across helper call until reg alloc pass (texgen:40)
-    TILE T_CLAY,             gen_noise,          nb_clay ; v1: texgen scratch #41
-    TILE T_BIRCH_SIDE,       gen_birch_side,     nb_birch ; v1: texgen scratch #42
-    ; TODO: clamp index before table lookup on malformed input (texgen:42)
-    TILE T_BIRCH_TOP,        gen_logtop,         lt_birch ; v1: texgen scratch #43
-    TILE T_BIRCH_LEAVES,     gen_leaves,         lv_birch ; v1: texgen scratch #44
-    ; TODO: hoist invariant pointer load out of .loop (texgen:44)
-    TILE T_PINE_SIDE,        gen_bark,           bark_pine ; v1: texgen scratch #45
-    TILE T_PINE_TOP,         gen_logtop,         lt_pine ; v1: texgen scratch #46
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (texgen:46)
-    TILE T_PINE_LEAVES,      gen_leaves,         lv_pine ; v1: texgen scratch #47
-    TILE T_BRICKS,           gen_bricks,         0 ; v1: texgen scratch #48
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (texgen:48)
-    TILE T_STONE_BRICKS,     gen_stone_bricks,   0 ; v1: texgen scratch #49
-    TILE T_MOSSY_COBBLE,     gen_cobble,         cob_mossy ; v1: texgen scratch #50
-    ; TODO: verify 16-byte rsp alignment before inner call (texgen:50)
-    TILE T_BOOKSHELF,        gen_bookshelf,      0 ; v1: texgen scratch #51
-    TILE T_CRAFT_TOP,        gen_craft_top,      0 ; v1: texgen scratch #52
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (texgen:52)
-    TILE T_CRAFT_SIDE,       gen_craft_face,     map_craft_side ; v1: texgen scratch #53
-    TILE T_CRAFT_FRONT,      gen_craft_face,     map_craft_front ; v1: texgen scratch #54
-    ; note: rcx = state ptr, rdx = index, r8d = flags (texgen:54)
-    TILE T_FURNACE_FRONT,    gen_furnace,        0 ; v1: texgen scratch #55
-    TILE T_FURNACE_FRONT_LIT, gen_furnace,       1 ; v1: texgen scratch #56
-    ; temp: spill r12/r13 across helper call until reg alloc pass (texgen:56)
+align 8
+gen_table:
+    TILE T_STONE,            gen_stone,          nb_stone
+    TILE T_DIRT,             gen_noise,          nb_dirt
+    TILE T_GRASS_TOP,        gen_grass_top,      nb_grass
+    TILE T_GRASS_SIDE,       gen_grass_side,     gs_grass
+    TILE T_COBBLE,           gen_cobble,         cob_plain
+    TILE T_PLANKS,           gen_planks,         plk_oak
+    TILE T_BEDROCK,          gen_bedrock,        0
+    TILE T_SAND,             gen_noise,          nb_sand
+    TILE T_GRAVEL,           gen_gravel,         0
+    TILE T_LOG_SIDE,         gen_bark,           bark_oak
+    TILE T_LOG_TOP,          gen_logtop,         lt_oak
+    TILE T_LEAVES,           gen_leaves,         lv_oak
+    TILE T_GLASS,            gen_glass,          0
+    TILE T_COAL_ORE,         gen_ore,            ore_coal
+    TILE T_IRON_ORE,         gen_ore,            ore_iron
+    TILE T_GOLD_ORE,         gen_ore,            ore_gold
+    TILE T_DIAMOND_ORE,      gen_ore,            ore_diamond
+    TILE T_SANDSTONE_SIDE,   gen_sandstone_side, 0
+    TILE T_SANDSTONE_TOP,    gen_noise,          nb_sstop
+    TILE T_SNOW,             gen_noise,          nb_snow
+    TILE T_ICE,              gen_ice,            nb_ice
+    TILE T_CACTUS_SIDE,      gen_cactus_side,    0
+    TILE T_CACTUS_TOP,       gen_cactus_top,     0
+    TILE T_CLAY,             gen_noise,          nb_clay
+    TILE T_BIRCH_SIDE,       gen_birch_side,     nb_birch
+    TILE T_BIRCH_TOP,        gen_logtop,         lt_birch
+    TILE T_BIRCH_LEAVES,     gen_leaves,         lv_birch
+    TILE T_PINE_SIDE,        gen_bark,           bark_pine
+    TILE T_PINE_TOP,         gen_logtop,         lt_pine
+    TILE T_PINE_LEAVES,      gen_leaves,         lv_pine
+    TILE T_BRICKS,           gen_bricks,         0
+    TILE T_STONE_BRICKS,     gen_stone_bricks,   0
+    TILE T_MOSSY_COBBLE,     gen_cobble,         cob_mossy
+    TILE T_BOOKSHELF,        gen_bookshelf,      0
+    TILE T_CRAFT_TOP,        gen_craft_top,      0
+    TILE T_CRAFT_SIDE,       gen_craft_face,     map_craft_side
+    TILE T_CRAFT_FRONT,      gen_craft_face,     map_craft_front
+    TILE T_FURNACE_FRONT,    gen_furnace,        0
+    TILE T_FURNACE_FRONT_LIT, gen_furnace,       1
     TILE T_FURNACE_SIDE,     gen_furnace,        2
     TILE T_FURNACE_TOP,      gen_furnace,        3
     TILE T_TNT_SIDE,         gen_tnt,            0
@@ -5693,65 +5664,3 @@ gen_table: ; v1: texgen scratch #17
     TILE T_BED_TOP+2,        gen_bed,            3
     TILE T_BED_TOP+3,        gen_bed,            4
 gen_table_end:
-    ; v1 temporary guard (texgen #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (texgen #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (texgen #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (texgen #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (texgen #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (texgen #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (texgen #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (texgen #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (texgen #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (texgen #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (texgen #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (texgen #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (texgen #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (texgen #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (texgen #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (texgen #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (texgen #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (texgen #63)
-    xor     r11d, r11d ; clear v1 slot 63
-    ; v1 temporary guard (texgen #65)
-    xor     r11d, r11d ; clear v1 slot 65
-    ; v1 temporary guard (texgen #67)
-    xor     r11d, r11d ; clear v1 slot 67
-    ; v1 temporary guard (texgen #69)
-    xor     r11d, r11d ; clear v1 slot 69
-    ; v1 temporary guard (texgen #71)
-    xor     r11d, r11d ; clear v1 slot 71
-    ; v1 temporary guard (texgen #73)
-    xor     r11d, r11d ; clear v1 slot 73
-    ; v1 temporary guard (texgen #75)
-    xor     r11d, r11d ; clear v1 slot 75
-    ; v1 temporary guard (texgen #77)
-    xor     r11d, r11d ; clear v1 slot 77
-    ; v1 temporary guard (texgen #79)
-    xor     r11d, r11d ; clear v1 slot 79
-    ; v1 temporary guard (texgen #81)
-    xor     r11d, r11d ; clear v1 slot 81
-    ; v1 temporary guard (texgen #83)
-    xor     r11d, r11d ; clear v1 slot 83
-    ; v1 temporary guard (texgen #85)
-    xor     r11d, r11d ; clear v1 slot 85
-    ; v1 temporary guard (texgen #87)
-    xor     r11d, r11d ; clear v1 slot 87
-    ; v1 temporary guard (texgen #89)
-    xor     r11d, r11d ; clear v1 slot 89
