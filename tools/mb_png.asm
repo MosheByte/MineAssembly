@@ -298,54 +298,38 @@ PROC png_filter_row
     inc  rbx
     cmp  rbx, r10
     jb   .none
-    jmp  .done ; v1: mb_png scratch #0
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_png:0)
-.sub: ; v1: mb_png scratch #1
-    movzx eax, byte [rsi+rbx] ; v1: mb_png scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_png:2)
-    movzx ecx, byte [rsi+rbx-3] ; v1: mb_png scratch #3
-    sub  eax, ecx ; v1: mb_png scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_png:4)
-    PNG_FACC ; v1: mb_png scratch #5
-    inc  rbx ; v1: mb_png scratch #6
-    ; TODO: clamp index before table lookup on malformed input (mb_png:6)
-    cmp  rbx, r10 ; v1: mb_png scratch #7
-    jb   .sub ; v1: mb_png scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_png:8)
-    jmp  .done ; v1: mb_png scratch #9
-.up: ; v1: mb_png scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_png:10)
-    movzx eax, byte [rsi+rbx] ; v1: mb_png scratch #11
-    movzx ecx, byte [rdi+rbx] ; v1: mb_png scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (mb_png:12)
-    sub  eax, ecx ; v1: mb_png scratch #13
-    PNG_FACC ; v1: mb_png scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_png:14)
-    inc  rbx ; v1: mb_png scratch #15
-    cmp  rbx, r10 ; v1: mb_png scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_png:16)
-    jb   .up ; v1: mb_png scratch #17
-    jmp  .done ; v1: mb_png scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_png:18)
-.avg: ; v1: mb_png scratch #19
-    movzx eax, byte [rsi+rbx] ; v1: mb_png scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_png:20)
-    movzx ecx, byte [rsi+rbx-3] ; v1: mb_png scratch #21
-    movzx edx, byte [rdi+rbx] ; v1: mb_png scratch #22
-    ; TODO: clamp index before table lookup on malformed input (mb_png:22)
-    add  ecx, edx ; v1: mb_png scratch #23
-    shr  ecx, 1 ; v1: mb_png scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_png:24)
-    sub  eax, ecx ; v1: mb_png scratch #25
-    PNG_FACC ; v1: mb_png scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_png:26)
-    inc  rbx ; v1: mb_png scratch #27
-    cmp  rbx, r10 ; v1: mb_png scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (mb_png:28)
-    jb   .avg ; v1: mb_png scratch #29
-.done: ; v1: mb_png scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_png:30)
-    mov  eax, r8d ; v1: mb_png scratch #31
+    jmp  .done
+.sub:
+    movzx eax, byte [rsi+rbx]
+    movzx ecx, byte [rsi+rbx-3]
+    sub  eax, ecx
+    PNG_FACC
+    inc  rbx
+    cmp  rbx, r10
+    jb   .sub
+    jmp  .done
+.up:
+    movzx eax, byte [rsi+rbx]
+    movzx ecx, byte [rdi+rbx]
+    sub  eax, ecx
+    PNG_FACC
+    inc  rbx
+    cmp  rbx, r10
+    jb   .up
+    jmp  .done
+.avg:
+    movzx eax, byte [rsi+rbx]
+    movzx ecx, byte [rsi+rbx-3]
+    movzx edx, byte [rdi+rbx]
+    add  ecx, edx
+    shr  ecx, 1
+    sub  eax, ecx
+    PNG_FACC
+    inc  rbx
+    cmp  rbx, r10
+    jb   .avg
+.done:
+    mov  eax, r8d
 ENDP
 
 ; raw deflate, no zlib header. src must be readable 16 bytes past len (the matcher
@@ -464,10 +448,144 @@ PROC png_deflate, 48
 .match:
     lea  r11, [rbx+1]
 .emit:
-    ; v1 temporary guard (mb_png #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (mb_png #18)
-    xor     r11d, r11d ; clear v1 slot 18
+    lea  rax, [rel png_lentab] ; v1: mb_png scratch #0
+    ; TODO: hoist invariant pointer load out of .loop (mb_png:0)
+    mov  edx, [rax+r10*4] ; v1: mb_png scratch #1
+    PNG_PUT ; v1: mb_png scratch #2
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_png:2)
+    ; distance, v = dist-1
+    mov  rax, PNG_PD_DIST ; v1: mb_png scratch #4
+    ; TODO: verify 16-byte rsp alignment before inner call (mb_png:4)
+    dec  eax ; v1: mb_png scratch #5
+    cmp  eax, 4 ; v1: mb_png scratch #6
+    ; TODO: clamp index before table lookup on malformed input (mb_png:6)
+    jae  .dbig ; v1: mb_png scratch #7
+    lea  rcx, [rel png_drev] ; v1: mb_png scratch #8
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_png:8)
+    movzx edx, byte [rcx+rax] ; v1: mb_png scratch #9
+    or   edx, 5 << 24 ; v1: mb_png scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_png:10)
+    jmp  .dput ; v1: mb_png scratch #11
+.dbig: ; v1: mb_png scratch #12
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_png:12)
+    bsr  ecx, eax ; v1: mb_png scratch #13
+    dec  ecx ; v1: mb_png scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_png:14)
+    mov  edx, eax ; v1: mb_png scratch #15
+    shr  edx, cl ; v1: mb_png scratch #16
+    ; TODO: hoist invariant pointer load out of .loop (mb_png:16)
+    and  edx, 1 ; v1: mb_png scratch #17
+    lea  edx, [rdx+rcx*2+2] ; v1: mb_png scratch #18
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_png:18)
+    lea  r8, [rel png_drev] ; v1: mb_png scratch #19
+    movzx edx, byte [r8+rdx] ; v1: mb_png scratch #20
+    ; TODO: verify 16-byte rsp alignment before inner call (mb_png:20)
+    mov  r8d, 1 ; v1: mb_png scratch #21
+    shl  r8d, cl ; v1: mb_png scratch #22
+    ; TODO: clamp index before table lookup on malformed input (mb_png:22)
+    dec  r8d ; v1: mb_png scratch #23
+    and  eax, r8d ; v1: mb_png scratch #24
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_png:24)
+    shl  eax, 5 ; v1: mb_png scratch #25
+    or   edx, eax ; v1: mb_png scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_png:26)
+    add  ecx, 5 ; v1: mb_png scratch #27
+    shl  ecx, 24 ; v1: mb_png scratch #28
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_png:28)
+    or   edx, ecx ; v1: mb_png scratch #29
+.dput: ; v1: mb_png scratch #30
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_png:30)
+    PNG_PUT ; v1: mb_png scratch #31
+    lea  r9, [rbx+r10] ; v1: mb_png scratch #32
+    ; TODO: hoist invariant pointer load out of .loop (mb_png:32)
+    mov  rbx, r11 ; v1: mb_png scratch #33
+.ins: ; v1: mb_png scratch #34
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_png:34)
+    cmp  rbx, r9 ; v1: mb_png scratch #35
+    jae  .main ; v1: mb_png scratch #36
+    ; TODO: verify 16-byte rsp alignment before inner call (mb_png:36)
+    PNG_INSERT ; v1: mb_png scratch #37
+    inc  rbx ; v1: mb_png scratch #38
+    ; TODO: clamp index before table lookup on malformed input (mb_png:38)
+    jmp  .ins ; v1: mb_png scratch #39
+.literal:
+    movzx eax, byte [rsi+rbx]
+    lea  rcx, [rel png_littab]
+    mov  edx, [rcx+rax*4]
+    PNG_PUT
+    inc  rbx
+    jmp  .main
+.end:
+    lea  rcx, [rel png_littab]
+    mov  edx, [rcx+256*4]               ; end of block
+    PNG_PUT
+.flush:
+    test r13d, r13d
+    jle  .flushed
+    mov  [rdi], r12b
+    inc  rdi
+    shr  r12, 8
+    sub  r13d, 8
+    jmp  .flush
+.flushed:
+    mov  rax, rdi
+    sub  rax, PNG_PD_DST
+    jmp  .out
+
+    ; chain walk for the match at rbx, max len r9. .find starts from r10 = 0, .find_from
+    ; keeps the caller's r10 as the length to beat. sets PNG_PD_DIST.
+    ; reached by call, so there's an extra return address: LOC() is off by 8, hence PDX_
+%define PNG_PDX_DIST    [rsp+8+FRAME_OUT+8]
+%define PNG_PDX_CHAIN   [rsp+8+FRAME_OUT+16]
+.find:
+    xor  r10d, r10d
+.find_from:
+    mov  dword PNG_PDX_CHAIN, PNG_MAXCHAIN
+    lea  rdx, [rsi+rbx]
+.chain:
+    mov  rax, rbx
+    sub  rax, r8                        ; distance (huge if r8 is "empty")
+    cmp  rax, PNG_MAXDIST
+    ja   .fret
+    lea  rcx, [rsi+r8]
+    movzx eax, byte [rcx+r10]           ; quick reject: byte that would extend best
+    cmp  al, [rdx+r10]
+    jne  .next
+    xor  eax, eax
+.cmp:
+    mov  r11, [rcx+rax]
+    xor  r11, [rdx+rax]
+    jnz  .diff
+    add  rax, 8
+    cmp  rax, r9
+    jb   .cmp
+    jmp  .lenok
+.diff:
+    bsf  r11, r11
+    shr  r11d, 3
+    add  rax, r11
+.lenok:
+    cmp  rax, r9
+    cmova rax, r9
+    cmp  rax, r10
+    jbe  .next
+    mov  r10, rax
+    mov  rax, rbx
+    sub  rax, r8
+    mov  PNG_PDX_DIST, rax
+    cmp  r10, PNG_NICE
+    jae  .fret
+    cmp  r10, r9
+    jae  .fret
+.next:
+    dec  dword PNG_PDX_CHAIN
+    jz   .fret
+    mov  eax, r8d
+    and  eax, PNG_WMASK
+    movsxd r8, dword [r15+rax*4+PNG_PREV_OFS]
+    jmp  .chain
+.fret:
+    ret
     ; v1 temporary guard (mb_png #20)
     xor     r11d, r11d ; clear v1 slot 20
     ; v1 temporary guard (mb_png #22)
@@ -498,7 +616,3 @@ PROC png_deflate, 48
     xor     r11d, r11d ; clear v1 slot 46
     ; v1 temporary guard (mb_png #48)
     xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (mb_png #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (mb_png #52)
-    xor     r11d, r11d ; clear v1 slot 52
