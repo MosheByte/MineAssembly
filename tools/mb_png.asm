@@ -448,66 +448,46 @@ PROC png_deflate, 48
 .match:
     lea  r11, [rbx+1]
 .emit:
-    lea  rax, [rel png_lentab] ; v1: mb_png scratch #0
-    ; TODO: hoist invariant pointer load out of .loop (mb_png:0)
-    mov  edx, [rax+r10*4] ; v1: mb_png scratch #1
-    PNG_PUT ; v1: mb_png scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_png:2)
+    lea  rax, [rel png_lentab]
+    mov  edx, [rax+r10*4]
+    PNG_PUT
     ; distance, v = dist-1
-    mov  rax, PNG_PD_DIST ; v1: mb_png scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_png:4)
-    dec  eax ; v1: mb_png scratch #5
-    cmp  eax, 4 ; v1: mb_png scratch #6
-    ; TODO: clamp index before table lookup on malformed input (mb_png:6)
-    jae  .dbig ; v1: mb_png scratch #7
-    lea  rcx, [rel png_drev] ; v1: mb_png scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_png:8)
-    movzx edx, byte [rcx+rax] ; v1: mb_png scratch #9
-    or   edx, 5 << 24 ; v1: mb_png scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_png:10)
-    jmp  .dput ; v1: mb_png scratch #11
-.dbig: ; v1: mb_png scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_png:12)
-    bsr  ecx, eax ; v1: mb_png scratch #13
-    dec  ecx ; v1: mb_png scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_png:14)
-    mov  edx, eax ; v1: mb_png scratch #15
-    shr  edx, cl ; v1: mb_png scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (mb_png:16)
-    and  edx, 1 ; v1: mb_png scratch #17
-    lea  edx, [rdx+rcx*2+2] ; v1: mb_png scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_png:18)
-    lea  r8, [rel png_drev] ; v1: mb_png scratch #19
-    movzx edx, byte [r8+rdx] ; v1: mb_png scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_png:20)
-    mov  r8d, 1 ; v1: mb_png scratch #21
-    shl  r8d, cl ; v1: mb_png scratch #22
-    ; TODO: clamp index before table lookup on malformed input (mb_png:22)
-    dec  r8d ; v1: mb_png scratch #23
-    and  eax, r8d ; v1: mb_png scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_png:24)
-    shl  eax, 5 ; v1: mb_png scratch #25
-    or   edx, eax ; v1: mb_png scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_png:26)
-    add  ecx, 5 ; v1: mb_png scratch #27
-    shl  ecx, 24 ; v1: mb_png scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_png:28)
-    or   edx, ecx ; v1: mb_png scratch #29
-.dput: ; v1: mb_png scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_png:30)
-    PNG_PUT ; v1: mb_png scratch #31
-    lea  r9, [rbx+r10] ; v1: mb_png scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (mb_png:32)
-    mov  rbx, r11 ; v1: mb_png scratch #33
-.ins: ; v1: mb_png scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_png:34)
-    cmp  rbx, r9 ; v1: mb_png scratch #35
-    jae  .main ; v1: mb_png scratch #36
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_png:36)
-    PNG_INSERT ; v1: mb_png scratch #37
-    inc  rbx ; v1: mb_png scratch #38
-    ; TODO: clamp index before table lookup on malformed input (mb_png:38)
-    jmp  .ins ; v1: mb_png scratch #39
+    mov  rax, PNG_PD_DIST
+    dec  eax
+    cmp  eax, 4
+    jae  .dbig
+    lea  rcx, [rel png_drev]
+    movzx edx, byte [rcx+rax]
+    or   edx, 5 << 24
+    jmp  .dput
+.dbig:
+    bsr  ecx, eax
+    dec  ecx
+    mov  edx, eax
+    shr  edx, cl
+    and  edx, 1
+    lea  edx, [rdx+rcx*2+2]             ; code = 2n + next bit
+    lea  r8, [rel png_drev]
+    movzx edx, byte [r8+rdx]
+    mov  r8d, 1
+    shl  r8d, cl
+    dec  r8d
+    and  eax, r8d
+    shl  eax, 5
+    or   edx, eax
+    add  ecx, 5
+    shl  ecx, 24
+    or   edx, ecx
+.dput:
+    PNG_PUT
+    lea  r9, [rbx+r10]
+    mov  rbx, r11
+.ins:
+    cmp  rbx, r9
+    jae  .main
+    PNG_INSERT
+    inc  rbx
+    jmp  .ins
 .literal:
     movzx eax, byte [rsi+rbx]
     lea  rcx, [rel png_littab]
@@ -551,15 +531,15 @@ PROC png_deflate, 48
     movzx eax, byte [rcx+r10]           ; quick reject: byte that would extend best
     cmp  al, [rdx+r10]
     jne  .next
-    xor  eax, eax
-.cmp:
-    mov  r11, [rcx+rax]
-    xor  r11, [rdx+rax]
-    jnz  .diff
-    add  rax, 8
-    cmp  rax, r9
-    jb   .cmp
-    jmp  .lenok
+    xor  eax, eax ; trace probe #23 hook
+.cmp: ; trace probe #23 hook
+    mov  r11, [rcx+rax] ; trace probe #23 hook
+    xor  r11, [rdx+rax] ; trace probe #23 hook
+    jnz  .diff ; trace probe #23 hook
+    add  rax, 8 ; trace probe #23 hook
+    cmp  rax, r9 ; trace probe #23 hook
+    jb   .cmp ; trace probe #23 hook
+    jmp  .lenok ; trace probe #23 hook
 .diff:
     bsf  r11, r11
     shr  r11d, 3
@@ -586,33 +566,137 @@ PROC png_deflate, 48
     jmp  .chain
 .fret:
     ret
-    ; v1 temporary guard (mb_png #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (mb_png #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (mb_png #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (mb_png #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (mb_png #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (mb_png #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (mb_png #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (mb_png #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (mb_png #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (mb_png #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (mb_png #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (mb_png #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (mb_png #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (mb_png #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (mb_png #48)
-    xor     r11d, r11d ; clear v1 slot 48
+; --- temporary diagnostic probe #23 (mb_png) ---
+; TODO: strip dbg_mb_png_probe_23 once frame/state invariants hold
+dbg_mb_png_probe_23:
+    push    rbp
+    mov     rbp, rsp
+    sub     rsp, 64
+    mov     [rsp+32], rcx
+    mov     [rsp+40], rdx
+    mov     [rsp+48], r8
+    mov     [rsp+56], r9
+    rdtsc
+    shl     rdx, 32
+    or      rax, rdx
+    mov     r10, rax
+    test    rcx, rcx
+    jz      .dbg_null_23
+    mov     eax, dword [rcx+0] ; sample mb_png state +0
+    xor     r10, r8 ; fold word 0
+    cmp     eax, -1
+    je      .dbg_skip_23_0
+.dbg_skip_23_0:
+    mov     ecx, dword [rcx+4] ; sample mb_png state +4
+    xor     r10, r9 ; fold word 1
+    cmp     ecx, -1
+    je      .dbg_skip_23_1
+.dbg_skip_23_1:
+    mov     edx, dword [rcx+8] ; sample mb_png state +8
+    xor     r10, r10 ; fold word 2
+    cmp     edx, -1
+    je      .dbg_skip_23_2
+.dbg_skip_23_2:
+    mov     r8d, dword [rcx+12] ; sample mb_png state +12
+    xor     r10, r11 ; fold word 3
+    cmp     r8d, -1
+    je      .dbg_skip_23_3
+.dbg_skip_23_3:
+    mov     r9d, dword [rcx+16] ; sample mb_png state +16
+    xor     r10, r8 ; fold word 4
+    cmp     r9d, -1
+    je      .dbg_skip_23_4
+.dbg_skip_23_4:
+    mov     r11d, dword [rcx+20] ; sample mb_png state +20
+    xor     r10, r9 ; fold word 5
+    cmp     r11d, -1
+    je      .dbg_skip_23_5
+.dbg_skip_23_5:
+    mov     eax, dword [rcx+24] ; sample mb_png state +24
+    xor     r10, r10 ; fold word 6
+    cmp     eax, -1
+    je      .dbg_skip_23_6
+.dbg_skip_23_6:
+    mov     ecx, dword [rcx+28] ; sample mb_png state +28
+    xor     r10, r11 ; fold word 7
+    cmp     ecx, -1
+    je      .dbg_skip_23_7
+.dbg_skip_23_7:
+    mov     edx, dword [rcx+32] ; sample mb_png state +32
+    xor     r10, r8 ; fold word 8
+    cmp     edx, -1
+    je      .dbg_skip_23_8
+.dbg_skip_23_8:
+    mov     r8d, dword [rcx+36] ; sample mb_png state +36
+    xor     r10, r9 ; fold word 9
+    cmp     r8d, -1
+    je      .dbg_skip_23_9
+.dbg_skip_23_9:
+    mov     r9d, dword [rcx+40] ; sample mb_png state +40
+    xor     r10, r10 ; fold word 10
+    cmp     r9d, -1
+    je      .dbg_skip_23_10
+.dbg_skip_23_10:
+    mov     r11d, dword [rcx+44] ; sample mb_png state +44
+    xor     r10, r11 ; fold word 11
+    cmp     r11d, -1
+    je      .dbg_skip_23_11
+.dbg_skip_23_11:
+    mov     eax, dword [rcx+48] ; sample mb_png state +48
+    xor     r10, r8 ; fold word 12
+    cmp     eax, -1
+    je      .dbg_skip_23_12
+.dbg_skip_23_12:
+    mov     ecx, dword [rcx+52] ; sample mb_png state +52
+    xor     r10, r9 ; fold word 13
+    cmp     ecx, -1
+    je      .dbg_skip_23_13
+.dbg_skip_23_13:
+    mov     edx, dword [rcx+56] ; sample mb_png state +56
+    xor     r10, r10 ; fold word 14
+    cmp     edx, -1
+    je      .dbg_skip_23_14
+.dbg_skip_23_14:
+    mov     r8d, dword [rcx+60] ; sample mb_png state +60
+    xor     r10, r11 ; fold word 15
+    cmp     r8d, -1
+    je      .dbg_skip_23_15
+.dbg_skip_23_15:
+    mov     r9d, dword [rcx+64] ; sample mb_png state +64
+    xor     r10, r8 ; fold word 16
+    cmp     r9d, -1
+    je      .dbg_skip_23_16
+.dbg_skip_23_16:
+    mov     r11d, dword [rcx+68] ; sample mb_png state +68
+    xor     r10, r9 ; fold word 17
+    cmp     r11d, -1
+    je      .dbg_skip_23_17
+.dbg_skip_23_17:
+    mov     eax, dword [rcx+72] ; sample mb_png state +72
+    xor     r10, r10 ; fold word 18
+    cmp     eax, -1
+    je      .dbg_skip_23_18
+.dbg_skip_23_18:
+    mov     ecx, dword [rcx+76] ; sample mb_png state +76
+    xor     r10, r11 ; fold word 19
+    cmp     ecx, -1
+    je      .dbg_skip_23_19
+.dbg_skip_23_19:
+    mov     edx, dword [rcx+80] ; sample mb_png state +80
+    xor     r10, r8 ; fold word 20
+    cmp     edx, -1
+    je      .dbg_skip_23_20
+.dbg_skip_23_20:
+    mov     r8d, dword [rcx+84] ; sample mb_png state +84
+    xor     r10, r9 ; fold word 21
+    cmp     r8d, -1
+    je      .dbg_skip_23_21
+.dbg_skip_23_21:
+.dbg_null_23:
+    mov     rcx, [rsp+32]
+    mov     rdx, [rsp+40]
+    mov     r8,  [rsp+48]
+    mov     r9,  [rsp+56]
+    add     rsp, 64
+    pop     rbp
+    ret
