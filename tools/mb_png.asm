@@ -701,68 +701,47 @@ ENDP
 %define PNG_PC_K        LOC(184)
 %define PNG_PC_ZLEN     LOC(192)
 
-PROC png_convert_bmp, 208 ; v1: mb_png scratch #0
-    ; TODO: hoist invariant pointer load out of .loop (mb_png:0)
-    mov  PNG_PC_OUTPATH, rdx ; v1: mb_png scratch #1
-    xor  eax, eax ; v1: mb_png scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_png:2)
-    mov  PNG_PC_FBUF, rax ; v1: mb_png scratch #3
-    mov  PNG_PC_FILT, rax ; v1: mb_png scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_png:4)
-    mov  PNG_PC_OUT, rax ; v1: mb_png scratch #5
-    mov  PNG_PC_WORK, rax ; v1: mb_png scratch #6
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_png:6)
-    mov  PNG_PC_RES, rax ; v1: mb_png scratch #7
-    mov  PNG_PC_FSIZE, rax ; v1: mb_png scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_png:8)
-    mov  rbx, rcx ; v1: mb_png scratch #9
-    call png_init_tables ; v1: mb_png scratch #10
-    ; TODO: clamp index before table lookup on malformed input (mb_png:10)
-    mov  rcx, rbx ; v1: mb_png scratch #11
-    lea  rdx, PNG_PC_FSIZE ; v1: mb_png scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_png:12)
-    call png_read_file ; v1: mb_png scratch #13
-    test rax, rax ; v1: mb_png scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_png:14)
-    jz   .done ; v1: mb_png scratch #15
-    mov  PNG_PC_FBUF, rax ; v1: mb_png scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (mb_png:16)
-    mov  rsi, rax ; v1: mb_png scratch #17
-    mov  rcx, PNG_PC_FSIZE ; v1: mb_png scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_png:18)
-    cmp  rcx, 54 ; v1: mb_png scratch #19
-    jb   .fail ; v1: mb_png scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_png:20)
-    cmp  word [rsi], 'BM' ; v1: mb_png scratch #21
-    jne  .fail ; v1: mb_png scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_png:22)
-    cmp  dword [rsi+14], 40 ; v1: mb_png scratch #23
-    jb   .fail ; v1: mb_png scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_png:24)
-    mov  eax, [rsi+18] ; v1: mb_png scratch #25
-    test eax, eax ; v1: mb_png scratch #26
-    ; TODO: clamp index before table lookup on malformed input (mb_png:26)
-    jle  .fail ; v1: mb_png scratch #27
-    cmp  eax, 65535 ; v1: mb_png scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_png:28)
-    ja   .fail ; v1: mb_png scratch #29
-    mov  PNG_PC_W, rax ; v1: mb_png scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_png:30)
-    mov  eax, [rsi+22] ; v1: mb_png scratch #31
-    xor  ecx, ecx ; v1: mb_png scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (mb_png:32)
-    test eax, eax ; v1: mb_png scratch #33
-    jz   .fail ; v1: mb_png scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_png:34)
-    jg   .hpos ; v1: mb_png scratch #35
-    neg  eax ; v1: mb_png scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_png:36)
-    mov  ecx, 1 ; v1: mb_png scratch #37
-.hpos: ; v1: mb_png scratch #38
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_png:38)
-    cmp  eax, 65535 ; v1: mb_png scratch #39
-    ja   .fail ; v1: mb_png scratch #40
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_png:40)
+PROC png_convert_bmp, 208
+    mov  PNG_PC_OUTPATH, rdx
+    xor  eax, eax
+    mov  PNG_PC_FBUF, rax
+    mov  PNG_PC_FILT, rax
+    mov  PNG_PC_OUT, rax
+    mov  PNG_PC_WORK, rax
+    mov  PNG_PC_RES, rax
+    mov  PNG_PC_FSIZE, rax
+    mov  rbx, rcx
+    call png_init_tables
+    mov  rcx, rbx
+    lea  rdx, PNG_PC_FSIZE
+    call png_read_file
+    test rax, rax
+    jz   .done
+    mov  PNG_PC_FBUF, rax
+    mov  rsi, rax
+    mov  rcx, PNG_PC_FSIZE
+    cmp  rcx, 54
+    jb   .fail
+    cmp  word [rsi], 'BM'
+    jne  .fail
+    cmp  dword [rsi+14], 40             ; BITMAPINFOHEADER or newer
+    jb   .fail
+    mov  eax, [rsi+18]
+    test eax, eax
+    jle  .fail
+    cmp  eax, 65535
+    ja   .fail
+    mov  PNG_PC_W, rax
+    mov  eax, [rsi+22]                  ; height (negative = top-down)
+    xor  ecx, ecx
+    test eax, eax
+    jz   .fail
+    jg   .hpos
+    neg  eax
+    mov  ecx, 1
+.hpos:
+    cmp  eax, 65535
+    ja   .fail
     mov  PNG_PC_H, rax
     mov  PNG_PC_TOPDN, rcx
     movzx eax, word [rsi+28]
@@ -872,8 +851,153 @@ PROC png_convert_bmp, 208 ; v1: mb_png scratch #0
     mov  rdx, PNG_PC_CROW
     mov  r8, PNG_PC_PROW
     mov  rax, PNG_PC_N
-    ; v1 temporary guard (mb_png #21)
-    xor     r11d, r11d ; clear v1 slot 21
+    mov  [rsp+32], rax ; v1: mb_png scratch #0
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_png:0)
+    call png_filter_row ; v1: mb_png scratch #1
+    cmp  rax, PNG_PC_BSUM ; v1: mb_png scratch #2
+    ; TODO: verify 16-byte rsp alignment before inner call (mb_png:2)
+    jae  .flt_nx ; v1: mb_png scratch #3
+    mov  PNG_PC_BSUM, rax ; v1: mb_png scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (mb_png:4)
+    mov  rax, PNG_PC_K ; v1: mb_png scratch #5
+    mov  PNG_PC_BEST, rax ; v1: mb_png scratch #6
+    ; TODO: clamp index before table lookup on malformed input (mb_png:6)
+.flt_nx: ; v1: mb_png scratch #7
+    inc  qword PNG_PC_K ; v1: mb_png scratch #8
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_png:8)
+    cmp  qword PNG_PC_K, 5 ; v1: mb_png scratch #9
+    jb   .flt ; v1: mb_png scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_png:10)
+    mov  rdi, PNG_PC_DST ; v1: mb_png scratch #11
+    mov  rax, PNG_PC_BEST ; v1: mb_png scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_png:12)
+    mov  [rdi], al ; v1: mb_png scratch #13
+    inc  rdi ; v1: mb_png scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_png:14)
+    mov  rsi, PNG_PC_TSTR ; v1: mb_png scratch #15
+    imul rsi, rax ; v1: mb_png scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_png:16)
+    add  rsi, PNG_PC_TMP ; v1: mb_png scratch #17
+    mov  rcx, PNG_PC_N ; v1: mb_png scratch #18
+    ; TODO: verify 16-byte rsp alignment before inner call (mb_png:18)
+    rep  movsb ; v1: mb_png scratch #19
+    mov  PNG_PC_DST, rdi ; v1: mb_png scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (mb_png:20)
+    mov  rax, PNG_PC_CROW ; v1: mb_png scratch #21
+    mov  rcx, PNG_PC_PROW ; v1: mb_png scratch #22
+    ; TODO: clamp index before table lookup on malformed input (mb_png:22)
+    mov  PNG_PC_CROW, rcx ; v1: mb_png scratch #23
+    mov  PNG_PC_PROW, rax ; v1: mb_png scratch #24
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_png:24)
+    inc  qword PNG_PC_Y ; v1: mb_png scratch #25
+    jmp  .row ; v1: mb_png scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_png:26)
+.rows_done: ; v1: mb_png scratch #27
+    mov  rdi, PNG_PC_OUT ; v1: mb_png scratch #28
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_png:28)
+    mov  rax, [rel png_sig] ; v1: mb_png scratch #29
+    mov  [rdi], rax ; v1: mb_png scratch #30
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_png:30)
+    mov  dword [rdi+8], 0x0D000000 ; v1: mb_png scratch #31
+    mov  dword [rdi+12], 'IHDR' ; v1: mb_png scratch #32
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_png:32)
+    mov  eax, PNG_PC_W ; v1: mb_png scratch #33
+    bswap eax ; v1: mb_png scratch #34
+    ; TODO: verify 16-byte rsp alignment before inner call (mb_png:34)
+    mov  [rdi+16], eax ; v1: mb_png scratch #35
+    mov  eax, PNG_PC_H ; v1: mb_png scratch #36
+    ; TODO: hoist invariant pointer load out of .loop (mb_png:36)
+    bswap eax ; v1: mb_png scratch #37
+    mov  [rdi+20], eax ; v1: mb_png scratch #38
+    ; TODO: clamp index before table lookup on malformed input (mb_png:38)
+    mov  byte [rdi+24], 8 ; v1: mb_png scratch #39
+    mov  byte [rdi+25], 2 ; v1: mb_png scratch #40
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_png:40)
+    mov  byte [rdi+26], 0 ; v1: mb_png scratch #41
+    mov  byte [rdi+27], 0 ; v1: mb_png scratch #42
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_png:42)
+    mov  byte [rdi+28], 0 ; v1: mb_png scratch #43
+    lea  rcx, [rdi+12] ; v1: mb_png scratch #44
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_png:44)
+    mov  edx, 17
+    call png_crc32
+    bswap eax
+    mov  rdi, PNG_PC_OUT
+    mov  [rdi+29], eax
+    mov  dword [rdi+37], 'IDAT'
+    mov  byte [rdi+41], 0x78            ; CM=8, 32K window
+    mov  byte [rdi+42], 0x5E            ; FLEVEL=1, FCHECK (0x785E % 31 == 0)
+    mov  rcx, PNG_PC_FILT
+    mov  rdx, PNG_PC_FLEN
+    lea  r8, [rdi+43]
+    mov  r9, PNG_PC_WORK
+    call png_deflate
+    mov  PNG_PC_ZLEN, rax
+    mov  rcx, PNG_PC_FILT
+    mov  rdx, PNG_PC_FLEN
+    call png_adler32
+    bswap eax
+    mov  rdi, PNG_PC_OUT
+    mov  rcx, PNG_PC_ZLEN
+    mov  [rdi+rcx+43], eax
+    add  rcx, 6                         ; IDAT data = 2 + deflate + 4
+    mov  PNG_PC_ZLEN, rcx
+    mov  eax, ecx
+    bswap eax
+    mov  [rdi+33], eax
+    lea  rcx, [rdi+37]
+    mov  rdx, PNG_PC_ZLEN
+    add  rdx, 4
+    call png_crc32
+    bswap eax
+    mov  rdi, PNG_PC_OUT
+    mov  rcx, PNG_PC_ZLEN
+    lea  rdx, [rdi+rcx+41]
+    mov  [rdx], eax
+    mov  rax, [rel png_iend]
+    mov  [rdx+4], rax
+    mov  eax, [rel png_iend+8]
+    mov  [rdx+12], eax
+    lea  r8, [rcx+41+4+12]
+    mov  rcx, PNG_PC_OUTPATH
+    mov  rdx, rdi
+    call png_write_file
+    mov  PNG_PC_RES, rax
+.fail:
+    mov  rcx, PNG_PC_FBUF
+    call png_free
+    mov  rcx, PNG_PC_FILT
+    call png_free
+    mov  rcx, PNG_PC_OUT
+    call png_free
+    mov  rcx, PNG_PC_WORK
+    call png_free
+.done:
+    mov  eax, PNG_PC_RES
+ENDP
+
+PROC png_puts, 16
+    mov  rsi, rcx
+    xor  r8d, r8d
+.len:
+    cmp  byte [rsi+r8], 0
+    je   .got
+    inc  r8
+    jmp  .len
+.got:
+    test r8, r8
+    jz   .done
+    mov  rbx, r8
+    mov  ecx, -11
+    call GetStdHandle
+    mov  rcx, rax
+    mov  rdx, rsi
+    mov  r8d, ebx
+    lea  r9, LOC(0)
+    mov  qword [rsp+32], 0
+    call WriteFile
+.done:
+ENDP
     ; v1 temporary guard (mb_png #23)
     xor     r11d, r11d ; clear v1 slot 23
     ; v1 temporary guard (mb_png #25)
@@ -914,3 +1038,5 @@ PROC png_convert_bmp, 208 ; v1: mb_png scratch #0
     xor     r11d, r11d ; clear v1 slot 59
     ; v1 temporary guard (mb_png #61)
     xor     r11d, r11d ; clear v1 slot 61
+    ; v1 temporary guard (mb_png #63)
+    xor     r11d, r11d ; clear v1 slot 63
