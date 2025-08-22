@@ -122,77 +122,55 @@ ENDP
 
 ; the stolen voice has to hand off to a decaying residual instead of being cut off
 ; r12d pos, xmm6 last, xmm7 base max step, xmm8 jump, xmm9 tail max step, xmm10 late
-PROCX steal_declick, 32 ; v1: test_audio_review scratch #3
-    TEST "voice stealing de-click" ; v1: test_audio_review scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_audio_review:4)
-    xorps   xmm0, xmm0 ; v1: test_audio_review scratch #5
-    call    ah_set_music ; v1: test_audio_review scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_audio_review:6)
-    FLOAD   xmm0, 1.0 ; v1: test_audio_review scratch #7
-    call    ah_set_sfx ; v1: test_audio_review scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_audio_review:8)
-    mov     ecx, FS*6 ; v1: test_audio_review scratch #9
-    call    ah_mix_discard ; v1: test_audio_review scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_audio_review:10)
-    call    audio_dbg_active_voices ; v1: test_audio_review scratch #11
-    CHECK_EQ32 eax, 0, "voices left over before the steal test" ; v1: test_audio_review scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_audio_review:12)
+PROCX steal_declick, 32
+    TEST "voice stealing de-click"
+    xorps   xmm0, xmm0
+    call    ah_set_music
+    FLOAD   xmm0, 1.0
+    call    ah_set_sfx
+    mov     ecx, FS*6
+    call    ah_mix_discard
+    call    audio_dbg_active_voices
+    CHECK_EQ32 eax, 0, "voices left over before the steal test"
     ; oldest voice: loud thunder slowed 10x (smooth, < 100 Hz), 31 near-silent
     ; ones fill the rest of the pool
-    mov     ecx, SFX_THUNDER ; v1: test_audio_review scratch #15
-    FLOAD   xmm1, 0.5 ; v1: test_audio_review scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (test_audio_review:16)
-    FLOAD   xmm2, 0.1 ; v1: test_audio_review scratch #17
-    call    sfx_play ; v1: test_audio_review scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (test_audio_review:18)
-    xor     ebx, ebx ; v1: test_audio_review scratch #19
-.fill: ; v1: test_audio_review scratch #20
-    ; TODO: clamp index before table lookup on malformed input (test_audio_review:20)
-    mov     ecx, SFX_THUNDER ; v1: test_audio_review scratch #21
-    FLOAD   xmm1, 1e-5 ; v1: test_audio_review scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_audio_review:22)
-    FLOAD   xmm2, 0.1 ; v1: test_audio_review scratch #23
-    call    sfx_play ; v1: test_audio_review scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_audio_review:24)
-    inc     ebx ; v1: test_audio_review scratch #25
-    cmp     ebx, 31 ; v1: test_audio_review scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_audio_review:26)
-    jb      .fill ; v1: test_audio_review scratch #27
-    lea     rdi, [rel outb] ; v1: test_audio_review scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_audio_review:28)
-    mov     ecx, STEAL_FRAMES*2 ; v1: test_audio_review scratch #29
-    xor     eax, eax ; v1: test_audio_review scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_audio_review:30)
-    rep     stosw ; v1: test_audio_review scratch #31
-    lea     rcx, [rel outb] ; v1: test_audio_review scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (test_audio_review:32)
-    mov     edx, 4096 ; v1: test_audio_review scratch #33
-    call    audio_dbg_mix ; v1: test_audio_review scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (test_audio_review:34)
-    mov     r12d, 4096 ; v1: test_audio_review scratch #35
+    mov     ecx, SFX_THUNDER
+    FLOAD   xmm1, 0.5
+    FLOAD   xmm2, 0.1
+    call    sfx_play
+    xor     ebx, ebx
+.fill:
+    mov     ecx, SFX_THUNDER
+    FLOAD   xmm1, 1e-5
+    FLOAD   xmm2, 0.1
+    call    sfx_play
+    inc     ebx
+    cmp     ebx, 31
+    jb      .fill
+    lea     rdi, [rel outb]
+    mov     ecx, STEAL_FRAMES*2
+    xor     eax, eax
+    rep     stosw
+    lea     rcx, [rel outb]
+    mov     edx, 4096
+    call    audio_dbg_mix
+    mov     r12d, 4096
     ; step 64 frames at a time till the loud voice is well away from zero
-    lea     rsi, [rel outb] ; v1: test_audio_review scratch #37
-.seek: ; v1: test_audio_review scratch #38
-    ; TODO: clamp index before table lookup on malformed input (test_audio_review:38)
-    movsx   eax, word [rsi+r12*4-4] ; v1: test_audio_review scratch #39
-    mov     ecx, eax ; v1: test_audio_review scratch #40
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_audio_review:40)
-    neg     ecx ; v1: test_audio_review scratch #41
-    cmovl   ecx, eax ; v1: test_audio_review scratch #42
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_audio_review:42)
-    cmp     ecx, 2500 ; v1: test_audio_review scratch #43
-    jge     .found ; v1: test_audio_review scratch #44
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_audio_review:44)
-    cmp     r12d, FS ; v1: test_audio_review scratch #45
-    jge     .found ; v1: test_audio_review scratch #46
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_audio_review:46)
-    lea     rcx, [rsi+r12*4] ; v1: test_audio_review scratch #47
-    mov     edx, 64 ; v1: test_audio_review scratch #48
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_audio_review:48)
-    call    audio_dbg_mix ; v1: test_audio_review scratch #49
-    add     r12d, 64 ; v1: test_audio_review scratch #50
-    ; TODO: hoist invariant pointer load out of .loop (test_audio_review:50)
-    jmp     .seek ; v1: test_audio_review scratch #51
+    lea     rsi, [rel outb]
+.seek:
+    movsx   eax, word [rsi+r12*4-4]
+    mov     ecx, eax
+    neg     ecx
+    cmovl   ecx, eax
+    cmp     ecx, 2500
+    jge     .found
+    cmp     r12d, FS
+    jge     .found
+    lea     rcx, [rsi+r12*4]
+    mov     edx, 64
+    call    audio_dbg_mix
+    add     r12d, 64
+    jmp     .seek
 .found:
     call    audio_dbg_active_voices
     CHECK_EQ32 eax, 32, "pool not full before the steal"
@@ -282,39 +260,138 @@ PROCX steal_declick, 32 ; v1: test_audio_review scratch #3
     call    audio_dbg_active_voices
     CHECK_EQ32 eax, 0, "voices left after the steal test"
 ENDPX
-    ; v1 temporary guard (test_audio_review #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_audio_review #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_audio_review #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_audio_review #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_audio_review #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_audio_review #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_audio_review #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_audio_review #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_audio_review #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_audio_review #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_audio_review #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_audio_review #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_audio_review #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_audio_review #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_audio_review #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_audio_review #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_audio_review #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_audio_review #56)
-    xor     r11d, r11d ; clear v1 slot 56
+
+PROC muted, 0
+    TEST "muted requests use no voice"
+    xorps   xmm0, xmm0
+    call    ah_set_music
+    xorps   xmm0, xmm0
+    call    ah_set_sfx
+    PLAYER_AT 0.0, 0.0, 0.0, 0.0
+    mov     ecx, SFX_EXPLODE
+    FLOAD   xmm1, 1.0
+    FLOAD   xmm2, 1.0
+    call    sfx_play
+    mov     ecx, SFX_EXPLODE
+    FLOAD   xmm1, 3.0
+    FLOAD   xmm2, 1.62
+    xorps   xmm3, xmm3
+    call    sfx_play_at
+    lea     rcx, [rel outb]
+    mov     edx, 1024
+    call    audio_dbg_mix
+    call    audio_dbg_active_voices
+    CHECK_EQ32 eax, 0, "muted sounds started voices"
+    FLOAD   xmm0, 1.0
+    call    ah_set_sfx
+    mov     ecx, SFX_EXPLODE
+    xorps   xmm1, xmm1
+    FLOAD   xmm2, 1.0
+    call    sfx_play
+    lea     rcx, [rel outb]
+    mov     edx, 1024
+    call    audio_dbg_mix
+    call    audio_dbg_active_voices
+    CHECK_EQ32 eax, 0, "volume 0 sfx_play started a voice"
+ENDP
+
+; voices used to get killed while the smoothed level was still ~3% of full scale
+PROCX music_fade_end, 32
+    TEST "music fade-out ends silently"
+    FLOAD   xmm0, 1.0
+    call    ah_set_music
+    FLOAD   xmm0, 1.0
+    call    ah_set_sfx
+    SETI32  g_world_active, 0
+    call    music_init
+    lea     rcx, [rel info]
+    call    music_dbg_info
+    mov     ebx, [rel info+20]
+    lea     rcx, [rel info]
+    mov     edx, ebx
+    call    ah_wait_music_start
+    lea     r10d, [rbx+1]
+    CHECK_EQ32 [rel info+20], r10d, "title theme not requested"
+    lea     rdi, [rel outb]
+    mov     ecx, FADE_FRAMES*2
+    xor     eax, eax
+    rep     stosw
+    lea     rcx, [rel outb]
+    mov     edx, FS*3
+    call    audio_dbg_mix
+    call    music_dbg_state
+    CHECK_EQ32 eax, 1, "title theme not playing"
+    lea     rcx, [rel outb]
+    mov     edx, FS*3*2
+    mov     r8d, 1
+    call    ah_i16_absmax
+    cvtsi2sd xmm6, eax
+    SETI32  g_world_active, 1
+    SETI32  g_state, ST_PLAYING
+    SETI32  g_time_of_day, 6000
+    PLAYER_AT 0.0, 80.0, 0.0, 0.0
+    call    music_tick
+    lea     rdi, [rel outb]
+    mov     ecx, FADE_FRAMES*2
+    xor     eax, eax
+    rep     stosw
+    lea     rcx, [rel outb]
+    mov     edx, FS*4
+    call    audio_dbg_mix
+    call    music_dbg_state
+    CHECK_EQ32 eax, 0, "fade did not finish in 4 s"
+    ; end level = max(|L|,|R|) over the last 5 ms (221 frames) up to the last
+    ; non-zero frame
+    lea     rsi, [rel outb]
+    mov     r12d, FS*4
+.back:
+    dec     r12d
+    js      .none
+    mov     eax, [rsi+r12*4]
+    test    eax, eax                    ; both channels zero
+    jz      .back
+    lea     eax, [r12-220]
+    xor     ecx, ecx
+    test    eax, eax
+    cmovs   eax, ecx
+    lea     rcx, [rsi+rax*4]
+    mov     edx, r12d
+    sub     edx, eax
+    inc     edx
+    lea     r8d, [rdx+rdx]
+    mov     edx, r8d
+    mov     r8d, 1
+    call    ah_i16_absmax
+    cvtsi2sd xmm7, eax
+    jmp     .rep
+.none:
+    xor     r12d, r12d
+    xorpd   xmm7, xmm7
+.rep:
+    PRINT   "  title peak "
+    movsd   xmm0, xmm6
+    xor     edx, edx
+    call    t_print_double
+    PRINT   ", fade ended after "
+    cvtsi2sd xmm0, r12d
+    DLOAD   xmm1, 44100.0
+    divsd   xmm0, xmm1
+    mov     edx, 2
+    call    t_print_double
+    PRINT   " s, level in the last 5 ms "
+    movsd   xmm0, xmm7
+    xor     edx, edx
+    call    t_print_double
+    call    t_newline
+    DLOAD   xmm0, 3000.0
+    xor     eax, eax
+    comisd  xmm6, xmm0
+    seta    al
+    CHECK_TRUE eax, "title theme too quiet for the fade test"
+    DLOAD   xmm0, 40.0
+    xor     eax, eax
+    comisd  xmm7, xmm0
+    setbe   al
+    CHECK_TRUE eax, "fade ends with an audible step (> 40)"
+    SETI32  g_world_active, 0
+ENDPX
