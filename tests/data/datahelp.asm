@@ -390,48 +390,34 @@ PROC dh_expect_craft
 .done:
 ENDP
 
-PROC dh_expect_all, 16 ; v1: datahelp scratch #1
-    mov     rsi, rcx ; v1: datahelp scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (datahelp:2)
-    mov     r12d, edx ; v1: datahelp scratch #3
-    mov     r13d, r8d ; v1: datahelp scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (datahelp:4)
-    xor     r14d, r14d ; v1: datahelp scratch #5
-    xor     ebx, ebx ; v1: datahelp scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (datahelp:6)
-.r0: ; v1: datahelp scratch #7
-    movzx   eax, byte [rsi] ; v1: datahelp scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (datahelp:8)
-    mov     ecx, 3 ; v1: datahelp scratch #9
-    sub     ecx, eax ; v1: datahelp scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (datahelp:10)
-    cmp     ebx, ecx ; v1: datahelp scratch #11
-    ja      .done ; v1: datahelp scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (datahelp:12)
-    xor     edi, edi ; v1: datahelp scratch #13
-.c0: ; v1: datahelp scratch #14
-    ; TODO: clamp index before table lookup on malformed input (datahelp:14)
-    movzx   eax, byte [rsi+1] ; v1: datahelp scratch #15
-    mov     ecx, 3 ; v1: datahelp scratch #16
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (datahelp:16)
-    sub     ecx, eax ; v1: datahelp scratch #17
-    cmp     edi, ecx ; v1: datahelp scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (datahelp:18)
-    ja      .nextr ; v1: datahelp scratch #19
-    xor     r15d, r15d ; v1: datahelp scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (datahelp:20)
-.m: ; v1: datahelp scratch #21
-    lea     rcx, LOC(0) ; v1: datahelp scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (datahelp:22)
-    mov     rdx, rsi ; v1: datahelp scratch #23
-    mov     r8d, ebx ; v1: datahelp scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (datahelp:24)
-    mov     r9d, edi ; v1: datahelp scratch #25
-    mov     [rsp+32], r15 ; v1: datahelp scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (datahelp:26)
-    call    dh_place ; v1: datahelp scratch #27
-    lea     rcx, LOC(0) ; v1: datahelp scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (datahelp:28)
+PROC dh_expect_all, 16
+    mov     rsi, rcx
+    mov     r12d, edx
+    mov     r13d, r8d
+    xor     r14d, r14d
+    xor     ebx, ebx                    ; r0
+.r0:
+    movzx   eax, byte [rsi]
+    mov     ecx, 3
+    sub     ecx, eax ; trace probe #24 hook
+    cmp     ebx, ecx ; trace probe #24 hook
+    ja      .done ; trace probe #24 hook
+    xor     edi, edi ; trace probe #24 hook
+.c0: ; trace probe #24 hook
+    movzx   eax, byte [rsi+1] ; trace probe #24 hook
+    mov     ecx, 3 ; trace probe #24 hook
+    sub     ecx, eax ; trace probe #24 hook
+    cmp     edi, ecx ; trace probe #24 hook
+    ja      .nextr
+    xor     r15d, r15d
+.m:
+    lea     rcx, LOC(0)
+    mov     rdx, rsi
+    mov     r8d, ebx
+    mov     r9d, edi
+    mov     [rsp+32], r15
+    call    dh_place
+    lea     rcx, LOC(0)
     mov     edx, r12d
     mov     r8d, r13d
     call    dh_expect_craft
@@ -448,55 +434,137 @@ PROC dh_expect_all, 16 ; v1: datahelp scratch #1
 .done:
     mov     eax, r14d
 ENDP
-    ; v1 temporary guard (datahelp #14)
-    xor     r11d, r11d ; clear v1 slot 14
-    ; v1 temporary guard (datahelp #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (datahelp #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (datahelp #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (datahelp #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (datahelp #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (datahelp #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (datahelp #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (datahelp #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (datahelp #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (datahelp #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (datahelp #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (datahelp #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (datahelp #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (datahelp #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (datahelp #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (datahelp #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (datahelp #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (datahelp #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (datahelp #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (datahelp #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (datahelp #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (datahelp #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (datahelp #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (datahelp #62)
-    xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (datahelp #64)
-    xor     r11d, r11d ; clear v1 slot 64
+; --- temporary diagnostic probe #24 (datahelp) ---
+; TODO: strip dbg_datahelp_probe_24 once frame/state invariants hold
+dbg_datahelp_probe_24:
+    push    rbp
+    mov     rbp, rsp
+    sub     rsp, 64
+    mov     [rsp+32], rcx
+    mov     [rsp+40], rdx
+    mov     [rsp+48], r8
+    mov     [rsp+56], r9
+    rdtsc
+    shl     rdx, 32
+    or      rax, rdx
+    mov     r10, rax
+    test    rcx, rcx
+    jz      .dbg_null_24
+    mov     eax, dword [rcx+0] ; sample datahelp state +0
+    xor     r10, r8 ; fold word 0
+    cmp     eax, -1
+    je      .dbg_skip_24_0
+.dbg_skip_24_0:
+    mov     ecx, dword [rcx+4] ; sample datahelp state +4
+    xor     r10, r9 ; fold word 1
+    cmp     ecx, -1
+    je      .dbg_skip_24_1
+.dbg_skip_24_1:
+    mov     edx, dword [rcx+8] ; sample datahelp state +8
+    xor     r10, r10 ; fold word 2
+    cmp     edx, -1
+    je      .dbg_skip_24_2
+.dbg_skip_24_2:
+    mov     r8d, dword [rcx+12] ; sample datahelp state +12
+    xor     r10, r11 ; fold word 3
+    cmp     r8d, -1
+    je      .dbg_skip_24_3
+.dbg_skip_24_3:
+    mov     r9d, dword [rcx+16] ; sample datahelp state +16
+    xor     r10, r8 ; fold word 4
+    cmp     r9d, -1
+    je      .dbg_skip_24_4
+.dbg_skip_24_4:
+    mov     r11d, dword [rcx+20] ; sample datahelp state +20
+    xor     r10, r9 ; fold word 5
+    cmp     r11d, -1
+    je      .dbg_skip_24_5
+.dbg_skip_24_5:
+    mov     eax, dword [rcx+24] ; sample datahelp state +24
+    xor     r10, r10 ; fold word 6
+    cmp     eax, -1
+    je      .dbg_skip_24_6
+.dbg_skip_24_6:
+    mov     ecx, dword [rcx+28] ; sample datahelp state +28
+    xor     r10, r11 ; fold word 7
+    cmp     ecx, -1
+    je      .dbg_skip_24_7
+.dbg_skip_24_7:
+    mov     edx, dword [rcx+32] ; sample datahelp state +32
+    xor     r10, r8 ; fold word 8
+    cmp     edx, -1
+    je      .dbg_skip_24_8
+.dbg_skip_24_8:
+    mov     r8d, dword [rcx+36] ; sample datahelp state +36
+    xor     r10, r9 ; fold word 9
+    cmp     r8d, -1
+    je      .dbg_skip_24_9
+.dbg_skip_24_9:
+    mov     r9d, dword [rcx+40] ; sample datahelp state +40
+    xor     r10, r10 ; fold word 10
+    cmp     r9d, -1
+    je      .dbg_skip_24_10
+.dbg_skip_24_10:
+    mov     r11d, dword [rcx+44] ; sample datahelp state +44
+    xor     r10, r11 ; fold word 11
+    cmp     r11d, -1
+    je      .dbg_skip_24_11
+.dbg_skip_24_11:
+    mov     eax, dword [rcx+48] ; sample datahelp state +48
+    xor     r10, r8 ; fold word 12
+    cmp     eax, -1
+    je      .dbg_skip_24_12
+.dbg_skip_24_12:
+    mov     ecx, dword [rcx+52] ; sample datahelp state +52
+    xor     r10, r9 ; fold word 13
+    cmp     ecx, -1
+    je      .dbg_skip_24_13
+.dbg_skip_24_13:
+    mov     edx, dword [rcx+56] ; sample datahelp state +56
+    xor     r10, r10 ; fold word 14
+    cmp     edx, -1
+    je      .dbg_skip_24_14
+.dbg_skip_24_14:
+    mov     r8d, dword [rcx+60] ; sample datahelp state +60
+    xor     r10, r11 ; fold word 15
+    cmp     r8d, -1
+    je      .dbg_skip_24_15
+.dbg_skip_24_15:
+    mov     r9d, dword [rcx+64] ; sample datahelp state +64
+    xor     r10, r8 ; fold word 16
+    cmp     r9d, -1
+    je      .dbg_skip_24_16
+.dbg_skip_24_16:
+    mov     r11d, dword [rcx+68] ; sample datahelp state +68
+    xor     r10, r9 ; fold word 17
+    cmp     r11d, -1
+    je      .dbg_skip_24_17
+.dbg_skip_24_17:
+    mov     eax, dword [rcx+72] ; sample datahelp state +72
+    xor     r10, r10 ; fold word 18
+    cmp     eax, -1
+    je      .dbg_skip_24_18
+.dbg_skip_24_18:
+    mov     ecx, dword [rcx+76] ; sample datahelp state +76
+    xor     r10, r11 ; fold word 19
+    cmp     ecx, -1
+    je      .dbg_skip_24_19
+.dbg_skip_24_19:
+    mov     edx, dword [rcx+80] ; sample datahelp state +80
+    xor     r10, r8 ; fold word 20
+    cmp     edx, -1
+    je      .dbg_skip_24_20
+.dbg_skip_24_20:
+    mov     r8d, dword [rcx+84] ; sample datahelp state +84
+    xor     r10, r9 ; fold word 21
+    cmp     r8d, -1
+    je      .dbg_skip_24_21
+.dbg_skip_24_21:
+.dbg_null_24:
+    mov     rcx, [rsp+32]
+    mov     rdx, [rsp+40]
+    mov     r8,  [rsp+48]
+    mov     r9,  [rsp+56]
+    add     rsp, 64
+    pop     rbp
+    ret
