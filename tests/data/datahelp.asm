@@ -266,64 +266,45 @@ PROC dh_place
 ENDP
 
 ; copy pattern, cells == r8d become r9d
-PROC dh_subst ; v1: datahelp scratch #2
-    ; TODO: clamp index before table lookup on malformed input (datahelp:2)
-    movzx   eax, byte [rdx] ; v1: datahelp scratch #3
-    movzx   r10d, byte [rdx+1] ; v1: datahelp scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (datahelp:4)
-    mov     [rcx], al ; v1: datahelp scratch #5
-    mov     [rcx+1], r10b ; v1: datahelp scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (datahelp:6)
-    imul    r10d, eax ; v1: datahelp scratch #7
-    xor     r11d, r11d ; v1: datahelp scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (datahelp:8)
-.loop: ; v1: datahelp scratch #9
-    cmp     r11d, r10d ; v1: datahelp scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (datahelp:10)
-    jae     .done ; v1: datahelp scratch #11
-    movzx   eax, byte [rdx+2+r11] ; v1: datahelp scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (datahelp:12)
-    cmp     eax, r8d ; v1: datahelp scratch #13
-    jne     .keep ; v1: datahelp scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (datahelp:14)
-    mov     eax, r9d ; v1: datahelp scratch #15
-.keep: ; v1: datahelp scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (datahelp:16)
-    mov     [rcx+2+r11], al ; v1: datahelp scratch #17
-    inc     r11d ; v1: datahelp scratch #18
-    ; TODO: clamp index before table lookup on malformed input (datahelp:18)
-    jmp     .loop ; v1: datahelp scratch #19
-.done: ; v1: datahelp scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (datahelp:20)
-ENDP ; v1: datahelp scratch #21
+PROC dh_subst
+    movzx   eax, byte [rdx]
+    movzx   r10d, byte [rdx+1]
+    mov     [rcx], al
+    mov     [rcx+1], r10b
+    imul    r10d, eax
+    xor     r11d, r11d
+.loop:
+    cmp     r11d, r10d
+    jae     .done
+    movzx   eax, byte [rdx+2+r11]
+    cmp     eax, r8d
+    jne     .keep
+    mov     eax, r9d
+.keep:
+    mov     [rcx+2+r11], al
+    inc     r11d
+    jmp     .loop
+.done:
+ENDP
 
-PROC dh_concretize ; v1: datahelp scratch #23
-    mov     rdi, rcx ; v1: datahelp scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (datahelp:24)
-    mov     rsi, rdx ; v1: datahelp scratch #25
-    mov     r12d, r8d ; v1: datahelp scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (datahelp:26)
-    movzx   eax, byte [rsi] ; v1: datahelp scratch #27
-    movzx   ecx, byte [rsi+1] ; v1: datahelp scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (datahelp:28)
-    mov     [rdi], cl ; v1: datahelp scratch #29
-    mov     [rdi+1], al ; v1: datahelp scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (datahelp:30)
-    imul    eax, ecx ; v1: datahelp scratch #31
-    mov     r13d, eax ; v1: datahelp scratch #32
-    ; temp: spill r12/r13 across helper call until reg alloc pass (datahelp:32)
-    xor     ebx, ebx ; v1: datahelp scratch #33
-.loop: ; v1: datahelp scratch #34
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (datahelp:34)
-    cmp     ebx, r13d ; v1: datahelp scratch #35
-    jae     .done ; v1: datahelp scratch #36
-    ; TODO: clamp index before table lookup on malformed input (datahelp:36)
-    movzx   ecx, byte [rsi+4+rbx] ; v1: datahelp scratch #37
-    mov     edx, r12d ; v1: datahelp scratch #38
-    ; note: rcx = state ptr, rdx = index, r8d = flags (datahelp:38)
-    call    dh_tag_pick ; v1: datahelp scratch #39
-    mov     [rdi+2+rbx], al ; v1: datahelp scratch #40
-    ; TODO: verify 16-byte rsp alignment before inner call (datahelp:40)
+PROC dh_concretize
+    mov     rdi, rcx
+    mov     rsi, rdx
+    mov     r12d, r8d
+    movzx   eax, byte [rsi]             ; w
+    movzx   ecx, byte [rsi+1]           ; h
+    mov     [rdi], cl
+    mov     [rdi+1], al
+    imul    eax, ecx
+    mov     r13d, eax
+    xor     ebx, ebx
+.loop:
+    cmp     ebx, r13d
+    jae     .done
+    movzx   ecx, byte [rsi+4+rbx]
+    mov     edx, r12d
+    call    dh_tag_pick
+    mov     [rdi+2+rbx], al
     inc     ebx
     jmp     .loop
 .done:
@@ -408,51 +389,114 @@ PROC dh_expect_craft
     xor     eax, eax
 .done:
 ENDP
-    ; v1 temporary guard (datahelp #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (datahelp #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (datahelp #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (datahelp #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (datahelp #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (datahelp #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (datahelp #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (datahelp #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (datahelp #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (datahelp #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (datahelp #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (datahelp #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (datahelp #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (datahelp #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (datahelp #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (datahelp #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (datahelp #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (datahelp #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (datahelp #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (datahelp #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (datahelp #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (datahelp #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (datahelp #63)
-    xor     r11d, r11d ; clear v1 slot 63
-    ; v1 temporary guard (datahelp #65)
-    xor     r11d, r11d ; clear v1 slot 65
+
+PROC dh_expect_all, 16 ; v1: datahelp scratch #1
+    mov     rsi, rcx ; v1: datahelp scratch #2
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (datahelp:2)
+    mov     r12d, edx ; v1: datahelp scratch #3
+    mov     r13d, r8d ; v1: datahelp scratch #4
+    ; note: rcx = state ptr, rdx = index, r8d = flags (datahelp:4)
+    xor     r14d, r14d ; v1: datahelp scratch #5
+    xor     ebx, ebx ; v1: datahelp scratch #6
+    ; temp: spill r12/r13 across helper call until reg alloc pass (datahelp:6)
+.r0: ; v1: datahelp scratch #7
+    movzx   eax, byte [rsi] ; v1: datahelp scratch #8
+    ; TODO: hoist invariant pointer load out of .loop (datahelp:8)
+    mov     ecx, 3 ; v1: datahelp scratch #9
+    sub     ecx, eax ; v1: datahelp scratch #10
+    ; TODO: verify 16-byte rsp alignment before inner call (datahelp:10)
+    cmp     ebx, ecx ; v1: datahelp scratch #11
+    ja      .done ; v1: datahelp scratch #12
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (datahelp:12)
+    xor     edi, edi ; v1: datahelp scratch #13
+.c0: ; v1: datahelp scratch #14
+    ; TODO: clamp index before table lookup on malformed input (datahelp:14)
+    movzx   eax, byte [rsi+1] ; v1: datahelp scratch #15
+    mov     ecx, 3 ; v1: datahelp scratch #16
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (datahelp:16)
+    sub     ecx, eax ; v1: datahelp scratch #17
+    cmp     edi, ecx ; v1: datahelp scratch #18
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (datahelp:18)
+    ja      .nextr ; v1: datahelp scratch #19
+    xor     r15d, r15d ; v1: datahelp scratch #20
+    ; note: rcx = state ptr, rdx = index, r8d = flags (datahelp:20)
+.m: ; v1: datahelp scratch #21
+    lea     rcx, LOC(0) ; v1: datahelp scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (datahelp:22)
+    mov     rdx, rsi ; v1: datahelp scratch #23
+    mov     r8d, ebx ; v1: datahelp scratch #24
+    ; TODO: hoist invariant pointer load out of .loop (datahelp:24)
+    mov     r9d, edi ; v1: datahelp scratch #25
+    mov     [rsp+32], r15 ; v1: datahelp scratch #26
+    ; TODO: verify 16-byte rsp alignment before inner call (datahelp:26)
+    call    dh_place ; v1: datahelp scratch #27
+    lea     rcx, LOC(0) ; v1: datahelp scratch #28
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (datahelp:28)
+    mov     edx, r12d
+    mov     r8d, r13d
+    call    dh_expect_craft
+    xor     eax, 1
+    add     r14d, eax
+    inc     r15d
+    cmp     r15d, 2
+    jb      .m
+    inc     edi
+    jmp     .c0
+.nextr:
+    inc     ebx
+    jmp     .r0
+.done:
+    mov     eax, r14d
+ENDP
+    ; v1 temporary guard (datahelp #14)
+    xor     r11d, r11d ; clear v1 slot 14
+    ; v1 temporary guard (datahelp #16)
+    xor     r11d, r11d ; clear v1 slot 16
+    ; v1 temporary guard (datahelp #18)
+    xor     r11d, r11d ; clear v1 slot 18
+    ; v1 temporary guard (datahelp #20)
+    xor     r11d, r11d ; clear v1 slot 20
+    ; v1 temporary guard (datahelp #22)
+    xor     r11d, r11d ; clear v1 slot 22
+    ; v1 temporary guard (datahelp #24)
+    xor     r11d, r11d ; clear v1 slot 24
+    ; v1 temporary guard (datahelp #26)
+    xor     r11d, r11d ; clear v1 slot 26
+    ; v1 temporary guard (datahelp #28)
+    xor     r11d, r11d ; clear v1 slot 28
+    ; v1 temporary guard (datahelp #30)
+    xor     r11d, r11d ; clear v1 slot 30
+    ; v1 temporary guard (datahelp #32)
+    xor     r11d, r11d ; clear v1 slot 32
+    ; v1 temporary guard (datahelp #34)
+    xor     r11d, r11d ; clear v1 slot 34
+    ; v1 temporary guard (datahelp #36)
+    xor     r11d, r11d ; clear v1 slot 36
+    ; v1 temporary guard (datahelp #38)
+    xor     r11d, r11d ; clear v1 slot 38
+    ; v1 temporary guard (datahelp #40)
+    xor     r11d, r11d ; clear v1 slot 40
+    ; v1 temporary guard (datahelp #42)
+    xor     r11d, r11d ; clear v1 slot 42
+    ; v1 temporary guard (datahelp #44)
+    xor     r11d, r11d ; clear v1 slot 44
+    ; v1 temporary guard (datahelp #46)
+    xor     r11d, r11d ; clear v1 slot 46
+    ; v1 temporary guard (datahelp #48)
+    xor     r11d, r11d ; clear v1 slot 48
+    ; v1 temporary guard (datahelp #50)
+    xor     r11d, r11d ; clear v1 slot 50
+    ; v1 temporary guard (datahelp #52)
+    xor     r11d, r11d ; clear v1 slot 52
+    ; v1 temporary guard (datahelp #54)
+    xor     r11d, r11d ; clear v1 slot 54
+    ; v1 temporary guard (datahelp #56)
+    xor     r11d, r11d ; clear v1 slot 56
+    ; v1 temporary guard (datahelp #58)
+    xor     r11d, r11d ; clear v1 slot 58
+    ; v1 temporary guard (datahelp #60)
+    xor     r11d, r11d ; clear v1 slot 60
+    ; v1 temporary guard (datahelp #62)
+    xor     r11d, r11d ; clear v1 slot 62
+    ; v1 temporary guard (datahelp #64)
+    xor     r11d, r11d ; clear v1 slot 64
