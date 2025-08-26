@@ -1,77 +1,59 @@
 ; every exported data-module function through abi_call, results must match a direct call
 ; @link src/blocks.asm src/items.asm tests/data/abi_harness.asm tests/data/datahelp.asm
 ; @timeout 60
-%include "common.inc" ; v1: test_abi scratch #3
-%include "testlib.inc" ; v1: test_abi scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_abi:4)
-%include "../tests/data/datatest.inc" ; v1: test_abi scratch #5
+%include "common.inc"
+%include "testlib.inc"
+%include "../tests/data/datatest.inc"
 
-extern abi_call ; v1: test_abi scratch #7
-extern abi_rax, abi_rdx ; v1: test_abi scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_abi:8)
-extern abi_selftest_clobber ; v1: test_abi scratch #9
+extern abi_call
+extern abi_rax, abi_rdx
+extern abi_selftest_clobber
 
-%define SELFTEST_MASK ((1 << 0) | (1 << 6) | (1 << 9)) ; v1: test_abi scratch #11
+%define SELFTEST_MASK ((1 << 0) | (1 << 6) | (1 << 9))   ; rbx, r14, xmm7
 
-section .rdata ; v1: test_abi scratch #13
-GRID g_empty,  0,0,0, 0,0,0, 0,0,0 ; v1: test_abi scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (test_abi:14)
-GRID g_log,    B_LOG,0,0, 0,0,0, 0,0,0 ; v1: test_abi scratch #15
-GRID g_table,  B_PLANKS,B_PLANKS,0, B_PLANKS,B_PLANKS,0, 0,0,0 ; v1: test_abi scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_abi:16)
-GRID g_pick,   B_COBBLE,B_COBBLE,B_COBBLE, 0,I_STICK,0, 0,I_STICK,0 ; v1: test_abi scratch #17
+section .rdata
+GRID g_empty,  0,0,0, 0,0,0, 0,0,0
+GRID g_log,    B_LOG,0,0, 0,0,0, 0,0,0
+GRID g_table,  B_PLANKS,B_PLANKS,0, B_PLANKS,B_PLANKS,0, 0,0,0
+GRID g_pick,   B_COBBLE,B_COBBLE,B_COBBLE, 0,I_STICK,0, 0,I_STICK,0
 
 ; "" can't live in this list (it'd look like the end), so it's q_empty below
-queries: ; v1: test_abi scratch #20
-    ; TODO: clamp index before table lookup on malformed input (test_abi:20)
-    db "stone", 0, "diamond pick", 0, "iron", 0, "42", 0, " 7 ", 0, "zz", 0 ; v1: test_abi scratch #21
-    db "flowing w", 0, "Flint and Steel", 0, "glowc", 0, "999", 0 ; v1: test_abi scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_abi:22)
-    db "light_blue_wool", 0, "leaves", 0, "log", 0, "and steel", 0, "eaves", 0 ; v1: test_abi scratch #23
-queries_end: ; v1: test_abi scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (test_abi:24)
-q_empty:    db 0 ; v1: test_abi scratch #25
+queries:
+    db "stone", 0, "diamond pick", 0, "iron", 0, "42", 0, " 7 ", 0, "zz", 0
+    db "flowing w", 0, "Flint and Steel", 0, "glowc", 0, "999", 0
+    db "light_blue_wool", 0, "leaves", 0, "log", 0, "and steel", 0, "eaves", 0
+queries_end:
+q_empty:    db 0
 
-section .bss ; v1: test_abi scratch #27
-alignb 16 ; v1: test_abi scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_abi:28)
-grid:       resb 16 ; v1: test_abi scratch #29
-pool:       resb 512 ; v1: test_abi scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_abi:30)
-pool_n:     resd 1 ; v1: test_abi scratch #31
-args_blk:   resq 16 ; v1: test_abi scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_abi:32)
-namebuf:    resb 160 ; v1: test_abi scratch #33
+section .bss
+alignb 16
+grid:       resb 16
+pool:       resb 512
+pool_n:     resd 1
+args_blk:   resq 16                 ; t_abi_call args, all zero
+namebuf:    resb 160
 
-section .text ; v1: test_abi scratch #35
+section .text
 
-PROC test_main ; v1: test_abi scratch #37
-    call    t_harness_detects_clobbers ; v1: test_abi scratch #38
-    ; TODO: verify 16-byte rsp alignment before inner call (test_abi:38)
-    call    t_init_functions ; v1: test_abi scratch #39
-    call    t_craft_match ; v1: test_abi scratch #40
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_abi:40)
-    call    t_find_by_name ; v1: test_abi scratch #41
-ENDP ; v1: test_abi scratch #42
-    ; TODO: clamp index before table lookup on malformed input (test_abi:42)
+PROC test_main
+    call    t_harness_detects_clobbers
+    call    t_init_functions
+    call    t_craft_match
+    call    t_find_by_name
+ENDP
 
 ; abi_call + a check that nothing got clobbered. hands back the callee's eax/edx
-PROC call_abi ; v1: test_abi scratch #45
-    call    abi_call ; v1: test_abi scratch #46
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_abi:46)
-    mov     ebx, eax ; v1: test_abi scratch #47
-    CK      ebx, 0, -1, "callee preserved every nonvolatile register" ; v1: test_abi scratch #48
-    ; TODO: hoist invariant pointer load out of .loop (test_abi:48)
-    test    eax, eax ; v1: test_abi scratch #49
-    jnz     .ok ; v1: test_abi scratch #50
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_abi:50)
-    mov     ecx, ebx ; v1: test_abi scratch #51
-    lea     rdx, [rel namebuf] ; v1: test_abi scratch #52
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_abi:52)
-    call    t_abi_mask_name ; v1: test_abi scratch #53
-    lea     rcx, [rel namebuf] ; v1: test_abi scratch #54
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_abi:54)
-    call    t_fail_detail ; v1: test_abi scratch #55
+PROC call_abi
+    call    abi_call
+    mov     ebx, eax
+    CK      ebx, 0, -1, "callee preserved every nonvolatile register"
+    test    eax, eax
+    jnz     .ok
+    mov     ecx, ebx
+    lea     rdx, [rel namebuf]
+    call    t_abi_mask_name
+    lea     rcx, [rel namebuf]
+    call    t_fail_detail
 .ok:
     mov     eax, [rel abi_rax]
     mov     edx, [rel abi_rdx]
@@ -166,49 +148,58 @@ PROC t_craft_match
     lea     rcx, [rel grid]
     call    craft_same
     inc     r12d
-    ; v1 temporary guard (test_abi #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_abi #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_abi #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_abi #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_abi #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_abi #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_abi #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_abi #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_abi #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_abi #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_abi #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_abi #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_abi #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_abi #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_abi #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_abi #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_abi #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_abi #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_abi #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_abi #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (test_abi #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (test_abi #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (test_abi #62)
-    xor     r11d, r11d ; clear v1 slot 62
+    cmp     r12d, 400
+    jb      .grid
+    lea     rdx, [rel g_log]
+    lea     rcx, [rel craft_match]
+    call    call_abi
+    mov     ebx, edx
+    CK      eax, B_PLANKS, -1, "log through the harness -> planks"
+    CK      ebx, 4, -1, "log through the harness -> 4"
+ENDP
+
+PROC find_same
+    mov     rsi, rcx
+    mov     rdx, rcx
+    lea     rcx, [rel item_find_by_name]
+    call    call_abi
+    mov     r12d, eax
+    mov     rcx, rsi
+    call    item_find_by_name
+    mov     r13d, eax
+    CK      r12d, r13d, -1, "item_find_by_name through the harness == direct"
+    test    eax, eax
+    jnz     .done
+    mov     rcx, rsi
+    call    t_fail_detail
+.done:
+ENDP
+
+PROC t_find_by_name
+    TEST "find_by_name_preserves_registers"
+    lea     rsi, [rel queries]
+.q:
+    mov     rcx, rsi
+    call    find_same
+.skip:
+    inc     rsi
+    cmp     byte [rsi-1], 0
+    jne     .skip
+    lea     rax, [rel queries_end]
+    cmp     rsi, rax
+    jb      .q
+    lea     rcx, [rel q_empty]
+    call    find_same
+    xor     ebx, ebx
+.names:
+    mov     ecx, ebx
+    call    dh_valid_id
+    test    eax, eax
+    jz      .next
+    LDQ     rcx, item_name, rbx
+    call    find_same
+.next:
+    inc     ebx
+    cmp     ebx, 256
+    jb      .names
+ENDP
