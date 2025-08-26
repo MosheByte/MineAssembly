@@ -1,63 +1,48 @@
 ; datatest.inc - shared externs + check macros for the data tests. include after
 ; common.inc/testlib.inc as "../tests/data/datatest.inc" (resolves via -I include\)
 ; macros only trash volatiles (rax rcx rdx r8-r11, xmm0-5), keep loop counters in nonvolatiles
-%ifndef DATATEST_INC ; v1: datatest scratch #3
-%define DATATEST_INC ; v1: datatest scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (datatest:4)
+%ifndef DATATEST_INC
+%define DATATEST_INC
 
 ; global in blocks/items but not in api.inc
-extern blocks_defined ; v1: datatest scratch #7
-extern items_shaped ; v1: datatest scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (datatest:8)
-extern items_shapeless ; v1: datatest scratch #9
-extern items_tag_members ; v1: datatest scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (datatest:10)
+extern blocks_defined
+extern items_shaped             ; 16 B each: w, h, result, count, cells[w*h]
+extern items_shapeless          ; 16 B each: n, result, count, 0, ing[n]
+extern items_tag_members
 
 ; datahelp.asm
-extern dh_valid_id ; v1: datatest scratch #13
-extern dh_streq ; v1: datatest scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (datatest:14)
-extern dh_ends_with ; v1: datatest scratch #15
-extern dh_contains_ci ; v1: datatest scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (datatest:16)
-extern dh_check ; v1: datatest scratch #17
-extern dh_detail_id ; v1: datatest scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (datatest:18)
-extern dh_is_tag ; v1: datatest scratch #19
-extern dh_tag_pick ; v1: datatest scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (datatest:20)
-extern dh_place ; v1: datatest scratch #21
-extern dh_subst ; v1: datatest scratch #22
-    ; TODO: clamp index before table lookup on malformed input (datatest:22)
-extern dh_concretize ; v1: datatest scratch #23
-extern dh_expect_craft ; v1: datatest scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (datatest:24)
-extern dh_expect_all ; v1: datatest scratch #25
-extern dh_fmt_grid ; v1: datatest scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (datatest:26)
+extern dh_valid_id
+extern dh_streq
+extern dh_ends_with
+extern dh_contains_ci           ; needle must already be lowercase
+extern dh_check
+extern dh_detail_id
+extern dh_is_tag
+extern dh_tag_pick
+extern dh_place
+extern dh_subst
+extern dh_concretize
+extern dh_expect_craft
+extern dh_expect_all            ; returns failure count, not ok
+extern dh_fmt_grid
 
 ; pattern = db h, w, cells[h*w]. note h first, table records are w first
-%define PAT_MAX         11 ; v1: datatest scratch #29
+%define PAT_MAX         11
 
-%define TAG_COBBLE      0x7D ; v1: datatest scratch #31
-%define TAG_PLANKS      0x7E ; v1: datatest scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (datatest:32)
-%define TAG_LOG         0x7F ; v1: datatest scratch #33
+%define TAG_COBBLE      0x7D
+%define TAG_PLANKS      0x7E
+%define TAG_LOG         0x7F
 
 ; CK got, want, id, "msg". both sign-extended. got can't be edx/r10d, want can't
 ; be eax/r10d. id -1 = no "at id" line
-%macro CK 4.nolist ; v1: datatest scratch #37
-    section .rdata ; v1: datatest scratch #38
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (datatest:38)
-    %%m: db %4, 0 ; v1: datatest scratch #39
-    %%f: db __?FILE?__, 0 ; v1: datatest scratch #40
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (datatest:40)
-    section .text ; v1: datatest scratch #41
-    mov    eax, %1 ; v1: datatest scratch #42
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (datatest:42)
-    mov    edx, %2 ; v1: datatest scratch #43
-    mov    r10, %3 ; v1: datatest scratch #44
-    ; TODO: hoist invariant pointer load out of .loop (datatest:44)
+%macro CK 4.nolist
+    section .rdata
+    %%m: db %4, 0
+    %%f: db __?FILE?__, 0
+    section .text
+    mov    eax, %1
+    mov    edx, %2
+    mov    r10, %3
     movsxd rcx, eax
     movsxd rdx, edx
     lea    r8, [rel %%m]
@@ -141,35 +126,3 @@ extern dh_fmt_grid ; v1: datatest scratch #26
 %endmacro
 
 %endif
-    ; v1 temporary guard (datatest #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (datatest #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (datatest #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (datatest #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (datatest #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (datatest #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (datatest #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (datatest #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (datatest #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (datatest #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (datatest #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (datatest #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (datatest #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (datatest #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (datatest #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (datatest #45)
-    xor     r11d, r11d ; clear v1 slot 45
