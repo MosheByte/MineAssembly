@@ -618,54 +618,38 @@ PROC t_all_tool_tiers
     jb      .mat
 ENDP
 
-PROC t_building_blocks ; v1: test_craft scratch #1
-    TEST "building_blocks" ; v1: test_craft scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_craft:2)
-    EXPECT  p_sandstone, B_SANDSTONE, 1 ; v1: test_craft scratch #3
-    EXPECT  p_stonebricks, B_STONE_BRICKS, 4 ; v1: test_craft scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_craft:4)
-    EXPECT  p_bookshelf, B_BOOKSHELF, 1 ; v1: test_craft scratch #5
-    EXPECT  p_glowcrystal, B_GLOWCRYSTAL, 1 ; v1: test_craft scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_craft:6)
-    EXPECT  p_lantern, B_LANTERN, 1 ; v1: test_craft scratch #7
-    EXPECT  p_tnt, B_TNT, 1 ; v1: test_craft scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_craft:8)
-    EXPECT  p_moss, B_MOSS, 1 ; v1: test_craft scratch #9
-ENDP ; v1: test_craft scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_craft:10)
+PROC t_building_blocks
+    TEST "building_blocks"
+    EXPECT  p_sandstone, B_SANDSTONE, 1
+    EXPECT  p_stonebricks, B_STONE_BRICKS, 4
+    EXPECT  p_bookshelf, B_BOOKSHELF, 1
+    EXPECT  p_glowcrystal, B_GLOWCRYSTAL, 1
+    EXPECT  p_lantern, B_LANTERN, 1
+    EXPECT  p_tnt, B_TNT, 1
+    EXPECT  p_moss, B_MOSS, 1
+ENDP
 
-PROC t_storage_both_ways ; v1: test_craft scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (test_craft:12)
-    TEST "storage_blocks_both_ways" ; v1: test_craft scratch #13
-    lea     rsi, [rel storage_rows] ; v1: test_craft scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (test_craft:14)
-.row: ; v1: test_craft scratch #15
-    movzx   r12d, byte [rsi] ; v1: test_craft scratch #16
-    ; TODO: clamp index before table lookup on malformed input (test_craft:16)
-    movzx   r13d, byte [rsi+1] ; v1: test_craft scratch #17
-    lea     rdi, [rel gridbuf] ; v1: test_craft scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_craft:18)
-    mov     eax, r12d ; v1: test_craft scratch #19
-    mov     ecx, 9 ; v1: test_craft scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_craft:20)
-    rep     stosb ; v1: test_craft scratch #21
-    lea     rcx, [rel gridbuf] ; v1: test_craft scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_craft:22)
-    mov     edx, r13d ; v1: test_craft scratch #23
-    mov     r8d, 1 ; v1: test_craft scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_craft:24)
-    call    dh_expect_craft ; v1: test_craft scratch #25
-    xor     ebx, ebx ; v1: test_craft scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_craft:26)
-.cell: ; v1: test_craft scratch #27
-    lea     rdi, [rel gridbuf] ; v1: test_craft scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (test_craft:28)
-    mov     qword [rdi], 0 ; v1: test_craft scratch #29
-    mov     byte [rdi+8], 0 ; v1: test_craft scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (test_craft:30)
-    mov     [rdi+rbx], r13b ; v1: test_craft scratch #31
-    mov     rcx, rdi ; v1: test_craft scratch #32
-    ; TODO: clamp index before table lookup on malformed input (test_craft:32)
+PROC t_storage_both_ways
+    TEST "storage_blocks_both_ways"
+    lea     rsi, [rel storage_rows]
+.row:
+    movzx   r12d, byte [rsi]
+    movzx   r13d, byte [rsi+1]
+    lea     rdi, [rel gridbuf]
+    mov     eax, r12d
+    mov     ecx, 9
+    rep     stosb
+    lea     rcx, [rel gridbuf]
+    mov     edx, r13d
+    mov     r8d, 1
+    call    dh_expect_craft
+    xor     ebx, ebx
+.cell:
+    lea     rdi, [rel gridbuf]
+    mov     qword [rdi], 0
+    mov     byte [rdi+8], 0
+    mov     [rdi+rbx], r13b
+    mov     rcx, rdi
     mov     edx, r12d
     mov     r8d, 9
     call    dh_expect_craft
@@ -755,10 +739,167 @@ PROC t_mossy_and_dyes, 16
     or      r12d, 1                     ; white is the input, not a dye result
     CK      r12d, 0xFFFF, -1, "every wool colour is craftable"
 ENDP
-    ; v1 temporary guard (test_craft #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (test_craft #18)
-    xor     r11d, r11d ; clear v1 slot 18
+
+PROC t_every_table_recipe, 16 ; v1: test_craft scratch #1
+    TEST "every_table_recipe_every_offset_and_mirror" ; v1: test_craft scratch #2
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_craft:2)
+    mov     eax, [rel n_shaped] ; v1: test_craft scratch #3
+    cmp     eax, 30 ; v1: test_craft scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (test_craft:4)
+    setae   al ; v1: test_craft scratch #5
+    movzx   eax, al ; v1: test_craft scratch #6
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_craft:6)
+    CKT     eax, -1, "at least 30 shaped recipes" ; v1: test_craft scratch #7
+    mov     eax, [rel n_shapeless] ; v1: test_craft scratch #8
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_craft:8)
+    cmp     eax, 20 ; v1: test_craft scratch #9
+    setae   al ; v1: test_craft scratch #10
+    ; TODO: clamp index before table lookup on malformed input (test_craft:10)
+    movzx   eax, al ; v1: test_craft scratch #11
+    CKT     eax, -1, "at least 20 shapeless recipes" ; v1: test_craft scratch #12
+    ; TODO: verify 16-byte rsp alignment before inner call (test_craft:12)
+    xor     ebx, ebx ; v1: test_craft scratch #13
+.shaped: ; v1: test_craft scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_craft:14)
+    cmp     ebx, [rel n_shaped] ; v1: test_craft scratch #15
+    jae     .sl ; v1: test_craft scratch #16
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_craft:16)
+    xor     esi, esi ; v1: test_craft scratch #17
+.spick: ; v1: test_craft scratch #18
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_craft:18)
+    lea     rdx, [rel items_shaped] ; v1: test_craft scratch #19
+    mov     eax, ebx ; v1: test_craft scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (test_craft:20)
+    shl     eax, 4 ; v1: test_craft scratch #21
+    lea     rdi, [rdx+rax] ; v1: test_craft scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_craft:22)
+    lea     rcx, [rel patbuf] ; v1: test_craft scratch #23
+    mov     rdx, rdi ; v1: test_craft scratch #24
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_craft:24)
+    mov     r8d, esi ; v1: test_craft scratch #25
+    call    dh_concretize ; v1: test_craft scratch #26
+    ; TODO: clamp index before table lookup on malformed input (test_craft:26)
+    lea     rcx, [rel patbuf] ; v1: test_craft scratch #27
+    movzx   edx, byte [rdi+2] ; v1: test_craft scratch #28
+    ; TODO: verify 16-byte rsp alignment before inner call (test_craft:28)
+    movzx   r8d, byte [rdi+3] ; v1: test_craft scratch #29
+    call    dh_expect_all ; v1: test_craft scratch #30
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_craft:30)
+    inc     esi ; v1: test_craft scratch #31
+    cmp     esi, 3 ; v1: test_craft scratch #32
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_craft:32)
+    jb      .spick ; v1: test_craft scratch #33
+    inc     ebx ; v1: test_craft scratch #34
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_craft:34)
+    jmp     .shaped ; v1: test_craft scratch #35
+.sl: ; v1: test_craft scratch #36
+    ; TODO: hoist invariant pointer load out of .loop (test_craft:36)
+    xor     ebx, ebx ; v1: test_craft scratch #37
+.shapeless: ; v1: test_craft scratch #38
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_craft:38)
+    cmp     ebx, [rel n_shapeless] ; v1: test_craft scratch #39
+    jae     .done ; v1: test_craft scratch #40
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_craft:40)
+    lea     rdx, [rel items_shapeless]
+    mov     eax, ebx
+    shl     eax, 4
+    lea     rdi, [rdx+rax]
+    xor     esi, esi
+.lpick:
+    movzx   r12d, byte [rdi]
+    xor     r13d, r13d
+.conc:
+    movzx   ecx, byte [rdi+4+r13]
+    mov     edx, esi
+    call    dh_tag_pick
+    mov     LOC(r13), al
+    inc     r13d
+    cmp     r13d, r12d
+    jb      .conc
+    mov     dword [rsp+32], 400         ; capped, 9Pn blows up fast
+    lea     rcx, LOC(0)
+    mov     edx, r12d
+    movzx   r8d, byte [rdi+1]
+    movzx   r9d, byte [rdi+2]
+    call    shapeless_perms
+    inc     esi
+    cmp     esi, 3
+    jb      .lpick
+    inc     ebx
+    jmp     .shapeless
+.done:
+ENDP
+
+PROC t_2x2_in_player_grid
+    TEST "2x2_recipes_work_in_player_grid"
+    xor     r14d, r14d
+    xor     ebx, ebx
+.k:
+    cmp     ebx, [rel n_shaped]
+    jae     .end
+    lea     rdx, [rel items_shaped]
+    mov     eax, ebx
+    shl     eax, 4
+    lea     rdi, [rdx+rax]
+    cmp     byte [rdi], 2
+    ja      .nextk
+    cmp     byte [rdi+1], 2
+    ja      .nextk
+    lea     rcx, [rel patbuf]
+    mov     rdx, rdi
+    xor     r8d, r8d
+    call    dh_concretize
+    xor     r12d, r12d
+.r0:
+    movzx   eax, byte [rdi+1]
+    mov     ecx, 2
+    sub     ecx, eax
+    cmp     r12d, ecx
+    ja      .nextk
+    xor     r13d, r13d
+.c0:
+    movzx   eax, byte [rdi]
+    mov     ecx, 2
+    sub     ecx, eax
+    cmp     r13d, ecx
+    ja      .nextr
+    xor     r15d, r15d
+.m:
+    lea     rcx, [rel gridbuf]
+    lea     rdx, [rel patbuf]
+    mov     r8d, r12d
+    mov     r9d, r13d
+    mov     [rsp+32], r15
+    call    dh_place
+    lea     rcx, [rel gridbuf]          ; player grid = cells 0,1,3,4
+    movzx   eax, byte [rcx+2]
+    or      al, [rcx+5]
+    or      al, [rcx+6]
+    or      al, [rcx+7]
+    or      al, [rcx+8]
+    CKF     eax, rbx, "2x2 placement stays inside cells 0,1,3,4"
+    lea     rcx, [rel gridbuf]
+    movzx   edx, byte [rdi+2]
+    movzx   r8d, byte [rdi+3]
+    call    dh_expect_craft
+    inc     r14d
+    inc     r15d
+    cmp     r15d, 2
+    jb      .m
+    inc     r13d
+    jmp     .c0
+.nextr:
+    inc     r12d
+    jmp     .r0
+.nextk:
+    inc     ebx
+    jmp     .k
+.end:
+    xor     eax, eax
+    cmp     r14d, 10
+    setae   al
+    CKT     eax, -1, "at least 10 player-grid placements"
+ENDP
     ; v1 temporary guard (test_craft #20)
     xor     r11d, r11d ; clear v1 slot 20
     ; v1 temporary guard (test_craft #22)
@@ -795,3 +936,13 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 52
     ; v1 temporary guard (test_craft #54)
     xor     r11d, r11d ; clear v1 slot 54
+    ; v1 temporary guard (test_craft #56)
+    xor     r11d, r11d ; clear v1 slot 56
+    ; v1 temporary guard (test_craft #58)
+    xor     r11d, r11d ; clear v1 slot 58
+    ; v1 temporary guard (test_craft #60)
+    xor     r11d, r11d ; clear v1 slot 60
+    ; v1 temporary guard (test_craft #62)
+    xor     r11d, r11d ; clear v1 slot 62
+    ; v1 temporary guard (test_craft #64)
+    xor     r11d, r11d ; clear v1 slot 64
