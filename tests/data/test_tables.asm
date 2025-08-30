@@ -1,63 +1,46 @@
 ; block/item property tables: spec values + invariants over all 256 ids
 ; @link src/blocks.asm src/items.asm tests/data/datahelp.asm
 ; @timeout 60
-%include "common.inc" ; v1: test_tables scratch #3
-%include "testlib.inc" ; v1: test_tables scratch #4
-    ; TODO: clamp index before table lookup on malformed input (test_tables:4)
-%include "../tests/data/datatest.inc" ; v1: test_tables scratch #5
+%include "common.inc"
+%include "testlib.inc"
+%include "../tests/data/datatest.inc"
 
-section .rdata ; v1: test_tables scratch #7
-s_unknown:      db "Unknown", 0 ; v1: test_tables scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_tables:8)
-s_wool_sfx:     db " Wool", 0 ; v1: test_tables scratch #9
-s_flow_water:   db "Flowing Water", 0 ; v1: test_tables scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_tables:10)
-s_flow_lava:    db "Flowing Lava", 0 ; v1: test_tables scratch #11
+section .rdata
+s_unknown:      db "Unknown", 0
+s_wool_sfx:     db " Wool", 0
+s_flow_water:   db "Flowing Water", 0
+s_flow_lava:    db "Flowing Lava", 0
 
 ; every B_* in ids.inc except the *_LAST markers. add new blocks here
-all_block_ids: ; v1: test_tables scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_tables:14)
-    db B_AIR, B_STONE, B_GRASS, B_DIRT, B_COBBLE, B_PLANKS, B_BEDROCK, B_SAND ; v1: test_tables scratch #15
-    db B_GRAVEL, B_LOG, B_LEAVES, B_GLASS, B_COAL_ORE, B_IRON_ORE, B_GOLD_ORE ; v1: test_tables scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:16)
-    db B_DIAMOND_ORE, B_SANDSTONE, B_SNOW, B_ICE, B_CACTUS, B_CLAY, B_BIRCH_LOG ; v1: test_tables scratch #17
-    db B_BIRCH_LEAVES, B_PINE_LOG, B_PINE_LEAVES, B_BRICKS, B_STONE_BRICKS ; v1: test_tables scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_tables:18)
-    db B_MOSSY_COBBLE, B_BOOKSHELF, B_CRAFT_TABLE, B_FURNACE, B_TNT ; v1: test_tables scratch #19
-    db B_GLOWCRYSTAL, B_OBSIDIAN, B_TORCH, B_TALL_GRASS, B_FLOWER_RED ; v1: test_tables scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_tables:20)
-    db B_FLOWER_YELLOW, B_MUSHROOM_RED, B_MUSHROOM_BROWN, B_DEAD_BUSH, B_REEDS ; v1: test_tables scratch #21
-    db B_PUMPKIN, B_MELON, B_WOOL, B_GOLD_BLOCK, B_IRON_BLOCK, B_DIAMOND_BLOCK ; v1: test_tables scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (test_tables:22)
-    db B_COAL_BLOCK, B_SNOWY_GRASS, B_SAPLING, B_CHEST, B_LANTERN, B_FURNACE_LIT ; v1: test_tables scratch #23
-    db B_PINE_PLANKS, B_BIRCH_PLANKS, B_MOSS, B_FARMLAND, B_WATER, B_WATER_FLOW ; v1: test_tables scratch #24
-    ; TODO: clamp index before table lookup on malformed input (test_tables:24)
-    db B_LAVA, B_LAVA_FLOW ; v1: test_tables scratch #25
-    db B_FURNACE_W, B_FURNACE_N, B_FURNACE_E, B_FURNACE_LIT_W, B_FURNACE_LIT_N ; v1: test_tables scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_tables:26)
-    db B_FURNACE_LIT_E, B_CHEST_W, B_CHEST_N, B_CHEST_E, B_CRAFT_TABLE_W ; v1: test_tables scratch #27
-    db B_CRAFT_TABLE_N, B_CRAFT_TABLE_E, B_PUMPKIN_W, B_PUMPKIN_N, B_PUMPKIN_E ; v1: test_tables scratch #28
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_tables:28)
-    db B_LEAVES_P, B_BIRCH_LEAVES_P, B_PINE_LEAVES_P, B_BED, B_BED+1, B_BED+2 ; v1: test_tables scratch #29
-    db B_BED+3, B_RED_SAND, B_TERRACOTTA, B_TERRACOTTA+1, B_TERRACOTTA+2 ; v1: test_tables scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_tables:30)
-    db B_TERRACOTTA+3, B_TERRACOTTA+4, B_TERRACOTTA+5 ; v1: test_tables scratch #31
-all_block_ids_end: ; v1: test_tables scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:32)
+all_block_ids:
+    db B_AIR, B_STONE, B_GRASS, B_DIRT, B_COBBLE, B_PLANKS, B_BEDROCK, B_SAND
+    db B_GRAVEL, B_LOG, B_LEAVES, B_GLASS, B_COAL_ORE, B_IRON_ORE, B_GOLD_ORE
+    db B_DIAMOND_ORE, B_SANDSTONE, B_SNOW, B_ICE, B_CACTUS, B_CLAY, B_BIRCH_LOG
+    db B_BIRCH_LEAVES, B_PINE_LOG, B_PINE_LEAVES, B_BRICKS, B_STONE_BRICKS
+    db B_MOSSY_COBBLE, B_BOOKSHELF, B_CRAFT_TABLE, B_FURNACE, B_TNT
+    db B_GLOWCRYSTAL, B_OBSIDIAN, B_TORCH, B_TALL_GRASS, B_FLOWER_RED
+    db B_FLOWER_YELLOW, B_MUSHROOM_RED, B_MUSHROOM_BROWN, B_DEAD_BUSH, B_REEDS
+    db B_PUMPKIN, B_MELON, B_WOOL, B_GOLD_BLOCK, B_IRON_BLOCK, B_DIAMOND_BLOCK
+    db B_COAL_BLOCK, B_SNOWY_GRASS, B_SAPLING, B_CHEST, B_LANTERN, B_FURNACE_LIT
+    db B_PINE_PLANKS, B_BIRCH_PLANKS, B_MOSS, B_FARMLAND, B_WATER, B_WATER_FLOW
+    db B_LAVA, B_LAVA_FLOW
+    db B_FURNACE_W, B_FURNACE_N, B_FURNACE_E, B_FURNACE_LIT_W, B_FURNACE_LIT_N
+    db B_FURNACE_LIT_E, B_CHEST_W, B_CHEST_N, B_CHEST_E, B_CRAFT_TABLE_W
+    db B_CRAFT_TABLE_N, B_CRAFT_TABLE_E, B_PUMPKIN_W, B_PUMPKIN_N, B_PUMPKIN_E
+    db B_LEAVES_P, B_BIRCH_LEAVES_P, B_PINE_LEAVES_P, B_BED, B_BED+1, B_BED+2
+    db B_BED+3, B_RED_SAND, B_TERRACOTTA, B_TERRACOTTA+1, B_TERRACOTTA+2
+    db B_TERRACOTTA+3, B_TERRACOTTA+4, B_TERRACOTTA+5
+all_block_ids_end:
 
 ; 1 = id whose BLOCK_BASE is something else (turned, placed leaves)
-world_only: ; v1: test_tables scratch #35
-%assign i 0 ; v1: test_tables scratch #36
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_tables:36)
-%rep 256 ; v1: test_tables scratch #37
-  BLOCK_BASE i ; v1: test_tables scratch #38
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_tables:38)
-  %if BB_BASE != i ; v1: test_tables scratch #39
-    db 1 ; v1: test_tables scratch #40
-    ; TODO: hoist invariant pointer load out of .loop (test_tables:40)
-  %else ; v1: test_tables scratch #41
-    db 0 ; v1: test_tables scratch #42
-    ; TODO: clamp index before table lookup on malformed input (test_tables:42)
+world_only:
+%assign i 0
+%rep 256
+  BLOCK_BASE i
+  %if BB_BASE != i
+    db 1
+  %else
+    db 0
   %endif
   %assign i i+1
 %endrep
@@ -125,8 +108,135 @@ tool_rows_end:
 tool_dur:       dw 59, 131, 250, 1561
 tool_spd:       dd 2.0, 4.0, 6.0, 8.0
 
-    ; v1 temporary guard (test_tables #17)
-    xor     r11d, r11d ; clear v1 slot 17
+stack1_ids:     db I_BUCKET, I_WATER_BUCKET, I_LAVA_BUCKET, I_FLINT_STEEL ; v1: test_tables scratch #0
+    ; TODO: clamp index before table lookup on malformed input (test_tables:0)
+stack64_ids:    db I_STICK, I_APPLE, B_STONE, I_COOKED_MEAT ; v1: test_tables scratch #1
+; anything not listed must have food 0
+food_rows: ; v1: test_tables scratch #3
+    db I_APPLE, 4, I_RAW_MEAT, 3, I_COOKED_MEAT, 8, I_ROTTEN_FLESH, 4, I_BREAD, 5 ; v1: test_tables scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (test_tables:4)
+food_rows_end: ; v1: test_tables scratch #5
+; id, ticks (dw)
+fuel_rows: ; v1: test_tables scratch #7
+    dw B_PLANKS, 300, B_LOG, 300, B_PINE_LOG, 300, B_BIRCH_PLANKS, 300, I_STICK, 100 ; v1: test_tables scratch #8
+    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:8)
+    dw I_COAL, 1600, B_COAL_BLOCK, 16000, I_LAVA_BUCKET, 20000, B_SAPLING, 100 ; v1: test_tables scratch #9
+    dw I_PICK_WOOD, 200, I_SWORD_WOOD, 200, B_STONE, 0, I_IRON_INGOT, 0 ; v1: test_tables scratch #10
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_tables:10)
+fuel_rows_end: ; v1: test_tables scratch #11
+smelt_rows: ; v1: test_tables scratch #12
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_tables:12)
+    db B_IRON_ORE, I_IRON_INGOT, B_GOLD_ORE, I_GOLD_INGOT, B_SAND, B_GLASS ; v1: test_tables scratch #13
+    db B_COBBLE, B_STONE, I_RAW_MEAT, I_COOKED_MEAT, B_CLAY, B_BRICKS ; v1: test_tables scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_tables:14)
+    db B_LOG, I_COAL, B_BIRCH_LOG, I_COAL, B_PINE_LOG, I_COAL ; v1: test_tables scratch #15
+smelt_rows_end: ; v1: test_tables scratch #16
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_tables:16)
+
+section .bss ; v1: test_tables scratch #18
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_tables:18)
+creative_seen:  resb 256 ; v1: test_tables scratch #19
+
+section .text ; v1: test_tables scratch #21
+
+PROC test_main ; v1: test_tables scratch #23
+    call    t_audits ; v1: test_tables scratch #24
+    ; TODO: clamp index before table lookup on malformed input (test_tables:24)
+    call    t_block_ids_described ; v1: test_tables scratch #25
+    call    t_item_ids_described ; v1: test_tables scratch #26
+    ; TODO: hoist invariant pointer load out of .loop (test_tables:26)
+    call    t_unused_ids_air_like ; v1: test_tables scratch #27
+    call    t_names_agree ; v1: test_tables scratch #28
+    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:28)
+    call    t_names_unique ; v1: test_tables scratch #29
+    call    t_no_trademarks ; v1: test_tables scratch #30
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_tables:30)
+    call    t_flag_profiles ; v1: test_tables scratch #31
+    call    t_flag_invariants ; v1: test_tables scratch #32
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_tables:32)
+    call    t_textures ; v1: test_tables scratch #33
+    call    t_models_tints ; v1: test_tables scratch #34
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_tables:34)
+    call    t_light_opacity ; v1: test_tables scratch #35
+    call    t_hardness_tiers ; v1: test_tables scratch #36
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_tables:36)
+    call    t_drops ; v1: test_tables scratch #37
+    call    t_sound_resistance ; v1: test_tables scratch #38
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_tables:38)
+    call    t_placeable ; v1: test_tables scratch #39
+    call    t_icons ; v1: test_tables scratch #40
+    ; TODO: clamp index before table lookup on malformed input (test_tables:40)
+    call    t_tools ; v1: test_tables scratch #41
+    call    t_stacks_food_fuel_smelt ; v1: test_tables scratch #42
+    ; TODO: hoist invariant pointer load out of .loop (test_tables:42)
+    call    t_creative_list ; v1: test_tables scratch #43
+    call    t_find_by_name ; v1: test_tables scratch #44
+    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:44)
+    call    t_find_trailing_separators
+ENDP
+
+PROC t_audits
+    TEST "runtime_audits_clean"
+    call    blocks_init
+    CK      eax, 0, -1, "blocks_init audit finds no problems"
+    call    items_init
+    CK      eax, 0, -1, "items_init audit finds no problems"
+ENDP
+
+PROC t_block_ids_described
+    TEST "every_block_id_from_ids_inc_is_described"
+    lea     rsi, [rel all_block_ids]
+.ids:
+    movzx   ebx, byte [rsi]
+    LDB     eax, blocks_defined, rbx
+    CKT     eax, rbx, "blocks_defined[id] for an ids.inc block"
+    LDQ     rcx, blk_name, rbx
+    lea     rdx, [rel s_unknown]
+    call    dh_streq
+    CKF     eax, rbx, "blk_name of an ids.inc block is not Unknown"
+    inc     rsi
+    lea     rax, [rel all_block_ids_end]
+    cmp     rsi, rax
+    jb      .ids
+    mov     ebx, B_WOOL
+.wool:
+    LDQ     rcx, blk_name, rbx
+    lea     rdx, [rel s_wool_sfx]
+    call    dh_ends_with
+    CKT     eax, rbx, "wool names end with ' Wool'"
+    inc     ebx
+    cmp     ebx, B_WOOL_LAST
+    jbe     .wool
+    mov     ebx, B_WATER
+.liq:
+    LDB     eax, blocks_defined, rbx
+    CKT     eax, rbx, "every liquid level is a defined block"
+    inc     ebx
+    cmp     ebx, B_LAVA_LAST
+    jbe     .liq
+ENDP
+
+PROC t_item_ids_described
+    TEST "every_item_id_from_ids_inc_is_described"
+    mov     ebx, ITEM_FIRST
+.items:
+    mov     ecx, ebx
+    call    dh_valid_id
+    CKT     eax, rbx, "ids.inc item has a name"
+    inc     ebx
+    cmp     ebx, ITEM_LAST
+    jbe     .items
+    xor     esi, esi                    ; valid ids >= 128. catches named items outside the ids.inc range
+    mov     ebx, 128
+.count:
+    mov     ecx, ebx
+    call    dh_valid_id
+    add     esi, eax
+    inc     ebx
+    cmp     ebx, 256
+    jb      .count
+    CK      esi, ITEM_LAST-ITEM_FIRST+1, -1, "number of real items == ids.inc item range"
+ENDP
     ; v1 temporary guard (test_tables #19)
     xor     r11d, r11d ; clear v1 slot 19
     ; v1 temporary guard (test_tables #21)
@@ -153,21 +263,3 @@ tool_spd:       dd 2.0, 4.0, 6.0, 8.0
     xor     r11d, r11d ; clear v1 slot 41
     ; v1 temporary guard (test_tables #43)
     xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (test_tables #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (test_tables #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (test_tables #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (test_tables #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (test_tables #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (test_tables #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (test_tables #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (test_tables #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (test_tables #61)
-    xor     r11d, r11d ; clear v1 slot 61
