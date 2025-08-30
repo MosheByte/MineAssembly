@@ -997,72 +997,51 @@ PROC t_negative_cases
 ENDP
 
 ; [0, n). plain modulo, slightly biased, doesn't matter here
-PROC rnd ; v1: test_craft scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_craft:2)
-    mov     ebx, ecx ; v1: test_craft scratch #3
-    call    t_rng_next ; v1: test_craft scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_craft:4)
-    xor     edx, edx ; v1: test_craft scratch #5
-    mov     ecx, ebx ; v1: test_craft scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_craft:6)
-    div     rcx ; v1: test_craft scratch #7
-    mov     eax, edx ; v1: test_craft scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (test_craft:8)
-ENDP ; v1: test_craft scratch #9
+PROC rnd
+    mov     ebx, ecx
+    call    t_rng_next
+    xor     edx, edx
+    mov     ecx, ebx
+    div     rcx
+    mov     eax, edx
+ENDP
 
-PROC pool_add ; v1: test_craft scratch #11
-    test    ecx, ecx ; v1: test_craft scratch #12
-    ; TODO: clamp index before table lookup on malformed input (test_craft:12)
-    jz      .done ; v1: test_craft scratch #13
-    mov     ebx, ecx ; v1: test_craft scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_craft:14)
-    call    dh_is_tag ; v1: test_craft scratch #15
-    test    eax, eax ; v1: test_craft scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_craft:16)
-    jnz     .done ; v1: test_craft scratch #17
-    lea     rax, [rel pool_mark] ; v1: test_craft scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (test_craft:18)
-    mov     byte [rax+rbx], 1 ; v1: test_craft scratch #19
-.done: ; v1: test_craft scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_craft:20)
-ENDP ; v1: test_craft scratch #21
+PROC pool_add
+    test    ecx, ecx
+    jz      .done
+    mov     ebx, ecx
+    call    dh_is_tag
+    test    eax, eax
+    jnz     .done
+    lea     rax, [rel pool_mark]
+    mov     byte [rax+rbx], 1
+.done:
+ENDP
 
 ; every ingredient used anywhere + tag members + dirt/apple as junk
-PROC build_pool ; v1: test_craft scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_craft:24)
-    xor     ebx, ebx ; v1: test_craft scratch #25
-.shaped: ; v1: test_craft scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_craft:26)
-    cmp     ebx, [rel n_shaped] ; v1: test_craft scratch #27
-    jae     .sl ; v1: test_craft scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (test_craft:28)
-    lea     rdi, [rel items_shaped] ; v1: test_craft scratch #29
-    mov     eax, ebx ; v1: test_craft scratch #30
-    ; TODO: clamp index before table lookup on malformed input (test_craft:30)
-    shl     eax, 4 ; v1: test_craft scratch #31
-    add     rdi, rax ; v1: test_craft scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_craft:32)
-    movzx   r12d, byte [rdi] ; v1: test_craft scratch #33
-    movzx   eax, byte [rdi+1] ; v1: test_craft scratch #34
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_craft:34)
-    imul    r12d, eax ; v1: test_craft scratch #35
-    xor     esi, esi ; v1: test_craft scratch #36
-    ; TODO: verify 16-byte rsp alignment before inner call (test_craft:36)
-.scell: ; v1: test_craft scratch #37
-    movzx   ecx, byte [rdi+4+rsi] ; v1: test_craft scratch #38
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_craft:38)
-    call    pool_add ; v1: test_craft scratch #39
-    inc     esi ; v1: test_craft scratch #40
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_craft:40)
-    cmp     esi, r12d ; v1: test_craft scratch #41
-    jb      .scell ; v1: test_craft scratch #42
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_craft:42)
-    inc     ebx ; v1: test_craft scratch #43
-    jmp     .shaped ; v1: test_craft scratch #44
-    ; TODO: hoist invariant pointer load out of .loop (test_craft:44)
-.sl: ; v1: test_craft scratch #45
-    xor     ebx, ebx ; v1: test_craft scratch #46
-    ; TODO: clamp index before table lookup on malformed input (test_craft:46)
+PROC build_pool
+    xor     ebx, ebx
+.shaped:
+    cmp     ebx, [rel n_shaped]
+    jae     .sl
+    lea     rdi, [rel items_shaped]
+    mov     eax, ebx
+    shl     eax, 4
+    add     rdi, rax
+    movzx   r12d, byte [rdi]
+    movzx   eax, byte [rdi+1]
+    imul    r12d, eax
+    xor     esi, esi
+.scell:
+    movzx   ecx, byte [rdi+4+rsi]
+    call    pool_add
+    inc     esi
+    cmp     esi, r12d
+    jb      .scell
+    inc     ebx
+    jmp     .shaped
+.sl:
+    xor     ebx, ebx
 .shapeless:
     cmp     ebx, [rel n_shapeless]
     jae     .tags
@@ -1166,31 +1145,54 @@ PROC t_random_vs_reference
     mov     ebx, eax
 .mut:
     test    ebx, ebx
-    ; v1 temporary guard (test_craft #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (test_craft #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (test_craft #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (test_craft #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (test_craft #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (test_craft #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (test_craft #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (test_craft #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (test_craft #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (test_craft #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (test_craft #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (test_craft #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (test_craft #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (test_craft #47)
-    xor     r11d, r11d ; clear v1 slot 47
+    jz      .check
+    mov     ecx, 9
+    call    rnd
+    mov     esi, eax
+    mov     ecx, [rel pool_n]
+    inc     ecx
+    call    rnd                         ; +1 so empty can be picked too
+    lea     rdx, [rel pool]
+    movzx   eax, byte [rdx+rax]
+    lea     rdx, [rel gridbuf]
+    mov     [rdx+rsi], al
+    dec     ebx
+    jmp     .mut
+.random:
+    xor     ebx, ebx
+.rcell:
+    mov     ecx, 100
+    call    rnd
+    xor     esi, esi
+    cmp     eax, 35                     ; 35% filled
+    jae     .put
+    mov     ecx, [rel pool_n]
+    call    rnd
+    lea     rdx, [rel pool+1]
+    movzx   esi, byte [rdx+rax]
+.put:
+    lea     rdx, [rel gridbuf]
+    mov     [rdx+rbx], sil
+    inc     ebx
+    cmp     ebx, 9
+    jb      .rcell
+.check:
+    lea     rcx, [rel gridbuf]
+    call    ref_match
+    mov     r12d, eax
+    xor     ecx, ecx
+    test    eax, eax
+    setnz   cl
+    add     r14d, ecx
+    lea     rcx, [rel gridbuf]
+    mov     r8d, edx
+    mov     edx, r12d
+    call    dh_expect_craft
+    inc     r15d
+    cmp     r15d, 6000
+    jb      .iter
+    xor     eax, eax
+    cmp     r14d, 1000
+    seta    al
+    CKT     eax, -1, "more than 1000 random grids hit a recipe"
+ENDP
