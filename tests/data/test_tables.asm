@@ -219,66 +219,47 @@ PROC t_item_ids_described
     CK      esi, ITEM_LAST-ITEM_FIRST+1, -1, "number of real items == ids.inc item range"
 ENDP
 
-PROC t_unused_ids_air_like ; v1: test_tables scratch #1
-    TEST "unused_ids_are_air_like" ; v1: test_tables scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_tables:2)
-    xor     ebx, ebx ; v1: test_tables scratch #3
-.loop: ; v1: test_tables scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:4)
-    mov     ecx, ebx ; v1: test_tables scratch #5
-    call    dh_valid_id ; v1: test_tables scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (test_tables:6)
-    test    eax, eax ; v1: test_tables scratch #7
-    jnz     .next ; v1: test_tables scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_tables:8)
-    LDQ     rcx, blk_name, rbx ; v1: test_tables scratch #9
-    lea     rdx, [rel s_unknown] ; v1: test_tables scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_tables:10)
-    call    dh_streq ; v1: test_tables scratch #11
-    CKT     eax, rbx, "unused id: blk_name is Unknown" ; v1: test_tables scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_tables:12)
-    WEQ     blk_flags, rbx, 0, "unused id: flags 0" ; v1: test_tables scratch #13
-    BEQ     blk_light, rbx, 0, "unused id: light 0" ; v1: test_tables scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_tables:14)
-    BEQ     blk_opacity, rbx, 0, "unused id: opacity 0" ; v1: test_tables scratch #15
-    BEQ     blk_drop, rbx, 0, "unused id: drop 0" ; v1: test_tables scratch #16
-    ; TODO: clamp index before table lookup on malformed input (test_tables:16)
-    BEQ     blk_drop_count, rbx, 0, "unused id: drop count 0" ; v1: test_tables scratch #17
-    BEQ     item_place, rbx, 0, "unused id: place 0" ; v1: test_tables scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_tables:18)
-    WEQ     item_fuel, rbx, 0, "unused id: fuel 0" ; v1: test_tables scratch #19
-    BEQ     item_smelt, rbx, 0, "unused id: smelt 0" ; v1: test_tables scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:20)
-    BEQ     item_food, rbx, 0, "unused id: food 0" ; v1: test_tables scratch #21
-    BEQ     item_tool_kind, rbx, 0, "unused id: tool kind 0" ; v1: test_tables scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (test_tables:22)
-    BEQ     blk_tier, rbx, 0xFF, "unused id: blk_tier 0xFF" ; v1: test_tables scratch #23
-    BEQ     item_tool_tier, rbx, 0xFF, "unused id: item_tool_tier 0xFF" ; v1: test_tables scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_tables:24)
-.next: ; v1: test_tables scratch #25
-    inc     ebx ; v1: test_tables scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_tables:26)
-    cmp     ebx, 256 ; v1: test_tables scratch #27
-    jb      .loop ; v1: test_tables scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_tables:28)
-ENDP ; v1: test_tables scratch #29
+PROC t_unused_ids_air_like
+    TEST "unused_ids_are_air_like"
+    xor     ebx, ebx
+.loop:
+    mov     ecx, ebx
+    call    dh_valid_id
+    test    eax, eax
+    jnz     .next
+    LDQ     rcx, blk_name, rbx
+    lea     rdx, [rel s_unknown]
+    call    dh_streq
+    CKT     eax, rbx, "unused id: blk_name is Unknown"
+    WEQ     blk_flags, rbx, 0, "unused id: flags 0"
+    BEQ     blk_light, rbx, 0, "unused id: light 0"
+    BEQ     blk_opacity, rbx, 0, "unused id: opacity 0"
+    BEQ     blk_drop, rbx, 0, "unused id: drop 0"
+    BEQ     blk_drop_count, rbx, 0, "unused id: drop count 0"
+    BEQ     item_place, rbx, 0, "unused id: place 0"
+    WEQ     item_fuel, rbx, 0, "unused id: fuel 0"
+    BEQ     item_smelt, rbx, 0, "unused id: smelt 0"
+    BEQ     item_food, rbx, 0, "unused id: food 0"
+    BEQ     item_tool_kind, rbx, 0, "unused id: tool kind 0"
+    BEQ     blk_tier, rbx, 0xFF, "unused id: blk_tier 0xFF"
+    BEQ     item_tool_tier, rbx, 0xFF, "unused id: item_tool_tier 0xFF"
+.next:
+    inc     ebx
+    cmp     ebx, 256
+    jb      .loop
+ENDP
 
-PROC t_names_agree ; v1: test_tables scratch #31
-    TEST "blk_name_and_item_name_agree" ; v1: test_tables scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_tables:32)
-    xor     ebx, ebx ; v1: test_tables scratch #33
-.loop: ; v1: test_tables scratch #34
-    ; TODO: clamp index before table lookup on malformed input (test_tables:34)
-    LDQ     rcx, blk_name, rbx ; v1: test_tables scratch #35
-    LDQ     rdx, item_name, rbx ; v1: test_tables scratch #36
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_tables:36)
-    call    dh_streq ; v1: test_tables scratch #37
-    CKT     eax, rbx, "blk_name[i] == item_name[i]" ; v1: test_tables scratch #38
-    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:38)
-    inc     ebx ; v1: test_tables scratch #39
-    cmp     ebx, 256 ; v1: test_tables scratch #40
-    ; TODO: hoist invariant pointer load out of .loop (test_tables:40)
-    jb      .loop ; v1: test_tables scratch #41
+PROC t_names_agree
+    TEST "blk_name_and_item_name_agree"
+    xor     ebx, ebx
+.loop:
+    LDQ     rcx, blk_name, rbx
+    LDQ     rdx, item_name, rbx
+    call    dh_streq
+    CKT     eax, rbx, "blk_name[i] == item_name[i]"
+    inc     ebx
+    cmp     ebx, 256
+    jb      .loop
 ENDP
 
 ; flowing levels all share one name, they're the only allowed dupes
@@ -358,8 +339,141 @@ PROC t_no_trademarks
     cmp     ebx, 256
     jb      .ids
 ENDP
-    ; v1 temporary guard (test_tables #19)
-    xor     r11d, r11d ; clear v1 slot 19
+
+%define SOLID_OPAQUE_SEL (BF_SOLID|BF_OPAQUE|BF_SELECTABLE) ; v1: test_tables scratch #1
+%define LEAF_FLAGS (BF_SOLID|BF_CUTOUT|BF_SELECTABLE|BF_LEAVES|BF_FLAMMABLE|BF_CULL_SAME) ; v1: test_tables scratch #2
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_tables:2)
+
+PROC t_flag_profiles ; v1: test_tables scratch #4
+    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:4)
+    TEST "flag_profiles" ; v1: test_tables scratch #5
+%macro SOLID_BLOCK 1.nolist ; v1: test_tables scratch #6
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_tables:6)
+    HAS     %1, SOLID_OPAQUE_SEL, "solid opaque selectable block" ; v1: test_tables scratch #7
+    LACKS   %1, BF_CUTOUT|BF_TRANSLUCENT|BF_LIQUID|BF_REPLACEABLE, "plain block lacks cutout/translucent/liquid/replaceable" ; v1: test_tables scratch #8
+    ; TODO: clamp index before table lookup on malformed input (test_tables:8)
+%endmacro ; v1: test_tables scratch #9
+    SOLID_BLOCK B_STONE ; v1: test_tables scratch #10
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_tables:10)
+    SOLID_BLOCK B_DIRT ; v1: test_tables scratch #11
+    SOLID_BLOCK B_COBBLE ; v1: test_tables scratch #12
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_tables:12)
+    SOLID_BLOCK B_OBSIDIAN ; v1: test_tables scratch #13
+    SOLID_BLOCK B_BRICKS ; v1: test_tables scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_tables:14)
+%macro LEAF_BLOCK 1.nolist ; v1: test_tables scratch #15
+    HAS     %1, LEAF_FLAGS, "leaves flags" ; v1: test_tables scratch #16
+    ; TODO: hoist invariant pointer load out of .loop (test_tables:16)
+    LACKS   %1, BF_OPAQUE, "leaves are not opaque" ; v1: test_tables scratch #17
+%endmacro ; v1: test_tables scratch #18
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_tables:18)
+    LEAF_BLOCK B_LEAVES ; v1: test_tables scratch #19
+    LEAF_BLOCK B_BIRCH_LEAVES ; v1: test_tables scratch #20
+    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:20)
+    LEAF_BLOCK B_PINE_LEAVES ; v1: test_tables scratch #21
+    HAS     B_GLASS, BF_SOLID|BF_CUTOUT|BF_CULL_SAME|BF_SELECTABLE, "glass flags" ; v1: test_tables scratch #22
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_tables:22)
+    LACKS   B_GLASS, BF_OPAQUE, "glass not opaque" ; v1: test_tables scratch #23
+    HAS     B_ICE, BF_SOLID|BF_TRANSLUCENT|BF_SELECTABLE|BF_CULL_SAME, "ice flags" ; v1: test_tables scratch #24
+    ; TODO: clamp index before table lookup on malformed input (test_tables:24)
+    mov     ebx, B_WATER ; v1: test_tables scratch #25
+.water: ; v1: test_tables scratch #26
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_tables:26)
+    HAS     rbx, BF_LIQUID|BF_TRANSLUCENT|BF_REPLACEABLE|BF_CULL_SAME, "water flags" ; v1: test_tables scratch #27
+    LACKS   rbx, BF_SOLID|BF_SELECTABLE|BF_OPAQUE, "water lacks solid/selectable/opaque" ; v1: test_tables scratch #28
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_tables:28)
+    inc     ebx ; v1: test_tables scratch #29
+    cmp     ebx, B_WATER_LAST ; v1: test_tables scratch #30
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_tables:30)
+    jbe     .water ; v1: test_tables scratch #31
+    mov     ebx, B_LAVA ; v1: test_tables scratch #32
+    ; TODO: hoist invariant pointer load out of .loop (test_tables:32)
+.lava: ; v1: test_tables scratch #33
+    HAS     rbx, BF_LIQUID|BF_REPLACEABLE|BF_CULL_SAME, "lava flags" ; v1: test_tables scratch #34
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_tables:34)
+    LACKS   rbx, BF_SOLID|BF_SELECTABLE|BF_TRANSLUCENT|BF_OPAQUE, "lava lacks solid/selectable/translucent/opaque" ; v1: test_tables scratch #35
+    inc     ebx ; v1: test_tables scratch #36
+    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:36)
+    cmp     ebx, B_LAVA_LAST ; v1: test_tables scratch #37
+    jbe     .lava ; v1: test_tables scratch #38
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_tables:38)
+    HAS     B_TALL_GRASS, BF_CUTOUT|BF_SUPPORT|BF_PLANT|BF_SELECTABLE|BF_REPLACEABLE, "tall grass flags" ; v1: test_tables scratch #39
+    LACKS   B_TALL_GRASS, BF_SOLID, "tall grass not solid" ; v1: test_tables scratch #40
+    ; TODO: clamp index before table lookup on malformed input (test_tables:40)
+%macro PLANT_BLOCK 1.nolist ; v1: test_tables scratch #41
+    HAS     %1, BF_CUTOUT|BF_SUPPORT|BF_PLANT|BF_SELECTABLE, "plant flags" ; v1: test_tables scratch #42
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_tables:42)
+    LACKS   %1, BF_SOLID|BF_REPLACEABLE, "plant not solid / replaceable" ; v1: test_tables scratch #43
+%endmacro
+    PLANT_BLOCK B_FLOWER_RED
+    PLANT_BLOCK B_FLOWER_YELLOW
+    PLANT_BLOCK B_SAPLING
+    HAS     B_TORCH, BF_CUTOUT|BF_SUPPORT|BF_SELECTABLE, "torch flags"
+    LACKS   B_TORCH, BF_SOLID, "torch not solid"
+    HAS     B_CACTUS, BF_SOLID|BF_CUTOUT|BF_SUPPORT, "cactus flags"
+    HAS     B_SAND, BF_GRAVITY, "sand falls"
+    HAS     B_GRAVEL, BF_GRAVITY, "gravel falls"
+    HAS     B_CRAFT_TABLE, BF_INTERACT, "crafting table interacts"
+    HAS     B_FURNACE, BF_INTERACT, "furnace interacts"
+    HAS     B_FURNACE_LIT, BF_INTERACT, "lit furnace interacts"
+    HAS     B_CHEST, BF_INTERACT, "chest interacts"
+    HAS     B_TNT, BF_INTERACT, "tnt interacts"
+    WEQ     blk_flags, B_AIR, BF_REPLACEABLE, "air flags == BF_REPLACEABLE"
+ENDP
+
+PROC t_flag_invariants
+    TEST "flag_invariants_every_block"
+    xor     ebx, ebx
+.loop:
+    LDW     esi, blk_flags, rbx
+    test    esi, BF_OPAQUE
+    jz      .liquid
+    BEQ     blk_opacity, rbx, 15, "opaque -> opacity 15"
+    mov     eax, esi
+    and     eax, BF_SOLID
+    CKT     eax, rbx, "opaque -> solid"
+    mov     eax, esi
+    and     eax, BF_CUTOUT|BF_TRANSLUCENT
+    CKF     eax, rbx, "opaque -> not cutout / translucent"
+    BEQ     blk_model, rbx, MODEL_CUBE, "opaque -> cube model"
+.liquid:
+    test    esi, BF_LIQUID
+    jz      .plant
+    BEQ     blk_model, rbx, MODEL_LIQUID, "liquid -> liquid model"
+.plant:
+    test    esi, BF_PLANT
+    jz      .leaves
+    mov     eax, esi
+    and     eax, BF_SUPPORT
+    CKT     eax, rbx, "plant -> needs support"
+.leaves:
+    test    esi, BF_LEAVES
+    jz      .select
+    BEQ     blk_opacity, rbx, 1, "leaves -> opacity 1"
+.select:
+    LDB     eax, blocks_defined, rbx
+    test    eax, eax
+    jz      .next
+    test    ebx, ebx
+    jz      .next
+    test    esi, BF_LIQUID
+    jnz     .next
+    mov     eax, esi
+    and     eax, BF_SELECTABLE
+    CKT     eax, rbx, "every real non-liquid non-air block is selectable"
+.next:
+    inc     ebx
+    cmp     ebx, 256
+    jb      .loop
+ENDP
+
+; face order: +x -x +y -y +z -z
+PROC tex_face
+    lea     rax, [rel blk_tex]
+    imul    ecx, ecx, 6
+    add     ecx, edx
+    movzx   eax, byte [rax+rcx]
+ENDP
     ; v1 temporary guard (test_tables #21)
     xor     r11d, r11d ; clear v1 slot 21
     ; v1 temporary guard (test_tables #23)
@@ -386,21 +500,3 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 43
     ; v1 temporary guard (test_tables #45)
     xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (test_tables #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (test_tables #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (test_tables #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (test_tables #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (test_tables #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (test_tables #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (test_tables #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (test_tables #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (test_tables #63)
-    xor     r11d, r11d ; clear v1 slot 63
