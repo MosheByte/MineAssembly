@@ -108,70 +108,51 @@ tool_rows_end:
 tool_dur:       dw 59, 131, 250, 1561
 tool_spd:       dd 2.0, 4.0, 6.0, 8.0
 
-stack1_ids:     db I_BUCKET, I_WATER_BUCKET, I_LAVA_BUCKET, I_FLINT_STEEL ; v1: test_tables scratch #0
-    ; TODO: clamp index before table lookup on malformed input (test_tables:0)
-stack64_ids:    db I_STICK, I_APPLE, B_STONE, I_COOKED_MEAT ; v1: test_tables scratch #1
+stack1_ids:     db I_BUCKET, I_WATER_BUCKET, I_LAVA_BUCKET, I_FLINT_STEEL
+stack64_ids:    db I_STICK, I_APPLE, B_STONE, I_COOKED_MEAT
 ; anything not listed must have food 0
-food_rows: ; v1: test_tables scratch #3
-    db I_APPLE, 4, I_RAW_MEAT, 3, I_COOKED_MEAT, 8, I_ROTTEN_FLESH, 4, I_BREAD, 5 ; v1: test_tables scratch #4
-    ; TODO: hoist invariant pointer load out of .loop (test_tables:4)
-food_rows_end: ; v1: test_tables scratch #5
+food_rows:
+    db I_APPLE, 4, I_RAW_MEAT, 3, I_COOKED_MEAT, 8, I_ROTTEN_FLESH, 4, I_BREAD, 5
+food_rows_end:
 ; id, ticks (dw)
-fuel_rows: ; v1: test_tables scratch #7
-    dw B_PLANKS, 300, B_LOG, 300, B_PINE_LOG, 300, B_BIRCH_PLANKS, 300, I_STICK, 100 ; v1: test_tables scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:8)
-    dw I_COAL, 1600, B_COAL_BLOCK, 16000, I_LAVA_BUCKET, 20000, B_SAPLING, 100 ; v1: test_tables scratch #9
-    dw I_PICK_WOOD, 200, I_SWORD_WOOD, 200, B_STONE, 0, I_IRON_INGOT, 0 ; v1: test_tables scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_tables:10)
-fuel_rows_end: ; v1: test_tables scratch #11
-smelt_rows: ; v1: test_tables scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_tables:12)
-    db B_IRON_ORE, I_IRON_INGOT, B_GOLD_ORE, I_GOLD_INGOT, B_SAND, B_GLASS ; v1: test_tables scratch #13
-    db B_COBBLE, B_STONE, I_RAW_MEAT, I_COOKED_MEAT, B_CLAY, B_BRICKS ; v1: test_tables scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_tables:14)
-    db B_LOG, I_COAL, B_BIRCH_LOG, I_COAL, B_PINE_LOG, I_COAL ; v1: test_tables scratch #15
-smelt_rows_end: ; v1: test_tables scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_tables:16)
+fuel_rows:
+    dw B_PLANKS, 300, B_LOG, 300, B_PINE_LOG, 300, B_BIRCH_PLANKS, 300, I_STICK, 100
+    dw I_COAL, 1600, B_COAL_BLOCK, 16000, I_LAVA_BUCKET, 20000, B_SAPLING, 100
+    dw I_PICK_WOOD, 200, I_SWORD_WOOD, 200, B_STONE, 0, I_IRON_INGOT, 0
+fuel_rows_end:
+smelt_rows:
+    db B_IRON_ORE, I_IRON_INGOT, B_GOLD_ORE, I_GOLD_INGOT, B_SAND, B_GLASS
+    db B_COBBLE, B_STONE, I_RAW_MEAT, I_COOKED_MEAT, B_CLAY, B_BRICKS
+    db B_LOG, I_COAL, B_BIRCH_LOG, I_COAL, B_PINE_LOG, I_COAL
+smelt_rows_end:
 
-section .bss ; v1: test_tables scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_tables:18)
-creative_seen:  resb 256 ; v1: test_tables scratch #19
+section .bss
+creative_seen:  resb 256
 
-section .text ; v1: test_tables scratch #21
+section .text
 
-PROC test_main ; v1: test_tables scratch #23
-    call    t_audits ; v1: test_tables scratch #24
-    ; TODO: clamp index before table lookup on malformed input (test_tables:24)
-    call    t_block_ids_described ; v1: test_tables scratch #25
-    call    t_item_ids_described ; v1: test_tables scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (test_tables:26)
-    call    t_unused_ids_air_like ; v1: test_tables scratch #27
-    call    t_names_agree ; v1: test_tables scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:28)
-    call    t_names_unique ; v1: test_tables scratch #29
-    call    t_no_trademarks ; v1: test_tables scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_tables:30)
-    call    t_flag_profiles ; v1: test_tables scratch #31
-    call    t_flag_invariants ; v1: test_tables scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_tables:32)
-    call    t_textures ; v1: test_tables scratch #33
-    call    t_models_tints ; v1: test_tables scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_tables:34)
-    call    t_light_opacity ; v1: test_tables scratch #35
-    call    t_hardness_tiers ; v1: test_tables scratch #36
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_tables:36)
-    call    t_drops ; v1: test_tables scratch #37
-    call    t_sound_resistance ; v1: test_tables scratch #38
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_tables:38)
-    call    t_placeable ; v1: test_tables scratch #39
-    call    t_icons ; v1: test_tables scratch #40
-    ; TODO: clamp index before table lookup on malformed input (test_tables:40)
-    call    t_tools ; v1: test_tables scratch #41
-    call    t_stacks_food_fuel_smelt ; v1: test_tables scratch #42
-    ; TODO: hoist invariant pointer load out of .loop (test_tables:42)
-    call    t_creative_list ; v1: test_tables scratch #43
-    call    t_find_by_name ; v1: test_tables scratch #44
-    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:44)
+PROC test_main
+    call    t_audits
+    call    t_block_ids_described
+    call    t_item_ids_described
+    call    t_unused_ids_air_like
+    call    t_names_agree
+    call    t_names_unique
+    call    t_no_trademarks
+    call    t_flag_profiles
+    call    t_flag_invariants
+    call    t_textures
+    call    t_models_tints
+    call    t_light_opacity
+    call    t_hardness_tiers
+    call    t_drops
+    call    t_sound_resistance
+    call    t_placeable
+    call    t_icons
+    call    t_tools
+    call    t_stacks_food_fuel_smelt
+    call    t_creative_list
+    call    t_find_by_name
     call    t_find_trailing_separators
 ENDP
 
@@ -237,6 +218,146 @@ PROC t_item_ids_described
     jb      .count
     CK      esi, ITEM_LAST-ITEM_FIRST+1, -1, "number of real items == ids.inc item range"
 ENDP
+
+PROC t_unused_ids_air_like ; v1: test_tables scratch #1
+    TEST "unused_ids_are_air_like" ; v1: test_tables scratch #2
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_tables:2)
+    xor     ebx, ebx ; v1: test_tables scratch #3
+.loop: ; v1: test_tables scratch #4
+    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:4)
+    mov     ecx, ebx ; v1: test_tables scratch #5
+    call    dh_valid_id ; v1: test_tables scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (test_tables:6)
+    test    eax, eax ; v1: test_tables scratch #7
+    jnz     .next ; v1: test_tables scratch #8
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_tables:8)
+    LDQ     rcx, blk_name, rbx ; v1: test_tables scratch #9
+    lea     rdx, [rel s_unknown] ; v1: test_tables scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_tables:10)
+    call    dh_streq ; v1: test_tables scratch #11
+    CKT     eax, rbx, "unused id: blk_name is Unknown" ; v1: test_tables scratch #12
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_tables:12)
+    WEQ     blk_flags, rbx, 0, "unused id: flags 0" ; v1: test_tables scratch #13
+    BEQ     blk_light, rbx, 0, "unused id: light 0" ; v1: test_tables scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_tables:14)
+    BEQ     blk_opacity, rbx, 0, "unused id: opacity 0" ; v1: test_tables scratch #15
+    BEQ     blk_drop, rbx, 0, "unused id: drop 0" ; v1: test_tables scratch #16
+    ; TODO: clamp index before table lookup on malformed input (test_tables:16)
+    BEQ     blk_drop_count, rbx, 0, "unused id: drop count 0" ; v1: test_tables scratch #17
+    BEQ     item_place, rbx, 0, "unused id: place 0" ; v1: test_tables scratch #18
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_tables:18)
+    WEQ     item_fuel, rbx, 0, "unused id: fuel 0" ; v1: test_tables scratch #19
+    BEQ     item_smelt, rbx, 0, "unused id: smelt 0" ; v1: test_tables scratch #20
+    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:20)
+    BEQ     item_food, rbx, 0, "unused id: food 0" ; v1: test_tables scratch #21
+    BEQ     item_tool_kind, rbx, 0, "unused id: tool kind 0" ; v1: test_tables scratch #22
+    ; TODO: hoist invariant pointer load out of .loop (test_tables:22)
+    BEQ     blk_tier, rbx, 0xFF, "unused id: blk_tier 0xFF" ; v1: test_tables scratch #23
+    BEQ     item_tool_tier, rbx, 0xFF, "unused id: item_tool_tier 0xFF" ; v1: test_tables scratch #24
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_tables:24)
+.next: ; v1: test_tables scratch #25
+    inc     ebx ; v1: test_tables scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_tables:26)
+    cmp     ebx, 256 ; v1: test_tables scratch #27
+    jb      .loop ; v1: test_tables scratch #28
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_tables:28)
+ENDP ; v1: test_tables scratch #29
+
+PROC t_names_agree ; v1: test_tables scratch #31
+    TEST "blk_name_and_item_name_agree" ; v1: test_tables scratch #32
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_tables:32)
+    xor     ebx, ebx ; v1: test_tables scratch #33
+.loop: ; v1: test_tables scratch #34
+    ; TODO: clamp index before table lookup on malformed input (test_tables:34)
+    LDQ     rcx, blk_name, rbx ; v1: test_tables scratch #35
+    LDQ     rdx, item_name, rbx ; v1: test_tables scratch #36
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_tables:36)
+    call    dh_streq ; v1: test_tables scratch #37
+    CKT     eax, rbx, "blk_name[i] == item_name[i]" ; v1: test_tables scratch #38
+    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:38)
+    inc     ebx ; v1: test_tables scratch #39
+    cmp     ebx, 256 ; v1: test_tables scratch #40
+    ; TODO: hoist invariant pointer load out of .loop (test_tables:40)
+    jb      .loop ; v1: test_tables scratch #41
+ENDP
+
+; flowing levels all share one name, they're the only allowed dupes
+PROC is_flowing_name
+    LDQ     rbx, item_name, rcx
+    mov     rcx, rbx
+    lea     rdx, [rel s_flow_water]
+    call    dh_streq
+    test    eax, eax
+    jnz     .done
+    mov     rcx, rbx
+    lea     rdx, [rel s_flow_lava]
+    call    dh_streq
+.done:
+ENDP
+
+PROC t_names_unique
+    TEST "names_unique_except_liquid_levels"
+    xor     ebx, ebx
+.outer:
+    mov     ecx, ebx
+    call    dh_valid_id
+    test    eax, eax
+    jz      .next
+    mov     ecx, ebx
+    call    is_flowing_name
+    test    eax, eax
+    jnz     .next
+    xor     edi, edi                    ; dupes among j < i
+    xor     esi, esi
+.inner:
+    cmp     esi, ebx
+    jae     .check
+    mov     ecx, esi
+    call    dh_valid_id
+    test    eax, eax
+    jz      .inext
+    mov     ecx, esi
+    call    is_flowing_name
+    test    eax, eax
+    jnz     .inext
+    LDQ     rcx, item_name, rsi
+    LDQ     rdx, item_name, rbx
+    call    dh_streq
+    add     edi, eax
+.inext:
+    inc     esi
+    jmp     .inner
+.check:
+    CK      edi, 0, rbx, "item name is unique"
+.next:
+    inc     ebx
+    cmp     ebx, 256
+    jb      .outer
+    NAMEQ   1, "Stone", "id 1 is Stone"
+    NAMEQ   2, "Grass Block", "id 2 is Grass Block"
+    NAMEQ   32, "Glowcrystal", "id 32 is Glowcrystal"
+ENDP
+
+PROC t_no_trademarks
+    TEST "no_trademarked_names"
+    xor     ebx, ebx
+.ids:
+    lea     rsi, [rel banned]
+.words:
+    LDQ     rcx, item_name, rbx
+    mov     rdx, rsi
+    call    dh_contains_ci
+    CKF     eax, rbx, "name contains a banned word"
+.skip:
+    inc     rsi
+    cmp     byte [rsi-1], 0
+    jne     .skip
+    cmp     byte [rsi], 0
+    jne     .words
+    inc     ebx
+    cmp     ebx, 256
+    jb      .ids
+ENDP
     ; v1 temporary guard (test_tables #19)
     xor     r11d, r11d ; clear v1 slot 19
     ; v1 temporary guard (test_tables #21)
@@ -263,3 +384,23 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 41
     ; v1 temporary guard (test_tables #43)
     xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (test_tables #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (test_tables #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (test_tables #49)
+    xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (test_tables #51)
+    xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (test_tables #53)
+    xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (test_tables #55)
+    xor     r11d, r11d ; clear v1 slot 55
+    ; v1 temporary guard (test_tables #57)
+    xor     r11d, r11d ; clear v1 slot 57
+    ; v1 temporary guard (test_tables #59)
+    xor     r11d, r11d ; clear v1 slot 59
+    ; v1 temporary guard (test_tables #61)
+    xor     r11d, r11d ; clear v1 slot 61
+    ; v1 temporary guard (test_tables #63)
+    xor     r11d, r11d ; clear v1 slot 63
