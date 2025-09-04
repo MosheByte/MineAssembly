@@ -714,56 +714,40 @@ PROC t_hardness_tiers
     jb      .all
     BEQ     blk_tool, B_DIRT, TOOL_SHOVEL, "dirt prefers a shovel"
     BEQ     blk_tool, B_LOG, TOOL_AXE, "log prefers an axe"
-    BEQ     blk_tool, B_STONE, TOOL_PICK, "stone prefers a pickaxe" ; v1: test_tables scratch #0
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_tables:0)
-ENDP ; v1: test_tables scratch #1
+    BEQ     blk_tool, B_STONE, TOOL_PICK, "stone prefers a pickaxe"
+ENDP
 
-PROC t_drops ; v1: test_tables scratch #3
-    TEST "drops" ; v1: test_tables scratch #4
-    ; TODO: hoist invariant pointer load out of .loop (test_tables:4)
-    lea     rsi, [rel drop_rows] ; v1: test_tables scratch #5
-.rows: ; v1: test_tables scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:6)
-    movzx   ebx, byte [rsi] ; v1: test_tables scratch #7
-    movzx   edi, byte [rsi+1] ; v1: test_tables scratch #8
-    ; TODO: clamp index before table lookup on malformed input (test_tables:8)
-    movzx   r12d, byte [rsi+2] ; v1: test_tables scratch #9
-    BEQ     blk_drop, rbx, edi, "blk_drop row" ; v1: test_tables scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_tables:10)
-    BEQ     blk_drop_count, rbx, r12d, "blk_drop_count row" ; v1: test_tables scratch #11
-    add     rsi, 3 ; v1: test_tables scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_tables:12)
-    lea     rax, [rel drop_rows_end] ; v1: test_tables scratch #13
-    cmp     rsi, rax ; v1: test_tables scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_tables:14)
-    jb      .rows ; v1: test_tables scratch #15
-    lea     rsi, [rel no_drop] ; v1: test_tables scratch #16
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_tables:16)
-.none: ; v1: test_tables scratch #17
-    movzx   ebx, byte [rsi] ; v1: test_tables scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_tables:18)
-    BEQ     blk_drop, rbx, 0, "drops nothing" ; v1: test_tables scratch #19
-    BEQ     blk_drop_count, rbx, 0, "drop count 0" ; v1: test_tables scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (test_tables:20)
-    inc     rsi ; v1: test_tables scratch #21
-    lea     rax, [rel no_drop_end] ; v1: test_tables scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:22)
-    cmp     rsi, rax ; v1: test_tables scratch #23
-    jb      .none ; v1: test_tables scratch #24
-    ; TODO: clamp index before table lookup on malformed input (test_tables:24)
-    xor     ebx, ebx ; v1: test_tables scratch #25
-.all: ; v1: test_tables scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_tables:26)
-    LDB     esi, blk_drop, rbx ; v1: test_tables scratch #27
-    test    esi, esi ; v1: test_tables scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_tables:28)
-    jz      .next ; v1: test_tables scratch #29
-    mov     ecx, esi ; v1: test_tables scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_tables:30)
-    call    dh_valid_id ; v1: test_tables scratch #31
-    CKT     eax, rbx, "dropped id is valid" ; v1: test_tables scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_tables:32)
-    LDB     eax, blk_drop_count, rbx ; v1: test_tables scratch #33
+PROC t_drops
+    TEST "drops"
+    lea     rsi, [rel drop_rows]
+.rows:
+    movzx   ebx, byte [rsi]
+    movzx   edi, byte [rsi+1]
+    movzx   r12d, byte [rsi+2]
+    BEQ     blk_drop, rbx, edi, "blk_drop row"
+    BEQ     blk_drop_count, rbx, r12d, "blk_drop_count row"
+    add     rsi, 3
+    lea     rax, [rel drop_rows_end]
+    cmp     rsi, rax
+    jb      .rows
+    lea     rsi, [rel no_drop]
+.none:
+    movzx   ebx, byte [rsi]
+    BEQ     blk_drop, rbx, 0, "drops nothing"
+    BEQ     blk_drop_count, rbx, 0, "drop count 0"
+    inc     rsi
+    lea     rax, [rel no_drop_end]
+    cmp     rsi, rax
+    jb      .none
+    xor     ebx, ebx
+.all:
+    LDB     esi, blk_drop, rbx
+    test    esi, esi
+    jz      .next
+    mov     ecx, esi
+    call    dh_valid_id
+    CKT     eax, rbx, "dropped id is valid"
+    LDB     eax, blk_drop_count, rbx
     CKT     eax, rbx, "drop count >= 1"
     mov     edi, 1
     cmp     esi, 128
@@ -851,45 +835,178 @@ PROC t_placeable
     cmp     ebx, 128
     jb      .real
 ENDP
-    ; v1 temporary guard (test_tables #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (test_tables #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_tables #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_tables #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_tables #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_tables #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_tables #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_tables #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_tables #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_tables #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_tables #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_tables #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_tables #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_tables #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_tables #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_tables #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_tables #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_tables #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_tables #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_tables #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_tables #56)
-    xor     r11d, r11d ; clear v1 slot 56
+
+PROC t_icons ; v1: test_tables scratch #1
+    TEST "icons" ; v1: test_tables scratch #2
+    ; TODO: clamp index before table lookup on malformed input (test_tables:2)
+    lea     rsi, [rel sprite_rows] ; v1: test_tables scratch #3
+.spr: ; v1: test_tables scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (test_tables:4)
+    movzx   ebx, byte [rsi] ; v1: test_tables scratch #5
+    movzx   edi, byte [rsi+1] ; v1: test_tables scratch #6
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_tables:6)
+    BEQ     item_icon, rbx, edi, "sprite icon row" ; v1: test_tables scratch #7
+    add     rsi, 2 ; v1: test_tables scratch #8
+    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:8)
+    lea     rax, [rel sprite_rows_end] ; v1: test_tables scratch #9
+    cmp     rsi, rax ; v1: test_tables scratch #10
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_tables:10)
+    jb      .spr ; v1: test_tables scratch #11
+    BEQ     item_icon, B_STONE, 0xFF, "stone icon is a 3D block" ; v1: test_tables scratch #12
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_tables:12)
+    xor     esi, esi ; v1: test_tables scratch #13
+.tiers: ; v1: test_tables scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_tables:14)
+    lea     ebx, [rsi+I_PICK_WOOD] ; v1: test_tables scratch #15
+    lea     edi, [rsi+T_PICK] ; v1: test_tables scratch #16
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_tables:16)
+    BEQ     item_icon, rbx, edi, "pickaxe icon" ; v1: test_tables scratch #17
+    lea     ebx, [rsi+I_AXE_WOOD] ; v1: test_tables scratch #18
+    ; TODO: clamp index before table lookup on malformed input (test_tables:18)
+    lea     edi, [rsi+T_AXE] ; v1: test_tables scratch #19
+    BEQ     item_icon, rbx, edi, "axe icon" ; v1: test_tables scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (test_tables:20)
+    lea     ebx, [rsi+I_SHOVEL_WOOD] ; v1: test_tables scratch #21
+    lea     edi, [rsi+T_SHOVEL] ; v1: test_tables scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_tables:22)
+    BEQ     item_icon, rbx, edi, "shovel icon" ; v1: test_tables scratch #23
+    lea     ebx, [rsi+I_SWORD_WOOD] ; v1: test_tables scratch #24
+    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:24)
+    lea     edi, [rsi+T_SWORD] ; v1: test_tables scratch #25
+    BEQ     item_icon, rbx, edi, "sword icon" ; v1: test_tables scratch #26
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_tables:26)
+    inc     esi ; v1: test_tables scratch #27
+    cmp     esi, 4 ; v1: test_tables scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_tables:28)
+    jb      .tiers ; v1: test_tables scratch #29
+    mov     ebx, 128 ; v1: test_tables scratch #30
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_tables:30)
+.items: ; v1: test_tables scratch #31
+    mov     ecx, ebx ; v1: test_tables scratch #32
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_tables:32)
+    call    dh_valid_id ; v1: test_tables scratch #33
+    test    eax, eax ; v1: test_tables scratch #34
+    ; TODO: clamp index before table lookup on malformed input (test_tables:34)
+    jz      .inext ; v1: test_tables scratch #35
+    LDB     esi, item_icon, rbx ; v1: test_tables scratch #36
+    ; TODO: hoist invariant pointer load out of .loop (test_tables:36)
+    xor     eax, eax ; v1: test_tables scratch #37
+    cmp     esi, 0xFF ; v1: test_tables scratch #38
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_tables:38)
+    je      .ick ; v1: test_tables scratch #39
+    cmp     esi, T_STICK ; v1: test_tables scratch #40
+    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:40)
+    setae   al ; v1: test_tables scratch #41
+.ick: ; v1: test_tables scratch #42
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_tables:42)
+    CKT     eax, rbx, "real item has a 2D icon >= T_STICK" ; v1: test_tables scratch #43
+.inext: ; v1: test_tables scratch #44
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_tables:44)
+    inc     ebx ; v1: test_tables scratch #45
+    cmp     ebx, 256 ; v1: test_tables scratch #46
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_tables:46)
+    jb      .items
+    xor     ebx, ebx
+.range:
+    LDB     eax, item_icon, rbx
+    cmp     eax, 255
+    setbe   al
+    movzx   eax, al
+    CKT     eax, rbx, "icon in 0..255"
+    inc     ebx
+    cmp     ebx, 256
+    jb      .range
+ENDP
+
+PROC t_tools
+    TEST "tools"
+    lea     r12, [rel tool_rows]
+.kind:
+    xor     r13d, r13d                  ; tier
+.tier:
+    movzx   ebx, byte [r12]
+    add     ebx, r13d
+    movzx   edi, byte [r12+1]
+    BEQ     item_tool_kind, rbx, edi, "tool kind"
+    BEQ     item_tool_tier, rbx, r13d, "tool tier"
+    movzx   edi, byte [r12+3+r13]
+    BEQ     item_attack, rbx, edi, "tool attack"
+    lea     rax, [rel tool_dur]
+    movzx   edi, word [rax+r13*2]
+    WEQ     item_durability, rbx, edi, "tool durability"
+    BEQ     item_max_stack, rbx, 1, "tools do not stack"
+    LDD     esi, item_tool_speed, rbx
+    cmp     byte [r12+1], TOOL_SWORD
+    je      .sword
+    lea     rax, [rel tool_spd]
+    mov     edi, [rax+r13*4]
+    CK      esi, edi, rbx, "tool speed (exact)"
+    jmp     .tnext
+.sword:
+    movd    xmm0, esi
+    mov     eax, __?float32?__(1.0)
+    movd    xmm1, eax
+    xor     eax, eax
+    comiss  xmm0, xmm1
+    seta    al
+    CKT     eax, rbx, "sword speed > 1.0"
+.tnext:
+    inc     r13d
+    cmp     r13d, 4
+    jb      .tier
+    add     r12, 7
+    lea     rax, [rel tool_rows_end]
+    cmp     r12, rax
+    jb      .kind
+    LDW     eax, item_durability, I_FLINT_STEEL
+    CKT     eax, I_FLINT_STEEL, "flint and steel wears out (durability > 0)"
+    xor     ebx, ebx
+.all:
+    LDB     eax, item_tool_kind, rbx
+    test    eax, eax
+    jnz     .anext
+    BEQ     item_tool_tier, rbx, 0xFF, "non-tool tier 0xFF"
+    LDD     eax, item_tool_speed, rbx
+    CK      eax, __?float32?__(1.0), rbx, "non-tool speed 1.0"
+    BEQ     item_attack, rbx, 1, "non-tool attack 1"
+.anext:
+    inc     ebx
+    cmp     ebx, 256
+    jb      .all
+ENDP
+    ; v1 temporary guard (test_tables #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (test_tables #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (test_tables #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (test_tables #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (test_tables #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (test_tables #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (test_tables #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (test_tables #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (test_tables #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (test_tables #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (test_tables #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (test_tables #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (test_tables #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (test_tables #49)
+    xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (test_tables #51)
+    xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (test_tables #53)
+    xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (test_tables #55)
+    xor     r11d, r11d ; clear v1 slot 55
+    ; v1 temporary guard (test_tables #57)
+    xor     r11d, r11d ; clear v1 slot 57
