@@ -952,60 +952,42 @@ PROC t_tools
     jb      .all
 ENDP
 
-PROC t_stacks_food_fuel_smelt ; v1: test_tables scratch #1
-    TEST "stacks_food_fuel_smelt" ; v1: test_tables scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_tables:2)
-    xor     ebx, ebx ; v1: test_tables scratch #3
-.stack: ; v1: test_tables scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_tables:4)
-    LDB     esi, item_max_stack, rbx ; v1: test_tables scratch #5
-    xor     eax, eax ; v1: test_tables scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_tables:6)
-    cmp     esi, 1 ; v1: test_tables scratch #7
-    jb      .sck ; v1: test_tables scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (test_tables:8)
-    cmp     esi, 64 ; v1: test_tables scratch #9
-    setbe   al ; v1: test_tables scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_tables:10)
-.sck: ; v1: test_tables scratch #11
-    CKT     eax, rbx, "1 <= max_stack <= 64" ; v1: test_tables scratch #12
-    ; TODO: clamp index before table lookup on malformed input (test_tables:12)
-    inc     ebx ; v1: test_tables scratch #13
-    cmp     ebx, 256 ; v1: test_tables scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:14)
-    jb      .stack ; v1: test_tables scratch #15
-    xor     esi, esi ; v1: test_tables scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_tables:16)
-.s1: ; v1: test_tables scratch #17
-    lea     rax, [rel stack1_ids] ; v1: test_tables scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_tables:18)
-    movzx   ebx, byte [rax+rsi] ; v1: test_tables scratch #19
-    BEQ     item_max_stack, rbx, 1, "buckets / flint and steel stack to 1" ; v1: test_tables scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_tables:20)
-    lea     rax, [rel stack64_ids] ; v1: test_tables scratch #21
-    movzx   ebx, byte [rax+rsi] ; v1: test_tables scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_tables:22)
-    BEQ     item_max_stack, rbx, 64, "plain items stack to 64" ; v1: test_tables scratch #23
-    inc     esi ; v1: test_tables scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (test_tables:24)
-    cmp     esi, 4 ; v1: test_tables scratch #25
-    jb      .s1 ; v1: test_tables scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_tables:26)
-    xor     ebx, ebx ; v1: test_tables scratch #27
-.food: ; v1: test_tables scratch #28
-    ; TODO: clamp index before table lookup on malformed input (test_tables:28)
-    xor     edi, edi ; v1: test_tables scratch #29
-    lea     rsi, [rel food_rows] ; v1: test_tables scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (test_tables:30)
-.frow: ; v1: test_tables scratch #31
-    movzx   eax, byte [rsi] ; v1: test_tables scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_tables:32)
-    cmp     eax, ebx ; v1: test_tables scratch #33
-    jne     .fnext ; v1: test_tables scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_tables:34)
-    movzx   edi, byte [rsi+1] ; v1: test_tables scratch #35
-.fnext: ; v1: test_tables scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_tables:36)
+PROC t_stacks_food_fuel_smelt
+    TEST "stacks_food_fuel_smelt"
+    xor     ebx, ebx
+.stack:
+    LDB     esi, item_max_stack, rbx
+    xor     eax, eax
+    cmp     esi, 1
+    jb      .sck
+    cmp     esi, 64
+    setbe   al
+.sck:
+    CKT     eax, rbx, "1 <= max_stack <= 64"
+    inc     ebx
+    cmp     ebx, 256
+    jb      .stack
+    xor     esi, esi
+.s1:
+    lea     rax, [rel stack1_ids]
+    movzx   ebx, byte [rax+rsi]
+    BEQ     item_max_stack, rbx, 1, "buckets / flint and steel stack to 1"
+    lea     rax, [rel stack64_ids]
+    movzx   ebx, byte [rax+rsi]
+    BEQ     item_max_stack, rbx, 64, "plain items stack to 64"
+    inc     esi
+    cmp     esi, 4
+    jb      .s1
+    xor     ebx, ebx
+.food:
+    xor     edi, edi
+    lea     rsi, [rel food_rows]
+.frow:
+    movzx   eax, byte [rsi]
+    cmp     eax, ebx
+    jne     .fnext
+    movzx   edi, byte [rsi+1]
+.fnext:
     add     rsi, 2
     lea     rax, [rel food_rows_end]
     cmp     rsi, rax
@@ -1119,45 +1101,146 @@ PROC t_creative_list
     je      .bnext
     cmp     ebx, B_FARMLAND
     je      .bnext
-    ; v1 temporary guard (test_tables #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_tables #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_tables #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_tables #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_tables #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_tables #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_tables #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_tables #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_tables #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_tables #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_tables #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_tables #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_tables #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_tables #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_tables #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_tables #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_tables #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_tables #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_tables #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_tables #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (test_tables #58)
-    xor     r11d, r11d ; clear v1 slot 58
+    cmp     ebx, B_WATER
+    je      .bnext
+    cmp     ebx, B_LAVA
+    je      .bnext
+    LDB     eax, creative_seen, rbx
+    CKT     eax, rbx, "every placeable block is in the creative list"
+.bnext:
+    inc     ebx
+    cmp     ebx, 128
+    jb      .blocks
+    movzx   eax, byte [r12]
+    CK      eax, B_GRASS, -1, "creative list starts with Grass Block"
+ENDP
+
+; rcx..rdx = FQ rows
+PROC run_queries
+    mov     rsi, rcx
+    mov     rdi, rdx
+.loop:
+    cmp     rsi, rdi
+    jae     .done
+    mov     rcx, [rsi]
+    call    item_find_by_name
+    mov     ebx, [rsi+8]
+    CK      eax, ebx, -1, "item_find_by_name(query)"
+    test    eax, eax
+    jnz     .next
+    mov     rcx, [rsi]
+    call    t_fail_detail
+.next:
+    add     rsi, 16
+    jmp     .loop
+.done:
+ENDP
+
+PROC t_find_by_name
+    TEST "find_by_name"
+    lea     rcx, [rel fq_table]
+    lea     rdx, [rel fq_table_end]
+    call    run_queries
+    xor     ecx, ecx
+    call    item_find_by_name
+    CK      eax, -1, -1, "item_find_by_name(NULL) == -1"
+    ; round trip compares names, not ids: flowing levels map back to the first one
+    xor     ebx, ebx
+.loop:
+    mov     ecx, ebx
+    call    dh_valid_id
+    test    eax, eax
+    jz      .next
+    LDQ     rcx, item_name, rbx
+    call    item_find_by_name
+    xor     edi, edi
+    cmp     eax, 255
+    ja      .ck                         ; catches -1 too
+    mov     eax, eax
+    LDQ     rcx, item_name, rax
+    LDQ     rdx, item_name, rbx
+    call    dh_streq
+    mov     edi, eax
+.ck:
+    CKT     edi, rbx, "item name round-trips through item_find_by_name"
+.next:
+    inc     ebx
+    cmp     ebx, 256
+    jb      .loop
+ENDP
+
+PROC t_find_trailing_separators
+    TEST "find_by_name_trailing_separators"
+    lea     rcx, [rel fq_trail]
+    lea     rdx, [rel fq_trail_end]
+    call    run_queries
+ENDP
+
+; 16 B row: dq query ptr, dq expected id
+%macro FQ 2.nolist
+    section .rdata
+    %%s: db %1, 0
+    section .data
+    dq %%s, %2
+%endmacro
+
+section .data
+align 8
+fq_table:
+    FQ "stone", B_STONE
+    FQ "Stone", B_STONE
+    FQ "GRASS_BLOCK", B_GRASS
+    FQ "grass block", B_GRASS
+    FQ "grass-block", B_GRASS
+    FQ "  diamond  ", I_DIAMOND
+    FQ "diamond_pickaxe", I_PICK_DIAMOND
+    FQ "Flint and Steel", I_FLINT_STEEL
+    FQ "flint_and_steel", I_FLINT_STEEL
+    FQ "light_blue_wool", B_WOOL+3
+    FQ "tnt", B_TNT
+    FQ "glowcrystal", B_GLOWCRYSTAL
+    FQ "water", B_WATER
+    FQ "flowing water", B_WATER_FLOW
+    FQ "air", 0
+    FQ "1", 1
+    FQ "42", 42
+    FQ "159", 159
+    FQ " 7 ", 7
+    FQ "92", -1
+    FQ "256", -1
+    FQ "99999", -1
+    FQ "diamond pick", I_PICK_DIAMOND
+    FQ "craft", B_CRAFT_TABLE
+    FQ "glowc", B_GLOWCRYSTAL
+    FQ "flowing w", B_WATER_FLOW        ; all levels share the name, still counts as unique
+    ; no prefix hit -> match on a trailing word, lowest id wins
+    FQ "leaves", B_LEAVES
+    FQ "LEAVES ", B_LEAVES
+    FQ "log", B_LOG
+    FQ "planks", B_PLANKS
+    FQ "wool", B_WOOL
+    FQ "needles", B_PINE_LEAVES
+    FQ "blue wool", B_WOOL+11           ; exact beats light blue's tail
+    FQ "steel", I_FLINT_STEEL
+    FQ "and steel", I_FLINT_STEEL
+    FQ "eaves", -1                      ; word boundaries only
+    FQ "leaf", -1
+    FQ "diamond ", I_DIAMOND
+    FQ "iron", -1                       ; ambiguous
+    FQ "unknown", -1
+    FQ "creeper", -1
+    FQ "", -1
+    FQ "   ", -1
+    FQ "s", -1                          ; never guess off 1 char
+fq_table_end:
+
+; any separator the matcher folds can also trail the query
+fq_trail:
+    FQ "stone ", B_STONE
+    FQ "stone_", B_STONE
+    FQ "stone-", B_STONE
+    FQ {"stone", 9}, B_STONE
+    FQ "stone_-_ ", B_STONE
+    FQ "stone x", -1
+    FQ "diamond pickaxe--", I_PICK_DIAMOND
+fq_trail_end:
