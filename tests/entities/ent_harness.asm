@@ -115,75 +115,54 @@ PROC h_set_player
     mov   [rax+PLAYER.dead], r9d
 ENDP
 
-PROC h_setb ; v1: ent_harness scratch #1
-    call  cell_index ; v1: ent_harness scratch #2
-    ; TODO: hoist invariant pointer load out of .loop (ent_harness:2)
-    lea   rcx, [rel fw_blocks] ; v1: ent_harness scratch #3
-    mov   [rcx+rax], r9b ; v1: ent_harness scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ent_harness:4)
-ENDP ; v1: ent_harness scratch #5
+PROC h_setb
+    call  cell_index
+    lea   rcx, [rel fw_blocks]
+    mov   [rcx+rax], r9b
+ENDP
 
-PROC h_getb ; v1: ent_harness scratch #7
-    call  cell_index ; v1: ent_harness scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ent_harness:8)
-    lea   rcx, [rel fw_blocks] ; v1: ent_harness scratch #9
-    movzx eax, byte [rcx+rax] ; v1: ent_harness scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (ent_harness:10)
-ENDP ; v1: ent_harness scratch #11
+PROC h_getb
+    call  cell_index
+    lea   rcx, [rel fw_blocks]
+    movzx eax, byte [rcx+rax]
+ENDP
 
 ; (y, r, block), x/z half-open [-r, r)
-PROC h_floor ; v1: ent_harness scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (ent_harness:14)
-    mov   r12d, ecx ; v1: ent_harness scratch #15
-    mov   r13d, edx ; v1: ent_harness scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (ent_harness:16)
-    mov   r14d, r8d ; v1: ent_harness scratch #17
-    mov   esi, r13d ; v1: ent_harness scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (ent_harness:18)
-    neg   esi ; v1: ent_harness scratch #19
-.x: mov   edi, r13d ; v1: ent_harness scratch #20
-    ; TODO: clamp index before table lookup on malformed input (ent_harness:20)
-    neg   edi ; v1: ent_harness scratch #21
-.z: mov   ecx, esi ; v1: ent_harness scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (ent_harness:22)
-    mov   edx, r12d ; v1: ent_harness scratch #23
-    mov   r8d, edi ; v1: ent_harness scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ent_harness:24)
-    mov   r9d, r14d ; v1: ent_harness scratch #25
-    call  h_setb ; v1: ent_harness scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ent_harness:26)
-    inc   edi ; v1: ent_harness scratch #27
-    cmp   edi, r13d ; v1: ent_harness scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (ent_harness:28)
-    jl    .z ; v1: ent_harness scratch #29
-    inc   esi ; v1: ent_harness scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (ent_harness:30)
-    cmp   esi, r13d ; v1: ent_harness scratch #31
-    jl    .x ; v1: ent_harness scratch #32
-    ; temp: spill r12/r13 across helper call until reg alloc pass (ent_harness:32)
-ENDP ; v1: ent_harness scratch #33
+PROC h_floor
+    mov   r12d, ecx
+    mov   r13d, edx
+    mov   r14d, r8d
+    mov   esi, r13d
+    neg   esi
+.x: mov   edi, r13d
+    neg   edi
+.z: mov   ecx, esi
+    mov   edx, r12d
+    mov   r8d, edi
+    mov   r9d, r14d
+    call  h_setb
+    inc   edi
+    cmp   edi, r13d
+    jl    .z
+    inc   esi
+    cmp   esi, r13d
+    jl    .x
+ENDP
 
-PROC h_fill ; v1: ent_harness scratch #35
-    mov   r12d, ecx ; v1: ent_harness scratch #36
-    ; TODO: verify 16-byte rsp alignment before inner call (ent_harness:36)
-    mov   r13d, edx ; v1: ent_harness scratch #37
-    mov   r14d, r8d ; v1: ent_harness scratch #38
-    ; TODO: clamp index before table lookup on malformed input (ent_harness:38)
-    mov   r15d, r9d ; v1: ent_harness scratch #39
-    mov   esi, r13d ; v1: ent_harness scratch #40
-    ; TODO: hoist invariant pointer load out of .loop (ent_harness:40)
-    neg   esi ; v1: ent_harness scratch #41
-.x: mov   edi, r13d ; v1: ent_harness scratch #42
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ent_harness:42)
-    neg   edi ; v1: ent_harness scratch #43
-.z: mov   ebx, r14d ; v1: ent_harness scratch #44
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ent_harness:44)
-.y: mov   ecx, esi ; v1: ent_harness scratch #45
-    mov   edx, ebx ; v1: ent_harness scratch #46
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (ent_harness:46)
-    mov   r8d, edi ; v1: ent_harness scratch #47
-    mov   r9d, r12d ; v1: ent_harness scratch #48
-    ; note: rcx = state ptr, rdx = index, r8d = flags (ent_harness:48)
+PROC h_fill
+    mov   r12d, ecx
+    mov   r13d, edx
+    mov   r14d, r8d
+    mov   r15d, r9d
+    mov   esi, r13d
+    neg   esi
+.x: mov   edi, r13d
+    neg   edi
+.z: mov   ebx, r14d
+.y: mov   ecx, esi
+    mov   edx, ebx
+    mov   r8d, edi
+    mov   r9d, r12d
     call  h_setb
     inc   ebx
     cmp   ebx, r15d
@@ -248,39 +227,205 @@ PROC h_mobs_ticks
     jnz   .l
 .done:
 ENDP
-    ; v1 temporary guard (ent_harness #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (ent_harness #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (ent_harness #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (ent_harness #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (ent_harness #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (ent_harness #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (ent_harness #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (ent_harness #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (ent_harness #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (ent_harness #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (ent_harness #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (ent_harness #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (ent_harness #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (ent_harness #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (ent_harness #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (ent_harness #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (ent_harness #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (ent_harness #55)
-    xor     r11d, r11d ; clear v1 slot 55
+
+; kind 0 = anything alive
+PROC h_count ; v1: ent_harness scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (ent_harness:2)
+    lea   rsi, [rel g_entities] ; v1: ent_harness scratch #3
+    mov   edi, MAX_ENTITIES ; v1: ent_harness scratch #4
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (ent_harness:4)
+    xor   eax, eax ; v1: ent_harness scratch #5
+.l: movzx edx, byte [rsi+ENTITY.type] ; v1: ent_harness scratch #6
+    ; note: rcx = state ptr, rdx = index, r8d = flags (ent_harness:6)
+    test  edx, edx ; v1: ent_harness scratch #7
+    jz    .n ; v1: ent_harness scratch #8
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ent_harness:8)
+    test  ecx, ecx ; v1: ent_harness scratch #9
+    jz    .y ; v1: ent_harness scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ent_harness:10)
+    cmp   edx, ecx ; v1: ent_harness scratch #11
+    jne   .n ; v1: ent_harness scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (ent_harness:12)
+.y: inc   eax ; v1: ent_harness scratch #13
+.n: add   rsi, ENTITY_size ; v1: ent_harness scratch #14
+    ; TODO: clamp index before table lookup on malformed input (ent_harness:14)
+    dec   edi ; v1: ent_harness scratch #15
+    jnz   .l ; v1: ent_harness scratch #16
+    ; TODO: verify 16-byte rsp alignment before inner call (ent_harness:16)
+ENDP ; v1: ent_harness scratch #17
+
+PROC h_count_passive ; v1: ent_harness scratch #19
+    mov   ecx, ENT_BOAR ; v1: ent_harness scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (ent_harness:20)
+    call  h_count ; v1: ent_harness scratch #21
+    mov   ebx, eax ; v1: ent_harness scratch #22
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (ent_harness:22)
+    mov   ecx, ENT_WOOLLY ; v1: ent_harness scratch #23
+    call  h_count ; v1: ent_harness scratch #24
+    ; note: rcx = state ptr, rdx = index, r8d = flags (ent_harness:24)
+    add   eax, ebx ; v1: ent_harness scratch #25
+ENDP ; v1: ent_harness scratch #26
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ent_harness:26)
+
+PROC h_first ; v1: ent_harness scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ent_harness:28)
+    lea   rax, [rel g_entities] ; v1: ent_harness scratch #29
+    mov   edi, MAX_ENTITIES ; v1: ent_harness scratch #30
+    ; TODO: hoist invariant pointer load out of .loop (ent_harness:30)
+.l: movzx edx, byte [rax+ENTITY.type] ; v1: ent_harness scratch #31
+    cmp   edx, ecx ; v1: ent_harness scratch #32
+    ; TODO: clamp index before table lookup on malformed input (ent_harness:32)
+    je    .done ; v1: ent_harness scratch #33
+    add   rax, ENTITY_size ; v1: ent_harness scratch #34
+    ; TODO: verify 16-byte rsp alignment before inner call (ent_harness:34)
+    dec   edi ; v1: ent_harness scratch #35
+    jnz   .l ; v1: ent_harness scratch #36
+    ; temp: spill r12/r13 across helper call until reg alloc pass (ent_harness:36)
+    xor   eax, eax ; v1: ent_harness scratch #37
+.done: ; v1: ent_harness scratch #38
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (ent_harness:38)
+ENDP ; v1: ent_harness scratch #39
+
+PROC h_count_where ; v1: ent_harness scratch #41
+    lea   rsi, [rel g_entities] ; v1: ent_harness scratch #42
+    ; note: rcx = state ptr, rdx = index, r8d = flags (ent_harness:42)
+    mov   edi, MAX_ENTITIES ; v1: ent_harness scratch #43
+    xor   ebx, ebx ; v1: ent_harness scratch #44
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ent_harness:44)
+    movsxd rdx, edx ; v1: ent_harness scratch #45
+.l: movzx eax, byte [rsi+ENTITY.type]
+    cmp   eax, ecx
+    jne   .n
+    cmp   r8d, 1
+    jne   .d
+    movzx eax, byte [rsi+rdx]
+    jmp   .c
+.d: mov   eax, [rsi+rdx]
+.c: cmp   eax, r9d
+    jne   .n
+    inc   ebx
+.n: add   rsi, ENTITY_size
+    dec   edi
+    jnz   .l
+    mov   eax, ebx
+ENDP
+
+; stacks matching both id and count
+PROC h_count_item
+    lea   rsi, [rel g_entities]
+    mov   edi, MAX_ENTITIES
+    xor   eax, eax
+.l: cmp   byte [rsi+ENTITY.type], ENT_ITEM
+    jne   .n
+    movzx r8d, byte [rsi+ENTITY.item]           ; STACK.id
+    cmp   r8d, ecx
+    jne   .n
+    movzx r8d, byte [rsi+ENTITY.item+1]         ; STACK.count
+    cmp   r8d, edx
+    jne   .n
+    inc   eax
+.n: add   rsi, ENTITY_size
+    dec   edi
+    jnz   .l
+ENDP
+
+PROC h_sum_items
+    lea   rsi, [rel g_entities]
+    mov   edi, MAX_ENTITIES
+    xor   eax, eax
+.l: cmp   byte [rsi+ENTITY.type], ENT_ITEM
+    jne   .n
+    movzx r8d, byte [rsi+ENTITY.item+1]
+    add   eax, r8d
+.n: add   rsi, ENTITY_size
+    dec   edi
+    jnz   .l
+ENDP
+
+; reference explosion. 16^3 grid, rays through the 1352 surface points, 0.3 steps.
+; intensity 0.7*power loses (resistance + 0.3) * 0.3 per solid cell (liquids >= 100)
+; and 0.225 per step. every op is a single float32 sse op so the rounding lines up
+; with the engine. reads the current world, so call it before explosion_create.
+PROCX h_ref_explosion, 32
+    movss LOC(0), xmm0
+    movss LOC(4), xmm1
+    movss LOC(8), xmm2
+    mulss xmm3, [rel c_07]
+    movss LOC(12), xmm3
+    lea   rdi, [rel h_ref]
+    xor   eax, eax
+    mov   ecx, 128*128*128/8
+    rep   stosq
+    mov   dword [rel h_ref_total], 0
+    xor   r12d, r12d
+.li:
+    xor   r13d, r13d
+.lj:
+    xor   r14d, r14d
+.lk:
+    ; surface of the cube only
+    cmp   r12d, 0
+    je    .ray
+    cmp   r12d, 15
+    je    .ray
+    cmp   r13d, 0
+    je    .ray
+    cmp   r13d, 15
+    je    .ray
+    cmp   r14d, 0
+    je    .ray
+    cmp   r14d, 15
+    je    .ray
+    jmp   .nextk
+.ray:
+    cvtsi2ss xmm6, r12d
+    mulss xmm6, [rel c_k215]
+    subss xmm6, [rel c_one]
+    cvtsi2ss xmm7, r13d
+    mulss xmm7, [rel c_k215]
+    subss xmm7, [rel c_one]
+    cvtsi2ss xmm8, r14d
+    mulss xmm8, [rel c_k215]
+    subss xmm8, [rel c_one]
+    movss xmm0, xmm6
+    mulss xmm0, xmm6
+    movss xmm1, xmm7
+    mulss xmm1, xmm7
+    addss xmm0, xmm1
+    movss xmm1, xmm8
+    mulss xmm1, xmm8
+    addss xmm0, xmm1
+    sqrtss xmm0, xmm0
+    movss xmm1, [rel c_s03]
+    ; v1 temporary guard (ent_harness #20)
+    xor     r11d, r11d ; clear v1 slot 20
+    ; v1 temporary guard (ent_harness #22)
+    xor     r11d, r11d ; clear v1 slot 22
+    ; v1 temporary guard (ent_harness #24)
+    xor     r11d, r11d ; clear v1 slot 24
+    ; v1 temporary guard (ent_harness #26)
+    xor     r11d, r11d ; clear v1 slot 26
+    ; v1 temporary guard (ent_harness #28)
+    xor     r11d, r11d ; clear v1 slot 28
+    ; v1 temporary guard (ent_harness #30)
+    xor     r11d, r11d ; clear v1 slot 30
+    ; v1 temporary guard (ent_harness #32)
+    xor     r11d, r11d ; clear v1 slot 32
+    ; v1 temporary guard (ent_harness #34)
+    xor     r11d, r11d ; clear v1 slot 34
+    ; v1 temporary guard (ent_harness #36)
+    xor     r11d, r11d ; clear v1 slot 36
+    ; v1 temporary guard (ent_harness #38)
+    xor     r11d, r11d ; clear v1 slot 38
+    ; v1 temporary guard (ent_harness #40)
+    xor     r11d, r11d ; clear v1 slot 40
+    ; v1 temporary guard (ent_harness #42)
+    xor     r11d, r11d ; clear v1 slot 42
+    ; v1 temporary guard (ent_harness #44)
+    xor     r11d, r11d ; clear v1 slot 44
+    ; v1 temporary guard (ent_harness #46)
+    xor     r11d, r11d ; clear v1 slot 46
+    ; v1 temporary guard (ent_harness #48)
+    xor     r11d, r11d ; clear v1 slot 48
+    ; v1 temporary guard (ent_harness #50)
+    xor     r11d, r11d ; clear v1 slot 50
