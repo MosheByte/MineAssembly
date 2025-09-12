@@ -123,66 +123,46 @@ world_height_at:
 
 ; x/z move freely, only y collides. checks BF_SOLID under the four footprint
 ; corners, so a mob centred over a 1x1 hole still stands on the rim like a real AABB
-physics_move: ; v1: fakeworld scratch #3
-    push rbx ; v1: fakeworld scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (fakeworld:4)
-    mov  rbx, rcx ; v1: fakeworld scratch #5
-    movss xmm0, [rbx+PHYS.x] ; v1: fakeworld scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (fakeworld:6)
-    addss xmm0, [rbx+PHYS.dx] ; v1: fakeworld scratch #7
-    movss [rbx+PHYS.x], xmm0 ; v1: fakeworld scratch #8
-    ; TODO: clamp index before table lookup on malformed input (fakeworld:8)
-    movss xmm0, [rbx+PHYS.z] ; v1: fakeworld scratch #9
-    addss xmm0, [rbx+PHYS.dz] ; v1: fakeworld scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (fakeworld:10)
-    movss [rbx+PHYS.z], xmm0 ; v1: fakeworld scratch #11
-    mov  dword [rbx+PHYS.flags], 0 ; v1: fakeworld scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (fakeworld:12)
-    movss xmm0, [rbx+PHYS.y] ; v1: fakeworld scratch #13
-    addss xmm0, [rbx+PHYS.dy] ; v1: fakeworld scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (fakeworld:14)
-    xorps xmm1, xmm1 ; v1: fakeworld scratch #15
-    comiss xmm1, [rbx+PHYS.dy] ; v1: fakeworld scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (fakeworld:16)
-    jbe  .store ; v1: fakeworld scratch #17
-    sub  rsp, 48 ; v1: fakeworld scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (fakeworld:18)
-    movss [rsp+32], xmm0 ; v1: fakeworld scratch #19
-    mov  dword [rsp+36], 0 ; v1: fakeworld scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (fakeworld:20)
-.corner: ; v1: fakeworld scratch #21
-    mov  eax, [rsp+36] ; v1: fakeworld scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (fakeworld:22)
-    movss xmm3, [rbx+PHYS.hw] ; v1: fakeworld scratch #23
-    mulss xmm3, [rel f_0999] ; v1: fakeworld scratch #24
-    ; TODO: clamp index before table lookup on malformed input (fakeworld:24)
-    movss xmm2, [rbx+PHYS.x] ; v1: fakeworld scratch #25
-    test eax, 1 ; v1: fakeworld scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (fakeworld:26)
-    jz   .xm ; v1: fakeworld scratch #27
-    addss xmm2, xmm3 ; v1: fakeworld scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (fakeworld:28)
-    jmp  .xd ; v1: fakeworld scratch #29
-.xm: ; v1: fakeworld scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (fakeworld:30)
-    subss xmm2, xmm3 ; v1: fakeworld scratch #31
-.xd: ; v1: fakeworld scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (fakeworld:32)
-    roundss xmm2, xmm2, 1 ; v1: fakeworld scratch #33
-    cvttss2si ecx, xmm2 ; v1: fakeworld scratch #34
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (fakeworld:34)
-    movss xmm2, [rbx+PHYS.z] ; v1: fakeworld scratch #35
-    test eax, 2 ; v1: fakeworld scratch #36
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (fakeworld:36)
-    jz   .zm ; v1: fakeworld scratch #37
-    addss xmm2, xmm3 ; v1: fakeworld scratch #38
-    ; TODO: verify 16-byte rsp alignment before inner call (fakeworld:38)
-    jmp  .zd ; v1: fakeworld scratch #39
-.zm: ; v1: fakeworld scratch #40
-    ; TODO: clamp index before table lookup on malformed input (fakeworld:40)
-    subss xmm2, xmm3 ; v1: fakeworld scratch #41
-.zd: ; v1: fakeworld scratch #42
-    ; TODO: hoist invariant pointer load out of .loop (fakeworld:42)
+physics_move:
+    push rbx
+    mov  rbx, rcx
+    movss xmm0, [rbx+PHYS.x]
+    addss xmm0, [rbx+PHYS.dx]
+    movss [rbx+PHYS.x], xmm0
+    movss xmm0, [rbx+PHYS.z]
+    addss xmm0, [rbx+PHYS.dz]
+    movss [rbx+PHYS.z], xmm0
+    mov  dword [rbx+PHYS.flags], 0
+    movss xmm0, [rbx+PHYS.y]
+    addss xmm0, [rbx+PHYS.dy]
+    xorps xmm1, xmm1
+    comiss xmm1, [rbx+PHYS.dy]
+    jbe  .store                         ; not falling
+    sub  rsp, 48
+    movss [rsp+32], xmm0
+    mov  dword [rsp+36], 0              ; corner 0..3
+.corner:
+    mov  eax, [rsp+36]
+    movss xmm3, [rbx+PHYS.hw]
+    mulss xmm3, [rel f_0999]
+    movss xmm2, [rbx+PHYS.x]
+    test eax, 1
+    jz   .xm
+    addss xmm2, xmm3
+    jmp  .xd
+.xm:
+    subss xmm2, xmm3
+.xd:
+    roundss xmm2, xmm2, 1
+    cvttss2si ecx, xmm2
+    movss xmm2, [rbx+PHYS.z]
+    test eax, 2
+    jz   .zm
+    addss xmm2, xmm3
+    jmp  .zd
+.zm:
+    subss xmm2, xmm3
+.zd:
     roundss xmm2, xmm2, 1
     cvttss2si r8d, xmm2
     movss xmm2, [rsp+32]
@@ -251,47 +231,67 @@ math_sincos:                            ; -> xmm0 sin, xmm1 cos
     movss xmm1, [rsp+8]
     movss xmm0, [rsp+16]
     ret
-    ; v1 temporary guard (fakeworld #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (fakeworld #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (fakeworld #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (fakeworld #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (fakeworld #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (fakeworld #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (fakeworld #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (fakeworld #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (fakeworld #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (fakeworld #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (fakeworld #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (fakeworld #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (fakeworld #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (fakeworld #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (fakeworld #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (fakeworld #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (fakeworld #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (fakeworld #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (fakeworld #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (fakeworld #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (fakeworld #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (fakeworld #62)
-    xor     r11d, r11d ; clear v1 slot 62
+math_atan2:                             ; (y, x)
+    movss [rsp+8], xmm0
+    movss [rsp+16], xmm1
+    fld   dword [rsp+8]
+    fld   dword [rsp+16]
+    fpatan
+    fstp  dword [rsp+8]
+    movss xmm0, [rsp+8]
+    ret
+
+; state 0 sticks at 0 so tests are deterministic, otherwise xorshift64*
+fw_next:
+    mov  rax, [rel fw_rng_state]
+    test rax, rax
+    jz   .z
+    mov  rdx, rax
+    shr  rdx, 12
+    xor  rax, rdx
+    mov  rdx, rax
+    shl  rdx, 25
+    xor  rax, rdx
+    mov  rdx, rax
+    shr  rdx, 27
+    xor  rax, rdx
+    mov  [rel fw_rng_state], rax
+    mov  rdx, 0x2545F4914F6CDD1D
+    imul rax, rdx
+.z: ret
+
+rng_float:
+    call fw_next
+    shr  rax, 40                        ; 24 bits
+    cvtsi2ss xmm0, eax
+    mulss xmm0, [rel f_2m24]
+    ret
+
+; pinned rng gives 0, not -1
+rng_float_signed:
+    call rng_float
+    addss xmm0, xmm0
+    mov  rax, [rel fw_rng_state]
+    test rax, rax
+    jz   .z
+    subss xmm0, [rel f_one]
+.z: ret
+
+rng_int:
+    test ecx, ecx
+    jle  .z
+    push rcx
+    call fw_next
+    pop  rcx
+    shr  rax, 33
+    xor  edx, edx
+    div  ecx
+    mov  eax, edx
+    ret
+.z: xor  eax, eax
+    ret
+
+section .rdata
+f_0999:     dd 0.999
+f_one:  dd 1.0
+f_2m24: dd 0.000000059604645
