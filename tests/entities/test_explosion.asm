@@ -113,75 +113,53 @@ PROC expl_air_destroys_nothing
     CHECK_EQ32 [rel explosion_last_count], 0, "nothing to destroy"
 ENDP
 
-PROC expl_dirt_matches_reference, 16 ; v1: test_explosion scratch #1
-    TEST "TestExplosion.test_dirt_matches_reference" ; v1: test_explosion scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_explosion:2)
-    call  h_reset ; v1: test_explosion scratch #3
-    FILL  B_DIRT ; v1: test_explosion scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_explosion:4)
-    REF_EXPLOSION 0.5, 64.5, 0.5, 4.0 ; v1: test_explosion scratch #5
-    mov   r15d, eax ; v1: test_explosion scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_explosion:6)
-    EXPLODE 0.5, 64.5, 0.5, 4.0 ; v1: test_explosion scratch #7
-    mov   ecx, 12 ; v1: test_explosion scratch #8
-    ; TODO: clamp index before table lookup on malformed input (test_explosion:8)
-    mov   edx, 52 ; v1: test_explosion scratch #9
-    mov   r8d, 76 ; v1: test_explosion scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_explosion:10)
-    call  h_destroyed ; v1: test_explosion scratch #11
-    mov   r14d, eax ; v1: test_explosion scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (test_explosion:12)
-    CHECK_EQ32 [rel explosion_last_count], r14d, "last_count = destroyed cells" ; v1: test_explosion scratch #13
-    mov   ecx, 12 ; v1: test_explosion scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_explosion:14)
-    mov   edx, 52 ; v1: test_explosion scratch #15
-    mov   r8d, 76 ; v1: test_explosion scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (test_explosion:16)
-    call  h_ref_symdiff ; v1: test_explosion scratch #17
-    CHECK_CMP eax, le, 2, "asm vs float32 reference: at most 2 cells differ" ; v1: test_explosion scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_explosion:18)
-    CHECK_CMP r14d, g, 20, "more than 20 destroyed" ; v1: test_explosion scratch #19
+PROC expl_dirt_matches_reference, 16
+    TEST "TestExplosion.test_dirt_matches_reference"
+    call  h_reset
+    FILL  B_DIRT
+    REF_EXPLOSION 0.5, 64.5, 0.5, 4.0
+    mov   r15d, eax
+    EXPLODE 0.5, 64.5, 0.5, 4.0
+    mov   ecx, 12
+    mov   edx, 52
+    mov   r8d, 76
+    call  h_destroyed
+    mov   r14d, eax
+    CHECK_EQ32 [rel explosion_last_count], r14d, "last_count = destroyed cells"
+    mov   ecx, 12
+    mov   edx, 52
+    mov   r8d, 76
+    call  h_ref_symdiff
+    CHECK_CMP eax, le, 2, "asm vs float32 reference: at most 2 cells differ"
+    CHECK_CMP r14d, g, 20, "more than 20 destroyed"
     ; max reach = 4.0 * 1.3 / (0.225 / 0.3) = 6.9333, so every hole is within rmax + 1
-    mov   r12d, -12 ; v1: test_explosion scratch #21
-.x: mov   r13d, -12 ; v1: test_explosion scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_explosion:22)
-.z: mov   ebx, 52 ; v1: test_explosion scratch #23
-.y: GETB  r12d, ebx, r13d ; v1: test_explosion scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_explosion:24)
-    test  eax, eax ; v1: test_explosion scratch #25
-    jnz   .ny ; v1: test_explosion scratch #26
-    ; TODO: clamp index before table lookup on malformed input (test_explosion:26)
-    cvtsi2ss xmm0, r12d ; v1: test_explosion scratch #27
-    mulss xmm0, xmm0 ; v1: test_explosion scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_explosion:28)
-    lea   eax, [rbx-64] ; v1: test_explosion scratch #29
-    cvtsi2ss xmm1, eax ; v1: test_explosion scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (test_explosion:30)
-    mulss xmm1, xmm1 ; v1: test_explosion scratch #31
-    addss xmm0, xmm1 ; v1: test_explosion scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_explosion:32)
-    cvtsi2ss xmm1, r13d ; v1: test_explosion scratch #33
-    mulss xmm1, xmm1 ; v1: test_explosion scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (test_explosion:34)
-    addss xmm0, xmm1 ; v1: test_explosion scratch #35
-    sqrtss xmm0, xmm0 ; v1: test_explosion scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_explosion:36)
+    mov   r12d, -12
+.x: mov   r13d, -12
+.z: mov   ebx, 52
+.y: GETB  r12d, ebx, r13d
+    test  eax, eax
+    jnz   .ny
+    cvtsi2ss xmm0, r12d                         ; the +0.5s cancel
+    mulss xmm0, xmm0
+    lea   eax, [rbx-64]
+    cvtsi2ss xmm1, eax
+    mulss xmm1, xmm1
+    addss xmm0, xmm1
+    cvtsi2ss xmm1, r13d
+    mulss xmm1, xmm1
+    addss xmm0, xmm1
+    sqrtss xmm0, xmm0
 
-    CHECK_FLT xmm0, 7.9333334, "destroyed cell inside rmax + 1" ; v1: test_explosion scratch #38
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_explosion:38)
-.ny:inc   ebx ; v1: test_explosion scratch #39
-    cmp   ebx, 76 ; v1: test_explosion scratch #40
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_explosion:40)
-    jle   .y ; v1: test_explosion scratch #41
-    inc   r13d ; v1: test_explosion scratch #42
-    ; TODO: clamp index before table lookup on malformed input (test_explosion:42)
-    cmp   r13d, 12 ; v1: test_explosion scratch #43
-    jle   .z ; v1: test_explosion scratch #44
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_explosion:44)
-    inc   r12d ; v1: test_explosion scratch #45
-    cmp   r12d, 12 ; v1: test_explosion scratch #46
-    ; TODO: verify 16-byte rsp alignment before inner call (test_explosion:46)
-    jle   .x ; v1: test_explosion scratch #47
+    CHECK_FLT xmm0, 7.9333334, "destroyed cell inside rmax + 1"
+.ny:inc   ebx
+    cmp   ebx, 76
+    jle   .y
+    inc   r13d
+    cmp   r13d, 12
+    jle   .z
+    inc   r12d
+    cmp   r12d, 12
+    jle   .x
 ENDP
 
 
@@ -259,41 +237,113 @@ PROC expl_tnt_blocks_are_primed_not_destroyed
     mov   ecx, 1
 .bad:
 
-    ; v1 temporary guard (test_explosion #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_explosion #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_explosion #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_explosion #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_explosion #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_explosion #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_explosion #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_explosion #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_explosion #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_explosion #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_explosion #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_explosion #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_explosion #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_explosion #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_explosion #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_explosion #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_explosion #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_explosion #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (test_explosion #58)
-    xor     r11d, r11d ; clear v1 slot 58
+    CHECK_TRUE ecx, "fuse within 10..30"
+.n: add   rbx, ENTITY_size
+    dec   r12d
+    jnz   .l
+    GETB  1, 64, 0
+    CHECK_EQ32 eax, 0, "primed TNT block removed"
+    GETB  3, 64, 3
+    CHECK_EQ32 eax, B_TNT, "unreached TNT stays"
+ENDP
+
+PROC expl_chain_reaction_cube
+    TEST "TestExplosion.test_chain_reaction_cube"
+    call  h_reset
+    ; 6x6x6 tnt has to go off completely, without the engine recursing
+    mov   r12d, -3
+.x: mov   r13d, -3
+.z: mov   r14d, 64
+.y: SETB  r12d, r14d, r13d, B_TNT
+    inc   r14d
+    cmp   r14d, 70
+    jl    .y
+    inc   r13d
+    cmp   r13d, 3
+    jl    .z
+    inc   r12d
+    cmp   r12d, 3
+    jl    .x
+    mov   ecx, 63
+    mov   edx, 30
+    mov   r8d, B_STONE
+    call  h_floor
+    SPAWN ENT_TNT, 0.5, 70.0, 0.5
+    mov   r15d, 400
+.tick:
+    TICK  1
+    COUNT ENT_TNT
+    test  eax, eax
+    jnz   .more
+    call  cube_tnt_left
+    test  eax, eax
+    jz    .over
+.more:
+    dec   r15d
+    jnz   .tick
+.over:
+    call  cube_tnt_left
+    CHECK_EQ32 eax, 0, "no TNT blocks remain"
+    COUNT ENT_TNT
+    CHECK_EQ32 eax, 0, "no primed TNT remains"
+ENDP
+
+
+PROC cube_tnt_left
+    mov   ecx, B_TNT
+    mov   edx, -3
+    mov   r8d, 3
+    mov   r9d, 64
+    mov   dword [rsp+32], 70
+    mov   dword [rsp+40], -3
+    mov   dword [rsp+48], 3
+    call  h_count_block_box
+ENDP
+
+PROC expl_drops_about_30_percent
+    TEST "TestExplosion.test_drops_about_30_percent"
+    call  h_reset
+    mov   qword [rel fw_rng_state], 987654321
+    FILL  B_DIRT
+    EXPLODE 0.5, 64.5, 0.5, 4.0
+    mov   r12d, [rel explosion_last_count]
+    call  h_sum_items
+    mov   r13d, eax
+    ; 0.15n < drops < 0.45n, scaled by 20 to stay in ints
+    imul  ebx, r13d, 20
+    imul  esi, r12d, 3
+    imul  edi, r12d, 9
+    CHECK_CMP ebx, g, esi, "drops > 15% of destroyed"
+    CHECK_CMP ebx, l, edi, "drops < 45% of destroyed"
+ENDP
+
+PROC expl_entity_damage_and_knockback
+    TEST "TestExplosion.test_entity_damage_and_knockback"
+    call  h_reset
+    SPAWN ENT_BOAR, 2.5, 64.0, 0.5
+    mov   r12, rax
+    SPAWN ENT_SHAMBLER, 9.5, 64.0, 0.5
+    mov   r13, rax
+    SPAWN_ITEM B_DIRT, 1, -2.5, 64.0, 0.5
+    mov   r14, rax
+    mov   dword [r14+ENTITY.vx], 0
+    mov   dword [r14+ENTITY.vy], 0
+    mov   dword [r14+ENTITY.vz], 0
+    EXPLODE 0.5, 64.5, 0.5, 4.0
+    CHECK_FLAG [r12+ENTITY.flags], EF_DEAD, "near boar killed"
+    CHECK_FGT dword [r12+ENTITY.vx], 0.0, "near boar pushed +x"
+    CHECK_EQ32 [r13+ENTITY.health], 20, "far shambler unhurt"
+    CHECK_EQ32 [r13+ENTITY.hurt_time], 0, "far shambler not flashing"
+    CHECK_FLT dword [r14+ENTITY.vx], 0.0, "item pushed -x"
+    movzx eax, byte [r14+ENTITY.type]
+    CHECK_EQ32 eax, ENT_ITEM, "item not destroyed"
+ENDP
+
+PROC expl_camera_shake
+    TEST "TestExplosion.test_camera_shake"
+    call  h_reset
+    SETP  3.0, 64.0, 0.5
+    EXPLODE 0.5, 64.5, 0.5, 4.0
+    CHECK_FGT dword [rel g_shake], 0.5, "shake > 0.5"
+    CHECK_FLE dword [rel g_shake], 2.5, "shake <= 2.5"
+ENDP
