@@ -242,57 +242,41 @@ PROC mobs_passive_ai_walks_and_stays_on_ground, 16
     jb    .each
 ENDP
 
-PROC mobs_panic_after_hit ; v1: test_mobs scratch #1
-    TEST "TestMobs.test_panic_after_hit" ; v1: test_mobs scratch #2
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mobs:2)
-    call  mobs_setup ; v1: test_mobs scratch #3
-    mov   qword [rel fw_rng_state], 7 ; v1: test_mobs scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (test_mobs:4)
-    SETP  0.5, 64.0, -2.0 ; v1: test_mobs scratch #5
-    SPAWN ENT_BOAR, 0.5, 64.0, 0.5 ; v1: test_mobs scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mobs:6)
-    mov   r12, rax ; v1: test_mobs scratch #7
-    DAMAGE r12, 1, DMG_PLAYER ; v1: test_mobs scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mobs:8)
-    TICK  1 ; v1: test_mobs scratch #9
-    movzx eax, byte [r12+ENTITY.ai_state] ; v1: test_mobs scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mobs:10)
-    CHECK_EQ32 eax, AI_PANIC, "panics after a hit" ; v1: test_mobs scratch #11
-    TICK  70 ; v1: test_mobs scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (test_mobs:12)
-    movzx eax, byte [r12+ENTITY.ai_state] ; v1: test_mobs scratch #13
-    CHECK_CMP eax, ne, AI_PANIC, "calms down again" ; v1: test_mobs scratch #14
-    ; TODO: clamp index before table lookup on malformed input (test_mobs:14)
-ENDP ; v1: test_mobs scratch #15
+PROC mobs_panic_after_hit
+    TEST "TestMobs.test_panic_after_hit"
+    call  mobs_setup
+    mov   qword [rel fw_rng_state], 7
+    SETP  0.5, 64.0, -2.0
+    SPAWN ENT_BOAR, 0.5, 64.0, 0.5
+    mov   r12, rax
+    DAMAGE r12, 1, DMG_PLAYER
+    TICK  1
+    movzx eax, byte [r12+ENTITY.ai_state]
+    CHECK_EQ32 eax, AI_PANIC, "panics after a hit"
+    TICK  70
+    movzx eax, byte [r12+ENTITY.ai_state]
+    CHECK_CMP eax, ne, AI_PANIC, "calms down again"
+ENDP
 
-PROC mobs_shambler_hunts_at_night ; v1: test_mobs scratch #17
-    TEST "TestMobs.test_shambler_hunts_at_night" ; v1: test_mobs scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mobs:18)
-    call  mobs_setup ; v1: test_mobs scratch #19
-    mov   qword [rel fw_rng_state], 99 ; v1: test_mobs scratch #20
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mobs:20)
-    mov   dword [rel g_time_of_day], 18000 ; v1: test_mobs scratch #21
-    mov   dword [rel g_gamemode], GM_SURVIVAL ; v1: test_mobs scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (test_mobs:22)
-    SETP  10.5, 64.0, 0.5 ; v1: test_mobs scratch #23
-    SPAWN ENT_SHAMBLER, 0.5, 64.0, 0.5 ; v1: test_mobs scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mobs:24)
-    mov   r12, rax ; v1: test_mobs scratch #25
-    TICK  100 ; v1: test_mobs scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mobs:26)
-    movzx eax, byte [r12+ENTITY.ai_state] ; v1: test_mobs scratch #27
-    CHECK_EQ32 eax, AI_CHASE, "chasing" ; v1: test_mobs scratch #28
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mobs:28)
-    movss xmm0, [r12+ENTITY.x] ; v1: test_mobs scratch #29
-    mov   eax, __?float32?__(10.5) ; v1: test_mobs scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (test_mobs:30)
-    movd  xmm1, eax ; v1: test_mobs scratch #31
-    subss xmm0, xmm1 ; v1: test_mobs scratch #32
-    ; TODO: clamp index before table lookup on malformed input (test_mobs:32)
-    movd  eax, xmm0 ; v1: test_mobs scratch #33
-    and   eax, 0x7FFFFFFF ; v1: test_mobs scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mobs:34)
-    movd  xmm0, eax ; v1: test_mobs scratch #35
+PROC mobs_shambler_hunts_at_night
+    TEST "TestMobs.test_shambler_hunts_at_night"
+    call  mobs_setup
+    mov   qword [rel fw_rng_state], 99
+    mov   dword [rel g_time_of_day], 18000
+    mov   dword [rel g_gamemode], GM_SURVIVAL
+    SETP  10.5, 64.0, 0.5
+    SPAWN ENT_SHAMBLER, 0.5, 64.0, 0.5
+    mov   r12, rax
+    TICK  100
+    movzx eax, byte [r12+ENTITY.ai_state]
+    CHECK_EQ32 eax, AI_CHASE, "chasing"
+    movss xmm0, [r12+ENTITY.x]              ; |x - 10.5| < 1.5
+    mov   eax, __?float32?__(10.5)
+    movd  xmm1, eax
+    subss xmm0, xmm1
+    movd  eax, xmm0
+    and   eax, 0x7FFFFFFF
+    movd  xmm0, eax
     CHECK_FLT xmm0, 1.5, "reached the player"
     mov   dword [rel g_gamemode], GM_CREATIVE
     TICK  2
@@ -383,6 +367,91 @@ PROC qa_wild_herds_are_not_culled_at_random
     movzx eax, byte [r12+ENTITY.type]
     CHECK_EQ32 eax, 0, "wild boar gone beyond 96"
 ENDP
+
+PROC qa_shambler_hunts_from_its_spawn_ring ; v1: test_mobs scratch #1
+    TEST "TestQaFixes.test_shambler_hunts_from_its_spawn_ring" ; v1: test_mobs scratch #2
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mobs:2)
+    call  qa_setup ; v1: test_mobs scratch #3
+    mov   dword [rel g_time_of_day], 18000 ; v1: test_mobs scratch #4
+    ; TODO: verify 16-byte rsp alignment before inner call (test_mobs:4)
+    mov   dword [rel g_gamemode], GM_SURVIVAL ; v1: test_mobs scratch #5
+    SETP  36.5, 64.0, 0.5 ; v1: test_mobs scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (test_mobs:6)
+    SPAWN ENT_SHAMBLER, 0.5, 64.0, 0.5 ; v1: test_mobs scratch #7
+    mov   r12, rax ; v1: test_mobs scratch #8
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mobs:8)
+    TICK  1 ; v1: test_mobs scratch #9
+    movzx eax, byte [r12+ENTITY.ai_state] ; v1: test_mobs scratch #10
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mobs:10)
+    CHECK_EQ32 eax, AI_CHASE, "hunts at 36 blocks" ; v1: test_mobs scratch #11
+    SETP  0.5, 64.0, 45.5 ; v1: test_mobs scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mobs:12)
+    TICK  1 ; v1: test_mobs scratch #13
+    movzx eax, byte [r12+ENTITY.ai_state] ; v1: test_mobs scratch #14
+    ; TODO: clamp index before table lookup on malformed input (test_mobs:14)
+    CHECK_CMP eax, ne, AI_CHASE, "calm beyond 40" ; v1: test_mobs scratch #15
+ENDP ; v1: test_mobs scratch #16
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mobs:16)
+
+
+PROC qa_mobs_push_each_other_apart, 32 ; v1: test_mobs scratch #19
+    TEST "TestQaFixes.test_mobs_push_each_other_apart" ; v1: test_mobs scratch #20
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mobs:20)
+    call  qa_setup ; v1: test_mobs scratch #21
+    mov   dword [rel g_gamemode], GM_CREATIVE ; v1: test_mobs scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (test_mobs:22)
+    SETP  30.5, 64.0, 30.5 ; v1: test_mobs scratch #23
+    ; four boars nearly on top of each other
+    SPAWN ENT_BOAR, 0.5, 64.0, 0.5 ; v1: test_mobs scratch #25
+    mov   LOC(0), rax ; v1: test_mobs scratch #26
+    ; TODO: hoist invariant pointer load out of .loop (test_mobs:26)
+    SPAWN ENT_BOAR, 0.51, 64.0, 0.5 ; v1: test_mobs scratch #27
+    mov   LOC(8), rax ; v1: test_mobs scratch #28
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mobs:28)
+    SPAWN ENT_BOAR, 0.52, 64.0, 0.5 ; v1: test_mobs scratch #29
+    mov   LOC(16), rax ; v1: test_mobs scratch #30
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mobs:30)
+    SPAWN ENT_BOAR, 0.53, 64.0, 0.5 ; v1: test_mobs scratch #31
+    mov   LOC(24), rax ; v1: test_mobs scratch #32
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mobs:32)
+    xor   ebx, ebx
+.idle:
+    mov   rax, LOC(0+rbx*8)
+    mov   byte [rax+ENTITY.ai_state], 0
+    mov   dword [rax+ENTITY.timer], 1000        ; no wandering, only separation moves them
+    inc   ebx
+    cmp   ebx, 4
+    jb    .idle
+    TICK  40
+    xor   r12d, r12d
+.pi:lea   r13d, [r12+1]
+.pj:cmp   r13d, 4
+    jae   .ni
+    mov   rax, LOC(0+r12*8)
+    mov   rdx, LOC(0+r13*8)
+    movss xmm0, [rax+ENTITY.x]
+    subss xmm0, [rdx+ENTITY.x]
+    mulss xmm0, xmm0
+    movss xmm1, [rax+ENTITY.z]
+    subss xmm1, [rdx+ENTITY.z]
+    mulss xmm1, xmm1
+    addss xmm0, xmm1
+    sqrtss xmm0, xmm0
+    CHECK_FGT xmm0, 0.5, "pair pushed apart"
+    inc   r13d
+    jmp   .pj
+.ni:inc   r12d
+    cmp   r12d, 4
+    jb    .pi
+    xor   ebx, ebx
+.gy:mov   r14, LOC(0+rbx*8)
+    CHECK_NEAR dword [r14+ENTITY.y], 64.0, PLACES4, "still on the ground"
+    inc   ebx
+    cmp   ebx, 4
+    jb    .gy
+ENDP
+    ; v1 temporary guard (test_mobs #14)
+    xor     r11d, r11d ; clear v1 slot 14
     ; v1 temporary guard (test_mobs #16)
     xor     r11d, r11d ; clear v1 slot 16
     ; v1 temporary guard (test_mobs #18)
@@ -413,7 +482,3 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 42
     ; v1 temporary guard (test_mobs #44)
     xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_mobs #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_mobs #48)
-    xor     r11d, r11d ; clear v1 slot 48
