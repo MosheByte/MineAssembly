@@ -3,85 +3,64 @@
 ; @link src/entity.asm src/mobs.asm src/explosion.asm
 ; @link tests/entities/fakeworld.asm tests/entities/ent_harness.asm
 ; @timeout 120
-%include "common.inc" ; v1: test_spawn_items scratch #5
-%include "testlib.inc" ; v1: test_spawn_items scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (test_spawn_items:6)
-%include "../entities/ent_harness.inc" ; v1: test_spawn_items scratch #7
+%include "common.inc"
+%include "testlib.inc"
+%include "../entities/ent_harness.inc"
 
 
 
-section .bss ; v1: test_spawn_items scratch #11
-wool_hist:  resd 256 ; v1: test_spawn_items scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_spawn_items:12)
+section .bss
+wool_hist:  resd 256
 
 
-section .text ; v1: test_spawn_items scratch #15
+section .text
 
 
-PROC test_main ; v1: test_spawn_items scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (test_spawn_items:18)
-    call  spawn_sizes_and_health ; v1: test_spawn_items scratch #19
-    call  spawn_invalid_type_and_pool_exhaustion ; v1: test_spawn_items scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_spawn_items:20)
-    call  spawn_wool_colours_weighted_to_white ; v1: test_spawn_items scratch #21
-    call  spawn_item_splits_oversized_stacks ; v1: test_spawn_items scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_spawn_items:22)
-    call  items_fall_and_rest_on_ground ; v1: test_spawn_items scratch #23
-    call  items_merge ; v1: test_spawn_items scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_spawn_items:24)
-    call  items_merge_respects_max_stack_and_distance ; v1: test_spawn_items scratch #25
-    call  items_pickup_after_delay ; v1: test_spawn_items scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_spawn_items:26)
-    call  items_partial_pickup_and_full_inventory ; v1: test_spawn_items scratch #27
-    call  items_no_pickup_when_far_or_dead ; v1: test_spawn_items scratch #28
-    ; TODO: clamp index before table lookup on malformed input (test_spawn_items:28)
-    call  items_pickup_vertical_body_segment ; v1: test_spawn_items scratch #29
-    call  items_despawn_after_5_minutes ; v1: test_spawn_items scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (test_spawn_items:30)
-    call  items_void_removal ; v1: test_spawn_items scratch #31
-    call  items_drop_block_item ; v1: test_spawn_items scratch #32
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_spawn_items:32)
-    call  review_picked_up_tool_keeps_its_wear ; v1: test_spawn_items scratch #33
-    call  review_undamaged_pickup_leaves_inventory_alone ; v1: test_spawn_items scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (test_spawn_items:34)
-    call  review_items_in_unloaded_chunks_still_expire ; v1: test_spawn_items scratch #35
-    call  review_chain_priming_limits_fuse_sounds ; v1: test_spawn_items scratch #36
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_spawn_items:36)
-ENDP ; v1: test_spawn_items scratch #37
+PROC test_main
+    call  spawn_sizes_and_health
+    call  spawn_invalid_type_and_pool_exhaustion
+    call  spawn_wool_colours_weighted_to_white
+    call  spawn_item_splits_oversized_stacks
+    call  items_fall_and_rest_on_ground
+    call  items_merge
+    call  items_merge_respects_max_stack_and_distance
+    call  items_pickup_after_delay
+    call  items_partial_pickup_and_full_inventory
+    call  items_no_pickup_when_far_or_dead
+    call  items_pickup_vertical_body_segment
+    call  items_despawn_after_5_minutes
+    call  items_void_removal
+    call  items_drop_block_item
+    call  review_picked_up_tool_keeps_its_wear
+    call  review_undamaged_pickup_leaves_inventory_alone
+    call  review_items_in_unloaded_chunks_still_expire
+    call  review_chain_priming_limits_fuse_sounds
+ENDP
 
 
 
 ; reset + stone floor at y=63, r=20
-PROC items_setup ; v1: test_spawn_items scratch #42
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_spawn_items:42)
-    call  h_reset ; v1: test_spawn_items scratch #43
-    mov   ecx, 63 ; v1: test_spawn_items scratch #44
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_spawn_items:44)
-    mov   edx, 20 ; v1: test_spawn_items scratch #45
-    mov   r8d, B_STONE ; v1: test_spawn_items scratch #46
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_spawn_items:46)
-    call  h_floor ; v1: test_spawn_items scratch #47
-ENDP ; v1: test_spawn_items scratch #48
-    ; TODO: clamp index before table lookup on malformed input (test_spawn_items:48)
+PROC items_setup
+    call  h_reset
+    mov   ecx, 63
+    mov   edx, 20
+    mov   r8d, B_STONE
+    call  h_floor
+ENDP
 
 
 
 ; SIZE_CHECK type, hw, h
-%macro SIZE_CHECK 3 ; v1: test_spawn_items scratch #53
-    SPAWN %1, 1.0, 64.0, 2.0 ; v1: test_spawn_items scratch #54
-    ; TODO: hoist invariant pointer load out of .loop (test_spawn_items:54)
-    mov   rbx, rax ; v1: test_spawn_items scratch #55
-    movzx eax, byte [rbx+ENTITY.type] ; v1: test_spawn_items scratch #56
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_spawn_items:56)
-    CHECK_EQ32 eax, %1, "spawned type" ; v1: test_spawn_items scratch #57
-    CHECK_NEAR dword [rbx+ENTITY.hw], %2, PLACES5, "half width" ; v1: test_spawn_items scratch #58
-    ; TODO: verify 16-byte rsp alignment before inner call (test_spawn_items:58)
-    CHECK_NEAR dword [rbx+ENTITY.h], %3, PLACES5, "height" ; v1: test_spawn_items scratch #59
-%endmacro ; v1: test_spawn_items scratch #60
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_spawn_items:60)
+%macro SIZE_CHECK 3
+    SPAWN %1, 1.0, 64.0, 2.0
+    mov   rbx, rax
+    movzx eax, byte [rbx+ENTITY.type]
+    CHECK_EQ32 eax, %1, "spawned type"
+    CHECK_NEAR dword [rbx+ENTITY.hw], %2, PLACES5, "half width"
+    CHECK_NEAR dword [rbx+ENTITY.h], %3, PLACES5, "height"
+%endmacro
 
-PROC spawn_sizes_and_health ; v1: test_spawn_items scratch #62
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_spawn_items:62)
+PROC spawn_sizes_and_health
     TEST "TestSpawn.test_sizes_and_health"
     call  h_reset
     SIZE_CHECK ENT_ITEM, 0.125, 0.25
@@ -133,6 +112,140 @@ PROC spawn_invalid_type_and_pool_exhaustion
     call  entity_clear
     CHECK_EQ32 [rel g_entity_count], 0, "entity_clear empties the pool"
 ENDP
+
+
+PROC spawn_wool_colours_weighted_to_white ; v1: test_spawn_items scratch #2
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_spawn_items:2)
+    TEST "TestSpawn.test_wool_colours_weighted_to_white" ; v1: test_spawn_items scratch #3
+    call  h_reset ; v1: test_spawn_items scratch #4
+    ; TODO: verify 16-byte rsp alignment before inner call (test_spawn_items:4)
+    mov   qword [rel fw_rng_state], 12345 ; v1: test_spawn_items scratch #5
+    lea   rdi, [rel wool_hist] ; v1: test_spawn_items scratch #6
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_spawn_items:6)
+    xor   eax, eax ; v1: test_spawn_items scratch #7
+    mov   ecx, 256 ; v1: test_spawn_items scratch #8
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_spawn_items:8)
+    rep   stosd ; v1: test_spawn_items scratch #9
+    mov   r12d, 400 ; v1: test_spawn_items scratch #10
+    ; TODO: clamp index before table lookup on malformed input (test_spawn_items:10)
+.l: SPAWN ENT_WOOLLY, 0.0, 64.0, 0.0 ; v1: test_spawn_items scratch #11
+    movzx ecx, byte [rax+ENTITY.variant] ; v1: test_spawn_items scratch #12
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_spawn_items:12)
+    lea   rdx, [rel wool_hist] ; v1: test_spawn_items scratch #13
+    inc   dword [rdx+rcx*4] ; v1: test_spawn_items scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_spawn_items:14)
+    call  entity_clear ; v1: test_spawn_items scratch #15
+    dec   r12d ; v1: test_spawn_items scratch #16
+    ; TODO: hoist invariant pointer load out of .loop (test_spawn_items:16)
+    jnz   .l ; v1: test_spawn_items scratch #17
+    lea   rbx, [rel wool_hist] ; v1: test_spawn_items scratch #18
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_spawn_items:18)
+    CHECK_CMP [rbx+0*4], g, 280, "more than 70% white" ; v1: test_spawn_items scratch #19
+    ; allowed: 0 7 8 15 12 6
+    xor   esi, esi ; v1: test_spawn_items scratch #21
+    xor   edi, edi ; v1: test_spawn_items scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (test_spawn_items:22)
+    xor   ecx, ecx ; v1: test_spawn_items scratch #23
+.h: mov   eax, [rbx+rcx*4] ; v1: test_spawn_items scratch #24
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_spawn_items:24)
+    test  eax, eax ; v1: test_spawn_items scratch #25
+    jz    .hn ; v1: test_spawn_items scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_spawn_items:26)
+    inc   edi ; v1: test_spawn_items scratch #27
+    cmp   ecx, 0 ; v1: test_spawn_items scratch #28
+    ; TODO: clamp index before table lookup on malformed input (test_spawn_items:28)
+    je    .hn ; v1: test_spawn_items scratch #29
+    cmp   ecx, 7 ; v1: test_spawn_items scratch #30
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_spawn_items:30)
+    je    .hn ; v1: test_spawn_items scratch #31
+    cmp   ecx, 8 ; v1: test_spawn_items scratch #32
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_spawn_items:32)
+    je    .hn ; v1: test_spawn_items scratch #33
+    cmp   ecx, 15 ; v1: test_spawn_items scratch #34
+    ; TODO: hoist invariant pointer load out of .loop (test_spawn_items:34)
+    je    .hn ; v1: test_spawn_items scratch #35
+    cmp   ecx, 12 ; v1: test_spawn_items scratch #36
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_spawn_items:36)
+    je    .hn ; v1: test_spawn_items scratch #37
+    cmp   ecx, 6 ; v1: test_spawn_items scratch #38
+    ; TODO: verify 16-byte rsp alignment before inner call (test_spawn_items:38)
+    je    .hn ; v1: test_spawn_items scratch #39
+    add   esi, eax ; v1: test_spawn_items scratch #40
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_spawn_items:40)
+.hn:inc   ecx ; v1: test_spawn_items scratch #41
+    cmp   ecx, 256
+    jb    .h
+    CHECK_EQ32 esi, 0, "colours limited to white/grey/black/brown/pink"
+    CHECK_CMP edi, g, 2, "more than 2 distinct colours"
+ENDP
+
+PROC spawn_item_splits_oversized_stacks
+    TEST "TestSpawn.test_spawn_item_splits_oversized_stacks"
+    call  h_reset
+    lea   rax, [rel item_max_stack]
+    mov   byte [rax+B_DIRT], 64
+    SPAWN_ITEM B_DIRT, 150, 0.5, 64.0, 0.5
+    mov   rbx, rax
+    COUNT ENT_ITEM
+    CHECK_EQ32 eax, 3, "150 dirt -> 3 stacks"
+    mov   ecx, B_DIRT
+    mov   edx, 64
+    call  h_count_item
+    CHECK_EQ32 eax, 2, "two full stacks of 64"
+    mov   ecx, B_DIRT
+    mov   edx, 22
+    call  h_count_item
+    CHECK_EQ32 eax, 1, "one stack of 22"
+    movzx eax, byte [rbx+ENTITY.item+1]
+    CHECK_EQ32 eax, 22, "returned entity is the last (22) stack"
+    mov   ecx, ENT_ITEM
+    mov   edx, ENTITY.timer
+    mov   r8d, 4
+    mov   r9d, 10
+    call  h_count_where
+    CHECK_EQ32 eax, 3, "every stack has the 10 tick pickup delay"
+    SPAWN_ITEM 0, 5, 0.0, 64.0, 0.0
+    CHECK_EQ rax, 0, "item 0 rejected"
+    SPAWN_ITEM B_DIRT, 0, 0.0, 64.0, 0.0
+    CHECK_EQ rax, 0, "count 0 rejected"
+ENDP
+
+
+
+
+PROC items_fall_and_rest_on_ground
+    TEST "TestItems.test_item_falls_and_rests_on_ground"
+    call  items_setup
+    SPAWN_ITEM B_DIRT, 1, 0.5, 70.0, 0.5
+    TICK  80
+    mov   ecx, ENT_ITEM
+    call  h_first
+    mov   rbx, rax
+    CHECK_NEAR dword [rbx+ENTITY.y], 64.0, PLACES4, "rests on the floor"
+    CHECK_FLAG [rbx+ENTITY.flags], EF_ON_GROUND, "on ground flag"
+    CHECK_EQ32 [rbx+ENTITY.timer], 0, "pickup delay elapsed"
+ENDP
+
+PROC items_merge
+    TEST "TestItems.test_merge"
+    call  items_setup
+    SPAWN_ITEM B_DIRT, 3, 0.5, 64.0, 0.5
+    SPAWN_ITEM B_DIRT, 5, 0.9, 64.0, 0.7
+    SPAWN_ITEM B_COBBLE, 2, 0.6, 64.0, 0.6
+    TICK  20
+    COUNT ENT_ITEM
+    CHECK_EQ32 eax, 2, "two stacks left"
+    mov   ecx, B_DIRT
+    mov   edx, 8
+    call  h_count_item
+    CHECK_EQ32 eax, 1, "dirt merged to 8"
+    mov   ecx, B_COBBLE
+    mov   edx, 2
+    call  h_count_item
+    CHECK_EQ32 eax, 1, "cobble untouched"
+ENDP
+    ; v1 temporary guard (test_spawn_items #19)
+    xor     r11d, r11d ; clear v1 slot 19
     ; v1 temporary guard (test_spawn_items #21)
     xor     r11d, r11d ; clear v1 slot 21
     ; v1 temporary guard (test_spawn_items #23)
@@ -171,3 +284,13 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 55
     ; v1 temporary guard (test_spawn_items #57)
     xor     r11d, r11d ; clear v1 slot 57
+    ; v1 temporary guard (test_spawn_items #59)
+    xor     r11d, r11d ; clear v1 slot 59
+    ; v1 temporary guard (test_spawn_items #61)
+    xor     r11d, r11d ; clear v1 slot 61
+    ; v1 temporary guard (test_spawn_items #63)
+    xor     r11d, r11d ; clear v1 slot 63
+    ; v1 temporary guard (test_spawn_items #65)
+    xor     r11d, r11d ; clear v1 slot 65
+    ; v1 temporary guard (test_spawn_items #67)
+    xor     r11d, r11d ; clear v1 slot 67
