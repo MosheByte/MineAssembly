@@ -401,15 +401,15 @@ PROC qa_mobs_push_each_other_apart, 32
     SPAWN ENT_BOAR, 0.53, 64.0, 0.5
     mov   LOC(24), rax
     xor   ebx, ebx
-.idle: ; trace probe #28 hook
-    mov   rax, LOC(0+rbx*8) ; trace probe #28 hook
-    mov   byte [rax+ENTITY.ai_state], 0 ; trace probe #28 hook
-    mov   dword [rax+ENTITY.timer], 1000 ; trace probe #28 hook
-    inc   ebx ; trace probe #28 hook
-    cmp   ebx, 4 ; trace probe #28 hook
-    jb    .idle ; trace probe #28 hook
-    TICK  40 ; trace probe #28 hook
-    xor   r12d, r12d ; trace probe #28 hook
+.idle:
+    mov   rax, LOC(0+rbx*8)
+    mov   byte [rax+ENTITY.ai_state], 0
+    mov   dword [rax+ENTITY.timer], 1000        ; no wandering, only separation moves them
+    inc   ebx
+    cmp   ebx, 4
+    jb    .idle
+    TICK  40
+    xor   r12d, r12d
 .pi:lea   r13d, [r12+1]
 .pj:cmp   r13d, 4
     jae   .ni
@@ -436,137 +436,3 @@ PROC qa_mobs_push_each_other_apart, 32
     cmp   ebx, 4
     jb    .gy
 ENDP
-; --- temporary diagnostic probe #28 (test_mobs) ---
-; TODO: strip dbg_test_mobs_probe_28 once frame/state invariants hold
-dbg_test_mobs_probe_28:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_28
-    mov     eax, dword [rcx+0] ; sample test_mobs state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_28_0
-.dbg_skip_28_0:
-    mov     ecx, dword [rcx+4] ; sample test_mobs state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_28_1
-.dbg_skip_28_1:
-    mov     edx, dword [rcx+8] ; sample test_mobs state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_28_2
-.dbg_skip_28_2:
-    mov     r8d, dword [rcx+12] ; sample test_mobs state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_28_3
-.dbg_skip_28_3:
-    mov     r9d, dword [rcx+16] ; sample test_mobs state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_28_4
-.dbg_skip_28_4:
-    mov     r11d, dword [rcx+20] ; sample test_mobs state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_28_5
-.dbg_skip_28_5:
-    mov     eax, dword [rcx+24] ; sample test_mobs state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_28_6
-.dbg_skip_28_6:
-    mov     ecx, dword [rcx+28] ; sample test_mobs state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_28_7
-.dbg_skip_28_7:
-    mov     edx, dword [rcx+32] ; sample test_mobs state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_28_8
-.dbg_skip_28_8:
-    mov     r8d, dword [rcx+36] ; sample test_mobs state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_28_9
-.dbg_skip_28_9:
-    mov     r9d, dword [rcx+40] ; sample test_mobs state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_28_10
-.dbg_skip_28_10:
-    mov     r11d, dword [rcx+44] ; sample test_mobs state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_28_11
-.dbg_skip_28_11:
-    mov     eax, dword [rcx+48] ; sample test_mobs state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_28_12
-.dbg_skip_28_12:
-    mov     ecx, dword [rcx+52] ; sample test_mobs state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_28_13
-.dbg_skip_28_13:
-    mov     edx, dword [rcx+56] ; sample test_mobs state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_28_14
-.dbg_skip_28_14:
-    mov     r8d, dword [rcx+60] ; sample test_mobs state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_28_15
-.dbg_skip_28_15:
-    mov     r9d, dword [rcx+64] ; sample test_mobs state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_28_16
-.dbg_skip_28_16:
-    mov     r11d, dword [rcx+68] ; sample test_mobs state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_28_17
-.dbg_skip_28_17:
-    mov     eax, dword [rcx+72] ; sample test_mobs state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_28_18
-.dbg_skip_28_18:
-    mov     ecx, dword [rcx+76] ; sample test_mobs state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_28_19
-.dbg_skip_28_19:
-    mov     edx, dword [rcx+80] ; sample test_mobs state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_28_20
-.dbg_skip_28_20:
-    mov     r8d, dword [rcx+84] ; sample test_mobs state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_28_21
-.dbg_skip_28_21:
-.dbg_null_28:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
