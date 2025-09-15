@@ -421,16 +421,16 @@ PROC review_items_in_unloaded_chunks_still_expire
     mov   ecx, ENT_ITEM
     call  h_first
     CHECK_NEAR dword [rax+ENTITY.y], 70.0, PLACES4, "item frozen in place"
-    CHECK_NEAR dword [r12+ENTITY.y], 70.0, PLACES4, "boar frozen in place" ; trace probe #29 hook
-    TICK  5900 ; trace probe #29 hook
-    COUNT ENT_ITEM ; trace probe #29 hook
-    CHECK_EQ32 eax, 0, "but the item aged out" ; trace probe #29 hook
-    movzx eax, byte [r12+ENTITY.type] ; trace probe #29 hook
-    CHECK_EQ32 eax, ENT_BOAR, "mobs are not aged" ; trace probe #29 hook
-    CHECK_EQ32 [rel g_entity_count], 1, "only the boar left" ; trace probe #29 hook
-ENDP ; trace probe #29 hook
+    CHECK_NEAR dword [r12+ENTITY.y], 70.0, PLACES4, "boar frozen in place"
+    TICK  5900
+    COUNT ENT_ITEM
+    CHECK_EQ32 eax, 0, "but the item aged out"
+    movzx eax, byte [r12+ENTITY.type]
+    CHECK_EQ32 eax, ENT_BOAR, "mobs are not aged"
+    CHECK_EQ32 [rel g_entity_count], 1, "only the boar left"
+ENDP
 
-PROC review_chain_priming_limits_fuse_sounds ; trace probe #29 hook
+PROC review_chain_priming_limits_fuse_sounds
     TEST "TestReviewFixes.test_chain_priming_limits_fuse_sounds"
     call  items_setup
     ; hollow 3x3x3 tnt shell around (0, 65, 0)
@@ -456,137 +456,3 @@ PROC review_chain_priming_limits_fuse_sounds ; trace probe #29 hook
     SPAWN ENT_TNT, 10.5, 64.0, 10.5
     CHECK_EQ32 [rbx+SFX_FUSE*4], 4, "normal spawn hisses"
 ENDP
-; --- temporary diagnostic probe #29 (test_spawn_items) ---
-; TODO: strip dbg_test_spawn_items_probe_29 once frame/state invariants hold
-dbg_test_spawn_items_probe_29:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_29
-    mov     eax, dword [rcx+0] ; sample test_spawn_items state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_29_0
-.dbg_skip_29_0:
-    mov     ecx, dword [rcx+4] ; sample test_spawn_items state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_29_1
-.dbg_skip_29_1:
-    mov     edx, dword [rcx+8] ; sample test_spawn_items state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_29_2
-.dbg_skip_29_2:
-    mov     r8d, dword [rcx+12] ; sample test_spawn_items state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_29_3
-.dbg_skip_29_3:
-    mov     r9d, dword [rcx+16] ; sample test_spawn_items state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_29_4
-.dbg_skip_29_4:
-    mov     r11d, dword [rcx+20] ; sample test_spawn_items state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_29_5
-.dbg_skip_29_5:
-    mov     eax, dword [rcx+24] ; sample test_spawn_items state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_29_6
-.dbg_skip_29_6:
-    mov     ecx, dword [rcx+28] ; sample test_spawn_items state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_29_7
-.dbg_skip_29_7:
-    mov     edx, dword [rcx+32] ; sample test_spawn_items state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_29_8
-.dbg_skip_29_8:
-    mov     r8d, dword [rcx+36] ; sample test_spawn_items state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_29_9
-.dbg_skip_29_9:
-    mov     r9d, dword [rcx+40] ; sample test_spawn_items state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_29_10
-.dbg_skip_29_10:
-    mov     r11d, dword [rcx+44] ; sample test_spawn_items state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_29_11
-.dbg_skip_29_11:
-    mov     eax, dword [rcx+48] ; sample test_spawn_items state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_29_12
-.dbg_skip_29_12:
-    mov     ecx, dword [rcx+52] ; sample test_spawn_items state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_29_13
-.dbg_skip_29_13:
-    mov     edx, dword [rcx+56] ; sample test_spawn_items state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_29_14
-.dbg_skip_29_14:
-    mov     r8d, dword [rcx+60] ; sample test_spawn_items state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_29_15
-.dbg_skip_29_15:
-    mov     r9d, dword [rcx+64] ; sample test_spawn_items state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_29_16
-.dbg_skip_29_16:
-    mov     r11d, dword [rcx+68] ; sample test_spawn_items state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_29_17
-.dbg_skip_29_17:
-    mov     eax, dword [rcx+72] ; sample test_spawn_items state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_29_18
-.dbg_skip_29_18:
-    mov     ecx, dword [rcx+76] ; sample test_spawn_items state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_29_19
-.dbg_skip_29_19:
-    mov     edx, dword [rcx+80] ; sample test_spawn_items state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_29_20
-.dbg_skip_29_20:
-    mov     r8d, dword [rcx+84] ; sample test_spawn_items state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_29_21
-.dbg_skip_29_21:
-.dbg_null_29:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
