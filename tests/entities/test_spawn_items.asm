@@ -114,65 +114,46 @@ PROC spawn_invalid_type_and_pool_exhaustion
 ENDP
 
 
-PROC spawn_wool_colours_weighted_to_white ; v1: test_spawn_items scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_spawn_items:2)
-    TEST "TestSpawn.test_wool_colours_weighted_to_white" ; v1: test_spawn_items scratch #3
-    call  h_reset ; v1: test_spawn_items scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (test_spawn_items:4)
-    mov   qword [rel fw_rng_state], 12345 ; v1: test_spawn_items scratch #5
-    lea   rdi, [rel wool_hist] ; v1: test_spawn_items scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_spawn_items:6)
-    xor   eax, eax ; v1: test_spawn_items scratch #7
-    mov   ecx, 256 ; v1: test_spawn_items scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_spawn_items:8)
-    rep   stosd ; v1: test_spawn_items scratch #9
-    mov   r12d, 400 ; v1: test_spawn_items scratch #10
-    ; TODO: clamp index before table lookup on malformed input (test_spawn_items:10)
-.l: SPAWN ENT_WOOLLY, 0.0, 64.0, 0.0 ; v1: test_spawn_items scratch #11
-    movzx ecx, byte [rax+ENTITY.variant] ; v1: test_spawn_items scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_spawn_items:12)
-    lea   rdx, [rel wool_hist] ; v1: test_spawn_items scratch #13
-    inc   dword [rdx+rcx*4] ; v1: test_spawn_items scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_spawn_items:14)
-    call  entity_clear ; v1: test_spawn_items scratch #15
-    dec   r12d ; v1: test_spawn_items scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (test_spawn_items:16)
-    jnz   .l ; v1: test_spawn_items scratch #17
-    lea   rbx, [rel wool_hist] ; v1: test_spawn_items scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_spawn_items:18)
-    CHECK_CMP [rbx+0*4], g, 280, "more than 70% white" ; v1: test_spawn_items scratch #19
+PROC spawn_wool_colours_weighted_to_white
+    TEST "TestSpawn.test_wool_colours_weighted_to_white"
+    call  h_reset
+    mov   qword [rel fw_rng_state], 12345
+    lea   rdi, [rel wool_hist]
+    xor   eax, eax
+    mov   ecx, 256
+    rep   stosd
+    mov   r12d, 400
+.l: SPAWN ENT_WOOLLY, 0.0, 64.0, 0.0
+    movzx ecx, byte [rax+ENTITY.variant]
+    lea   rdx, [rel wool_hist]
+    inc   dword [rdx+rcx*4]
+    call  entity_clear
+    dec   r12d
+    jnz   .l
+    lea   rbx, [rel wool_hist]
+    CHECK_CMP [rbx+0*4], g, 280, "more than 70% white"
     ; allowed: 0 7 8 15 12 6
-    xor   esi, esi ; v1: test_spawn_items scratch #21
-    xor   edi, edi ; v1: test_spawn_items scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (test_spawn_items:22)
-    xor   ecx, ecx ; v1: test_spawn_items scratch #23
-.h: mov   eax, [rbx+rcx*4] ; v1: test_spawn_items scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_spawn_items:24)
-    test  eax, eax ; v1: test_spawn_items scratch #25
-    jz    .hn ; v1: test_spawn_items scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_spawn_items:26)
-    inc   edi ; v1: test_spawn_items scratch #27
-    cmp   ecx, 0 ; v1: test_spawn_items scratch #28
-    ; TODO: clamp index before table lookup on malformed input (test_spawn_items:28)
-    je    .hn ; v1: test_spawn_items scratch #29
-    cmp   ecx, 7 ; v1: test_spawn_items scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_spawn_items:30)
-    je    .hn ; v1: test_spawn_items scratch #31
-    cmp   ecx, 8 ; v1: test_spawn_items scratch #32
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_spawn_items:32)
-    je    .hn ; v1: test_spawn_items scratch #33
-    cmp   ecx, 15 ; v1: test_spawn_items scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (test_spawn_items:34)
-    je    .hn ; v1: test_spawn_items scratch #35
-    cmp   ecx, 12 ; v1: test_spawn_items scratch #36
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_spawn_items:36)
-    je    .hn ; v1: test_spawn_items scratch #37
-    cmp   ecx, 6 ; v1: test_spawn_items scratch #38
-    ; TODO: verify 16-byte rsp alignment before inner call (test_spawn_items:38)
-    je    .hn ; v1: test_spawn_items scratch #39
-    add   esi, eax ; v1: test_spawn_items scratch #40
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_spawn_items:40)
-.hn:inc   ecx ; v1: test_spawn_items scratch #41
+    xor   esi, esi                      ; samples outside that set
+    xor   edi, edi                      ; distinct colours
+    xor   ecx, ecx
+.h: mov   eax, [rbx+rcx*4]
+    test  eax, eax
+    jz    .hn
+    inc   edi
+    cmp   ecx, 0
+    je    .hn
+    cmp   ecx, 7
+    je    .hn
+    cmp   ecx, 8
+    je    .hn
+    cmp   ecx, 15
+    je    .hn
+    cmp   ecx, 12
+    je    .hn
+    cmp   ecx, 6
+    je    .hn
+    add   esi, eax
+.hn:inc   ecx
     cmp   ecx, 256
     jb    .h
     CHECK_EQ32 esi, 0, "colours limited to white/grey/black/brown/pink"
@@ -244,53 +225,168 @@ PROC items_merge
     call  h_count_item
     CHECK_EQ32 eax, 1, "cobble untouched"
 ENDP
-    ; v1 temporary guard (test_spawn_items #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (test_spawn_items #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (test_spawn_items #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (test_spawn_items #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (test_spawn_items #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (test_spawn_items #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (test_spawn_items #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (test_spawn_items #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (test_spawn_items #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (test_spawn_items #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (test_spawn_items #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (test_spawn_items #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (test_spawn_items #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (test_spawn_items #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (test_spawn_items #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (test_spawn_items #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (test_spawn_items #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (test_spawn_items #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (test_spawn_items #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (test_spawn_items #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (test_spawn_items #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (test_spawn_items #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (test_spawn_items #63)
-    xor     r11d, r11d ; clear v1 slot 63
-    ; v1 temporary guard (test_spawn_items #65)
-    xor     r11d, r11d ; clear v1 slot 65
-    ; v1 temporary guard (test_spawn_items #67)
-    xor     r11d, r11d ; clear v1 slot 67
+
+PROC items_merge_respects_max_stack_and_distance ; v1: test_spawn_items scratch #1
+    TEST "TestItems.test_merge_respects_max_stack_and_distance" ; v1: test_spawn_items scratch #2
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_spawn_items:2)
+    call  items_setup ; v1: test_spawn_items scratch #3
+    lea   rax, [rel item_max_stack] ; v1: test_spawn_items scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (test_spawn_items:4)
+    mov   byte [rax+B_DIRT], 64 ; v1: test_spawn_items scratch #5
+    SPAWN_ITEM B_DIRT, 40, 0.5, 64.0, 0.5 ; v1: test_spawn_items scratch #6
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_spawn_items:6)
+    SPAWN_ITEM B_DIRT, 40, 0.7, 64.0, 0.5 ; v1: test_spawn_items scratch #7
+    SPAWN_ITEM B_DIRT, 7, 5.5, 64.0, 5.5 ; v1: test_spawn_items scratch #8
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_spawn_items:8)
+    TICK  20 ; v1: test_spawn_items scratch #9
+    COUNT ENT_ITEM ; v1: test_spawn_items scratch #10
+    ; TODO: verify 16-byte rsp alignment before inner call (test_spawn_items:10)
+    CHECK_EQ32 eax, 3, "three stacks" ; v1: test_spawn_items scratch #11
+    mov   ecx, B_DIRT ; v1: test_spawn_items scratch #12
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_spawn_items:12)
+    mov   edx, 7 ; v1: test_spawn_items scratch #13
+    call  h_count_item ; v1: test_spawn_items scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_spawn_items:14)
+    CHECK_EQ32 eax, 1, "far stack of 7 kept" ; v1: test_spawn_items scratch #15
+    mov   ecx, B_DIRT ; v1: test_spawn_items scratch #16
+    ; TODO: clamp index before table lookup on malformed input (test_spawn_items:16)
+    mov   edx, 16 ; v1: test_spawn_items scratch #17
+    call  h_count_item ; v1: test_spawn_items scratch #18
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_spawn_items:18)
+    CHECK_EQ32 eax, 1, "remainder 16" ; v1: test_spawn_items scratch #19
+    mov   ecx, B_DIRT ; v1: test_spawn_items scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (test_spawn_items:20)
+    mov   edx, 64 ; v1: test_spawn_items scratch #21
+    call  h_count_item ; v1: test_spawn_items scratch #22
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_spawn_items:22)
+    CHECK_EQ32 eax, 1, "merged up to the max stack 64" ; v1: test_spawn_items scratch #23
+ENDP ; v1: test_spawn_items scratch #24
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_spawn_items:24)
+
+PROC items_pickup_after_delay ; v1: test_spawn_items scratch #26
+    ; TODO: verify 16-byte rsp alignment before inner call (test_spawn_items:26)
+    TEST "TestItems.test_pickup_after_delay" ; v1: test_spawn_items scratch #27
+    call  items_setup ; v1: test_spawn_items scratch #28
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_spawn_items:28)
+    SETP  0.5, 64.0, 0.5 ; v1: test_spawn_items scratch #29
+    SPAWN_ITEM B_DIRT, 8, 0.5, 64.0, 0.5 ; v1: test_spawn_items scratch #30
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_spawn_items:30)
+    TICK  5 ; v1: test_spawn_items scratch #31
+    lea   rbx, [rel fw_given] ; v1: test_spawn_items scratch #32
+    ; TODO: clamp index before table lookup on malformed input (test_spawn_items:32)
+    CHECK_EQ32 [rbx+B_DIRT*4], 0, "10 tick pickup delay" ; v1: test_spawn_items scratch #33
+    TICK  10
+    CHECK_EQ32 [rbx+B_DIRT*4], 8, "picked up all 8"
+    TICK  5                                     ; let the collect animation finish
+    COUNT ENT_ITEM
+    CHECK_EQ32 eax, 0, "item entity gone"
+    CHECK_EQ32 [rel g_entity_count], 0, "live counter 0"
+ENDP
+
+PROC items_partial_pickup_and_full_inventory
+    TEST "TestItems.test_partial_pickup_and_full_inventory"
+    call  items_setup
+    SETP  0.5, 64.0, 0.5
+    mov   dword [rel fw_capacity], 3
+    SPAWN_ITEM B_DIRT, 8, 0.5, 64.0, 0.5
+    TICK  20
+    lea   rbx, [rel fw_given]
+    CHECK_EQ32 [rbx+B_DIRT*4], 3, "took 3"
+    COUNT ENT_ITEM
+    CHECK_EQ32 eax, 1, "one stack left"
+    mov   ecx, B_DIRT
+    mov   edx, 5
+    call  h_count_item
+    CHECK_EQ32 eax, 1, "remaining 5"
+    TICK  20
+    COUNT ENT_ITEM
+    CHECK_EQ32 eax, 1, "still one stack"
+    mov   ecx, B_DIRT
+    mov   edx, 5
+    call  h_count_item
+    CHECK_EQ32 eax, 1, "still 5"
+ENDP
+
+PROC items_no_pickup_when_far_or_dead
+    TEST "TestItems.test_no_pickup_when_far_or_dead"
+    call  items_setup
+    SETP  3.0, 64.0, 0.5                        ; 2.5 away
+    SPAWN_ITEM B_DIRT, 2, 0.5, 64.0, 0.5
+    TICK  20
+    lea   rbx, [rel fw_given]
+    CHECK_EQ32 [rbx+B_DIRT*4], 0, "too far"
+    SETP  0.5, 64.0, 0.5, 1                     ; dead
+    TICK  20
+    CHECK_EQ32 [rbx+B_DIRT*4], 0, "dead player collects nothing"
+    SETP  1.6, 64.0, 0.5                        ; 1.1 away, in range
+    TICK  2
+    CHECK_EQ32 [rbx+B_DIRT*4], 2, "in range again"
+ENDP
+
+PROC items_pickup_vertical_body_segment
+    TEST "TestItems.test_pickup_vertical_body_segment"
+    call  items_setup
+    ; pickup reach covers the whole body, so an item at head height (feet + 1.7) counts
+    SETP  0.5, 62.3, 1.5
+    SETB  0, 61, 1, B_STONE
+    SPAWN_ITEM B_DIRT, 1, 0.5, 64.0, 0.5
+    TICK  15
+    lea   rbx, [rel fw_given]
+    CHECK_EQ32 [rbx+B_DIRT*4], 1, "picked up at head height"
+ENDP
+
+PROC items_despawn_after_5_minutes
+    TEST "TestItems.test_despawn_after_5_minutes"
+    call  items_setup
+    SPAWN_ITEM B_DIRT, 1, 0.5, 64.0, 0.5
+    TICK  5999
+    COUNT ENT_ITEM
+    CHECK_EQ32 eax, 1, "alive at 5999 ticks"
+    TICK  1
+    COUNT ENT_ITEM
+    CHECK_EQ32 eax, 0, "gone at 6000 ticks"
+ENDP
+
+PROC items_void_removal
+    TEST "TestItems.test_void_removal"
+    call  items_setup
+    lea   rax, [rel blk_flags]
+    mov   word [rax+B_BEDROCK*2], 0             ; fakeworld returns bedrock below y=0, so make it non-solid
+    SPAWN_ITEM B_DIRT, 1, 30.5, 2.0, 30.5       ; off the floor
+    TICK  200
+    CHECK_EQ32 [rel g_entity_count], 0, "fell into the void and was removed"
+ENDP
+    ; v1 temporary guard (test_spawn_items #16)
+    xor     r11d, r11d ; clear v1 slot 16
+    ; v1 temporary guard (test_spawn_items #18)
+    xor     r11d, r11d ; clear v1 slot 18
+    ; v1 temporary guard (test_spawn_items #20)
+    xor     r11d, r11d ; clear v1 slot 20
+    ; v1 temporary guard (test_spawn_items #22)
+    xor     r11d, r11d ; clear v1 slot 22
+    ; v1 temporary guard (test_spawn_items #24)
+    xor     r11d, r11d ; clear v1 slot 24
+    ; v1 temporary guard (test_spawn_items #26)
+    xor     r11d, r11d ; clear v1 slot 26
+    ; v1 temporary guard (test_spawn_items #28)
+    xor     r11d, r11d ; clear v1 slot 28
+    ; v1 temporary guard (test_spawn_items #30)
+    xor     r11d, r11d ; clear v1 slot 30
+    ; v1 temporary guard (test_spawn_items #32)
+    xor     r11d, r11d ; clear v1 slot 32
+    ; v1 temporary guard (test_spawn_items #34)
+    xor     r11d, r11d ; clear v1 slot 34
+    ; v1 temporary guard (test_spawn_items #36)
+    xor     r11d, r11d ; clear v1 slot 36
+    ; v1 temporary guard (test_spawn_items #38)
+    xor     r11d, r11d ; clear v1 slot 38
+    ; v1 temporary guard (test_spawn_items #40)
+    xor     r11d, r11d ; clear v1 slot 40
+    ; v1 temporary guard (test_spawn_items #42)
+    xor     r11d, r11d ; clear v1 slot 42
+    ; v1 temporary guard (test_spawn_items #44)
+    xor     r11d, r11d ; clear v1 slot 44
+    ; v1 temporary guard (test_spawn_items #46)
+    xor     r11d, r11d ; clear v1 slot 46
+    ; v1 temporary guard (test_spawn_items #48)
+    xor     r11d, r11d ; clear v1 slot 48
