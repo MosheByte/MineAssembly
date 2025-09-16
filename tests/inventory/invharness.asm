@@ -1,66 +1,47 @@
 ; invharness.asm - test env for the inventory tests: reset everything the
 ; modules read, rebuild the slot layout, and fake mouse/key input on slots.
-%define IMPL_INVHARNESS ; v1: invharness scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (invharness:2)
-%include "common.inc" ; v1: invharness scratch #3
-%include "testlib.inc" ; v1: invharness scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (invharness:4)
-%include "../inventory/invtest.inc" ; v1: invharness scratch #5
+%define IMPL_INVHARNESS
+%include "common.inc"
+%include "testlib.inc"
+%include "../inventory/invtest.inc"   ; via the tests/lib/ include path
 
-section .rdata ; v1: invharness scratch #7
-align 8 ; v1: invharness scratch #8
-    ; TODO: clamp index before table lookup on malformed input (invharness:8)
-d_one:      dq 1.0 ; v1: invharness scratch #9
-d_hundred:  dq 100.0 ; v1: invharness scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (invharness:10)
-f_half:     dd 0.5 ; v1: invharness scratch #11
-f_64:       dd 64.0 ; v1: invharness scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (invharness:12)
-s_notfound: db "h_find: slot (group, idx) not in the layout", 0 ; v1: invharness scratch #13
-s_harness:  db "invharness.asm", 0 ; v1: invharness scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (invharness:14)
+section .rdata
+align 8
+d_one:      dq 1.0
+d_hundred:  dq 100.0
+f_half:     dd 0.5
+f_64:       dd 64.0
+s_notfound: db "h_find: slot (group, idx) not in the layout", 0
+s_harness:  db "invharness.asm", 0
 
-section .bss ; v1: invharness scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (invharness:16)
-alignb 16 ; v1: invharness scratch #17
-dummy_slot: resb SD_SIZE ; v1: invharness scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (invharness:18)
+section .bss
+alignb 16
+dummy_slot: resb SD_SIZE
 
-section .text ; v1: invharness scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (invharness:20)
+section .text
 
 ; known state: 64-stacks with tools at 1, no fuel/smelt/durability, 427x240 ui,
 ; clock at 100 s, player at (0.5, 64, 0.5)
-PROC h_reset, 0 ; v1: invharness scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (invharness:24)
-    call  screens_close ; v1: invharness scratch #25
-    lea   rdi, [rel g_player] ; v1: invharness scratch #26
-    ; TODO: clamp index before table lookup on malformed input (invharness:26)
-    xor   eax, eax ; v1: invharness scratch #27
-    mov   ecx, 512 ; v1: invharness scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (invharness:28)
-    rep   stosb ; v1: invharness scratch #29
-    lea   rdi, [rel item_max_stack] ; v1: invharness scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (invharness:30)
-    mov   al, 64 ; v1: invharness scratch #31
-    mov   ecx, 256 ; v1: invharness scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (invharness:32)
-    rep   stosb ; v1: invharness scratch #33
-    lea   rdi, [rel item_max_stack] ; v1: invharness scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (invharness:34)
-    mov   byte [rdi], 0 ; v1: invharness scratch #35
-    lea   rdi, [rdi+I_PICK_WOOD] ; v1: invharness scratch #36
-    ; TODO: verify 16-byte rsp alignment before inner call (invharness:36)
-    mov   al, 1 ; v1: invharness scratch #37
-    mov   ecx, 20 ; v1: invharness scratch #38
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (invharness:38)
-    rep   stosb ; v1: invharness scratch #39
-    xor   eax, eax ; v1: invharness scratch #40
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (invharness:40)
-    lea   rdi, [rel item_fuel] ; v1: invharness scratch #41
-    mov   ecx, 512 ; v1: invharness scratch #42
-    ; TODO: clamp index before table lookup on malformed input (invharness:42)
-    rep   stosb ; v1: invharness scratch #43
+PROC h_reset, 0
+    call  screens_close
+    lea   rdi, [rel g_player]
+    xor   eax, eax
+    mov   ecx, 512
+    rep   stosb
+    lea   rdi, [rel item_max_stack]
+    mov   al, 64
+    mov   ecx, 256
+    rep   stosb
+    lea   rdi, [rel item_max_stack]
+    mov   byte [rdi], 0
+    lea   rdi, [rdi+I_PICK_WOOD]
+    mov   al, 1
+    mov   ecx, 20                       ; the 20 tool ids
+    rep   stosb
+    xor   eax, eax
+    lea   rdi, [rel item_fuel]
+    mov   ecx, 512
+    rep   stosb
     lea   rdi, [rel item_durability]
     mov   ecx, 512
     rep   stosb
@@ -137,51 +118,131 @@ PROC h_find, 0
     lea   rax, [rel dummy_slot]
 .done:
 ENDP
-    ; v1 temporary guard (invharness #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (invharness #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (invharness #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (invharness #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (invharness #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (invharness #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (invharness #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (invharness #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (invharness #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (invharness #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (invharness #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (invharness #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (invharness #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (invharness #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (invharness #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (invharness #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (invharness #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (invharness #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (invharness #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (invharness #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (invharness #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (invharness #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (invharness #63)
-    xor     r11d, r11d ; clear v1 slot 63
-    ; v1 temporary guard (invharness #65)
-    xor     r11d, r11d ; clear v1 slot 65
+
+PROC h_hover, 0
+    call  h_find
+    movsx ecx, word [rax+SD_X]
+    movsx edx, word [rax+SD_Y]
+    add   ecx, 9
+    add   edx, 9
+    mov   [rel g_ui_mx], ecx
+    mov   [rel g_ui_my], edx
+ENDP
+
+LEAF h_mouse_at
+    mov   [rel g_ui_mx], ecx
+    mov   [rel g_ui_my], edx
+    ret
+
+; bumps the clock 1 s first so two clicks never read as a double-click
+PROC h_click, 0
+    mov   r12d, r8d
+    mov   r13d, r9d
+    call  h_hover
+    xor   eax, eax
+    test  r13d, r13d
+    setnz al
+    lea   rcx, [rel g_keys]
+    mov   [rcx+VK_SHIFT_], al
+    movsd xmm0, [rel g_time_total]
+    addsd xmm0, [rel d_one]
+    movsd [rel g_time_total], xmm0
+    mov   [rel g_mouse_buttons], r12d
+    mov   ecx, r12d
+    mov   edx, 1
+    call  screens_on_mouse
+    mov   dword [rel g_mouse_buttons], 0
+    mov   ecx, r12d
+    xor   edx, edx
+    call  screens_on_mouse
+    lea   rcx, [rel g_keys]
+    mov   byte [rcx+VK_SHIFT_], 0
+ENDP
+
+PROC h_press, 0
+    mov   [rel g_mouse_buttons], ecx
+    mov   edx, 1
+    call  screens_on_mouse
+ENDP
+
+PROC h_release, 0
+    mov   dword [rel g_mouse_buttons], 0
+    xor   edx, edx
+    call  screens_on_mouse
+ENDP
+
+PROC h_move, 0
+    call  h_hover
+    call  screens_render
+ENDP
+
+; same shape as game_on_key forwards a WM_KEYDOWN
+PROC h_key, 0
+    mov   ebx, ecx
+    xor   eax, eax
+    test  edx, edx
+    sete  al                            ; auto-repeat isn't "pressed this frame"
+    lea   rsi, [rel g_keys_pressed]
+    mov   [rsi+rbx], al
+    call  screens_on_key
+    mov   byte [rsi+rbx], 0
+ENDP
+
+PROC h_count_group, 0
+    mov   ebx, ecx
+    call  screens_render
+    mov   ecx, [rel scr_nslots]
+    lea   rdx, [rel scr_slots]
+    xor   eax, eax
+    test  ecx, ecx
+    jle   .done
+.loop:
+    movzx r8d, byte [rdx+SD_GROUP]
+    cmp   r8d, ebx
+    jne   .next
+    inc   eax
+.next:
+    add   rdx, SD_SIZE
+    dec   ecx
+    jnz   .loop
+.done:
+ENDP
+
+PROC h_cells, 0
+    mov   rbx, rcx
+    call  screens_render
+    mov   ecx, [rel scr_nslots]
+    lea   rdx, [rel scr_slots]
+    xor   eax, eax
+    test  ecx, ecx
+    jle   .done
+.loop:
+    cmp   byte [rdx+SD_GROUP], G_CGRID
+    jne   .next
+    movzx r8d, word [rdx+SD_IDX]
+    mov   [rbx+rax*2], r8w
+    inc   eax
+.next:
+    add   rdx, SD_SIZE
+    dec   ecx
+    jnz   .loop
+.done:
+ENDP
+
+PROC h_panel, 192
+    lea   rcx, LOC(0)
+    call  h_cells
+    movzx edx, word LOC(0)
+    mov   ecx, G_CGRID
+    call  h_find
+    movsx ecx, word [rax+SD_X]
+    movsx edx, word [rax+SD_Y]
+    lea   eax, [rcx-8]
+    sub   edx, 17
+ENDP
+
+LEAF h_set_name
+    movzx ecx, cl
+    lea   rax, [rel item_name]
+    mov   [rax+rcx*8], rdx
+    ret
