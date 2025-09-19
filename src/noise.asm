@@ -532,3 +532,72 @@ PROCX fbm3
     divss   xmm9, xmm12
     movaps  xmm0, xmm9
 ENDPX
+
+; musgrave ridged. (1-|n|)^2, each octave weighted by the last so detail
+; piles up on the ridges and valleys stay smooth
+PROCX ridged2
+    movaps  xmm6, xmm0
+    movaps  xmm7, xmm1
+    mov     ebx, r8d
+    CLAMP_OCTAVES ebx
+    xorps   xmm8, xmm8
+    movss   xmm9, [f_one]
+    movss   xmm10, [f_one]
+    xorps   xmm11, xmm11
+    movss   xmm12, [f_one] ; weight carried over
+    xorps   xmm13, xmm13
+    lea     rsi, [rel oct_offsets]
+.octave:
+    movaps  xmm0, xmm6
+    mulss   xmm0, xmm10
+    addss   xmm0, [rsi]
+    movaps  xmm1, xmm7
+    mulss   xmm1, xmm10
+    addss   xmm1, [rsi+4]
+    call    noise2
+    movaps  xmm1, xmm13
+    subss   xmm1, xmm0
+    maxss   xmm0, xmm1 ; |n| without a mask constant
+    movss   xmm1, [f_one]
+    subss   xmm1, xmm0
+    mulss   xmm1, xmm1
+    mulss   xmm1, xmm12
+    movaps  xmm12, xmm1
+    addss   xmm12, xmm12
+    maxss   xmm12, xmm13
+    minss   xmm12, [f_one] ; next weight = clamp(2r, 0, 1)
+    mulss   xmm1, xmm9
+    addss   xmm8, xmm1
+    addss   xmm11, xmm9
+    mulss   xmm9, [f_half]
+    addss   xmm10, xmm10
+    add     rsi, 16
+    dec     ebx
+    jnz     .octave
+    divss   xmm8, xmm11
+    movaps  xmm0, xmm8
+ENDPX
+
+; quilez domain warp: fbm2(p + 4q), q = (fbm2(p), fbm2(p + (5.2, 1.3))).
+; 3 fbm calls, keep it out of hot loops
+PROCX warp2
+    movaps  xmm6, xmm0
+    movaps  xmm7, xmm1
+    mov     ebx, r8d
+    call    fbm2 ; args are already right
+    movaps  xmm8, xmm0
+    movaps  xmm0, xmm6
+    addss   xmm0, [f_warp_ox]
+    movaps  xmm1, xmm7
+    addss   xmm1, [f_warp_oy]
+    mov     r8d, ebx
+    call    fbm2
+    mulss   xmm0, [f_four]
+    mulss   xmm8, [f_four]
+    addss   xmm0, xmm7
+    movaps  xmm1, xmm0
+    movaps  xmm0, xmm6
+    addss   xmm0, xmm8
+    mov     r8d, ebx
+    call    fbm2
+ENDPX
