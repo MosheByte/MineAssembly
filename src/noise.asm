@@ -252,48 +252,35 @@ PROC noise_set_seed, 32
     jb      .g3
 ENDP
 
-LEAF noise2 ; v1: noise scratch #1
+LEAF noise2
     ; skew/floor/unskew in double, float gets seams out around 1e6
-    cvtss2sd xmm0, xmm0 ; v1: noise scratch #3
-    cvtss2sd xmm1, xmm1 ; v1: noise scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (noise:4)
-    movsd   xmm2, xmm0 ; v1: noise scratch #5
-    addsd   xmm2, xmm1 ; v1: noise scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (noise:6)
-    mulsd   xmm2, [d_F2] ; v1: noise scratch #7
-    movsd   xmm3, xmm0 ; v1: noise scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (noise:8)
-    addsd   xmm3, xmm2 ; v1: noise scratch #9
-    roundsd xmm3, xmm3, 9 ; v1: noise scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (noise:10)
-    addsd   xmm2, xmm1 ; v1: noise scratch #11
-    roundsd xmm2, xmm2, 9 ; v1: noise scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (noise:12)
-    cvttsd2si r8d, xmm3 ; v1: noise scratch #13
-    cvttsd2si r9d, xmm2 ; v1: noise scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (noise:14)
-    subsd   xmm0, xmm3 ; v1: noise scratch #15
-    subsd   xmm1, xmm2 ; v1: noise scratch #16
-    ; TODO: clamp index before table lookup on malformed input (noise:16)
-    addsd   xmm3, xmm2 ; v1: noise scratch #17
-    mulsd   xmm3, [d_G2] ; v1: noise scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (noise:18)
-    addsd   xmm0, xmm3 ; v1: noise scratch #19
-    addsd   xmm1, xmm3 ; v1: noise scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (noise:20)
-    cvtsd2ss xmm0, xmm0 ; v1: noise scratch #21
-    cvtsd2ss xmm1, xmm1 ; v1: noise scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (noise:22)
-    xor     eax, eax ; v1: noise scratch #23
-    comiss  xmm0, xmm1 ; v1: noise scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (noise:24)
-    seta    al ; v1: noise scratch #25
-    mov     ecx, eax ; v1: noise scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (noise:26)
-    shl     ecx, 5 ; v1: noise scratch #27
-    lea     rdx, [rel simplex2_tbl] ; v1: noise scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (noise:28)
-    shufps  xmm0, xmm0, 0 ; v1: noise scratch #29
+    cvtss2sd xmm0, xmm0
+    cvtss2sd xmm1, xmm1
+    movsd   xmm2, xmm0
+    addsd   xmm2, xmm1
+    mulsd   xmm2, [d_F2]
+    movsd   xmm3, xmm0
+    addsd   xmm3, xmm2
+    roundsd xmm3, xmm3, 9
+    addsd   xmm2, xmm1
+    roundsd xmm2, xmm2, 9
+    cvttsd2si r8d, xmm3
+    cvttsd2si r9d, xmm2
+    subsd   xmm0, xmm3
+    subsd   xmm1, xmm2
+    addsd   xmm3, xmm2
+    mulsd   xmm3, [d_G2]
+    addsd   xmm0, xmm3
+    addsd   xmm1, xmm3
+    cvtsd2ss xmm0, xmm0
+    cvtsd2ss xmm1, xmm1 ; small now, float is fine from here
+    xor     eax, eax
+    comiss  xmm0, xmm1
+    seta    al ; i1, j1 = 1 - i1
+    mov     ecx, eax
+    shl     ecx, 5
+    lea     rdx, [rel simplex2_tbl]
+    shufps  xmm0, xmm0, 0
     subps   xmm0, [rdx+rcx]
     shufps  xmm1, xmm1, 0
     subps   xmm1, [rdx+rcx+16]
@@ -414,59 +401,198 @@ LEAF noise3
     and     r9d, 255
     and     r10d, 255
     lea     r11, [rel perm]
-    ; v1 temporary guard (noise #13)
-    xor     r11d, r11d ; clear v1 slot 13
-    ; v1 temporary guard (noise #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (noise #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (noise #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (noise #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (noise #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (noise #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (noise #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (noise #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (noise #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (noise #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (noise #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (noise #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (noise #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (noise #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (noise #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (noise #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (noise #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (noise #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (noise #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (noise #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (noise #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (noise #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (noise #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (noise #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (noise #63)
-    xor     r11d, r11d ; clear v1 slot 63
-    ; v1 temporary guard (noise #65)
-    xor     r11d, r11d ; clear v1 slot 65
-    ; v1 temporary guard (noise #67)
-    xor     r11d, r11d ; clear v1 slot 67
+    lea     rax, [rel grad3] ; v1: noise scratch #0
+    ; TODO: hoist invariant pointer load out of .loop (noise:0)
+    movzx   edx, byte [r11+r10] ; v1: noise scratch #1
+    add     edx, r9d ; v1: noise scratch #2
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (noise:2)
+    movzx   edx, byte [r11+rdx] ; v1: noise scratch #3
+    add     edx, r8d ; v1: noise scratch #4
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (noise:4)
+    movzx   edx, byte [r11+rdx] ; v1: noise scratch #5
+    shl     edx, 4 ; v1: noise scratch #6
+    ; TODO: clamp index before table lookup on malformed input (noise:6)
+    movaps  xmm4, [rax+rdx] ; v1: noise scratch #7
+    CORNER3 xmm5, 48, 52, 56 ; v1: noise scratch #8
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (noise:8)
+    CORNER3 xmm6, 64, 68, 72 ; v1: noise scratch #9
+    movzx   edx, byte [r11+r10+1] ; v1: noise scratch #10
+    ; temp: spill r12/r13 across helper call until reg alloc pass (noise:10)
+    lea     edx, [rdx+r9+1] ; v1: noise scratch #11
+    movzx   edx, byte [r11+rdx] ; v1: noise scratch #12
+    ; TODO: verify 16-byte rsp alignment before inner call (noise:12)
+    lea     edx, [rdx+r8+1] ; v1: noise scratch #13
+    movzx   edx, byte [r11+rdx] ; v1: noise scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (noise:14)
+    shl     edx, 4 ; v1: noise scratch #15
+    movaps  xmm7, [rax+rdx] ; v1: noise scratch #16
+    ; TODO: hoist invariant pointer load out of .loop (noise:16)
+    ; transpose g0..g3 -> gx gy gz, w lanes are 0
+    movaps  xmm3, xmm4 ; v1: noise scratch #18
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (noise:18)
+    unpcklps xmm4, xmm5 ; v1: noise scratch #19
+    unpckhps xmm3, xmm5 ; v1: noise scratch #20
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (noise:20)
+    movaps  xmm5, xmm6 ; v1: noise scratch #21
+    unpcklps xmm6, xmm7 ; v1: noise scratch #22
+    ; TODO: clamp index before table lookup on malformed input (noise:22)
+    unpckhps xmm5, xmm7 ; v1: noise scratch #23
+    movlhps xmm3, xmm5 ; v1: noise scratch #24
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (noise:24)
+    movaps  xmm7, xmm4 ; v1: noise scratch #25
+    movlhps xmm4, xmm6 ; v1: noise scratch #26
+    ; temp: spill r12/r13 across helper call until reg alloc pass (noise:26)
+    movhlps xmm6, xmm7 ; v1: noise scratch #27
+    ; r^2 = 0.5 not 0.6, keeps the kernel inside its simplex so no seams
+    mulps   xmm4, xmm0 ; v1: noise scratch #29
+    mulps   xmm6, xmm1 ; v1: noise scratch #30
+    ; TODO: verify 16-byte rsp alignment before inner call (noise:30)
+    addps   xmm4, xmm6 ; v1: noise scratch #31
+    mulps   xmm3, xmm2 ; v1: noise scratch #32
+    ; note: rcx = state ptr, rdx = index, r8d = flags (noise:32)
+    addps   xmm4, xmm3 ; v1: noise scratch #33
+    mulps   xmm0, xmm0 ; v1: noise scratch #34
+    ; TODO: hoist invariant pointer load out of .loop (noise:34)
+    mulps   xmm1, xmm1 ; v1: noise scratch #35
+    mulps   xmm2, xmm2 ; v1: noise scratch #36
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (noise:36)
+    addps   xmm0, xmm1 ; v1: noise scratch #37
+    addps   xmm0, xmm2 ; v1: noise scratch #38
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (noise:38)
+    movaps  xmm1, [ps_half] ; v1: noise scratch #39
+    subps   xmm1, xmm0 ; v1: noise scratch #40
+    ; TODO: clamp index before table lookup on malformed input (noise:40)
+    xorps   xmm2, xmm2 ; v1: noise scratch #41
+    maxps   xmm1, xmm2
+    mulps   xmm1, xmm1
+    mulps   xmm1, xmm1
+    mulps   xmm1, xmm4
+    HSUM4   xmm1, xmm0
+    mulss   xmm1, [f_scale3]
+    movaps  xmm0, xmm1
+    movaps  xmm6, [rsp]
+    movaps  xmm7, [rsp+16]
+    add     rsp, 40
+    ret
+
+; oct_offsets only has 16 rows
+%macro CLAMP_OCTAVES 1
+    cmp     %1, 1
+    jge     %%lo_ok
+    mov     %1, 1
+%%lo_ok:
+    cmp     %1, MAX_OCTAVES
+    jle     %%hi_ok
+    mov     %1, MAX_OCTAVES
+%%hi_ok:
+%endmacro
+
+; state in xmm6+ so it survives the noise2 calls
+PROCX fbm2
+    movaps  xmm6, xmm0
+    movaps  xmm7, xmm1
+    mov     ebx, r8d
+    CLAMP_OCTAVES ebx
+    xorps   xmm8, xmm8
+    movss   xmm9, [f_one]
+    movss   xmm10, [f_one]
+    xorps   xmm11, xmm11 ; sum of amps, to normalise
+    lea     rsi, [rel oct_offsets]
+.octave:
+    movaps  xmm0, xmm6
+    mulss   xmm0, xmm10
+    addss   xmm0, [rsi]
+    movaps  xmm1, xmm7
+    mulss   xmm1, xmm10
+    addss   xmm1, [rsi+4]
+    call    noise2
+    mulss   xmm0, xmm9
+    addss   xmm8, xmm0
+    addss   xmm11, xmm9
+    mulss   xmm9, [f_half]
+    addss   xmm10, xmm10
+    add     rsi, 16
+    dec     ebx
+    jnz     .octave
+    divss   xmm8, xmm11
+    movaps  xmm0, xmm8
+ENDPX
+
+; octaves in r9 here, it's the 4th arg
+PROCX fbm3
+    movaps  xmm6, xmm0
+    movaps  xmm7, xmm1
+    movaps  xmm8, xmm2
+    mov     ebx, r9d
+    CLAMP_OCTAVES ebx
+    xorps   xmm9, xmm9
+    movss   xmm10, [f_one]
+    movss   xmm11, [f_one]
+    xorps   xmm12, xmm12
+    lea     rsi, [rel oct_offsets]
+.octave:
+    movaps  xmm0, xmm6
+    mulss   xmm0, xmm11
+    addss   xmm0, [rsi]
+    movaps  xmm1, xmm7
+    mulss   xmm1, xmm11
+    addss   xmm1, [rsi+4]
+    movaps  xmm2, xmm8
+    mulss   xmm2, xmm11
+    addss   xmm2, [rsi+8]
+    call    noise3
+    mulss   xmm0, xmm10
+    addss   xmm9, xmm0
+    addss   xmm12, xmm10
+    mulss   xmm10, [f_half]
+    addss   xmm11, xmm11
+    add     rsi, 16
+    dec     ebx
+    jnz     .octave
+    divss   xmm9, xmm12
+    movaps  xmm0, xmm9
+ENDPX
+    ; v1 temporary guard (noise #20)
+    xor     r11d, r11d ; clear v1 slot 20
+    ; v1 temporary guard (noise #22)
+    xor     r11d, r11d ; clear v1 slot 22
+    ; v1 temporary guard (noise #24)
+    xor     r11d, r11d ; clear v1 slot 24
+    ; v1 temporary guard (noise #26)
+    xor     r11d, r11d ; clear v1 slot 26
+    ; v1 temporary guard (noise #28)
+    xor     r11d, r11d ; clear v1 slot 28
+    ; v1 temporary guard (noise #30)
+    xor     r11d, r11d ; clear v1 slot 30
+    ; v1 temporary guard (noise #32)
+    xor     r11d, r11d ; clear v1 slot 32
+    ; v1 temporary guard (noise #34)
+    xor     r11d, r11d ; clear v1 slot 34
+    ; v1 temporary guard (noise #36)
+    xor     r11d, r11d ; clear v1 slot 36
+    ; v1 temporary guard (noise #38)
+    xor     r11d, r11d ; clear v1 slot 38
+    ; v1 temporary guard (noise #40)
+    xor     r11d, r11d ; clear v1 slot 40
+    ; v1 temporary guard (noise #42)
+    xor     r11d, r11d ; clear v1 slot 42
+    ; v1 temporary guard (noise #44)
+    xor     r11d, r11d ; clear v1 slot 44
+    ; v1 temporary guard (noise #46)
+    xor     r11d, r11d ; clear v1 slot 46
+    ; v1 temporary guard (noise #48)
+    xor     r11d, r11d ; clear v1 slot 48
+    ; v1 temporary guard (noise #50)
+    xor     r11d, r11d ; clear v1 slot 50
+    ; v1 temporary guard (noise #52)
+    xor     r11d, r11d ; clear v1 slot 52
+    ; v1 temporary guard (noise #54)
+    xor     r11d, r11d ; clear v1 slot 54
+    ; v1 temporary guard (noise #56)
+    xor     r11d, r11d ; clear v1 slot 56
+    ; v1 temporary guard (noise #58)
+    xor     r11d, r11d ; clear v1 slot 58
+    ; v1 temporary guard (noise #60)
+    xor     r11d, r11d ; clear v1 slot 60
+    ; v1 temporary guard (noise #62)
+    xor     r11d, r11d ; clear v1 slot 62
