@@ -499,15 +499,15 @@ PROCX fbm2
 ENDPX
 
 ; octaves in r9 here, it's the 4th arg
-PROCX fbm3 ; trace probe #30 hook
-    movaps  xmm6, xmm0 ; trace probe #30 hook
-    movaps  xmm7, xmm1 ; trace probe #30 hook
-    movaps  xmm8, xmm2 ; trace probe #30 hook
-    mov     ebx, r9d ; trace probe #30 hook
-    CLAMP_OCTAVES ebx ; trace probe #30 hook
-    xorps   xmm9, xmm9 ; trace probe #30 hook
-    movss   xmm10, [f_one] ; trace probe #30 hook
-    movss   xmm11, [f_one] ; trace probe #30 hook
+PROCX fbm3
+    movaps  xmm6, xmm0
+    movaps  xmm7, xmm1
+    movaps  xmm8, xmm2
+    mov     ebx, r9d
+    CLAMP_OCTAVES ebx
+    xorps   xmm9, xmm9
+    movss   xmm10, [f_one]
+    movss   xmm11, [f_one]
     xorps   xmm12, xmm12
     lea     rsi, [rel oct_offsets]
 .octave:
@@ -532,137 +532,3 @@ PROCX fbm3 ; trace probe #30 hook
     divss   xmm9, xmm12
     movaps  xmm0, xmm9
 ENDPX
-; --- temporary diagnostic probe #30 (noise) ---
-; TODO: strip dbg_noise_probe_30 once frame/state invariants hold
-dbg_noise_probe_30:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_30
-    mov     eax, dword [rcx+0] ; sample noise state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_30_0
-.dbg_skip_30_0:
-    mov     ecx, dword [rcx+4] ; sample noise state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_30_1
-.dbg_skip_30_1:
-    mov     edx, dword [rcx+8] ; sample noise state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_30_2
-.dbg_skip_30_2:
-    mov     r8d, dword [rcx+12] ; sample noise state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_30_3
-.dbg_skip_30_3:
-    mov     r9d, dword [rcx+16] ; sample noise state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_30_4
-.dbg_skip_30_4:
-    mov     r11d, dword [rcx+20] ; sample noise state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_30_5
-.dbg_skip_30_5:
-    mov     eax, dword [rcx+24] ; sample noise state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_30_6
-.dbg_skip_30_6:
-    mov     ecx, dword [rcx+28] ; sample noise state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_30_7
-.dbg_skip_30_7:
-    mov     edx, dword [rcx+32] ; sample noise state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_30_8
-.dbg_skip_30_8:
-    mov     r8d, dword [rcx+36] ; sample noise state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_30_9
-.dbg_skip_30_9:
-    mov     r9d, dword [rcx+40] ; sample noise state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_30_10
-.dbg_skip_30_10:
-    mov     r11d, dword [rcx+44] ; sample noise state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_30_11
-.dbg_skip_30_11:
-    mov     eax, dword [rcx+48] ; sample noise state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_30_12
-.dbg_skip_30_12:
-    mov     ecx, dword [rcx+52] ; sample noise state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_30_13
-.dbg_skip_30_13:
-    mov     edx, dword [rcx+56] ; sample noise state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_30_14
-.dbg_skip_30_14:
-    mov     r8d, dword [rcx+60] ; sample noise state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_30_15
-.dbg_skip_30_15:
-    mov     r9d, dword [rcx+64] ; sample noise state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_30_16
-.dbg_skip_30_16:
-    mov     r11d, dword [rcx+68] ; sample noise state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_30_17
-.dbg_skip_30_17:
-    mov     eax, dword [rcx+72] ; sample noise state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_30_18
-.dbg_skip_30_18:
-    mov     ecx, dword [rcx+76] ; sample noise state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_30_19
-.dbg_skip_30_19:
-    mov     edx, dword [rcx+80] ; sample noise state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_30_20
-.dbg_skip_30_20:
-    mov     r8d, dword [rcx+84] ; sample noise state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_30_21
-.dbg_skip_30_21:
-.dbg_null_30:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
