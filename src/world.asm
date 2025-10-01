@@ -1,66 +1,48 @@
 ; world.asm - chunk storage + block lookup. get_block gets hammered by meshing,
 ; physics and raycasts, so the fast path is what matters here
 ; hash: h = cx*0x9E3779B1 ^ cz*0x7FEB352D, h ^= h>>15, & 4095. chains are ~always 0-1 long
-%define IMPL_WORLD ; v1: world scratch #3
-%include "common.inc" ; v1: world scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (world:4)
+%define IMPL_WORLD
+%include "common.inc"
 
-extern chunkmgr_drain ; v1: world scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (world:6)
+extern chunkmgr_drain
 
-%define HK1 0x9E3779B1 ; v1: world scratch #8
-    ; TODO: clamp index before table lookup on malformed input (world:8)
-%define HK2 0x7FEB352D ; v1: world scratch #9
+%define HK1 0x9E3779B1
+%define HK2 0x7FEB352D
 
 ; dst, cx, cz, tmp -> dst = bucket
-%macro CHUNK_HASH 4 ; v1: world scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (world:12)
-    imul %1, %2, HK1 ; v1: world scratch #13
-    imul %4, %3, HK2 ; v1: world scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (world:14)
-    xor  %1, %4 ; v1: world scratch #15
-    mov  %4, %1 ; v1: world scratch #16
-    ; note: rcx = state ptr, rdx = index, r8d = flags (world:16)
-    shr  %4, 15 ; v1: world scratch #17
-    xor  %1, %4 ; v1: world scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (world:18)
-    and  %1, CHUNK_HASH_SIZE-1 ; v1: world scratch #19
-%endmacro ; v1: world scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (world:20)
+%macro CHUNK_HASH 4
+    imul %1, %2, HK1
+    imul %4, %3, HK2
+    xor  %1, %4
+    mov  %4, %1
+    shr  %4, 15
+    xor  %1, %4
+    and  %1, CHUNK_HASH_SIZE-1
+%endmacro
 
-section .bss ; v1: world scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (world:22)
-alignb 16 ; v1: world scratch #23
-w_pool          resq 1 ; v1: world scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (world:24)
-w_inited        resd 1 ; v1: world scratch #25
-w_free_count    resd 1 ; v1: world scratch #26
-    ; TODO: clamp index before table lookup on malformed input (world:26)
-alignb 16 ; v1: world scratch #27
-w_cache         resq 1 ; v1: world scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (world:28)
-alignb 16 ; v1: world scratch #29
-w_hash          resq CHUNK_HASH_SIZE ; v1: world scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (world:30)
-alignb 16 ; v1: world scratch #31
-w_free_stack    resd MAX_CHUNKS ; v1: world scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (world:32)
+section .bss
+alignb 16
+w_pool          resq 1
+w_inited        resd 1
+w_free_count    resd 1
+alignb 16
+w_cache         resq 1              ; last chunk hit, main thread only
+alignb 16
+w_hash          resq CHUNK_HASH_SIZE
+alignb 16
+w_free_stack    resd MAX_CHUNKS
 
-section .rdata ; v1: world scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (world:34)
-align 16 ; v1: world scratch #35
-CSTR s_pool_fail, "world_init: could not allocate the chunk pool" ; v1: world scratch #36
-    ; TODO: hoist invariant pointer load out of .loop (world:36)
+section .rdata
+align 16
+CSTR s_pool_fail, "world_init: could not allocate the chunk pool"
 
 ; 0xAABBGGRR, same order as the BIOME_* ids
-%define RGB(r,g,b) (0xFF000000 | ((b)<<16) | ((g)<<8) | (r)) ; v1: world scratch #39
+%define RGB(r,g,b) (0xFF000000 | ((b)<<16) | ((g)<<8) | (r))
 
-section .data ; v1: world scratch #41
-align 16 ; v1: world scratch #42
-    ; TODO: verify 16-byte rsp alignment before inner call (world:42)
-global biome_grass_color ; v1: world scratch #43
-biome_grass_color: ; v1: world scratch #44
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (world:44)
+section .data
+align 16
+global biome_grass_color
+biome_grass_color:
     dd RGB(142,185,113)
     dd RGB(150,190, 92)
     dd RGB(141,189, 84)
@@ -132,53 +114,185 @@ bn_jungle:    db "Jungle", 0
 bn_savanna:   db "Savanna", 0
 bn_badlands:  db "Badlands", 0
 
-    ; v1 temporary guard (world #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (world #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (world #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (world #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (world #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (world #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (world #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (world #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (world #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (world #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (world #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (world #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (world #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (world #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (world #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (world #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (world #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (world #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (world #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (world #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (world #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (world #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (world #62)
-    xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (world #64)
-    xor     r11d, r11d ; clear v1 slot 64
-    ; v1 temporary guard (world #66)
-    xor     r11d, r11d ; clear v1 slot 66
+; turned blocks and placed leaves read back as their base block, so whatever
+; only cares what a block is (block entities, screens, drops, raycasts) keeps
+; working on the base id. world_get_block_raw and chunk memory have the real one
+align 16 ; v1: world scratch #3
+w_base: ; v1: world scratch #4
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (world:4)
+%assign i 0 ; v1: world scratch #5
+%rep 256 ; v1: world scratch #6
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (world:6)
+  BLOCK_BASE i ; v1: world scratch #7
+  db BB_BASE ; v1: world scratch #8
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (world:8)
+  %assign i i+1 ; v1: world scratch #9
+%endrep ; v1: world scratch #10
+    ; TODO: hoist invariant pointer load out of .loop (world:10)
+w_face: ; v1: world scratch #11
+%assign i 0 ; v1: world scratch #12
+    ; TODO: verify 16-byte rsp alignment before inner call (world:12)
+%rep 256 ; v1: world scratch #13
+  BLOCK_BASE i ; v1: world scratch #14
+    ; temp: spill r12/r13 across helper call until reg alloc pass (world:14)
+  db BB_FACE ; v1: world scratch #15
+  %assign i i+1 ; v1: world scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (world:16)
+%endrep ; v1: world scratch #17
+w_turn: ; v1: world scratch #18
+    ; TODO: clamp index before table lookup on malformed input (world:18)
+%assign i 0 ; v1: world scratch #19
+%rep 256 ; v1: world scratch #20
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (world:20)
+  BLOCK_BASE i ; v1: world scratch #21
+  db BB_TURN ; v1: world scratch #22
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (world:22)
+  %assign i i+1 ; v1: world scratch #23
+%endrep ; v1: world scratch #24
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (world:24)
+
+
+section .text ; v1: world scratch #27
+
+; safe to call twice
+    global world_init ; v1: world scratch #30
+    ; TODO: hoist invariant pointer load out of .loop (world:30)
+    align 16 ; v1: world scratch #31
+world_init: ; v1: world scratch #32
+    ; TODO: verify 16-byte rsp alignment before inner call (world:32)
+    push rbp ; v1: world scratch #33
+    mov  rbp, rsp ; v1: world scratch #34
+    ; temp: spill r12/r13 across helper call until reg alloc pass (world:34)
+    push rdi ; v1: world scratch #35
+    sub  rsp, FRAME_OUT + 8 ; v1: world scratch #36
+    ; note: rcx = state ptr, rdx = index, r8d = flags (world:36)
+    cmp  dword [rel w_inited], 0 ; v1: world scratch #37
+    jne  .done ; v1: world scratch #38
+    ; TODO: clamp index before table lookup on malformed input (world:38)
+    mov  rcx, MAX_CHUNKS*CHUNK_BYTES ; v1: world scratch #39
+    call mem_valloc ; v1: world scratch #40
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (world:40)
+    test rax, rax ; v1: world scratch #41
+    jnz  .ok ; v1: world scratch #42
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (world:42)
+    lea  rcx, [rel s_pool_fail] ; v1: world scratch #43
+    call fatal_error ; v1: world scratch #44
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (world:44)
+.ok: ; v1: world scratch #45
+    mov  [rel w_pool], rax
+    ; push in reverse so slot 0 is handed out first
+    lea  rdx, [rel w_free_stack]
+    xor  ecx, ecx
+    mov  r8d, MAX_CHUNKS-1
+.fill:
+    mov  [rdx+rcx*4], r8d
+    ; slot never changes after this
+    mov  r9, r8
+    imul r9, r9, CHUNK_BYTES
+    add  r9, rax
+    mov  [r9+CHUNK.slot], r8d
+    inc  ecx
+    dec  r8d
+    jns  .fill
+    mov  dword [rel w_free_count], MAX_CHUNKS
+    lea  rdi, [rel w_hash]
+    xor  eax, eax
+    mov  ecx, CHUNK_HASH_SIZE
+    rep  stosq
+    mov  qword [rel w_cache], 0
+    mov  dword [rel g_chunk_count], 0
+    mov  dword [rel w_inited], 1
+.done:
+    lea  rsp, [rbp-8]
+    pop  rdi
+    pop  rbp
+    ret
+
+LEAF world_get_chunk
+    mov  r8, [rel w_cache]
+    test r8, r8
+    jz   .hash
+    cmp  ecx, [r8+CHUNK.cx]
+    jne  .hash
+    cmp  edx, [r8+CHUNK.cz]
+    jne  .hash
+    cmp  dword [r8+CHUNK.state], CS_FREE
+    je   .hash
+    mov  rax, r8
+    ret
+.hash:
+    CHUNK_HASH eax, ecx, edx, r9d
+    lea  r8, [rel w_hash]
+    mov  rax, [r8+rax*8]
+.walk:
+    test rax, rax
+    jz   .out
+    cmp  ecx, [rax+CHUNK.cx]
+    jne  .next
+    cmp  edx, [rax+CHUNK.cz]
+    je   .out
+.next:
+    mov  rax, [rax+CHUNK.hnext]
+    jmp  .walk
+.out:
+    ret
+
+; hot path. leaf that only touches rax rcx rdx r8-r11 and callers rely on that,
+; so no calls in here
+LEAF world_get_block
+    cmp  edx, CHUNK_H
+    jae  .oob                       ; unsigned compare, catches y<0 too
+    mov  eax, ecx
+    sar  eax, CHUNK_SHIFT
+    mov  r9d, r8d
+    sar  r9d, CHUNK_SHIFT
+    mov  r10, [rel w_cache]
+    test r10, r10
+    jz   .lookup
+    cmp  eax, [r10+CHUNK.cx]
+    jne  .lookup
+    cmp  r9d, [r10+CHUNK.cz]
+    jne  .lookup
+.have:
+    cmp  dword [r10+CHUNK.state], CS_GENERATED
+    jb   .air
+    and  ecx, 15
+    and  r8d, 15
+    shl  r8d, 4
+    shl  edx, 8
+    or   ecx, r8d
+    or   ecx, edx
+    movzx eax, byte [r10+rcx+CHUNK_BLOCKS]
+    lea  r11, [rel w_base]
+    movzx eax, byte [r11+rax]
+    ret
+    ; v1 temporary guard (world #19)
+    xor     r11d, r11d ; clear v1 slot 19
+    ; v1 temporary guard (world #21)
+    xor     r11d, r11d ; clear v1 slot 21
+    ; v1 temporary guard (world #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (world #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (world #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (world #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (world #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (world #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (world #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (world #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (world #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (world #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (world #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (world #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (world #47)
+    xor     r11d, r11d ; clear v1 slot 47
