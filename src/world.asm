@@ -639,67 +639,48 @@ PROC world_set_block, 32
     jmp  .done
 .fail:
     xor  eax, eax
-.done: ; v1: world scratch #0
-    ; note: rcx = state ptr, rdx = index, r8d = flags (world:0)
-ENDP ; v1: world scratch #1
+.done:
+ENDP
 
 ; unloaded chunk? just ask worldgen
-    global world_get_biome ; v1: world scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (world:4)
-    align 16 ; v1: world scratch #5
-world_get_biome: ; v1: world scratch #6
-    ; TODO: clamp index before table lookup on malformed input (world:6)
-    push rbp ; v1: world scratch #7
-    mov  rbp, rsp ; v1: world scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (world:8)
-    push rsi ; v1: world scratch #9
-    push rdi ; v1: world scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (world:10)
-    sub  rsp, FRAME_OUT ; v1: world scratch #11
-    mov  esi, ecx ; v1: world scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (world:12)
-    mov  edi, edx ; v1: world scratch #13
-    sar  ecx, CHUNK_SHIFT ; v1: world scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (world:14)
-    sar  edx, CHUNK_SHIFT ; v1: world scratch #15
-    call world_get_chunk ; v1: world scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (world:16)
-    test rax, rax ; v1: world scratch #17
-    jz   .gen ; v1: world scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (world:18)
-    cmp  dword [rax+CHUNK.state], CS_GENERATED ; v1: world scratch #19
-    jb   .gen ; v1: world scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (world:20)
-    mov  ecx, esi ; v1: world scratch #21
-    and  ecx, 15 ; v1: world scratch #22
-    ; TODO: clamp index before table lookup on malformed input (world:22)
-    mov  edx, edi ; v1: world scratch #23
-    and  edx, 15 ; v1: world scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (world:24)
-    shl  edx, 4 ; v1: world scratch #25
-    or   ecx, edx ; v1: world scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (world:26)
-    movzx eax, byte [rax+rcx+CHUNK.biome] ; v1: world scratch #27
-    jmp  .done ; v1: world scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (world:28)
-.gen: ; v1: world scratch #29
-    mov  ecx, esi ; v1: world scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (world:30)
-    mov  edx, edi ; v1: world scratch #31
-    call worldgen_biome_at ; v1: world scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (world:32)
-.done: ; v1: world scratch #33
-    lea  rsp, [rbp-16] ; v1: world scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (world:34)
-    pop  rdi ; v1: world scratch #35
-    pop  rsi ; v1: world scratch #36
-    ; TODO: verify 16-byte rsp alignment before inner call (world:36)
-    pop  rbp ; v1: world scratch #37
-    ret ; v1: world scratch #38
-    ; TODO: clamp index before table lookup on malformed input (world:38)
+    global world_get_biome
+    align 16
+world_get_biome:
+    push rbp
+    mov  rbp, rsp
+    push rsi
+    push rdi
+    sub  rsp, FRAME_OUT
+    mov  esi, ecx
+    mov  edi, edx
+    sar  ecx, CHUNK_SHIFT
+    sar  edx, CHUNK_SHIFT
+    call world_get_chunk
+    test rax, rax
+    jz   .gen
+    cmp  dword [rax+CHUNK.state], CS_GENERATED
+    jb   .gen
+    mov  ecx, esi
+    and  ecx, 15
+    mov  edx, edi
+    and  edx, 15
+    shl  edx, 4
+    or   ecx, edx
+    movzx eax, byte [rax+rcx+CHUNK.biome]
+    jmp  .done
+.gen:
+    mov  ecx, esi
+    mov  edx, edi
+    call worldgen_biome_at
+.done:
+    lea  rsp, [rbp-16]
+    pop  rdi
+    pop  rsi
+    pop  rbp
+    ret
 
 ; -1 if all air / not loaded
-    global world_height_at ; v1: world scratch #41
+    global world_height_at
     align 16
 world_height_at:
     push rbp
@@ -808,31 +789,114 @@ world_alloc_chunk:
     ; slot and it keys off state
     mov  eax, CS_QUEUED
     xchg [r12+CHUNK.state], eax
-    ; v1 temporary guard (world #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (world #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (world #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (world #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (world #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (world #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (world #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (world #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (world #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (world #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (world #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (world #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (world #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (world #45)
-    xor     r11d, r11d ; clear v1 slot 45
+    mov  rax, r12
+    jmp  .done
+.full:
+    xor  eax, eax
+.done:
+    lea  rsp, [rbp-40]
+    pop  r13
+    pop  r12
+    pop  rdi
+    pop  rsi
+    pop  rbx
+    pop  rbp
+    ret
+
+; saving and freeing GL buffers is on the caller, do that first
+global world_release_chunk
+    global world_release_chunk
+    align 16
+world_release_chunk:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    push rdi
+    sub  rsp, FRAME_OUT + 8
+    mov  rbx, rcx
+    mov  esi, [rbx+CHUNK.cx]
+    mov  edi, [rbx+CHUNK.cz]
+    CHUNK_HASH eax, esi, edi, ecx
+    lea  rdx, [rel w_hash]
+    lea  rdx, [rdx+rax*8]
+.find:
+    mov  rax, [rdx]
+    test rax, rax
+    jz   .unlinked                  ; not in the chain?? shouldn't happen
+    cmp  rax, rbx
+    je   .hit
+    lea  rdx, [rax+CHUNK.hnext]
+    jmp  .find
+.hit:
+    mov  rax, [rbx+CHUNK.hnext]
+    mov  [rdx], rax
+.unlinked:
+    mov  qword [rbx+CHUNK.hnext], 0
+    mov  eax, [rel g_chunk_count]
+    dec  eax
+    js   .listed
+    mov  [rel g_chunk_count], eax
+    lea  rdx, [rel g_chunk_list]
+    mov  ecx, [rbx+CHUNK.list_idx]
+    mov  r8, [rdx+rax*8]
+    mov  [rdx+rcx*8], r8
+    mov  [r8+CHUNK.list_idx], ecx
+    mov  qword [rdx+rax*8], 0
+.listed:
+    cmp  [rel w_cache], rbx
+    jne  .nocache
+    mov  qword [rel w_cache], 0
+.nocache:
+    xor  eax, eax
+    xchg [rbx+CHUNK.state], eax     ; CS_FREE
+    mov  dword [rbx+CHUNK.dirty], 0
+    mov  dword [rbx+CHUNK.modified], 0
+    mov  eax, [rel w_free_count]
+    lea  rdx, [rel w_free_stack]
+    mov  ecx, [rbx+CHUNK.slot]
+    mov  [rdx+rax*4], ecx
+    inc  eax
+    mov  [rel w_free_count], eax
+    lea  rsp, [rbp-24]
+    pop  rdi
+    pop  rsi
+    pop  rbx
+    pop  rbp
+    ret
+
+; drain first, otherwise a worker can still be writing into a slot we just freed
+    global world_clear
+    align 16
+world_clear:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    sub  rsp, FRAME_OUT + 8
+    cmp  dword [rel w_inited], 0
+    je   .done
+    call chunkmgr_drain
+.loop:
+    mov  eax, [rel g_chunk_count]
+    test eax, eax
+    jz   .empty
+    dec  eax
+    lea  rdx, [rel g_chunk_list]
+    mov  rbx, [rdx+rax*8]
+    mov  rcx, rbx
+    call render_free_chunk
+    mov  rcx, rbx
+    call world_release_chunk
+    jmp  .loop
+.empty:
+    mov  qword [rel w_cache], 0
+.done:
+    lea  rsp, [rbp-8]
+    pop  rbx
+    pop  rbp
+    ret
+
+global world_free_slots
+LEAF world_free_slots
+    mov  eax, [rel w_free_count]
+    ret
