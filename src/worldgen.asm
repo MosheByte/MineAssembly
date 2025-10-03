@@ -1,66 +1,47 @@
 ; MineAssembly worldgen. deterministic per seed. worker threads gen chunks in
 ; parallel, so all scratch lives in a heap ctx per call.
 ; shaping runs on continuous weights, never on the biome id, or you get cliffs at biome borders
-%define IMPL_WORLDGEN ; v1: worldgen scratch #3
-%include "common.inc" ; v1: worldgen scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (worldgen:4)
+%define IMPL_WORLDGEN
+%include "common.inc"
 
 ; private frames, same as PROC/PROCX but not exported
-%macro FN 1-2 0 ; v1: worldgen scratch #7
-    align 16 ; v1: worldgen scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (worldgen:8)
-%1: ; v1: worldgen scratch #9
-    push rbp ; v1: worldgen scratch #10
-    ; TODO: clamp index before table lookup on malformed input (worldgen:10)
-    mov  rbp, rsp ; v1: worldgen scratch #11
-    push rbx ; v1: worldgen scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (worldgen:12)
-    push rsi ; v1: worldgen scratch #13
-    push rdi ; v1: worldgen scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (worldgen:14)
-    push r12 ; v1: worldgen scratch #15
-    push r13 ; v1: worldgen scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (worldgen:16)
-    push r14 ; v1: worldgen scratch #17
-    push r15 ; v1: worldgen scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (worldgen:18)
-    sub  rsp, (((%2)+15) & ~15) + FRAME_OUT + 8 ; v1: worldgen scratch #19
-%endmacro ; v1: worldgen scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (worldgen:20)
+%macro FN 1-2 0
+    align 16
+%1:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    push r14
+    push r15
+    sub  rsp, (((%2)+15) & ~15) + FRAME_OUT + 8
+%endmacro
 
-%macro FNX 1-2 0 ; v1: worldgen scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (worldgen:22)
-    align 16 ; v1: worldgen scratch #23
-%1: ; v1: worldgen scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (worldgen:24)
-    push rbp ; v1: worldgen scratch #25
-    mov  rbp, rsp ; v1: worldgen scratch #26
-    ; TODO: clamp index before table lookup on malformed input (worldgen:26)
-    push rbx ; v1: worldgen scratch #27
-    push rsi ; v1: worldgen scratch #28
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (worldgen:28)
-    push rdi ; v1: worldgen scratch #29
-    push r12 ; v1: worldgen scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (worldgen:30)
-    push r13 ; v1: worldgen scratch #31
-    push r14 ; v1: worldgen scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (worldgen:32)
-    push r15 ; v1: worldgen scratch #33
-    sub  rsp, 168 ; v1: worldgen scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (worldgen:34)
-    movdqa [rsp+0],   xmm6 ; v1: worldgen scratch #35
-    movdqa [rsp+16],  xmm7 ; v1: worldgen scratch #36
-    ; note: rcx = state ptr, rdx = index, r8d = flags (worldgen:36)
-    movdqa [rsp+32],  xmm8 ; v1: worldgen scratch #37
-    movdqa [rsp+48],  xmm9 ; v1: worldgen scratch #38
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (worldgen:38)
-    movdqa [rsp+64],  xmm10 ; v1: worldgen scratch #39
-    movdqa [rsp+80],  xmm11 ; v1: worldgen scratch #40
-    ; TODO: verify 16-byte rsp alignment before inner call (worldgen:40)
-    movdqa [rsp+96],  xmm12 ; v1: worldgen scratch #41
-    movdqa [rsp+112], xmm13 ; v1: worldgen scratch #42
-    ; TODO: clamp index before table lookup on malformed input (worldgen:42)
-    movdqa [rsp+128], xmm14 ; v1: worldgen scratch #43
+%macro FNX 1-2 0
+    align 16
+%1:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    push r14
+    push r15
+    sub  rsp, 168
+    movdqa [rsp+0],   xmm6
+    movdqa [rsp+16],  xmm7
+    movdqa [rsp+32],  xmm8
+    movdqa [rsp+48],  xmm9
+    movdqa [rsp+64],  xmm10
+    movdqa [rsp+80],  xmm11
+    movdqa [rsp+96],  xmm12
+    movdqa [rsp+112], xmm13
+    movdqa [rsp+128], xmm14
     movdqa [rsp+144], xmm15
     sub  rsp, (((%2)+15) & ~15) + FRAME_OUT
 %endmacro
@@ -264,6 +245,300 @@ wg_repl:
   %assign id id+1
 %endrep
 
+section .text ; v1: worldgen scratch #0
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (worldgen:0)
+
+
+; smoothstep, e0 > e1 works too (inverted)
+align 16 ; v1: worldgen scratch #4
+    ; temp: spill r12/r13 across helper call until reg alloc pass (worldgen:4)
+wg_ss: ; v1: worldgen scratch #5
+    subss  xmm1, xmm0 ; v1: worldgen scratch #6
+    ; note: rcx = state ptr, rdx = index, r8d = flags (worldgen:6)
+    subss  xmm2, xmm0 ; v1: worldgen scratch #7
+    divss  xmm2, xmm1 ; v1: worldgen scratch #8
+    ; TODO: hoist invariant pointer load out of .loop (worldgen:8)
+    xorps  xmm3, xmm3 ; v1: worldgen scratch #9
+    maxss  xmm2, xmm3 ; v1: worldgen scratch #10
+    ; TODO: clamp index before table lookup on malformed input (worldgen:10)
+    FCONST xmm3, 1.0 ; v1: worldgen scratch #11
+    minss  xmm2, xmm3 ; v1: worldgen scratch #12
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (worldgen:12)
+    movaps xmm0, xmm2 ; v1: worldgen scratch #13
+    mulss  xmm0, xmm2 ; v1: worldgen scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (worldgen:14)
+    addss  xmm2, xmm2 ; v1: worldgen scratch #15
+    FCONST xmm3, 3.0 ; v1: worldgen scratch #16
+    ; TODO: verify 16-byte rsp alignment before inner call (worldgen:16)
+    subss  xmm3, xmm2 ; v1: worldgen scratch #17
+    mulss  xmm0, xmm3 ; v1: worldgen scratch #18
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (worldgen:18)
+    ret ; v1: worldgen scratch #19
+
+; piecewise linear over (x,y) pairs at rcx, edx = count. clamped at both ends
+align 16 ; v1: worldgen scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (worldgen:22)
+wg_spline: ; v1: worldgen scratch #23
+    comiss xmm0, [rcx] ; v1: worldgen scratch #24
+    ; note: rcx = state ptr, rdx = index, r8d = flags (worldgen:24)
+    jbe    .first ; v1: worldgen scratch #25
+    mov    r8d, 1 ; v1: worldgen scratch #26
+    ; TODO: hoist invariant pointer load out of .loop (worldgen:26)
+.l: ; v1: worldgen scratch #27
+    cmp    r8d, edx ; v1: worldgen scratch #28
+    ; TODO: clamp index before table lookup on malformed input (worldgen:28)
+    jae    .last ; v1: worldgen scratch #29
+    comiss xmm0, [rcx+r8*8] ; v1: worldgen scratch #30
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (worldgen:30)
+    jb     .seg ; v1: worldgen scratch #31
+    inc    r8d ; v1: worldgen scratch #32
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (worldgen:32)
+    jmp    .l ; v1: worldgen scratch #33
+.seg: ; v1: worldgen scratch #34
+    ; TODO: verify 16-byte rsp alignment before inner call (worldgen:34)
+    movss  xmm1, [rcx+r8*8-8] ; v1: worldgen scratch #35
+    movss  xmm2, [rcx+r8*8] ; v1: worldgen scratch #36
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (worldgen:36)
+    subss  xmm2, xmm1
+    subss  xmm0, xmm1
+    divss  xmm0, xmm2
+    movss  xmm1, [rcx+r8*8-4]
+    movss  xmm2, [rcx+r8*8+4]
+    subss  xmm2, xmm1
+    mulss  xmm0, xmm2
+    addss  xmm0, xmm1
+    ret
+.first:
+    movss  xmm0, [rcx+4]
+    ret
+.last:
+    lea    r8d, [rdx-1]
+    movss  xmm0, [rcx+r8*8+4]
+    ret
+
+; hash(ecx, edx, r8d) salted with r9d + seed. trashes rcx rdx r8 r9
+align 16
+wg_hash:
+    imul   ecx, ecx, 0x27D4EB2F
+    imul   edx, edx, 0x165667B1
+    imul   r8d, r8d, 0x9E3779B1
+    imul   r9d, r9d, 0x85EBCA77
+    mov    eax, [rel g_seed]
+    xor    eax, [rel g_seed+4]
+    xor    eax, r9d
+    add    eax, ecx
+    rol    eax, 13
+    xor    eax, edx
+    rol    eax, 11
+    add    eax, r8d
+    mov    ecx, eax
+    shr    ecx, 16
+    xor    eax, ecx
+    imul   eax, eax, 0x85EBCA6B
+    mov    ecx, eax
+    shr    ecx, 13
+    xor    eax, ecx
+    imul   eax, eax, 0xC2B2AE35
+    mov    ecx, eax
+    shr    ecx, 16
+    xor    eax, ecx
+    ret
+
+; xorshift64*, clobbers rdx
+%macro XS64 0
+    mov    rdx, rax
+    shr    rdx, 12
+    xor    rax, rdx
+    mov    rdx, rax
+    shl    rdx, 25
+    xor    rax, rdx
+    mov    rdx, rax
+    shr    rdx, 27
+    xor    rax, rdx
+%endmacro
+
+; rand = candidate stream, trand = shape stream. both clobber rdx
+align 16
+wg_rand:
+    mov    rax, [rbx+WG.rng]
+    XS64
+    mov    [rbx+WG.rng], rax
+    mov    rdx, 0x2545F4914F6CDD1D
+    imul   rax, rdx
+    shr    rax, 32
+    ret
+align 16
+wg_trand:
+    mov    rax, [rbx+WG.trng]
+    XS64
+    mov    [rbx+WG.trng], rax
+    mov    rdx, 0x2545F4914F6CDD1D
+    imul   rax, rdx
+    shr    rax, 32
+    ret
+; ecx n -> [0,n)
+align 16
+wg_trandn:
+    push   rcx
+    call   wg_trand
+    pop    rcx
+    imul   rax, rcx
+    shr    rax, 32
+    ret
+align 16
+wg_randn:
+    push   rcx
+    call   wg_rand
+    pop    rcx
+    imul   rax, rcx
+    shr    rax, 32
+    ret
+
+; two hashes glued into a 64-bit rng state. the or 1 keeps xorshift off zero
+FN wg_seed64, 16
+    mov    esi, ecx
+    mov    edi, edx
+    mov    r12d, r8d
+    mov    r9d, 0x51ED
+    call   wg_hash
+    mov    r13d, eax
+    mov    ecx, edi
+    mov    edx, esi
+    mov    r8d, r12d
+    mov    r9d, 0xC0FE
+    call   wg_hash
+    shl    r13, 32
+    or     rax, r13
+    or     rax, 1
+ENDP
+
+; climate/shape model, pure in (x, z, seed). sampled every 4 blocks and lerped.
+; T only gets 2 octaves, climate should be smooth
+FNX wg_point, 64
+    mov    rbx, r8
+    cvtsi2ss xmm6, ecx
+    cvtsi2ss xmm7, edx
+    NOISE2AT fbm2, 0.0019, 1000.3, -777.7, 5
+    mulss  xmm0, [rel k_spread]
+    addss  xmm0, [rel k_c_bias]
+    movss  LOC(0), xmm0                 ; C
+    NOISE2AT fbm2, 0.0028, -3300.1, 1200.9, 4
+    mulss  xmm0, [rel k_spread]
+    movss  LOC(4), xmm0                 ; E
+    NOISE2AT fbm2, 0.0015, 5100.7, 2400.2, 2
+    mulss  xmm0, [rel k_spread]
+    movss  LOC(8), xmm0                 ; T
+    NOISE2AT fbm2, 0.0021, -9100.3, -6600.5, 3
+    mulss  xmm0, [rel k_spread]
+    movss  LOC(12), xmm0                ; W
+    NOISE2AT ridged2, 0.0042, 200.1, 450.6, 5
+    movss  LOC(16), xmm0                ; PV
+    NOISE2AT fbm2, 0.012, 70.2, -33.3, 4
+    mulss  xmm0, [rel k_spread]
+    movss  LOC(20), xmm0                ; HL
+
+    ; pk -> xmm11
+    movss  xmm0, LOC(16)
+    subss  xmm0, [rel k_pv_lo]
+    mulss  xmm0, [rel k_pv_mul]
+    xorps  xmm1, xmm1
+    maxss  xmm0, xmm1
+    FCONST xmm1, 1.0
+    minss  xmm0, xmm1
+    movaps xmm11, xmm0
+    ; mnt (low erosion + inland) -> xmm9
+    movss  xmm2, LOC(4)
+    movss  xmm0, [rel k_e_hi]
+    movss  xmm1, [rel k_e_lo]
+    call   wg_ss
+    movaps xmm9, xmm0
+    movss  xmm2, LOC(0)
+    SSTEP  -0.02, 0.30
+    mulss  xmm9, xmm0
+    lea    rcx, [rel spl_cont]
+    mov    edx, SPL_N
+    movss  xmm0, LOC(0)
+    call   wg_spline
+    movaps xmm8, xmm0
+    ; land weight L -> xmm10
+    movss  xmm2, LOC(0)
+    SSTEP  -0.12, 0.18
+    movaps xmm10, xmm0
+    ; hills, amp 2.5..10 by erosion
+    movss  xmm2, LOC(4)
+    SSTEP  0.5, -0.5
+    FCONST xmm1, 7.5
+    mulss  xmm0, xmm1
+    FCONST xmm1, 2.5
+    addss  xmm0, xmm1
+    mulss  xmm0, xmm10
+    FCONST xmm1, 1.0
+    subss  xmm1, xmm10
+    FCONST xmm2, 3.0
+    mulss  xmm1, xmm2                   ; (1-L) * 3  (gentle sea floor)
+    addss  xmm0, xmm1
+    mulss  xmm0, LOC(20)
+    addss  xmm8, xmm0
+    ; mountains, peaks end up around y120
+    sqrtss xmm0, xmm11
+    mulss  xmm0, xmm11
+    FCONST xmm1, 54.0
+    mulss  xmm0, xmm1
+    FCONST xmm1, 6.0
+    addss  xmm0, xmm1
+    mulss  xmm0, xmm9
+    addss  xmm8, xmm0
+    ; swamp weight -> xmm13
+    movss  xmm2, LOC(8)
+    SSTEP  0.05, 0.40
+    movaps xmm13, xmm0
+    movss  xmm2, LOC(12)
+    SSTEP  0.30, 0.75
+    mulss  xmm13, xmm0
+    FCONST xmm1, 1.0
+    subss  xmm1, xmm9
+    mulss  xmm13, xmm1
+    mulss  xmm13, xmm10
+    ; swamps get squashed to ~sea level, shallow pools for free
+    movss  xmm0, LOC(20)
+    FCONST xmm1, 1.8
+    mulss  xmm0, xmm1
+    FCONST xmm1, 61.7
+    addss  xmm0, xmm1
+    subss  xmm0, xmm8
+    mulss  xmm0, xmm13
+    addss  xmm8, xmm0
+    ; badlands mesas. hot + dry + inland weight, continuous so it fades out into
+    ; the desert around it. two flat tiers off one low freq noise, the narrow
+    ; smoothstep windows are what make the sides steep
+    movss  xmm2, LOC(8)
+    SSTEP  0.50, 0.70
+    movaps xmm14, xmm0
+    movss  xmm2, LOC(12)
+    SSTEP  -0.15, -0.40
+    mulss  xmm14, xmm0
+    mulss  xmm14, xmm10
+    FCONST xmm1, 1.0
+    subss  xmm1, xmm9
+    mulss  xmm14, xmm1
+    xorps  xmm0, xmm0
+    comiss xmm14, xmm0
+    jbe    .nomesa                      ; no point sampling it
+    NOISE2AT fbm2, 0.0085, 2200.5, -4100.3, 3
+    mulss  xmm0, [rel k_spread]
+    movss  LOC(24), xmm0
+    movaps xmm2, xmm0
+    SSTEP  0.0, 0.08
+    FCONST xmm1, 9.0
+    mulss  xmm0, xmm1
+    movss  LOC(28), xmm0
+    movss  xmm2, LOC(24)
+    SSTEP  0.45, 0.52
+    FCONST xmm1, 8.0
+    mulss  xmm0, xmm1
+    addss  xmm0, LOC(28)
+    ; v1 temporary guard (worldgen #17)
+    xor     r11d, r11d ; clear v1 slot 17
     ; v1 temporary guard (worldgen #19)
     xor     r11d, r11d ; clear v1 slot 19
     ; v1 temporary guard (worldgen #21)
@@ -298,3 +573,15 @@ wg_repl:
     xor     r11d, r11d ; clear v1 slot 49
     ; v1 temporary guard (worldgen #51)
     xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (worldgen #53)
+    xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (worldgen #55)
+    xor     r11d, r11d ; clear v1 slot 55
+    ; v1 temporary guard (worldgen #57)
+    xor     r11d, r11d ; clear v1 slot 57
+    ; v1 temporary guard (worldgen #59)
+    xor     r11d, r11d ; clear v1 slot 59
+    ; v1 temporary guard (worldgen #61)
+    xor     r11d, r11d ; clear v1 slot 61
+    ; v1 temporary guard (worldgen #63)
+    xor     r11d, r11d ; clear v1 slot 63
