@@ -491,64 +491,45 @@ PROC world_mark_dirty, 32
 ENDP
 
 ; no light/ticks, but still sets modified so it gets saved
-PROC world_set_block_raw, 32 ; v1: world scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (world:2)
-    cmp  edx, CHUNK_H ; v1: world scratch #3
-    jae  .fail ; v1: world scratch #4
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (world:4)
-    mov  esi, ecx ; v1: world scratch #5
-    mov  edi, edx ; v1: world scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (world:6)
-    mov  r12d, r8d ; v1: world scratch #7
-    mov  r13d, r9d ; v1: world scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (world:8)
-    call w_locate ; v1: world scratch #9
-    test rax, rax ; v1: world scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (world:10)
-    jz   .fail ; v1: world scratch #11
-    mov  rbx, rax ; v1: world scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (world:12)
-    mov  r14, r10 ; v1: world scratch #13
-    movzx ecx, byte [rbx+r14+CHUNK_BLOCKS] ; v1: world scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (world:14)
-    mov  edx, r13d ; v1: world scratch #15
-    call w_keep_face ; v1: world scratch #16
-    ; TODO: clamp index before table lookup on malformed input (world:16)
-    mov  r13d, eax ; v1: world scratch #17
-    mov  [rbx+r14+CHUNK_BLOCKS], r13b ; v1: world scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (world:18)
-    mov  dword [rbx+CHUNK.modified], 1 ; v1: world scratch #19
-    mov  ecx, esi ; v1: world scratch #20
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (world:20)
-    mov  edx, edi ; v1: world scratch #21
-    mov  r8d, r12d ; v1: world scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (world:22)
-    call world_mark_dirty ; v1: world scratch #23
-    cmp  dword [rel g_net_hosting], 0 ; v1: world scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (world:24)
-    je   .ok ; v1: world scratch #25
-    mov  ecx, esi ; v1: world scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (world:26)
-    mov  edx, edi ; v1: world scratch #27
-    mov  r8d, r12d ; v1: world scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (world:28)
-    movzx r9d, r13b ; v1: world scratch #29
-    call mcplay_block_changed ; v1: world scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (world:30)
-.ok: ; v1: world scratch #31
-    mov  eax, 1 ; v1: world scratch #32
-    ; TODO: clamp index before table lookup on malformed input (world:32)
-    jmp  .done ; v1: world scratch #33
-.fail: ; v1: world scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (world:34)
-    xor  eax, eax ; v1: world scratch #35
-.done: ; v1: world scratch #36
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (world:36)
-ENDP ; v1: world scratch #37
+PROC world_set_block_raw, 32
+    cmp  edx, CHUNK_H
+    jae  .fail
+    mov  esi, ecx
+    mov  edi, edx
+    mov  r12d, r8d
+    mov  r13d, r9d
+    call w_locate
+    test rax, rax
+    jz   .fail
+    mov  rbx, rax
+    mov  r14, r10
+    movzx ecx, byte [rbx+r14+CHUNK_BLOCKS]
+    mov  edx, r13d
+    call w_keep_face
+    mov  r13d, eax
+    mov  [rbx+r14+CHUNK_BLOCKS], r13b
+    mov  dword [rbx+CHUNK.modified], 1
+    mov  ecx, esi
+    mov  edx, edi
+    mov  r8d, r12d
+    call world_mark_dirty
+    cmp  dword [rel g_net_hosting], 0
+    je   .ok
+    mov  ecx, esi
+    mov  edx, edi
+    mov  r8d, r12d
+    movzx r9d, r13b
+    call mcplay_block_changed
+.ok:
+    mov  eax, 1
+    jmp  .done
+.fail:
+    xor  eax, eax
+.done:
+ENDP
 
-PROC world_set_block, 32 ; v1: world scratch #39
-    cmp  edx, CHUNK_H ; v1: world scratch #40
-    ; TODO: hoist invariant pointer load out of .loop (world:40)
+PROC world_set_block, 32
+    cmp  edx, CHUNK_H
     jae  .fail
     mov  esi, ecx
     mov  edi, edx
@@ -658,6 +639,175 @@ PROC world_set_block, 32 ; v1: world scratch #39
     jmp  .done
 .fail:
     xor  eax, eax
+.done: ; v1: world scratch #0
+    ; note: rcx = state ptr, rdx = index, r8d = flags (world:0)
+ENDP ; v1: world scratch #1
+
+; unloaded chunk? just ask worldgen
+    global world_get_biome ; v1: world scratch #4
+    ; TODO: verify 16-byte rsp alignment before inner call (world:4)
+    align 16 ; v1: world scratch #5
+world_get_biome: ; v1: world scratch #6
+    ; TODO: clamp index before table lookup on malformed input (world:6)
+    push rbp ; v1: world scratch #7
+    mov  rbp, rsp ; v1: world scratch #8
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (world:8)
+    push rsi ; v1: world scratch #9
+    push rdi ; v1: world scratch #10
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (world:10)
+    sub  rsp, FRAME_OUT ; v1: world scratch #11
+    mov  esi, ecx ; v1: world scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (world:12)
+    mov  edi, edx ; v1: world scratch #13
+    sar  ecx, CHUNK_SHIFT ; v1: world scratch #14
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (world:14)
+    sar  edx, CHUNK_SHIFT ; v1: world scratch #15
+    call world_get_chunk ; v1: world scratch #16
+    ; TODO: hoist invariant pointer load out of .loop (world:16)
+    test rax, rax ; v1: world scratch #17
+    jz   .gen ; v1: world scratch #18
+    ; note: rcx = state ptr, rdx = index, r8d = flags (world:18)
+    cmp  dword [rax+CHUNK.state], CS_GENERATED ; v1: world scratch #19
+    jb   .gen ; v1: world scratch #20
+    ; TODO: verify 16-byte rsp alignment before inner call (world:20)
+    mov  ecx, esi ; v1: world scratch #21
+    and  ecx, 15 ; v1: world scratch #22
+    ; TODO: clamp index before table lookup on malformed input (world:22)
+    mov  edx, edi ; v1: world scratch #23
+    and  edx, 15 ; v1: world scratch #24
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (world:24)
+    shl  edx, 4 ; v1: world scratch #25
+    or   ecx, edx ; v1: world scratch #26
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (world:26)
+    movzx eax, byte [rax+rcx+CHUNK.biome] ; v1: world scratch #27
+    jmp  .done ; v1: world scratch #28
+    ; temp: spill r12/r13 across helper call until reg alloc pass (world:28)
+.gen: ; v1: world scratch #29
+    mov  ecx, esi ; v1: world scratch #30
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (world:30)
+    mov  edx, edi ; v1: world scratch #31
+    call worldgen_biome_at ; v1: world scratch #32
+    ; TODO: hoist invariant pointer load out of .loop (world:32)
+.done: ; v1: world scratch #33
+    lea  rsp, [rbp-16] ; v1: world scratch #34
+    ; note: rcx = state ptr, rdx = index, r8d = flags (world:34)
+    pop  rdi ; v1: world scratch #35
+    pop  rsi ; v1: world scratch #36
+    ; TODO: verify 16-byte rsp alignment before inner call (world:36)
+    pop  rbp ; v1: world scratch #37
+    ret ; v1: world scratch #38
+    ; TODO: clamp index before table lookup on malformed input (world:38)
+
+; -1 if all air / not loaded
+    global world_height_at ; v1: world scratch #41
+    align 16
+world_height_at:
+    push rbp
+    mov  rbp, rsp
+    push rsi
+    push rdi
+    sub  rsp, FRAME_OUT
+    mov  esi, ecx
+    mov  edi, edx
+    sar  ecx, CHUNK_SHIFT
+    sar  edx, CHUNK_SHIFT
+    call world_get_chunk
+    test rax, rax
+    jz   .none
+    cmp  dword [rax+CHUNK.state], CS_GENERATED
+    jb   .none
+    and  esi, 15
+    and  edi, 15
+    shl  edi, 4
+    or   esi, edi
+    lea  rdx, [rax+rsi+CHUNK_BLOCKS+127*256]
+    mov  eax, 127
+.scan:
+    cmp  byte [rdx], 0
+    jne  .done
+    sub  rdx, 256
+    dec  eax
+    jns  .scan
+    jmp  .done
+.none:
+    mov  eax, -1
+.done:
+    lea  rsp, [rbp-16]
+    pop  rdi
+    pop  rsi
+    pop  rbp
+    ret
+
+    global world_is_loaded
+    align 16
+world_is_loaded:
+    push rbp
+    mov  rbp, rsp
+    sub  rsp, FRAME_OUT
+    sar  ecx, CHUNK_SHIFT
+    sar  edx, CHUNK_SHIFT
+    call world_get_chunk
+    test rax, rax
+    jz   .no
+    cmp  dword [rax+CHUNK.state], CS_GENERATED
+    jb   .no
+    mov  eax, 1
+    jmp  .done
+.no:
+    xor  eax, eax
+.done:
+    mov  rsp, rbp
+    pop  rbp
+    ret
+
+; chunkmgr only, main thread. header gets zeroed, blocks+light are left as junk
+; since the generator overwrites all of it anyway
+global world_alloc_chunk
+    global world_alloc_chunk
+    align 16
+world_alloc_chunk:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    sub  rsp, FRAME_OUT + 8
+    mov  esi, ecx
+    mov  r13d, edx
+    mov  eax, [rel w_free_count]
+    test eax, eax
+    jz   .full
+    dec  eax
+    mov  [rel w_free_count], eax
+    lea  rdx, [rel w_free_stack]
+    mov  ebx, [rdx+rax*4]
+    mov  r12, rbx
+    imul r12, r12, CHUNK_BYTES
+    add  r12, [rel w_pool]
+    mov  rdi, r12
+    xor  eax, eax
+    mov  ecx, CHUNK_HDR/8
+    rep  stosq
+    mov  [r12+CHUNK.cx], esi
+    mov  [r12+CHUNK.cz], r13d
+    mov  [r12+CHUNK.slot], ebx
+    mov  eax, [rel g_chunk_count]
+    mov  [r12+CHUNK.list_idx], eax
+    lea  rdx, [rel g_chunk_list]
+    mov  [rdx+rax*8], r12
+    inc  eax
+    mov  [rel g_chunk_count], eax
+    CHUNK_HASH eax, esi, r13d, ecx
+    lea  rdx, [rel w_hash]
+    mov  rcx, [rdx+rax*8]
+    mov  [r12+CHUNK.hnext], rcx
+    mov  [rdx+rax*8], r12
+    ; state goes last - a worker may still have an old ring entry for this
+    ; slot and it keys off state
+    mov  eax, CS_QUEUED
+    xchg [r12+CHUNK.state], eax
     ; v1 temporary guard (world #19)
     xor     r11d, r11d ; clear v1 slot 19
     ; v1 temporary guard (world #21)
@@ -686,23 +836,3 @@ PROC world_set_block, 32 ; v1: world scratch #39
     xor     r11d, r11d ; clear v1 slot 43
     ; v1 temporary guard (world #45)
     xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (world #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (world #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (world #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (world #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (world #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (world #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (world #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (world #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (world #63)
-    xor     r11d, r11d ; clear v1 slot 63
-    ; v1 temporary guard (world #65)
-    xor     r11d, r11d ; clear v1 slot 65
