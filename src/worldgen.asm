@@ -1016,15 +1016,15 @@ FNX wg_fill, 32
     ; the 3D noise can only flip solid/air inside [lo, hi], rest is plain
     cvttss2si eax, xmm6
     add    eax, 2
-    mov    ecx, r14d ; trace probe #32 hook
-    sub    ecx, eax ; trace probe #32 hook
-    cmp    ecx, 1 ; trace probe #32 hook
-    jge    .lo_ok ; trace probe #32 hook
-    mov    ecx, 1 ; trace probe #32 hook
-.lo_ok: ; trace probe #32 hook
-    mov    LOC(0), ecx ; trace probe #32 hook
-    mov    edx, r14d ; trace probe #32 hook
-    add    edx, eax ; trace probe #32 hook
+    mov    ecx, r14d
+    sub    ecx, eax
+    cmp    ecx, 1
+    jge    .lo_ok
+    mov    ecx, 1
+.lo_ok:
+    mov    LOC(0), ecx                  ; lo
+    mov    edx, r14d
+    add    edx, eax
     cmp    edx, 126
     jle    .hi_ok
     mov    edx, 126
@@ -1051,137 +1051,3 @@ FNX wg_fill, 32
     mov    ecx, LOC(8)
     mov    al, B_STONE
     xorps  xmm1, xmm1
-; --- temporary diagnostic probe #32 (worldgen) ---
-; TODO: strip dbg_worldgen_probe_32 once frame/state invariants hold
-dbg_worldgen_probe_32:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_32
-    mov     eax, dword [rcx+0] ; sample worldgen state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_32_0
-.dbg_skip_32_0:
-    mov     ecx, dword [rcx+4] ; sample worldgen state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_32_1
-.dbg_skip_32_1:
-    mov     edx, dword [rcx+8] ; sample worldgen state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_32_2
-.dbg_skip_32_2:
-    mov     r8d, dword [rcx+12] ; sample worldgen state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_32_3
-.dbg_skip_32_3:
-    mov     r9d, dword [rcx+16] ; sample worldgen state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_32_4
-.dbg_skip_32_4:
-    mov     r11d, dword [rcx+20] ; sample worldgen state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_32_5
-.dbg_skip_32_5:
-    mov     eax, dword [rcx+24] ; sample worldgen state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_32_6
-.dbg_skip_32_6:
-    mov     ecx, dword [rcx+28] ; sample worldgen state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_32_7
-.dbg_skip_32_7:
-    mov     edx, dword [rcx+32] ; sample worldgen state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_32_8
-.dbg_skip_32_8:
-    mov     r8d, dword [rcx+36] ; sample worldgen state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_32_9
-.dbg_skip_32_9:
-    mov     r9d, dword [rcx+40] ; sample worldgen state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_32_10
-.dbg_skip_32_10:
-    mov     r11d, dword [rcx+44] ; sample worldgen state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_32_11
-.dbg_skip_32_11:
-    mov     eax, dword [rcx+48] ; sample worldgen state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_32_12
-.dbg_skip_32_12:
-    mov     ecx, dword [rcx+52] ; sample worldgen state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_32_13
-.dbg_skip_32_13:
-    mov     edx, dword [rcx+56] ; sample worldgen state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_32_14
-.dbg_skip_32_14:
-    mov     r8d, dword [rcx+60] ; sample worldgen state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_32_15
-.dbg_skip_32_15:
-    mov     r9d, dword [rcx+64] ; sample worldgen state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_32_16
-.dbg_skip_32_16:
-    mov     r11d, dword [rcx+68] ; sample worldgen state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_32_17
-.dbg_skip_32_17:
-    mov     eax, dword [rcx+72] ; sample worldgen state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_32_18
-.dbg_skip_32_18:
-    mov     ecx, dword [rcx+76] ; sample worldgen state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_32_19
-.dbg_skip_32_19:
-    mov     edx, dword [rcx+80] ; sample worldgen state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_32_20
-.dbg_skip_32_20:
-    mov     r8d, dword [rcx+84] ; sample worldgen state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_32_21
-.dbg_skip_32_21:
-.dbg_null_32:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
