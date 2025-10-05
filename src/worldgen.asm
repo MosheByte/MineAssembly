@@ -1051,3 +1051,309 @@ FNX wg_fill, 32
     mov    ecx, LOC(8)
     mov    al, B_STONE
     xorps  xmm1, xmm1
+    comiss xmm0, xmm1 ; v1: worldgen scratch #0
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (worldgen:0)
+    ja     .cw ; v1: worldgen scratch #1
+.empty: ; v1: worldgen scratch #2
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (worldgen:2)
+    mov    al, B_WATER ; v1: worldgen scratch #3
+    cmp    ecx, SEA_LEVEL ; v1: worldgen scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (worldgen:4)
+    jle    .cw ; v1: worldgen scratch #5
+    xor    eax, eax ; v1: worldgen scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (worldgen:6)
+.cw: ; v1: worldgen scratch #7
+    mov    edx, ecx ; v1: worldgen scratch #8
+    ; note: rcx = state ptr, rdx = index, r8d = flags (worldgen:8)
+    shl    edx, 8 ; v1: worldgen scratch #9
+    mov    [rdi+rdx], al ; v1: worldgen scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (worldgen:10)
+    inc    ecx ; v1: worldgen scratch #11
+    mov    LOC(8), ecx ; v1: worldgen scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (worldgen:12)
+    cmp    ecx, CHUNK_H ; v1: worldgen scratch #13
+    jb     .cl ; v1: worldgen scratch #14
+    ; TODO: clamp index before table lookup on malformed input (worldgen:14)
+.bed: ; v1: worldgen scratch #15
+    cmp    r15d, r14d ; v1: worldgen scratch #16
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (worldgen:16)
+    jge    .t1 ; v1: worldgen scratch #17
+    mov    r15d, r14d ; v1: worldgen scratch #18
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (worldgen:18)
+.t1: ; v1: worldgen scratch #19
+    mov    [rsi+C_TOP], r15d ; v1: worldgen scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (worldgen:20)
+    cmp    r15d, [rbx+WG.maxtop] ; v1: worldgen scratch #21
+    jle    .t2 ; v1: worldgen scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (worldgen:22)
+    mov    [rbx+WG.maxtop], r15d ; v1: worldgen scratch #23
+.t2: ; v1: worldgen scratch #24
+    ; note: rcx = state ptr, rdx = index, r8d = flags (worldgen:24)
+    ; bedrock: y=0 always, y=1..4 at 80/60/40/20 % so the top is ragged
+    mov    byte [rdi], B_BEDROCK ; v1: worldgen scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (worldgen:26)
+    mov    r15d, 1 ; v1: worldgen scratch #27
+.br: ; v1: worldgen scratch #28
+    ; temp: spill r12/r13 across helper call until reg alloc pass (worldgen:28)
+    mov    ecx, [rbx+WG.ox] ; v1: worldgen scratch #29
+    add    ecx, r12d ; v1: worldgen scratch #30
+    ; TODO: clamp index before table lookup on malformed input (worldgen:30)
+    mov    edx, r15d ; v1: worldgen scratch #31
+    mov    r8d, [rbx+WG.oz] ; v1: worldgen scratch #32
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (worldgen:32)
+    add    r8d, r13d ; v1: worldgen scratch #33
+    mov    r9d, S_BEDROCK ; v1: worldgen scratch #34
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (worldgen:34)
+    call   wg_hash ; v1: worldgen scratch #35
+    and    eax, 0xFFFF ; v1: worldgen scratch #36
+    ; TODO: hoist invariant pointer load out of .loop (worldgen:36)
+    imul   eax, eax, 5 ; v1: worldgen scratch #37
+    shr    eax, 16 ; v1: worldgen scratch #38
+    ; TODO: verify 16-byte rsp alignment before inner call (worldgen:38)
+    cmp    eax, r15d ; v1: worldgen scratch #39
+    jb     .nobr ; v1: worldgen scratch #40
+    ; note: rcx = state ptr, rdx = index, r8d = flags (worldgen:40)
+    mov    eax, r15d ; v1: worldgen scratch #41
+    shl    eax, 8
+    mov    byte [rdi+rax], B_BEDROCK
+.nobr:
+    inc    r15d
+    cmp    r15d, 4
+    jbe    .br
+    inc    r12d
+    cmp    r12d, 16
+    jb     .xl
+    inc    r13d
+    cmp    r13d, 16
+    jb     .zl
+ENDPX
+
+; BAND in a layer slot = pick the badlands layer for this y (ecx) instead
+%define BAND 0xFF
+%macro BANDED 0
+    cmp    eax, BAND
+    jne    %%keep
+    mov    eax, ecx
+    add    eax, LOC(36)
+    and    eax, 31
+    lea    r10, [rel band_tbl]
+    movzx  eax, byte [r10+rax]
+%%keep:
+%endmacro
+
+; walks each column top-down and re-types the stone from wg_fill.
+; locals: 0 top, 4 filler, 8 filler depth, 12 under, 16 under depth,
+;         20 underwater top, 24 depth, 28 underwater flag, 32 hash, 36 band shift
+FN wg_surface, 48
+    xor    r13d, r13d
+.zl:
+    xor    r12d, r12d
+.xl:
+    COL_PTR
+    COL_BASE
+    mov    ecx, [rbx+WG.ox]
+    add    ecx, r12d
+    mov    edx, [rbx+WG.oz]
+    add    edx, r13d
+    xor    r8d, r8d
+    mov    r9d, S_SURF
+    call   wg_hash
+    mov    LOC(32), eax
+    mov    r14d, [rsi+C_HS]
+    mov    r15d, [rsi+C_BIOME]
+    ; defaults: grass over 3-4 dirt over stone
+    mov    dword LOC(0), B_GRASS
+    mov    dword LOC(4), B_DIRT
+    and    eax, 1
+    add    eax, 3
+    mov    LOC(8), eax
+    mov    dword LOC(12), B_STONE
+    mov    dword LOC(16), 0
+    movss  xmm4, [rsi+C_SLOPE]
+    cmp    r15d, BIOME_BADLANDS
+    jne    .nbad
+    ; 1-2 red sand over ~28 layers of banded terracotta. cliffs show the bands
+    mov    dword LOC(0), B_RED_SAND
+    mov    dword LOC(4), B_RED_SAND
+    and    eax, 1
+    inc    eax
+    mov    LOC(8), eax
+    mov    dword LOC(12), BAND
+    mov    dword LOC(16), 28
+    ; slow wobble on the band index so the layers tilt a little across a region
+    movss  xmm0, [rsi+P_W]
+    FCONST xmm1, 10.0
+    mulss  xmm0, xmm1
+    cvttss2si eax, xmm0
+    mov    LOC(36), eax
+    FCONST xmm0, 1.4
+    comiss xmm4, xmm0
+    jbe    .decided
+    mov    dword LOC(0), BAND
+    mov    dword LOC(4), BAND
+    jmp    .decided
+.nbad:
+    cmp    r15d, BIOME_DESERT
+    jne    .nd
+    mov    dword LOC(0), B_SAND
+    mov    dword LOC(4), B_SAND
+    mov    dword LOC(12), B_SANDSTONE
+    mov    eax, LOC(32)
+    shr    eax, 1
+    and    eax, 1
+    add    eax, 3
+    mov    LOC(16), eax
+    FCONST xmm0, 1.7
+    comiss xmm4, xmm0
+    jbe    .decided
+    mov    dword LOC(0), B_SANDSTONE
+    mov    dword LOC(4), B_SANDSTONE
+    jmp    .decided
+.nd:
+    cmp    r15d, BIOME_BEACH
+    jne    .nb
+    mov    dword LOC(0), B_SAND
+    mov    dword LOC(4), B_SAND
+    mov    dword LOC(8), 3
+    mov    dword LOC(12), B_SANDSTONE
+    mov    dword LOC(16), 2
+    jmp    .decided
+.nb:
+    cmp    r15d, BIOME_TUNDRA
+    jne    .nt
+    mov    dword LOC(0), B_SNOWY_GRASS
+    jmp    .generic
+.nt:
+    cmp    r15d, BIOME_TAIGA
+    jne    .nta
+    cmp    r14d, 84
+    jle    .generic
+    mov    dword LOC(0), B_SNOWY_GRASS
+    jmp    .generic
+.nta:
+    cmp    r15d, BIOME_MOUNTAINS
+    jne    .generic
+    cmp    r14d, 98
+    jg     .bare
+    FCONST xmm0, 1.0
+    comiss xmm4, xmm0
+    jbe    .generic
+.bare:
+    mov    dword LOC(0), B_STONE
+    mov    dword LOC(4), B_STONE
+.generic:
+    FCONST xmm0, 1.7
+    comiss xmm4, xmm0
+    jbe    .notcliff
+    mov    dword LOC(0), B_STONE
+    mov    dword LOC(4), B_STONE
+.notcliff:
+    ; sandy river banks
+    movss  xmm0, [rsi+P_RIV]
+    FCONST xmm1, 0.06
+    comiss xmm0, xmm1
+    jbe    .nobank
+    cmp    r14d, SEA_LEVEL+1
+    jg     .nobank
+    cmp    dword LOC(4), B_DIRT
+    jne    .nobank
+    mov    dword LOC(0), B_SAND
+    mov    dword LOC(4), B_SAND
+    mov    dword LOC(8), 2
+.nobank:
+    movss  xmm0, [rsi+P_T]
+    FCONST xmm1, -0.6
+    comiss xmm0, xmm1
+    jae    .decided
+    cmp    dword LOC(0), B_GRASS
+    jne    .decided
+    mov    dword LOC(0), B_SNOWY_GRASS
+.decided:
+    cmp    r15d, BIOME_BADLANDS          ; mesa tops stay red
+    je     .nosnow
+    ; snow caps: snowline = 104 + (h>>4 & 3) - T*8
+    movss  xmm0, [rsi+P_T]
+    FCONST xmm1, 8.0
+    mulss  xmm0, xmm1
+    cvttss2si eax, xmm0
+    mov    ecx, LOC(32)
+    shr    ecx, 4
+    and    ecx, 3
+    add    ecx, 104
+    sub    ecx, eax
+    cmp    r14d, ecx
+    jl     .nosnow
+    mov    dword LOC(0), B_SNOW
+    mov    dword LOC(8), 1
+    mov    dword LOC(4), B_SNOW
+    FCONST xmm0, 1.7
+    comiss xmm4, xmm0
+    jbe    .nosnow
+    mov    dword LOC(4), B_STONE
+.nosnow:
+    mov    eax, LOC(32)
+    shr    eax, 8
+    and    eax, 15
+    cmp    r15d, BIOME_OCEAN
+    jne    .uw_ns
+    cmp    r14d, 48
+    jge    .uw_shallow
+    mov    ecx, B_GRAVEL
+    cmp    eax, 3
+    jae    .uw_set
+    mov    ecx, B_CLAY
+    jmp    .uw_set
+.uw_shallow:
+    mov    ecx, B_SAND
+    cmp    eax, 4
+    jae    .uw_set
+    mov    ecx, B_GRAVEL
+    cmp    eax, 2
+    jae    .uw_set
+    mov    ecx, B_CLAY
+    jmp    .uw_set
+.uw_ns:
+    cmp    r15d, BIOME_SWAMP
+    jne    .uw_river
+    mov    ecx, B_DIRT
+    cmp    eax, 4
+    jae    .uw_set
+    mov    ecx, B_CLAY
+    jmp    .uw_set
+.uw_river:
+    mov    ecx, B_SAND
+    cmp    eax, 5
+    jae    .uw_set
+    mov    ecx, B_GRAVEL
+    cmp    eax, 2
+    jae    .uw_set
+    mov    ecx, B_CLAY
+.uw_set:
+    mov    LOC(20), ecx
+
+    ; v1 temporary guard (worldgen #21)
+    xor     r11d, r11d ; clear v1 slot 21
+    ; v1 temporary guard (worldgen #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (worldgen #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (worldgen #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (worldgen #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (worldgen #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (worldgen #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (worldgen #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (worldgen #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (worldgen #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (worldgen #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (worldgen #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (worldgen #45)
+    xor     r11d, r11d ; clear v1 slot 45
