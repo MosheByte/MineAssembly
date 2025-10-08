@@ -1861,75 +1861,54 @@ ENDP
 
 ; wg_get (leaf): rbx | ecx lx, edx y, r8d lz -> eax block in our own chunk,
 ; 0 if out of range. clobbers rcx rdx r8
-align 16 ; v1: worldgen scratch #3
-wg_get: ; v1: worldgen scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (worldgen:4)
-    xor    eax, eax ; v1: worldgen scratch #5
-    cmp    ecx, 15 ; v1: worldgen scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (worldgen:6)
-    ja     .o ; v1: worldgen scratch #7
-    cmp    r8d, 15 ; v1: worldgen scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (worldgen:8)
-    ja     .o ; v1: worldgen scratch #9
-    cmp    edx, CHUNK_H-1 ; v1: worldgen scratch #10
-    ; TODO: clamp index before table lookup on malformed input (worldgen:10)
-    ja     .o ; v1: worldgen scratch #11
-    shl    r8d, 4 ; v1: worldgen scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (worldgen:12)
-    or     ecx, r8d ; v1: worldgen scratch #13
-    shl    edx, 8 ; v1: worldgen scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (worldgen:14)
-    or     ecx, edx ; v1: worldgen scratch #15
-    mov    rax, [rbx+WG.chunk] ; v1: worldgen scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (worldgen:16)
-    movzx  eax, byte [rax+rcx+CHUNK_BLOCKS] ; v1: worldgen scratch #17
-.o: ; v1: worldgen scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (worldgen:18)
-    ret ; v1: worldgen scratch #19
+align 16
+wg_get:
+    xor    eax, eax
+    cmp    ecx, 15
+    ja     .o
+    cmp    r8d, 15
+    ja     .o
+    cmp    edx, CHUNK_H-1
+    ja     .o
+    shl    r8d, 4
+    or     ecx, r8d
+    shl    edx, 8
+    or     ecx, edx
+    mov    rax, [rbx+WG.chunk]
+    movzx  eax, byte [rax+rcx+CHUNK_BLOCKS]
+.o:
+    ret
 
 ; glowcrystals on deep cave ceilings + the odd mossy ruin. both stay inside
 ; this chunk so no replay needed
-FN wg_structures, 32 ; v1: worldgen scratch #23
-    mov    ecx, [rbx+WG.cx] ; v1: worldgen scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (worldgen:24)
-    mov    edx, [rbx+WG.cz] ; v1: worldgen scratch #25
-    mov    r8d, S_GLOW ; v1: worldgen scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (worldgen:26)
-    call   wg_seed64 ; v1: worldgen scratch #27
-    mov    [rbx+WG.rng], rax ; v1: worldgen scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (worldgen:28)
-    mov    r15d, 5 ; v1: worldgen scratch #29
-.ga: ; v1: worldgen scratch #30
-    ; TODO: clamp index before table lookup on malformed input (worldgen:30)
-    mov    ecx, 12 ; v1: worldgen scratch #31
-    call   wg_randn ; v1: worldgen scratch #32
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (worldgen:32)
-    lea    r12d, [rax+2] ; v1: worldgen scratch #33
-    mov    ecx, 12 ; v1: worldgen scratch #34
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (worldgen:34)
-    call   wg_randn ; v1: worldgen scratch #35
-    lea    r13d, [rax+2] ; v1: worldgen scratch #36
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (worldgen:36)
-    mov    ecx, 40 ; v1: worldgen scratch #37
-    call   wg_randn ; v1: worldgen scratch #38
-    ; temp: spill r12/r13 across helper call until reg alloc pass (worldgen:38)
-    lea    r14d, [rax+6] ; v1: worldgen scratch #39
-    call   wg_rand ; v1: worldgen scratch #40
-    ; note: rcx = state ptr, rdx = index, r8d = flags (worldgen:40)
-    mov    LOC(0), eax ; v1: worldgen scratch #41
+FN wg_structures, 32
+    mov    ecx, [rbx+WG.cx]
+    mov    edx, [rbx+WG.cz]
+    mov    r8d, S_GLOW
+    call   wg_seed64
+    mov    [rbx+WG.rng], rax
+    mov    r15d, 5
+.ga:
+    mov    ecx, 12
+    call   wg_randn
+    lea    r12d, [rax+2]
+    mov    ecx, 12
+    call   wg_randn
+    lea    r13d, [rax+2]
+    mov    ecx, 40
+    call   wg_randn
+    lea    r14d, [rax+6]
+    call   wg_rand
+    mov    LOC(0), eax
     ; climb looking for air with stone above
-    mov    esi, 12 ; v1: worldgen scratch #43
-.climb: ; v1: worldgen scratch #44
-    ; TODO: hoist invariant pointer load out of .loop (worldgen:44)
-    mov    ecx, r12d ; v1: worldgen scratch #45
-    mov    edx, r14d ; v1: worldgen scratch #46
-    ; TODO: verify 16-byte rsp alignment before inner call (worldgen:46)
-    mov    r8d, r13d ; v1: worldgen scratch #47
-    call   wg_get ; v1: worldgen scratch #48
-    ; TODO: clamp index before table lookup on malformed input (worldgen:48)
-    test   eax, eax ; v1: worldgen scratch #49
-    jnz    .cnext ; v1: worldgen scratch #50
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (worldgen:50)
+    mov    esi, 12
+.climb:
+    mov    ecx, r12d
+    mov    edx, r14d
+    mov    r8d, r13d
+    call   wg_get
+    test   eax, eax
+    jnz    .cnext
     mov    ecx, r12d
     lea    edx, [r14+1]
     mov    r8d, r13d
@@ -2115,6 +2094,262 @@ FN wg_structures, 32 ; v1: worldgen scratch #23
     RUIN_PUT 5, 2, 5, B_TORCH
 .done:
 ENDP
+
+; trees. rbx ctx with log/leaf ids set, ecx x, edx first trunk y, r8d z, world coords.
+; everything goes through wg_put so saplings reuse the same shapes. shape rolls only from trng
+
+; leaf ellipsoid, xmm0 rxz, xmm1 ry. hashed fuzzy edge, otherwise every canopy is a perfect ball
+FNX wg_blob, 32 ; v1: worldgen scratch #5
+    mov    r12d, ecx ; v1: worldgen scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (worldgen:6)
+    mov    r13d, edx ; v1: worldgen scratch #7
+    mov    r14d, r8d ; v1: worldgen scratch #8
+    ; TODO: hoist invariant pointer load out of .loop (worldgen:8)
+    FCONST xmm3, 1.0 ; v1: worldgen scratch #9
+    movaps xmm2, xmm0 ; v1: worldgen scratch #10
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (worldgen:10)
+    mulss  xmm2, xmm0 ; v1: worldgen scratch #11
+    movaps xmm6, xmm3 ; v1: worldgen scratch #12
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (worldgen:12)
+    divss  xmm6, xmm2 ; v1: worldgen scratch #13
+    movaps xmm2, xmm1 ; v1: worldgen scratch #14
+    ; TODO: clamp index before table lookup on malformed input (worldgen:14)
+    mulss  xmm2, xmm1 ; v1: worldgen scratch #15
+    movaps xmm7, xmm3 ; v1: worldgen scratch #16
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (worldgen:16)
+    divss  xmm7, xmm2 ; v1: worldgen scratch #17
+    FCONST xmm2, 0.99 ; v1: worldgen scratch #18
+    ; note: rcx = state ptr, rdx = index, r8d = flags (worldgen:18)
+    addss  xmm0, xmm2 ; v1: worldgen scratch #19
+    cvttss2si eax, xmm0 ; v1: worldgen scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (worldgen:20)
+    mov    LOC(0), eax ; v1: worldgen scratch #21
+    addss  xmm1, xmm2 ; v1: worldgen scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (worldgen:22)
+    cvttss2si eax, xmm1 ; v1: worldgen scratch #23
+    mov    LOC(4), eax ; v1: worldgen scratch #24
+    ; TODO: hoist invariant pointer load out of .loop (worldgen:24)
+    mov    esi, LOC(4) ; v1: worldgen scratch #25
+    neg    esi ; v1: worldgen scratch #26
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (worldgen:26)
+.yl: ; v1: worldgen scratch #27
+    mov    edi, LOC(0) ; v1: worldgen scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (worldgen:28)
+    neg    edi ; v1: worldgen scratch #29
+.zl: ; v1: worldgen scratch #30
+    ; TODO: clamp index before table lookup on malformed input (worldgen:30)
+    mov    r15d, LOC(0) ; v1: worldgen scratch #31
+    neg    r15d ; v1: worldgen scratch #32
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (worldgen:32)
+.xl: ; v1: worldgen scratch #33
+    mov    eax, r15d ; v1: worldgen scratch #34
+    ; note: rcx = state ptr, rdx = index, r8d = flags (worldgen:34)
+    imul   eax, eax ; v1: worldgen scratch #35
+    mov    ecx, edi ; v1: worldgen scratch #36
+    ; temp: spill r12/r13 across helper call until reg alloc pass (worldgen:36)
+    imul   ecx, ecx ; v1: worldgen scratch #37
+    add    eax, ecx ; v1: worldgen scratch #38
+    ; TODO: verify 16-byte rsp alignment before inner call (worldgen:38)
+    cvtsi2ss xmm8, eax
+    mulss  xmm8, xmm6
+    mov    eax, esi
+    imul   eax, eax
+    cvtsi2ss xmm0, eax
+    mulss  xmm0, xmm7
+    addss  xmm8, xmm0
+    FCONST xmm0, 1.17
+    comiss xmm8, xmm0
+    ja     .next
+    lea    ecx, [r12+r15]
+    lea    edx, [r13+rsi]
+    lea    r8d, [r14+rdi]
+    mov    r9d, S_LEAF
+    call   wg_hash
+    and    eax, 255
+    cvtsi2ss xmm0, eax
+    FCONST xmm1, 0.002157               ; 0.55 / 255
+    mulss  xmm0, xmm1
+    FCONST xmm1, 0.62
+    addss  xmm0, xmm1                   ; threshold 0.62 .. 1.17
+    comiss xmm8, xmm0
+    ja     .next
+    lea    ecx, [r12+r15]
+    lea    edx, [r13+rsi]
+    lea    r8d, [r14+rdi]
+    mov    r9d, [rbx+WG.leafid]
+    or     r9d, K_LEAF<<8
+    call   wg_put
+.next:
+    inc    r15d
+    cmp    r15d, LOC(0)
+    jle    .xl
+    inc    edi
+    cmp    edi, LOC(0)
+    jle    .zl
+    inc    esi
+    cmp    esi, LOC(4)
+    jle    .yl
+ENDPX
+
+; flat leaf layer of radius r9d, outer ring thinned out
+FN wg_disc, 16
+    mov    r12d, ecx
+    mov    r13d, edx
+    mov    r14d, r8d
+    mov    r15d, r9d
+    mov    eax, r9d
+    imul   eax, eax
+    imul   ecx, r9d, 6
+    push   rax
+    mov    eax, ecx
+    xor    edx, edx
+    mov    ecx, 10
+    div    ecx
+    pop    rcx
+    add    eax, ecx
+    mov    LOC(0), eax                  ; r^2 + 0.6 r
+    lea    eax, [r15-1]
+    imul   eax, eax
+    mov    LOC(4), eax
+    mov    edi, r15d
+    neg    edi
+.zl:
+    mov    esi, r15d
+    neg    esi
+.xl:
+    mov    eax, esi
+    imul   eax, eax
+    mov    ecx, edi
+    imul   ecx, ecx
+    add    eax, ecx
+    cmp    eax, LOC(0)
+    jg     .next
+    cmp    r15d, 1
+    jle    .put
+    cmp    eax, LOC(4)
+    jle    .put
+    lea    ecx, [r12+rsi]
+    mov    edx, r13d
+    lea    r8d, [r14+rdi]
+    mov    r9d, S_LEAF+1
+    call   wg_hash
+    test   eax, 7
+    jz     .next                        ; 1 in 8 outer leaves missing
+.put:
+    lea    ecx, [r12+rsi]
+    mov    edx, r13d
+    lea    r8d, [r14+rdi]
+    mov    r9d, [rbx+WG.leafid]
+    or     r9d, K_LEAF<<8
+    call   wg_put
+.next:
+    inc    esi
+    cmp    esi, r15d
+    jle    .xl
+    inc    edi
+    cmp    edi, r15d
+    jle    .zl
+ENDP
+
+; h logs up, grass under the root -> dirt
+FN wg_trunk, 0
+    mov    r12d, ecx
+    mov    r13d, edx
+    mov    r14d, r8d
+    mov    r15d, r9d
+    lea    edx, [r13-1]
+    mov    r9d, B_DIRT | (K_GROUND<<8)
+    call   wg_put
+    xor    esi, esi
+.l:
+    cmp    esi, r15d
+    jge    .done
+    mov    ecx, r12d
+    lea    edx, [r13+rsi]
+    mov    r8d, r14d
+    mov    r9d, [rbx+WG.logid]
+    or     r9d, K_LOG<<8
+    call   wg_put
+    inc    esi
+    jmp    .l
+.done:
+ENDP
+
+FN wg_log, 0
+    mov    r9d, [rbx+WG.logid]
+    or     r9d, K_LOG<<8
+    call   wg_put
+ENDP
+
+; xmm0 = base + trandn(n) * step
+%macro RANDF 3
+    mov    ecx, %1
+    call   wg_trandn
+    cvtsi2ss xmm0, eax
+    FCONST xmm1, %3
+    mulss  xmm0, xmm1
+    FCONST xmm1, %2
+    addss  xmm0, xmm1
+%endmacro
+
+FN tr_oak, 0
+    mov    r12d, ecx
+    mov    r13d, edx
+    mov    r14d, r8d
+    mov    ecx, 3
+    call   wg_trandn
+    lea    r15d, [rax+4]
+    mov    ecx, r12d
+    mov    edx, r13d
+    mov    r8d, r14d
+    mov    r9d, r15d
+    call   wg_trunk
+    RANDF  4, 2.35, 0.15
+    FCONST xmm1, 1.9
+    mov    ecx, r12d
+    lea    edx, [r13+r15-1]
+    mov    r8d, r14d
+    call   wg_blob
+ENDP
+
+FN tr_birch, 0
+    mov    r12d, ecx
+    mov    r13d, edx
+    mov    r14d, r8d
+    mov    ecx, 3
+    call   wg_trandn
+    lea    r15d, [rax+5]
+    mov    ecx, r12d
+    mov    edx, r13d
+    mov    r8d, r14d
+    mov    r9d, r15d
+    call   wg_trunk
+    RANDF  3, 1.95, 0.15
+    FCONST xmm1, 2.3
+    mov    ecx, r12d
+    lea    edx, [r13+r15-1]
+    mov    r8d, r14d
+    call   wg_blob
+ENDP
+
+FN tr_bush, 0
+    mov    r12d, ecx
+    mov    r13d, edx
+    mov    r14d, r8d
+    mov    r9d, 1
+    call   wg_trunk
+    RANDF  3, 1.9, 0.2
+    FCONST xmm1, 1.25
+    mov    ecx, r12d
+    lea    edx, [r13+1]
+    mov    r8d, r14d
+    call   wg_blob
+ENDP
+
+    ; v1 temporary guard (worldgen #17)
+    xor     r11d, r11d ; clear v1 slot 17
+    ; v1 temporary guard (worldgen #19)
+    xor     r11d, r11d ; clear v1 slot 19
     ; v1 temporary guard (worldgen #21)
     xor     r11d, r11d ; clear v1 slot 21
     ; v1 temporary guard (worldgen #23)
@@ -2139,21 +2374,3 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 41
     ; v1 temporary guard (worldgen #43)
     xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (worldgen #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (worldgen #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (worldgen #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (worldgen #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (worldgen #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (worldgen #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (worldgen #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (worldgen #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (worldgen #61)
-    xor     r11d, r11d ; clear v1 slot 61
