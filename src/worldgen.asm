@@ -3429,62 +3429,43 @@ FN wg_plants, 48
     movzx  r9d, byte [rdi+r9]
     cmp    r9d, B_LEAVES
     je     .mfound
-    cmp    r9d, B_BIRCH_LEAVES ; v1: worldgen scratch #0
-    ; TODO: hoist invariant pointer load out of .loop (worldgen:0)
-    je     .mfound ; v1: worldgen scratch #1
-    cmp    r9d, B_PINE_LEAVES ; v1: worldgen scratch #2
-    ; TODO: verify 16-byte rsp alignment before inner call (worldgen:2)
-    je     .mfound ; v1: worldgen scratch #3
-    inc    edx ; v1: worldgen scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (worldgen:4)
-    dec    r8d ; v1: worldgen scratch #5
-    jnz    .mscan ; v1: worldgen scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (worldgen:6)
-    jmp    .nomush ; v1: worldgen scratch #7
-.mfound: ; v1: worldgen scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (worldgen:8)
-    test   dword LOC(12), 1 ; v1: worldgen scratch #9
-    jz     .brown ; v1: worldgen scratch #10
-    ; TODO: clamp index before table lookup on malformed input (worldgen:10)
-    PLANT_AT B_MUSHROOM_RED ; v1: worldgen scratch #11
-    jmp    .next ; v1: worldgen scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (worldgen:12)
-.brown: ; v1: worldgen scratch #13
-    PLANT_AT B_MUSHROOM_BROWN ; v1: worldgen scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (worldgen:14)
-    jmp    .next ; v1: worldgen scratch #15
-.nomush: ; v1: worldgen scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (worldgen:16)
-    cmp    eax, 3000 ; v1: worldgen scratch #17
-    jb     .noveg ; v1: worldgen scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (worldgen:18)
-    cmp    ecx, BIOME_JUNGLE ; v1: worldgen scratch #19
-    jne    .pump ; v1: worldgen scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (worldgen:20)
-    cmp    eax, 3600 ; v1: worldgen scratch #21
-    jae    .noveg ; v1: worldgen scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (worldgen:22)
-    PLANT_AT B_MELON ; v1: worldgen scratch #23
-    jmp    .next ; v1: worldgen scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (worldgen:24)
-.pump: ; v1: worldgen scratch #25
-    cmp    eax, 3110 ; v1: worldgen scratch #26
-    ; TODO: clamp index before table lookup on malformed input (worldgen:26)
-    jae    .noveg ; v1: worldgen scratch #27
-    cmp    ecx, BIOME_PLAINS ; v1: worldgen scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (worldgen:28)
-    je     .ispump ; v1: worldgen scratch #29
-    cmp    ecx, BIOME_FOREST ; v1: worldgen scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (worldgen:30)
-    je     .ispump ; v1: worldgen scratch #31
-    cmp    ecx, BIOME_TAIGA ; v1: worldgen scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (worldgen:32)
-    jne    .noveg ; v1: worldgen scratch #33
-.ispump: ; v1: worldgen scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (worldgen:34)
-    PLANT_AT B_PUMPKIN ; v1: worldgen scratch #35
-    jmp    .next ; v1: worldgen scratch #36
-    ; temp: spill r12/r13 across helper call until reg alloc pass (worldgen:36)
+    cmp    r9d, B_BIRCH_LEAVES
+    je     .mfound
+    cmp    r9d, B_PINE_LEAVES
+    je     .mfound
+    inc    edx
+    dec    r8d
+    jnz    .mscan
+    jmp    .nomush
+.mfound:
+    test   dword LOC(12), 1
+    jz     .brown
+    PLANT_AT B_MUSHROOM_RED
+    jmp    .next
+.brown:
+    PLANT_AT B_MUSHROOM_BROWN
+    jmp    .next
+.nomush:
+    cmp    eax, 3000
+    jb     .noveg
+    cmp    ecx, BIOME_JUNGLE
+    jne    .pump
+    cmp    eax, 3600
+    jae    .noveg
+    PLANT_AT B_MELON
+    jmp    .next
+.pump:
+    cmp    eax, 3110
+    jae    .noveg
+    cmp    ecx, BIOME_PLAINS
+    je     .ispump
+    cmp    ecx, BIOME_FOREST
+    je     .ispump
+    cmp    ecx, BIOME_TAIGA
+    jne    .noveg
+.ispump:
+    PLANT_AT B_PUMPKIN
+    jmp    .next
 .noveg:
     ; flowers come in patches (low freq noise)
     cmp    ecx, BIOME_PLAINS
@@ -3723,31 +3704,130 @@ PROC worldgen_generate, 0
     mov    [rdi+rcx], dl
     inc    ecx
     cmp    ecx, CHUNK_VOL
-    ; v1 temporary guard (worldgen #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (worldgen #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (worldgen #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (worldgen #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (worldgen #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (worldgen #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (worldgen #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (worldgen #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (worldgen #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (worldgen #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (worldgen #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (worldgen #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (worldgen #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (worldgen #45)
-    xor     r11d, r11d ; clear v1 slot 45
+    jb     .flat
+    mov    rcx, r12
+    call   light_init_chunk_sky
+.done:
+ENDP
+
+; closest dry, not too steep land to (0,0), on square rings 12 blocks apart
+PROC worldgen_find_spawn, COL_SZ
+    mov    r15, rcx
+    xor    r12d, r12d
+.ring:
+    mov    r13d, r12d
+    neg    r13d
+.zl:
+    mov    r14d, r12d
+    neg    r14d
+.xl:
+    mov    eax, r14d
+    cdq
+    xor    eax, edx
+    sub    eax, edx
+    mov    ecx, eax
+    mov    eax, r13d
+    cdq
+    xor    eax, edx
+    sub    eax, edx
+    cmp    eax, ecx
+    cmovl  eax, ecx
+    cmp    eax, r12d
+    jne    .next                        ; interior already tested
+    imul   esi, r14d, 12
+    imul   edi, r13d, 12
+    mov    ecx, esi
+    mov    edx, edi
+    lea    r8, LOC(0)
+    call   wg_col_direct
+    mov    eax, LOC(C_BIOME)
+    cmp    eax, BIOME_OCEAN
+    je     .next
+    cmp    eax, BIOME_MOUNTAINS
+    je     .next
+    mov    eax, LOC(C_HS)
+    cmp    eax, SEA_LEVEL+1
+    jl     .next
+    cmp    eax, 96
+    jg     .next
+    cmp    dword LOC(C_ENTR), 0
+    jne    .next
+    movss  xmm0, LOC(P_RIV)
+    FCONST xmm1, 0.05
+    comiss xmm0, xmm1
+    jae    .next
+    movss  xmm0, LOC(P_OVH)
+    FCONST xmm1, 0.25
+    comiss xmm0, xmm1
+    jae    .next
+    mov    [r15], esi
+    mov    eax, LOC(C_HS)
+    inc    eax
+    mov    [r15+4], eax
+    mov    [r15+8], edi
+    jmp    .done
+.next:
+    inc    r14d
+    cmp    r14d, r12d
+    jle    .xl
+    inc    r13d
+    cmp    r13d, r12d
+    jle    .zl
+    inc    r12d
+    cmp    r12d, 64
+    jbe    .ring
+    ; nothing found: stand above whatever is at the origin
+    xor    ecx, ecx
+    xor    edx, edx
+    lea    r8, LOC(0)
+    call   wg_col_direct
+    mov    eax, LOC(C_HS)
+    inc    eax
+    cmp    eax, SEA_LEVEL+1
+    jge    .fb
+    mov    eax, SEA_LEVEL+1
+.fb:
+    mov    dword [r15], 0
+    mov    [r15+4], eax
+    mov    dword [r15+8], 0
+.done:
+ENDP
+
+; sapling -> the biome's tree, through world_set_block so main thread only
+PROC worldgen_place_tree, WG_HDR
+    mov    esi, ecx
+    mov    edi, edx
+    mov    r12d, r8d
+    mov    r13d, r9d
+    lea    rbx, LOC(0)
+    xor    eax, eax
+    xor    ecx, ecx
+.z:
+    mov    [rbx+rcx], rax
+    add    ecx, 8
+    cmp    ecx, WG_HDR
+    jb     .z
+    mov    dword [rbx+WG.mode], 1
+    mov    ecx, edi
+    shl    ecx, 8
+    xor    ecx, esi
+    mov    edx, r12d
+    mov    r8d, [rel g_world_time]
+    add    r8d, S_SAPLING
+    call   wg_seed64
+    mov    [rbx+WG.trng], rax
+    mov    ecx, 100
+    call   wg_trandn
+    mov    edx, eax
+    mov    ecx, r13d
+    cmp    ecx, BIOME_COUNT
+    jb     .bok
+    mov    ecx, BIOME_PLAINS
+.bok:
+    call   wg_pick_tree
+    mov    ecx, eax
+    mov    edx, esi
+    mov    r8d, edi
+    mov    r9d, r12d
+    call   wg_build_tree
+ENDP
