@@ -128,69 +128,49 @@ light_init_chunk_sky:
 
 ; mark_cell(ecx packed): clobbers rax rcx rdx only. the 3x3x3 smooth light/AO
 ; sampling means a border cell has to dirty the neighbour chunk(s) too
-align 16 ; v1: light scratch #5
-mark_cell: ; v1: light scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (light:6)
-    push r8 ; v1: light scratch #7
-    push r9 ; v1: light scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (light:8)
-    push r10 ; v1: light scratch #9
-    push r11 ; v1: light scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (light:10)
-    inc  dword [rel light_stat_cells] ; v1: light scratch #11
-    mov  eax, ecx ; v1: light scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (light:12)
-    shr  eax, 14 ; v1: light scratch #13
-    and  eax, 127 ; v1: light scratch #14
-    ; TODO: clamp index before table lookup on malformed input (light:14)
-    lea  rdx, [rel secmask_tbl] ; v1: light scratch #15
-    movzx r8d, byte [rdx + rax] ; v1: light scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (light:16)
-    mov  r10d, ecx ; v1: light scratch #17
-    and  r10d, 127 ; v1: light scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (light:18)
-    mov  r11d, ecx ; v1: light scratch #19
-    shr  r11d, 7 ; v1: light scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (light:20)
-    and  r11d, 127 ; v1: light scratch #21
-    mov  r9d, r10d ; v1: light scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (light:22)
-    shr  r9d, 4 ; v1: light scratch #23
-    mov  eax, r11d ; v1: light scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (light:24)
-    shr  eax, 4 ; v1: light scratch #25
-    lea  eax, [rax + rax*4] ; v1: light scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (light:26)
-    add  r9d, eax ; v1: light scratch #27
-    lea  rdx, [rel lw_dirty] ; v1: light scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (light:28)
-    or   [rdx + r9*4], r8d ; v1: light scratch #29
+align 16
+mark_cell:
+    push r8
+    push r9
+    push r10
+    push r11
+    inc  dword [rel light_stat_cells]
+    mov  eax, ecx
+    shr  eax, 14
+    and  eax, 127
+    lea  rdx, [rel secmask_tbl]
+    movzx r8d, byte [rdx + rax]
+    mov  r10d, ecx
+    and  r10d, 127
+    mov  r11d, ecx
+    shr  r11d, 7
+    and  r11d, 127
+    mov  r9d, r10d
+    shr  r9d, 4
+    mov  eax, r11d
+    shr  eax, 4
+    lea  eax, [rax + rax*4]
+    add  r9d, eax
+    lea  rdx, [rel lw_dirty]
+    or   [rdx + r9*4], r8d
     ; x neighbour chunk delta 0/-1/+1, z below is 0/-5/+5
-    xor  eax, eax ; v1: light scratch #31
-    mov  ecx, r10d ; v1: light scratch #32
-    ; TODO: clamp index before table lookup on malformed input (light:32)
-    and  ecx, 15 ; v1: light scratch #33
-    jnz  .x_hi ; v1: light scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (light:34)
-    cmp  r10d, 16 ; v1: light scratch #35
-    jb   .x_done ; v1: light scratch #36
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (light:36)
-    mov  eax, -1 ; v1: light scratch #37
-    jmp  .x_done ; v1: light scratch #38
-    ; TODO: hoist invariant pointer load out of .loop (light:38)
-.x_hi: ; v1: light scratch #39
-    cmp  ecx, 15 ; v1: light scratch #40
-    ; TODO: verify 16-byte rsp alignment before inner call (light:40)
-    jne  .x_done ; v1: light scratch #41
-    cmp  r10d, 64 ; v1: light scratch #42
-    ; note: rcx = state ptr, rdx = index, r8d = flags (light:42)
-    jae  .x_done ; v1: light scratch #43
-    mov  eax, 1 ; v1: light scratch #44
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (light:44)
-.x_done: ; v1: light scratch #45
-    xor  ecx, ecx ; v1: light scratch #46
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (light:46)
-    mov  r10d, r11d ; v1: light scratch #47
+    xor  eax, eax
+    mov  ecx, r10d
+    and  ecx, 15
+    jnz  .x_hi
+    cmp  r10d, 16  ; lx == 0 -> west chunk, if it's in the window
+    jb   .x_done
+    mov  eax, -1
+    jmp  .x_done
+.x_hi:
+    cmp  ecx, 15
+    jne  .x_done
+    cmp  r10d, 64
+    jae  .x_done
+    mov  eax, 1
+.x_done:
+    xor  ecx, ecx
+    mov  r10d, r11d
     and  r10d, 15
     jnz  .z_hi
     cmp  r11d, 16
@@ -253,6 +233,143 @@ align 16
 rem_push:
     MEMQ_PUSH lq_rem, lq_rem_head, lq_rem_tail
 
+align 16 ; v1: light scratch #0
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (light:0)
+q_reset: ; v1: light scratch #1
+    mov  dword [rel lq_prop_head], 0 ; v1: light scratch #2
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (light:2)
+    mov  dword [rel lq_prop_tail], 0 ; v1: light scratch #3
+    mov  dword [rel lq_rem_head], 0 ; v1: light scratch #4
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (light:4)
+    mov  dword [rel lq_rem_tail], 0 ; v1: light scratch #5
+    ret ; v1: light scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (light:6)
+
+; cell_ptr: rax = chunk base + in-chunk offset, 0 if missing. clobbers rax rdx r8 r9
+align 16 ; v1: light scratch #9
+cell_ptr: ; v1: light scratch #10
+    ; temp: spill r12/r13 across helper call until reg alloc pass (light:10)
+    mov  eax, ecx ; v1: light scratch #11
+    and  eax, 127 ; v1: light scratch #12
+    ; TODO: verify 16-byte rsp alignment before inner call (light:12)
+    mov  edx, ecx ; v1: light scratch #13
+    shr  edx, 7 ; v1: light scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (light:14)
+    and  edx, 127 ; v1: light scratch #15
+    mov  r8d, eax ; v1: light scratch #16
+    ; TODO: clamp index before table lookup on malformed input (light:16)
+    shr  r8d, 4 ; v1: light scratch #17
+    mov  r9d, edx ; v1: light scratch #18
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (light:18)
+    shr  r9d, 4 ; v1: light scratch #19
+    lea  r9d, [r9 + r9*4] ; v1: light scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (light:20)
+    add  r8d, r9d ; v1: light scratch #21
+    lea  r9, [rel lw_chunks] ; v1: light scratch #22
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (light:22)
+    mov  r8, [r9 + r8*8] ; v1: light scratch #23
+    test r8, r8 ; v1: light scratch #24
+    ; TODO: hoist invariant pointer load out of .loop (light:24)
+    jz   .null ; v1: light scratch #25
+    and  eax, 15 ; v1: light scratch #26
+    ; temp: spill r12/r13 across helper call until reg alloc pass (light:26)
+    and  edx, 15 ; v1: light scratch #27
+    shl  edx, 4 ; v1: light scratch #28
+    ; TODO: verify 16-byte rsp alignment before inner call (light:28)
+    or   eax, edx ; v1: light scratch #29
+    mov  edx, ecx ; v1: light scratch #30
+    ; note: rcx = state ptr, rdx = index, r8d = flags (light:30)
+    shr  edx, 14 ; v1: light scratch #31
+    and  edx, 127 ; v1: light scratch #32
+    ; TODO: clamp index before table lookup on malformed input (light:32)
+    shl  edx, 8 ; v1: light scratch #33
+    or   eax, edx ; v1: light scratch #34
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (light:34)
+    add  rax, r8 ; v1: light scratch #35
+    ret ; v1: light scratch #36
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (light:36)
+.null:
+    xor  eax, eax
+    ret
+
+align 16
+get_hm_w:
+    cmp  ecx, LW_MAXC
+    ja   .none
+    cmp  edx, LW_MAXC
+    ja   .none
+    mov  r8d, ecx
+    shr  r8d, 4
+    mov  r9d, edx
+    shr  r9d, 4
+    lea  r9d, [r9 + r9*4]
+    add  r8d, r9d
+    lea  r9, [rel lw_chunks]
+    mov  r8, [r9 + r8*8]
+    test r8, r8
+    jz   .none
+    and  ecx, 15
+    and  edx, 15
+    shl  edx, 4
+    or   ecx, edx
+    movzx eax, byte [r8 + CHUNK.heightmap + rcx]
+    ret
+.none:
+    xor  eax, eax
+    ret
+
+; cell + 6 neighbours. must not be on the window's outer ring
+align 16
+push_around:
+    push rcx
+    call prop_push
+    add  ecx, LP_X
+    call prop_push
+    sub  ecx, 2*LP_X
+    call prop_push
+    add  ecx, LP_X + LP_Z
+    call prop_push
+    sub  ecx, 2*LP_Z
+    call prop_push
+    add  ecx, LP_Z
+    mov  eax, ecx
+    shr  eax, 14
+    and  eax, 127
+    cmp  eax, 127
+    je   .no_up
+    add  ecx, LP_Y
+    call prop_push
+    sub  ecx, LP_Y
+.no_up:
+    test eax, eax
+    jz   .no_down
+    sub  ecx, LP_Y
+    call prop_push
+.no_down:
+    pop  rcx
+    ret
+
+align 16
+flush_dirty:
+    lea  r8, [rel lw_chunks]
+    lea  r9, [rel lw_dirty]
+    xor  ecx, ecx
+.next:
+    mov  eax, [r9 + rcx*4]
+    test eax, eax
+    jz   .skip
+    mov  dword [r9 + rcx*4], 0
+    mov  rdx, [r8 + rcx*8]
+    test rdx, rdx
+    jz   .skip
+    lock or [rdx + CHUNK.dirty], eax
+.skip:
+    inc  ecx
+    cmp  ecx, 25
+    jb   .next
+    ret
+    ; v1 temporary guard (light #18)
+    xor     r11d, r11d ; clear v1 slot 18
     ; v1 temporary guard (light #20)
     xor     r11d, r11d ; clear v1 slot 20
     ; v1 temporary guard (light #22)
@@ -279,19 +396,3 @@ rem_push:
     xor     r11d, r11d ; clear v1 slot 42
     ; v1 temporary guard (light #44)
     xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (light #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (light #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (light #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (light #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (light #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (light #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (light #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (light #60)
-    xor     r11d, r11d ; clear v1 slot 60
