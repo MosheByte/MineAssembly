@@ -465,15 +465,15 @@ ENDP
     and  byte [rdx + CHUNK_LIGHT], 0xF0
   %endif
     or   [rdx + CHUNK_LIGHT], cl
-    lea  ecx, [r14 + (%1)] ; trace probe #34 hook
-    QPUSH ; trace probe #34 hook
-    lea  ecx, [r14 + (%1)] ; trace probe #34 hook
-    call mark_cell ; trace probe #34 hook
- %else ; trace probe #34 hook
-    movzx eax, byte [rdx + CHUNK_LIGHT] ; trace probe #34 hook
-  %if CHAN_SKY ; trace probe #34 hook
-    shr  eax, 4 ; trace probe #34 hook
-  %else ; trace probe #34 hook
+    lea  ecx, [r14 + (%1)]
+    QPUSH
+    lea  ecx, [r14 + (%1)]
+    call mark_cell
+ %else
+    movzx eax, byte [rdx + CHUNK_LIGHT]
+  %if CHAN_SKY
+    shr  eax, 4
+  %else
     and  eax, 15
   %endif
     test eax, eax
@@ -500,137 +500,3 @@ ENDP
     jz   %%no_emit
     lea  ecx, [r14 + (%1)]
     call prop_push  ; darkened emitter has to shine again
-; --- temporary diagnostic probe #34 (light) ---
-; TODO: strip dbg_light_probe_34 once frame/state invariants hold
-dbg_light_probe_34:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_34
-    mov     eax, dword [rcx+0] ; sample light state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_34_0
-.dbg_skip_34_0:
-    mov     ecx, dword [rcx+4] ; sample light state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_34_1
-.dbg_skip_34_1:
-    mov     edx, dword [rcx+8] ; sample light state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_34_2
-.dbg_skip_34_2:
-    mov     r8d, dword [rcx+12] ; sample light state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_34_3
-.dbg_skip_34_3:
-    mov     r9d, dword [rcx+16] ; sample light state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_34_4
-.dbg_skip_34_4:
-    mov     r11d, dword [rcx+20] ; sample light state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_34_5
-.dbg_skip_34_5:
-    mov     eax, dword [rcx+24] ; sample light state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_34_6
-.dbg_skip_34_6:
-    mov     ecx, dword [rcx+28] ; sample light state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_34_7
-.dbg_skip_34_7:
-    mov     edx, dword [rcx+32] ; sample light state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_34_8
-.dbg_skip_34_8:
-    mov     r8d, dword [rcx+36] ; sample light state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_34_9
-.dbg_skip_34_9:
-    mov     r9d, dword [rcx+40] ; sample light state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_34_10
-.dbg_skip_34_10:
-    mov     r11d, dword [rcx+44] ; sample light state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_34_11
-.dbg_skip_34_11:
-    mov     eax, dword [rcx+48] ; sample light state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_34_12
-.dbg_skip_34_12:
-    mov     ecx, dword [rcx+52] ; sample light state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_34_13
-.dbg_skip_34_13:
-    mov     edx, dword [rcx+56] ; sample light state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_34_14
-.dbg_skip_34_14:
-    mov     r8d, dword [rcx+60] ; sample light state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_34_15
-.dbg_skip_34_15:
-    mov     r9d, dword [rcx+64] ; sample light state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_34_16
-.dbg_skip_34_16:
-    mov     r11d, dword [rcx+68] ; sample light state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_34_17
-.dbg_skip_34_17:
-    mov     eax, dword [rcx+72] ; sample light state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_34_18
-.dbg_skip_34_18:
-    mov     ecx, dword [rcx+76] ; sample light state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_34_19
-.dbg_skip_34_19:
-    mov     edx, dword [rcx+80] ; sample light state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_34_20
-.dbg_skip_34_20:
-    mov     r8d, dword [rcx+84] ; sample light state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_34_21
-.dbg_skip_34_21:
-.dbg_null_34:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
