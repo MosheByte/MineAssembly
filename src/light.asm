@@ -752,58 +752,41 @@ PROC light_propagate_chunk, 32
     cmp  r12d, 16
     jb   .sky_z
 
-    mov  ecx, 4 ; v1: light scratch #0
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (light:0)
-    call seed_faces ; v1: light scratch #1
-    call bfs_prop_sky ; v1: light scratch #2
-    ; TODO: hoist invariant pointer load out of .loop (light:2)
+    mov  ecx, 4
+    call seed_faces
+    call bfs_prop_sky
 
     ; block light, every emitter
-    call q_reset ; v1: light scratch #5
-    lea  rsi, [rbx + CHUNK_BLOCKS] ; v1: light scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (light:6)
-    lea  rdi, [rel blk_light] ; v1: light scratch #7
-    xor  r12d, r12d ; v1: light scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (light:8)
-.emit: ; v1: light scratch #9
-    movzx eax, byte [rsi + r12] ; v1: light scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (light:10)
-    movzx eax, byte [rdi + rax] ; v1: light scratch #11
-    test eax, eax ; v1: light scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (light:12)
-    jz   .emit_next ; v1: light scratch #13
-    mov  ecx, r12d ; v1: light scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (light:14)
-    and  ecx, 15 ; v1: light scratch #15
-    add  ecx, LW_ORG ; v1: light scratch #16
-    ; TODO: clamp index before table lookup on malformed input (light:16)
-    mov  edx, r12d ; v1: light scratch #17
-    shr  edx, 4 ; v1: light scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (light:18)
-    and  edx, 15 ; v1: light scratch #19
-    add  edx, LW_ORG ; v1: light scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (light:20)
-    shl  edx, 7 ; v1: light scratch #21
-    or   ecx, edx ; v1: light scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (light:22)
-    mov  edx, r12d ; v1: light scratch #23
-    shr  edx, 8 ; v1: light scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (light:24)
-    shl  edx, 14 ; v1: light scratch #25
-    or   ecx, edx ; v1: light scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (light:26)
-    mov  r13d, ecx ; v1: light scratch #27
-    movzx edx, byte [rsi + r12 + LIGHT_OFS] ; v1: light scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (light:28)
-    and  edx, 15 ; v1: light scratch #29
-    cmp  eax, edx ; v1: light scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (light:30)
-    jbe  .emit_push ; v1: light scratch #31
-    and  byte [rsi + r12 + LIGHT_OFS], 0xF0 ; v1: light scratch #32
-    ; TODO: clamp index before table lookup on malformed input (light:32)
-    or   [rsi + r12 + LIGHT_OFS], al ; v1: light scratch #33
-    call mark_cell ; v1: light scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (light:34)
+    call q_reset
+    lea  rsi, [rbx + CHUNK_BLOCKS]
+    lea  rdi, [rel blk_light]
+    xor  r12d, r12d
+.emit:
+    movzx eax, byte [rsi + r12]
+    movzx eax, byte [rdi + rax]
+    test eax, eax
+    jz   .emit_next
+    mov  ecx, r12d
+    and  ecx, 15
+    add  ecx, LW_ORG
+    mov  edx, r12d
+    shr  edx, 4
+    and  edx, 15
+    add  edx, LW_ORG
+    shl  edx, 7
+    or   ecx, edx
+    mov  edx, r12d
+    shr  edx, 8
+    shl  edx, 14
+    or   ecx, edx
+    mov  r13d, ecx
+    movzx edx, byte [rsi + r12 + LIGHT_OFS]
+    and  edx, 15
+    cmp  eax, edx
+    jbe  .emit_push
+    and  byte [rsi + r12 + LIGHT_OFS], 0xF0
+    or   [rsi + r12 + LIGHT_OFS], al
+    call mark_cell
 .emit_push:
     mov  ecx, r13d
     call prop_push
@@ -906,51 +889,126 @@ PROC light_on_block_changed, 32
     cmp  ecx, LOC(0)
     jbe  .hm_not_up
 
-    ; v1 temporary guard (light #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (light #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (light #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (light #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (light #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (light #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (light #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (light #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (light #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (light #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (light #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (light #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (light #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (light #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (light #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (light #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (light #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (light #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (light #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (light #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (light #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (light #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (light #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (light #63)
-    xor     r11d, r11d ; clear v1 slot 63
+    ; hm went up: [old, new) lost direct sky
+    mov  r15d, LOC(0)
+.rise:
+    cmp  r15d, LOC(4)
+    jae  .sky_bfs
+    mov  eax, r15d
+    shl  eax, 8
+    add  eax, r12d
+    lea  rdx, [rbx + rax]
+    movzx eax, byte [rdx + CHUNK_LIGHT]
+    shr  eax, 4
+    jz   .rise_next
+    and  byte [rdx + CHUNK_LIGHT], 0x0F
+    mov  LOC(8), eax
+    mov  ecx, edi
+    and  ecx, LP_YCLEAR
+    mov  edx, r15d
+    shl  edx, 14
+    or   ecx, edx
+    call mark_cell
+    mov  ecx, edi
+    and  ecx, LP_YCLEAR
+    mov  edx, r15d
+    shl  edx, 14
+    or   ecx, edx
+    mov  eax, LOC(8)
+    shl  eax, 21
+    or   ecx, eax
+    call rem_push
+.rise_next:
+    inc  r15d
+    jmp  .rise
+
+.hm_not_up:
+    cmp  r13d, LOC(4)
+    jae  .no_cell_sky
+    movzx eax, byte [rsi + CHUNK_LIGHT]
+    shr  eax, 4
+    jz   .no_cell_sky
+    and  byte [rsi + CHUNK_LIGHT], 0x0F
+    mov  LOC(8), eax
+    mov  ecx, edi
+    call mark_cell
+    mov  eax, LOC(8)
+    shl  eax, 21
+    mov  ecx, edi
+    or   ecx, eax
+    call rem_push
+.no_cell_sky:
+    ; hm went down: [new, old) sees the sky now, pour it in
+    mov  r15d, LOC(4)
+.fall:
+    cmp  r15d, LOC(0)
+    jae  .sky_bfs
+    mov  eax, r15d
+    shl  eax, 8
+    add  eax, r12d
+    lea  rdx, [rbx + rax]
+    movzx eax, byte [rdx + CHUNK_LIGHT]
+    cmp  eax, 0xF0
+    jae  .fall_push
+    or   byte [rdx + CHUNK_LIGHT], 0xF0
+    mov  ecx, edi
+    and  ecx, LP_YCLEAR
+    mov  edx, r15d
+    shl  edx, 14
+    or   ecx, edx
+    call mark_cell
+.fall_push:
+    mov  ecx, edi
+    and  ecx, LP_YCLEAR
+    mov  edx, r15d
+    shl  edx, 14
+    or   ecx, edx
+    call prop_push
+    inc  r15d
+    jmp  .fall
+
+.sky_bfs:
+    call bfs_rem_sky
+    mov  ecx, edi
+    call push_around
+    call bfs_prop_sky
+
+    ; block light
+    call q_reset
+    movzx eax, byte [rsi + CHUNK_LIGHT]
+    and  eax, 15
+    jz   .no_cell_blk
+    and  byte [rsi + CHUNK_LIGHT], 0xF0
+    mov  LOC(8), eax
+    mov  ecx, edi
+    call mark_cell
+    mov  eax, LOC(8)
+    shl  eax, 21
+    mov  ecx, edi
+    or   ecx, eax
+    call rem_push
+.no_cell_blk:
+    call bfs_rem_blk
+    lea  rax, [rel blk_light]
+    movzx eax, byte [rax + r14]
+    test eax, eax
+    jz   .no_emit
+    movzx ecx, byte [rsi + CHUNK_LIGHT]
+    and  ecx, 15
+    cmp  eax, ecx
+    jbe  .emit_push
+    and  byte [rsi + CHUNK_LIGHT], 0xF0
+    or   [rsi + CHUNK_LIGHT], al
+    mov  ecx, edi
+    call mark_cell
+.emit_push:
+    mov  ecx, edi
+    call prop_push
+.no_emit:
+    mov  ecx, edi
+    call push_around
+    call bfs_prop_blk
+
+    call flush_dirty
+.done:
+ENDP
