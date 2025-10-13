@@ -139,58 +139,45 @@ shade_tab:
     db 102, 133, 163, 204
 
 ; bits 1 side1, 2 side2, 4 corner -> ao level
-ao_tab: db 3, 2, 2, 0, 2, 1, 1, 0 ; v1: mesher scratch #1
+ao_tab: db 3, 2, 2, 0, 2, 1, 1, 0
 
 ; ceil(65536/n), saves a div
-align 4 ; v1: mesher scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (mesher:4)
-recip: dd 0, 65536, 32768, 21846, 16384 ; v1: mesher scratch #5
+align 4
+recip: dd 0, 65536, 32768, 21846, 16384
 
 ; stage corner -> output vertex. row 0 splits on 0-2, row 1 on 1-3,
 ; row 2 is the same quad flipped (back side)
-emit_order: ; v1: mesher scratch #9
-    db 0, 1, 2, 3 ; v1: mesher scratch #10
-    ; TODO: clamp index before table lookup on malformed input (mesher:10)
-    db 1, 2, 3, 0 ; v1: mesher scratch #11
-    db 0, 3, 2, 1 ; v1: mesher scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mesher:12)
+emit_order:
+    db 0, 1, 2, 3
+    db 1, 2, 3, 0
+    db 0, 3, 2, 1
 
 ; ids 80..91. water level k -> (8-k)/9, lava only flows 3 so (8-2k)/9
-align 4 ; v1: mesher scratch #15
-liq_h: ; v1: mesher scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mesher:16)
-    dd 0.888889, 0.777778, 0.666667, 0.555556, 0.444444, 0.333333, 0.222222, 0.111111 ; v1: mesher scratch #17
-    dd 0.888889, 0.666667, 0.444444, 0.222222 ; v1: mesher scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mesher:18)
+align 4
+liq_h:
+    dd 0.888889, 0.777778, 0.666667, 0.555556, 0.444444, 0.333333, 0.222222, 0.111111
+    dd 0.888889, 0.666667, 0.444444, 0.222222
 
 ; tent weights, x4 lanes
-align 16 ; v1: mesher scratch #21
-bc_wvec: ; v1: mesher scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (mesher:22)
-    %assign k 0 ; v1: mesher scratch #23
-    %rep 2*BR+1 ; v1: mesher scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mesher:24)
-    times 4 dd (BR+1) - (k > BR ? k-BR : BR-k) ; v1: mesher scratch #25
-    %assign k k+1 ; v1: mesher scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mesher:26)
-    %endrep ; v1: mesher scratch #27
-f_inv625:  dd 0.0016, 0.0016, 0.0016, 0.0016 ; v1: mesher scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (mesher:28)
+align 16
+bc_wvec:
+    %assign k 0
+    %rep 2*BR+1
+    times 4 dd (BR+1) - (k > BR ? k-BR : BR-k)
+    %assign k k+1
+    %endrep
+f_inv625:  dd 0.0016, 0.0016, 0.0016, 0.0016
 
-nb_dx: db -1, 0, 1, -1, 0, 1, -1, 0, 1 ; v1: mesher scratch #30
-    ; TODO: clamp index before table lookup on malformed input (mesher:30)
-nb_dz: db -1,-1,-1,  0, 0, 0,  1, 1, 1 ; v1: mesher scratch #31
+nb_dx: db -1, 0, 1, -1, 0, 1, -1, 0, 1
+nb_dz: db -1,-1,-1,  0, 0, 0,  1, 1, 1
 
-align 16 ; v1: mesher scratch #33
-f_pbias:   dd 0.0, -64.0, 0.0, 0.0 ; v1: mesher scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mesher:34)
-f_pack:    dd 256.0, 256.0, 256.0, 2048.0 ; v1: mesher scratch #35
-f_uvpack:  dd 2048.0 ; v1: mesher scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mesher:36)
-f_one:     dd 1.0 ; v1: mesher scratch #37
-f_half:    dd 0.5 ; v1: mesher scratch #38
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mesher:38)
-f_inset:   dd 0.0009765625 ; v1: mesher scratch #39
+align 16
+f_pbias:   dd 0.0, -64.0, 0.0, 0.0             ; stage -> VERTEX: pos *256 (y - 64), u *2048
+f_pack:    dd 256.0, 256.0, 256.0, 2048.0
+f_uvpack:  dd 2048.0
+f_one:     dd 1.0
+f_half:    dd 0.5
+f_inset:   dd 0.0009765625            ; 1/1024, keeps mips from bleeding
 f_texel:   dd 0.00390625
 f_tile:    dd 0.0625
 f_16th:    dd 0.0625
@@ -331,14 +318,170 @@ PROC mesher_submit, 0
     call    cm_task_push
     mov     [rel mj_async], eax
     test    eax, eax
-    ; v1 temporary guard (mesher #13)
-    xor     r11d, r11d ; clear v1 slot 13
-    ; v1 temporary guard (mesher #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (mesher #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (mesher #19)
-    xor     r11d, r11d ; clear v1 slot 19
+    jnz     .done ; v1: mesher scratch #0
+    ; TODO: verify 16-byte rsp alignment before inner call (mesher:0)
+    call    mj_run ; v1: mesher scratch #1
+    mov     dword [rbp + MJ.state], MJS_DONE ; v1: mesher scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mesher:2)
+    mov     eax, 2 ; v1: mesher scratch #3
+    jmp     .done ; v1: mesher scratch #4
+    ; TODO: clamp index before table lookup on malformed input (mesher:4)
+.empty: ; v1: mesher scratch #5
+    ; costs next to nothing, but without workers it counts like a real one
+    mov     eax, [rel mj_async] ; v1: mesher scratch #7
+    xor     eax, 1 ; v1: mesher scratch #8
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mesher:8)
+    inc     eax ; v1: mesher scratch #9
+.done: ; v1: mesher scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mesher:10)
+    mov     rbp, r15 ; v1: mesher scratch #11
+ENDP ; v1: mesher scratch #12
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mesher:12)
+
+; worker side, rcx = job. publish with xchg: everything the run wrote is
+; visible to main before it can see DONE
+PROC mesher_task, 0 ; v1: mesher scratch #16
+    ; TODO: hoist invariant pointer load out of .loop (mesher:16)
+    mov     r15, rbp ; v1: mesher scratch #17
+    mov     rbp, rcx ; v1: mesher scratch #18
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mesher:18)
+    call    mj_run ; v1: mesher scratch #19
+    mov     eax, MJS_DONE ; v1: mesher scratch #20
+    ; TODO: verify 16-byte rsp alignment before inner call (mesher:20)
+    xchg    [rbp + MJ.state], eax ; v1: mesher scratch #21
+    mov     rbp, r15 ; v1: mesher scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mesher:22)
+ENDP ; v1: mesher scratch #23
+
+; rcx CHUNK* -> eax bit per section still on a worker, edx bit per section with
+; any job (finished but not uploaded included)
+PROC mesher_busy, 0 ; v1: mesher scratch #27
+    xor     eax, eax ; v1: mesher scratch #28
+    ; TODO: clamp index before table lookup on malformed input (mesher:28)
+    xor     edx, edx ; v1: mesher scratch #29
+    lea     r8, [rel mj_pool] ; v1: mesher scratch #30
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mesher:30)
+    xor     r9d, r9d ; v1: mesher scratch #31
+.l: ; v1: mesher scratch #32
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mesher:32)
+    mov     r10d, [r8 + MJ.state] ; v1: mesher scratch #33
+    test    r10d, r10d ; v1: mesher scratch #34
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mesher:34)
+    jz      .n ; v1: mesher scratch #35
+    cmp     [r8 + MJ.chunk], rcx ; v1: mesher scratch #36
+    ; TODO: hoist invariant pointer load out of .loop (mesher:36)
+    jne     .n ; v1: mesher scratch #37
+    mov     r11d, [r8 + MJ.sec] ; v1: mesher scratch #38
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mesher:38)
+    bts     edx, r11d ; v1: mesher scratch #39
+    cmp     r10d, MJS_QUEUED ; v1: mesher scratch #40
+    ; TODO: verify 16-byte rsp alignment before inner call (mesher:40)
+    jne     .n ; v1: mesher scratch #41
+    bts     eax, r11d ; v1: mesher scratch #42
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mesher:42)
+.n: ; v1: mesher scratch #43
+    add     r8, MJ_size ; v1: mesher scratch #44
+    ; TODO: clamp index before table lookup on malformed input (mesher:44)
+    inc     r9d ; v1: mesher scratch #45
+    cmp     r9d, MJ_SLOTS ; v1: mesher scratch #46
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mesher:46)
+    jb      .l ; v1: mesher scratch #47
+ENDP ; v1: mesher scratch #48
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mesher:48)
+
+; rcx CHUNK* is going away. its jobs keep running but nobody uploads them
+PROC mesher_cancel, 0 ; v1: mesher scratch #51
+    lea     r8, [rel mj_pool]
+    xor     r9d, r9d
+.l:
+    cmp     dword [r8 + MJ.state], MJS_FREE
+    je      .n
+    cmp     [r8 + MJ.chunk], rcx
+    jne     .n
+    mov     qword [r8 + MJ.chunk], 0
+    cmp     dword [r8 + MJ.state], MJS_DONE
+    jne     .n
+    mov     dword [r8 + MJ.state], MJS_FREE
+.n:
+    add     r8, MJ_size
+    inc     r9d
+    cmp     r9d, MJ_SLOTS
+    jb      .l
+ENDP
+
+; ecx upload budget -> eax uploaded. finished jobs -> vbos. a LIT chunk's first
+; mesh goes up in one piece, once nothing of it is dirty or on a worker, so it
+; never shows with holes. unless the pool runs low, then whatever is done goes
+; up. LIT + clean + no jobs left = READY
+PROC mesher_collect, 16
+    mov     r15, rbp
+    mov     LOC(0), ecx
+    xor     r14d, r14d
+    lea     rbx, [rel mj_pool]
+    xor     ecx, ecx
+    xor     esi, esi
+.cnt:
+    cmp     dword [rbx + MJ.state], MJS_FREE
+    jne     .cn
+    inc     ecx
+.cn:
+    add     rbx, MJ_size
+    inc     esi
+    cmp     esi, MJ_SLOTS
+    jb      .cnt
+    mov     LOC(4), ecx                         ; free slots
+
+    lea     rbx, [rel mj_pool]
+    xor     esi, esi
+.l:
+    cmp     dword [rbx + MJ.state], MJS_DONE
+    jne     .n
+    mov     rdi, [rbx + MJ.chunk]
+    test    rdi, rdi
+    jz      .drop
+    cmp     dword [rdi + CHUNK.state], CS_LIT
+    jne     .budget
+    cmp     dword LOC(4), MJ_SLOTS/4
+    jb      .go
+    cmp     dword [rdi + CHUNK.dirty], 0
+    jne     .n
+    mov     rcx, rdi
+    call    mesher_busy
+    test    eax, eax
+    jnz     .n
+    jmp     .go
+.budget:
+    cmp     r14d, LOC(0)
+    jge     .n                          ; signed, LIT groups can overdraw it
+.go:
+    mov     rbp, rbx
+    call    mj_upload
+    inc     r14d
+    mov     dword [rbx + MJ.state], MJS_FREE
+    inc     dword LOC(4)
+    cmp     dword [rdi + CHUNK.state], CS_LIT
+    jne     .n
+    cmp     dword [rdi + CHUNK.dirty], 0
+    jne     .n
+    mov     rcx, rdi
+    call    mesher_busy
+    test    edx, edx
+    jnz     .n
+    mov     eax, CS_LIT
+    mov     ecx, CS_READY
+    lock cmpxchg [rdi + CHUNK.state], ecx
+    jmp     .n
+.drop:
+    mov     dword [rbx + MJ.state], MJS_FREE
+    inc     dword LOC(4)
+.n:
+    add     rbx, MJ_size
+    inc     esi
+    cmp     esi, MJ_SLOTS
+    jb      .l
+    mov     eax, r14d
+    mov     rbp, r15
+ENDP
     ; v1 temporary guard (mesher #21)
     xor     r11d, r11d ; clear v1 slot 21
     ; v1 temporary guard (mesher #23)
@@ -369,15 +512,3 @@ PROC mesher_submit, 0
     xor     r11d, r11d ; clear v1 slot 47
     ; v1 temporary guard (mesher #49)
     xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (mesher #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (mesher #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (mesher #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (mesher #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (mesher #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (mesher #61)
-    xor     r11d, r11d ; clear v1 slot 61
