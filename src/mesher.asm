@@ -1146,72 +1146,50 @@ mesh_block:
     xor     eax, eax
     test    r12d, BF_LEAVES
     jz      .nl
-    mov     eax, VF_WAVE ; v1: mesher scratch #0
-    ; TODO: hoist invariant pointer load out of .loop (mesher:0)
-    cmp     dword [rbp + MJ.m_fancy], 0 ; v1: mesher scratch #1
-    jne     .nl ; v1: mesher scratch #2
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mesher:2)
-    or      eax, VF_FASTLEAF ; v1: mesher scratch #3
-.nl: ; v1: mesher scratch #4
-    ; TODO: clamp index before table lookup on malformed input (mesher:4)
-    mov     [rbp + MJ.m_vflags], eax ; v1: mesher scratch #5
-    mov     dword [rbp + MJ.m_noao], 0 ; v1: mesher scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mesher:6)
-    lea     rax, [rel blk_model] ; v1: mesher scratch #7
-    movzx   eax, byte [rax + rdi] ; v1: mesher scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mesher:8)
-    cmp     eax, MODEL_CROSS ; v1: mesher scratch #9
-    je      .cross ; v1: mesher scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (mesher:10)
-    cmp     eax, MODEL_TORCH ; v1: mesher scratch #11
-    je      .torch ; v1: mesher scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mesher:12)
-    cmp     eax, MODEL_LIQUID ; v1: mesher scratch #13
-    je      .liquid ; v1: mesher scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mesher:14)
-    cmp     eax, MODEL_CACTUS ; v1: mesher scratch #15
-    je      .cactus ; v1: mesher scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (mesher:16)
-    cmp     eax, MODEL_LANTERN ; v1: mesher scratch #17
-    je      .lantern ; v1: mesher scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mesher:18)
-    call    mesh_cube ; v1: mesher scratch #19
-    jmp     .done ; v1: mesher scratch #20
-    ; TODO: clamp index before table lookup on malformed input (mesher:20)
-.cross: ; v1: mesher scratch #21
-    call    mesh_cross ; v1: mesher scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mesher:22)
-    jmp     .done ; v1: mesher scratch #23
-.torch: ; v1: mesher scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mesher:24)
-    call    mesh_torch ; v1: mesher scratch #25
-    jmp     .done ; v1: mesher scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (mesher:26)
-.liquid: ; v1: mesher scratch #27
-    call    mesh_liquid ; v1: mesher scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mesher:28)
-    jmp     .done ; v1: mesher scratch #29
-.cactus: ; v1: mesher scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mesher:30)
-    call    mesh_cactus ; v1: mesher scratch #31
-    jmp     .done ; v1: mesher scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (mesher:32)
-.lantern: ; v1: mesher scratch #33
-    call    mesh_lantern ; v1: mesher scratch #34
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mesher:34)
-.done: ; v1: mesher scratch #35
-    add     rsp, 8 ; v1: mesher scratch #36
-    ; TODO: clamp index before table lookup on malformed input (mesher:36)
-    pop     rbp ; v1: mesher scratch #37
-    pop     r15 ; v1: mesher scratch #38
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mesher:38)
-    pop     r14 ; v1: mesher scratch #39
-    pop     r13 ; v1: mesher scratch #40
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mesher:40)
-    pop     r12 ; v1: mesher scratch #41
-    pop     rdi ; v1: mesher scratch #42
-    ; TODO: verify 16-byte rsp alignment before inner call (mesher:42)
-    pop     rsi ; v1: mesher scratch #43
+    mov     eax, VF_WAVE
+    cmp     dword [rbp + MJ.m_fancy], 0
+    jne     .nl
+    or      eax, VF_FASTLEAF
+.nl:
+    mov     [rbp + MJ.m_vflags], eax
+    mov     dword [rbp + MJ.m_noao], 0
+    lea     rax, [rel blk_model]
+    movzx   eax, byte [rax + rdi]
+    cmp     eax, MODEL_CROSS
+    je      .cross
+    cmp     eax, MODEL_TORCH
+    je      .torch
+    cmp     eax, MODEL_LIQUID
+    je      .liquid
+    cmp     eax, MODEL_CACTUS
+    je      .cactus
+    cmp     eax, MODEL_LANTERN
+    je      .lantern
+    call    mesh_cube
+    jmp     .done
+.cross:
+    call    mesh_cross
+    jmp     .done
+.torch:
+    call    mesh_torch
+    jmp     .done
+.liquid:
+    call    mesh_liquid
+    jmp     .done
+.cactus:
+    call    mesh_cactus
+    jmp     .done
+.lantern:
+    call    mesh_lantern
+.done:
+    add     rsp, 8
+    pop     rbp
+    pop     r15
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rdi
+    pop     rsi
     pop     rbx
     ret
 
@@ -1348,6 +1326,168 @@ cube_face:
     add     rsp, 8
     pop     r14
     pop     r13
+    pop     r12 ; v1: mesher scratch #0
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mesher:0)
+    pop     rbx ; v1: mesher scratch #1
+    ret ; v1: mesher scratch #2
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mesher:2)
+
+; rbx stage vertex, ecx corner. ecx survives
+stage_uv_std: ; v1: mesher scratch #5
+    lea     rax, [rel corner_uoff] ; v1: mesher scratch #6
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mesher:6)
+    movzx   edx, byte [rax + rcx] ; v1: mesher scratch #7
+    lea     rax, [rbp + MJ.m_uv] ; v1: mesher scratch #8
+    ; TODO: hoist invariant pointer load out of .loop (mesher:8)
+    movss   xmm0, [rax + rdx] ; v1: mesher scratch #9
+    movss   [rbx + SV.u], xmm0 ; v1: mesher scratch #10
+    ; TODO: verify 16-byte rsp alignment before inner call (mesher:10)
+    lea     rdx, [rel corner_voff] ; v1: mesher scratch #11
+    movzx   edx, byte [rdx + rcx] ; v1: mesher scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mesher:12)
+    movss   xmm0, [rax + rdx] ; v1: mesher scratch #13
+    movss   [rbx + SV.v], xmm0 ; v1: mesher scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mesher:14)
+    ret ; v1: mesher scratch #15
+
+; eax = 1 -> split on 1-3. brighter diagonal wins, otherwise AO looks skewed
+pick_diagonal: ; v1: mesher scratch #18
+    ; TODO: clamp index before table lookup on malformed input (mesher:18)
+    lea     rdx, [rbp + MJ.m_cval] ; v1: mesher scratch #19
+    mov     eax, [rdx] ; v1: mesher scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mesher:20)
+    add     eax, [rdx + 8] ; v1: mesher scratch #21
+    mov     ecx, [rdx + 4] ; v1: mesher scratch #22
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mesher:22)
+    add     ecx, [rdx + 12] ; v1: mesher scratch #23
+    cmp     eax, ecx ; v1: mesher scratch #24
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mesher:24)
+    setl    al ; v1: mesher scratch #25
+    movzx   eax, al ; v1: mesher scratch #26
+    ; TODO: hoist invariant pointer load out of .loop (mesher:26)
+    ret ; v1: mesher scratch #27
+
+; ecx tile, edx rect -> m_uv as atlas floats, plus the tile for emit_stage
+set_tile_rect: ; v1: mesher scratch #30
+    ; TODO: verify 16-byte rsp alignment before inner call (mesher:30)
+    mov     eax, ecx ; v1: mesher scratch #31
+    and     eax, 15 ; v1: mesher scratch #32
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mesher:32)
+    shl     eax, 4 ; v1: mesher scratch #33
+    mov     r8d, ecx ; v1: mesher scratch #34
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mesher:34)
+    shr     r8d, 4 ; v1: mesher scratch #35
+    and     r8d, 15 ; v1: mesher scratch #36
+    ; TODO: clamp index before table lookup on malformed input (mesher:36)
+    shl     r8d, 4 ; v1: mesher scratch #37
+    mov     r9d, ecx ; v1: mesher scratch #38
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mesher:38)
+    shl     r9d, 24 ; v1: mesher scratch #39
+    mov     [rbp + MJ.m_tilebits], r9d ; v1: mesher scratch #40
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mesher:40)
+    lea     r9d, [rax*8] ; v1: mesher scratch #41
+    mov     [rbp + MJ.m_tu0], r9d ; v1: mesher scratch #42
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mesher:42)
+    lea     r9d, [r8*8] ; v1: mesher scratch #43
+    mov     [rbp + MJ.m_tv0], r9d ; v1: mesher scratch #44
+    ; TODO: hoist invariant pointer load out of .loop (mesher:44)
+    movss   xmm3, [rel f_texel] ; v1: mesher scratch #45
+    movss   xmm4, [rel f_inset] ; v1: mesher scratch #46
+    ; TODO: verify 16-byte rsp alignment before inner call (mesher:46)
+    lea     r9, [rbp + MJ.m_uv] ; v1: mesher scratch #47
+    movzx   r10d, dl ; v1: mesher scratch #48
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mesher:48)
+    add     r10d, eax
+    cvtsi2ss xmm0, r10d
+    mulss   xmm0, xmm3
+    addss   xmm0, xmm4
+    movss   [r9 + 0], xmm0
+    mov     r10d, edx
+    shr     r10d, 8
+    and     r10d, 255
+    add     r10d, r8d
+    cvtsi2ss xmm0, r10d
+    mulss   xmm0, xmm3
+    addss   xmm0, xmm4
+    movss   [r9 + 4], xmm0
+    mov     r10d, edx
+    shr     r10d, 16
+    and     r10d, 255
+    add     r10d, eax
+    cvtsi2ss xmm0, r10d
+    mulss   xmm0, xmm3
+    subss   xmm0, xmm4
+    movss   [r9 + 8], xmm0
+    mov     r10d, edx
+    shr     r10d, 24
+    add     r10d, r8d
+    cvtsi2ss xmm0, r10d
+    mulss   xmm0, xmm3
+    subss   xmm0, xmm4
+    movss   [r9 + 12], xmm0
+    ret
+
+; ecx face -> eax ABGR tint, edx extra vflags
+face_tint:
+    mov     edx, [rbp + MJ.m_id]
+    lea     rax, [rel blk_tint]
+    movzx   eax, byte [rax + rdx]
+    cmp     eax, TINT_GRASS
+    je      .grass
+    cmp     eax, TINT_FOLIAGE
+    je      .foliage
+    cmp     eax, TINT_PINE
+    je      .pine
+    cmp     eax, TINT_BIRCH
+    je      .birch
+    cmp     eax, TINT_WATER
+    je      .water
+.white:
+    mov     eax, 0xFFFFFFFF
+    xor     edx, edx
+    ret
+.grass:
+    ; grass side = dirt + baked green fringe. VF_GRASSSIDE tints only the green
+    ; texels, so the fringe follows the biome colour
+    lea     rax, [rel blk_model]
+    cmp     byte [rax + rdx], MODEL_CUBE
+    jne     .grass_t
+    cmp     ecx, FACE_PY
+    je      .grass_t
+    cmp     ecx, FACE_NY
+    je      .white
+    mov     edx, [rbp + MJ.m_col]
+    lea     rax, [rbp + MJ.col_tab]
+    mov     eax, [rax + rdx*4]
+    mov     edx, VF_GRASSSIDE
+    ret
+.grass_t:
+    mov     edx, [rbp + MJ.m_col]
+    lea     rax, [rbp + MJ.col_tab]
+    mov     eax, [rax + rdx*4]
+    xor     edx, edx
+    ret
+.foliage:
+    mov     edx, [rbp + MJ.m_col]
+    lea     rax, [rbp + MJ.col_tab]
+    mov     eax, [rax + rdx*4 + 1024]
+    xor     edx, edx
+    ret
+.water:
+    mov     edx, [rbp + MJ.m_col]
+    lea     rax, [rbp + MJ.col_tab]
+    mov     eax, [rax + rdx*4 + 2048]
+    xor     edx, edx
+    ret
+.pine:
+    mov     eax, TINT_PINE_RGBA
+    xor     edx, edx
+    ret
+.birch:
+    mov     eax, TINT_BIRCH_RGBA
+    xor     edx, edx
+    ret
+
     ; v1 temporary guard (mesher #22)
     xor     r11d, r11d ; clear v1 slot 22
     ; v1 temporary guard (mesher #24)
@@ -1376,21 +1516,3 @@ cube_face:
     xor     r11d, r11d ; clear v1 slot 46
     ; v1 temporary guard (mesher #48)
     xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (mesher #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (mesher #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (mesher #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (mesher #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (mesher #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (mesher #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (mesher #62)
-    xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (mesher #64)
-    xor     r11d, r11d ; clear v1 slot 64
-    ; v1 temporary guard (mesher #66)
-    xor     r11d, r11d ; clear v1 slot 66
