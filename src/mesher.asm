@@ -1794,51 +1794,37 @@ box_face:
     pop     rbx
     ret
 
-load_box: ; v1: mesher scratch #1
-    movups  xmm0, [rcx] ; v1: mesher scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mesher:2)
-    movups  [rbp + MJ.m_box], xmm0 ; v1: mesher scratch #3
-    movq    xmm0, [rcx + 16] ; v1: mesher scratch #4
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mesher:4)
-    movq    [rbp + MJ.m_box + 16], xmm0 ; v1: mesher scratch #5
-    ret ; v1: mesher scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mesher:6)
+load_box:
+    movups  xmm0, [rcx]
+    movups  [rbp + MJ.m_box], xmm0
+    movq    xmm0, [rcx + 16]
+    movq    [rbp + MJ.m_box + 16], xmm0
+    ret
 
-block_tile: ; v1: mesher scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (mesher:8)
-    mov     eax, [rbp + MJ.m_id] ; v1: mesher scratch #9
-    lea     eax, [rax + rax*2] ; v1: mesher scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mesher:10)
-    lea     eax, [rcx + rax*2] ; v1: mesher scratch #11
-    lea     rdx, [rel blk_tex] ; v1: mesher scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (mesher:12)
-    movzx   eax, byte [rdx + rax] ; v1: mesher scratch #13
-    ret ; v1: mesher scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mesher:14)
+block_tile:
+    mov     eax, [rbp + MJ.m_id]
+    lea     eax, [rax + rax*2]
+    lea     eax, [rcx + rax*2]
+    lea     rdx, [rel blk_tex]
+    movzx   eax, byte [rdx + rax]
+    ret
 
 ; torch 2/16 x 10/16, the top only uses the flame tip (texels 7..9 x 6..8)
-mesh_torch: ; v1: mesher scratch #17
-    push    rbx ; v1: mesher scratch #18
-    ; TODO: clamp index before table lookup on malformed input (mesher:18)
-    sub     rsp, 16 ; v1: mesher scratch #19
-    lea     rcx, [rel box_torch] ; v1: mesher scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mesher:20)
-    call    load_box ; v1: mesher scratch #21
-    xor     ebx, ebx ; v1: mesher scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mesher:22)
-.f: ; v1: mesher scratch #23
-    mov     ecx, ebx ; v1: mesher scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mesher:24)
-    call    block_tile ; v1: mesher scratch #25
-    mov     r8d, eax ; v1: mesher scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (mesher:26)
-    mov     edx, RECT(7,6,9,16) ; v1: mesher scratch #27
-    cmp     ebx, FACE_PY ; v1: mesher scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mesher:28)
-    jne     .nb ; v1: mesher scratch #29
-    mov     edx, RECT(7,6,9,8) ; v1: mesher scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (mesher:30)
-.nb: ; v1: mesher scratch #31
+mesh_torch:
+    push    rbx
+    sub     rsp, 16
+    lea     rcx, [rel box_torch]
+    call    load_box
+    xor     ebx, ebx
+.f:
+    mov     ecx, ebx
+    call    block_tile
+    mov     r8d, eax
+    mov     edx, RECT(7,6,9,16)
+    cmp     ebx, FACE_PY
+    jne     .nb
+    mov     edx, RECT(7,6,9,8)
+.nb:
     cmp     ebx, FACE_NY
     jne     .go
     mov     edx, RECT(7,14,9,16)
@@ -1987,45 +1973,237 @@ mesh_cross:
     addss   xmm0, xmm4
     addss   xmm0, [rbp + MJ.m_bx]
     movss   [rsp + 0], xmm0                     ; [rsp] = x0 x1 z0 z1 y0 y1
-    ; v1 temporary guard (mesher #14)
-    xor     r11d, r11d ; clear v1 slot 14
-    ; v1 temporary guard (mesher #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (mesher #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (mesher #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (mesher #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (mesher #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (mesher #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (mesher #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (mesher #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (mesher #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (mesher #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (mesher #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (mesher #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (mesher #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (mesher #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (mesher #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (mesher #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (mesher #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (mesher #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (mesher #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (mesher #54)
-    xor     r11d, r11d ; clear v1 slot 54
+    movss   xmm0, [rel f_plant_hi] ; v1: mesher scratch #0
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mesher:0)
+    addss   xmm0, xmm4 ; v1: mesher scratch #1
+    addss   xmm0, [rbp + MJ.m_bx] ; v1: mesher scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mesher:2)
+    movss   [rsp + 4], xmm0 ; v1: mesher scratch #3
+    movss   xmm0, [rel f_plant_lo] ; v1: mesher scratch #4
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mesher:4)
+    addss   xmm0, xmm5 ; v1: mesher scratch #5
+    addss   xmm0, [rbp + MJ.m_bz] ; v1: mesher scratch #6
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mesher:6)
+    movss   [rsp + 8], xmm0 ; v1: mesher scratch #7
+    movss   xmm0, [rel f_plant_hi] ; v1: mesher scratch #8
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mesher:8)
+    addss   xmm0, xmm5 ; v1: mesher scratch #9
+    addss   xmm0, [rbp + MJ.m_bz] ; v1: mesher scratch #10
+    ; TODO: verify 16-byte rsp alignment before inner call (mesher:10)
+    movss   [rsp + 12], xmm0 ; v1: mesher scratch #11
+    movss   xmm0, [rbp + MJ.m_by] ; v1: mesher scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (mesher:12)
+    movss   [rsp + 16], xmm0 ; v1: mesher scratch #13
+    addss   xmm0, [rel f_one] ; v1: mesher scratch #14
+    ; TODO: clamp index before table lookup on malformed input (mesher:14)
+    movss   [rsp + 20], xmm0 ; v1: mesher scratch #15
+    ; bottom: shade 0.8, no wave. top: 1.0, wave if it's a plant
+    mov     dword [rbp + MJ.m_vflags], 0 ; v1: mesher scratch #17
+    mov     ecx, 204 ; v1: mesher scratch #18
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mesher:18)
+    call    own_light_packed ; v1: mesher scratch #19
+    mov     r12d, eax ; v1: mesher scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mesher:20)
+    lea     rax, [rel blk_flags] ; v1: mesher scratch #21
+    mov     edx, [rbp + MJ.m_id] ; v1: mesher scratch #22
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mesher:22)
+    movzx   eax, word [rax + rdx*2] ; v1: mesher scratch #23
+    xor     ecx, ecx ; v1: mesher scratch #24
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mesher:24)
+    test    eax, BF_PLANT ; v1: mesher scratch #25
+    jz      .nowave ; v1: mesher scratch #26
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mesher:26)
+    mov     ecx, VF_WAVE ; v1: mesher scratch #27
+.nowave: ; v1: mesher scratch #28
+    ; TODO: verify 16-byte rsp alignment before inner call (mesher:28)
+    mov     [rbp + MJ.m_vflags], ecx ; v1: mesher scratch #29
+    mov     ecx, 255 ; v1: mesher scratch #30
+    ; TODO: hoist invariant pointer load out of .loop (mesher:30)
+    call    own_light_packed ; v1: mesher scratch #31
+    mov     r13d, eax ; v1: mesher scratch #32
+    ; TODO: clamp index before table lookup on malformed input (mesher:32)
+    ; plane A (x0,z0)->(x1,z1), plane B (x0,z1)->(x1,z0)
+    xor     ebx, ebx ; v1: mesher scratch #34
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mesher:34)
+.plane:
+    lea     rcx, [rbp + MJ.stage]
+    movss   xmm0, [rsp + 0]
+    movss   xmm1, [rsp + 4]
+    movss   xmm2, [rsp + 8]
+    movss   xmm3, [rsp + 12]
+    test    ebx, ebx
+    jz      .pz
+    movss   xmm2, [rsp + 12]
+    movss   xmm3, [rsp + 8]
+.pz:
+    movss   xmm4, [rsp + 16]
+    movss   xmm5, [rsp + 20]
+    movss   [rcx + SV.x], xmm0
+    movss   [rcx + SV.y], xmm4
+    movss   [rcx + SV.z], xmm2
+    movss   [rcx + SV_size + SV.x], xmm1
+    movss   [rcx + SV_size + SV.y], xmm4
+    movss   [rcx + SV_size + SV.z], xmm3
+    movss   [rcx + SV_size*2 + SV.x], xmm1
+    movss   [rcx + SV_size*2 + SV.y], xmm5
+    movss   [rcx + SV_size*2 + SV.z], xmm3
+    movss   [rcx + SV_size*3 + SV.x], xmm0
+    movss   [rcx + SV_size*3 + SV.y], xmm5
+    movss   [rcx + SV_size*3 + SV.z], xmm2
+    mov     [rcx + SV.sky], r12d
+    mov     [rcx + SV_size + SV.sky], r12d
+    mov     [rcx + SV_size*2 + SV.sky], r13d
+    mov     [rcx + SV_size*3 + SV.sky], r13d
+    mov     [rcx + SV.r], r14d
+    mov     [rcx + SV_size + SV.r], r14d
+    mov     [rcx + SV_size*2 + SV.r], r14d
+    mov     [rcx + SV_size*3 + SV.r], r14d
+    push    rbx
+    lea     rbx, [rbp + MJ.stage]
+    xor     ecx, ecx
+.uv:
+    call    stage_uv_std
+    add     rbx, SV_size
+    inc     ecx
+    cmp     ecx, 4
+    jb      .uv
+    pop     rbx
+    xor     ecx, ecx
+    call    emit_stage
+    mov     ecx, 2
+    call    emit_stage
+    inc     ebx
+    cmp     ebx, 2
+    jb      .plane
+    add     rsp, 40
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbx
+    ret
+
+; ecx id -> eax 0 none / 1 water / 2 lava
+liq_kind:
+    xor     eax, eax
+    cmp     ecx, B_WATER
+    jb      .r
+    cmp     ecx, B_LAVA_LAST
+    ja      .r
+    mov     eax, 1
+    cmp     ecx, B_WATER_LAST
+    jbe     .r
+    mov     eax, 2
+.r:
+    ret
+
+; ecx cx, edx cz -> xmm0 corner height, weighted over the 4 cells around it.
+; like MC: sources x4, air pulls toward 0, liquid on top of any of them -> full
+liquid_corner:
+    push    rbx
+    push    rsi
+    push    rdi
+    push    r12
+    sub     rsp, 8
+    xorps   xmm4, xmm4                          ; sum
+    xorps   xmm5, xmm5                          ; weight
+    lea     r12d, [rcx - 1]
+    lea     esi, [rdx - 1]
+    xor     ebx, ebx                             ; bit0 +x, bit1 +z
+.cell:
+    mov     edi, ebx
+    and     edi, 1
+    add     edi, r12d
+    mov     eax, ebx
+    shr     eax, 1
+    add     eax, esi
+    imul    eax, eax, PADW
+    add     edi, eax
+    add     edi, [rbp + MJ.m_p]
+    lea     rax, [rbp + MJ.pad_blk]
+    movzx   ecx, byte [rax + rdi]
+    mov     r8d, ecx
+    call    liq_kind
+    cmp     eax, [rbp + MJ.m_lkind]
+    jne     .other
+    ; same liquid with more of it on top -> full
+    lea     rax, [rbp + MJ.pad_blk]
+    movzx   ecx, byte [rax + rdi + PADA]
+    call    liq_kind
+    cmp     eax, [rbp + MJ.m_lkind]
+    je      .full
+    lea     rax, [rel liq_h]
+    movss   xmm0, [rax + r8*4 - B_WATER*4]
+    cmp     r8d, B_WATER
+    je      .src
+    cmp     r8d, B_LAVA
+    je      .src
+    addss   xmm4, xmm0
+    addss   xmm5, [rel f_one]
+    jmp     .next
+.src:
+    mulss   xmm0, [rel f_four]
+    addss   xmm4, xmm0
+    addss   xmm5, [rel f_four]
+    jmp     .next
+.other:
+    lea     rax, [rel blk_flags]
+    movzx   eax, word [rax + r8*2]
+    test    eax, BF_SOLID
+    jnz     .next
+    addss   xmm5, [rel f_one]                   ; air = height 0
+.next:
+    inc     ebx
+    cmp     ebx, 4
+    jb      .cell
+    movaps  xmm0, xmm4
+    divss   xmm0, xmm5
+    jmp     .ret
+.full:
+    movss   xmm0, [rel f_one]
+.ret:
+    add     rsp, 8
+    pop     r12
+    pop     rdi
+    pop     rsi
+    pop     rbx
+    ret
+    ; v1 temporary guard (mesher #17)
+    xor     r11d, r11d ; clear v1 slot 17
+    ; v1 temporary guard (mesher #19)
+    xor     r11d, r11d ; clear v1 slot 19
+    ; v1 temporary guard (mesher #21)
+    xor     r11d, r11d ; clear v1 slot 21
+    ; v1 temporary guard (mesher #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (mesher #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (mesher #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (mesher #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (mesher #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (mesher #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (mesher #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (mesher #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (mesher #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (mesher #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (mesher #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (mesher #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (mesher #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (mesher #49)
+    xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (mesher #51)
+    xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (mesher #53)
+    xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (mesher #55)
+    xor     r11d, r11d ; clear v1 slot 55
