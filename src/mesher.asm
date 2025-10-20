@@ -1973,58 +1973,41 @@ mesh_cross:
     addss   xmm0, xmm4
     addss   xmm0, [rbp + MJ.m_bx]
     movss   [rsp + 0], xmm0                     ; [rsp] = x0 x1 z0 z1 y0 y1
-    movss   xmm0, [rel f_plant_hi] ; v1: mesher scratch #0
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mesher:0)
-    addss   xmm0, xmm4 ; v1: mesher scratch #1
-    addss   xmm0, [rbp + MJ.m_bx] ; v1: mesher scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mesher:2)
-    movss   [rsp + 4], xmm0 ; v1: mesher scratch #3
-    movss   xmm0, [rel f_plant_lo] ; v1: mesher scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mesher:4)
-    addss   xmm0, xmm5 ; v1: mesher scratch #5
-    addss   xmm0, [rbp + MJ.m_bz] ; v1: mesher scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mesher:6)
-    movss   [rsp + 8], xmm0 ; v1: mesher scratch #7
-    movss   xmm0, [rel f_plant_hi] ; v1: mesher scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mesher:8)
-    addss   xmm0, xmm5 ; v1: mesher scratch #9
-    addss   xmm0, [rbp + MJ.m_bz] ; v1: mesher scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (mesher:10)
-    movss   [rsp + 12], xmm0 ; v1: mesher scratch #11
-    movss   xmm0, [rbp + MJ.m_by] ; v1: mesher scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (mesher:12)
-    movss   [rsp + 16], xmm0 ; v1: mesher scratch #13
-    addss   xmm0, [rel f_one] ; v1: mesher scratch #14
-    ; TODO: clamp index before table lookup on malformed input (mesher:14)
-    movss   [rsp + 20], xmm0 ; v1: mesher scratch #15
+    movss   xmm0, [rel f_plant_hi]
+    addss   xmm0, xmm4
+    addss   xmm0, [rbp + MJ.m_bx]
+    movss   [rsp + 4], xmm0
+    movss   xmm0, [rel f_plant_lo]
+    addss   xmm0, xmm5
+    addss   xmm0, [rbp + MJ.m_bz]
+    movss   [rsp + 8], xmm0
+    movss   xmm0, [rel f_plant_hi]
+    addss   xmm0, xmm5
+    addss   xmm0, [rbp + MJ.m_bz]
+    movss   [rsp + 12], xmm0
+    movss   xmm0, [rbp + MJ.m_by]
+    movss   [rsp + 16], xmm0
+    addss   xmm0, [rel f_one]
+    movss   [rsp + 20], xmm0
     ; bottom: shade 0.8, no wave. top: 1.0, wave if it's a plant
-    mov     dword [rbp + MJ.m_vflags], 0 ; v1: mesher scratch #17
-    mov     ecx, 204 ; v1: mesher scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mesher:18)
-    call    own_light_packed ; v1: mesher scratch #19
-    mov     r12d, eax ; v1: mesher scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mesher:20)
-    lea     rax, [rel blk_flags] ; v1: mesher scratch #21
-    mov     edx, [rbp + MJ.m_id] ; v1: mesher scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mesher:22)
-    movzx   eax, word [rax + rdx*2] ; v1: mesher scratch #23
-    xor     ecx, ecx ; v1: mesher scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mesher:24)
-    test    eax, BF_PLANT ; v1: mesher scratch #25
-    jz      .nowave ; v1: mesher scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mesher:26)
-    mov     ecx, VF_WAVE ; v1: mesher scratch #27
-.nowave: ; v1: mesher scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (mesher:28)
-    mov     [rbp + MJ.m_vflags], ecx ; v1: mesher scratch #29
-    mov     ecx, 255 ; v1: mesher scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (mesher:30)
-    call    own_light_packed ; v1: mesher scratch #31
-    mov     r13d, eax ; v1: mesher scratch #32
-    ; TODO: clamp index before table lookup on malformed input (mesher:32)
+    mov     dword [rbp + MJ.m_vflags], 0
+    mov     ecx, 204
+    call    own_light_packed
+    mov     r12d, eax
+    lea     rax, [rel blk_flags]
+    mov     edx, [rbp + MJ.m_id]
+    movzx   eax, word [rax + rdx*2]
+    xor     ecx, ecx
+    test    eax, BF_PLANT
+    jz      .nowave
+    mov     ecx, VF_WAVE
+.nowave:
+    mov     [rbp + MJ.m_vflags], ecx
+    mov     ecx, 255
+    call    own_light_packed
+    mov     r13d, eax
     ; plane A (x0,z0)->(x1,z1), plane B (x0,z1)->(x1,z0)
-    xor     ebx, ebx ; v1: mesher scratch #34
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mesher:34)
+    xor     ebx, ebx
 .plane:
     lea     rcx, [rbp + MJ.stage]
     movss   xmm0, [rsp + 0]
@@ -2167,43 +2150,191 @@ liquid_corner:
     pop     rsi
     pop     rbx
     ret
-    ; v1 temporary guard (mesher #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (mesher #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (mesher #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (mesher #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (mesher #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (mesher #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (mesher #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (mesher #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (mesher #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (mesher #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (mesher #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (mesher #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (mesher #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (mesher #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (mesher #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (mesher #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (mesher #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (mesher #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (mesher #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (mesher #55)
-    xor     r11d, r11d ; clear v1 slot 55
+
+; water's top also goes out back facing so you see it from underwater.
+; sides crop the texture to the side height instead of squashing it
+mesh_liquid:
+    push    rbx
+    push    r12
+    push    r13
+    push    r14
+    push    r15
+    sub     rsp, 16
+    mov     ecx, [rbp + MJ.m_id]
+    call    liq_kind
+    mov     [rbp + MJ.m_lkind], eax
+    mov     dword [rbp + MJ.m_noao], 1
+    mov     dword [rbp + MJ.m_vflags], 0
+    ; liquid above -> full height, no top
+    mov     eax, [rbp + MJ.m_p]
+    lea     rdx, [rbp + MJ.pad_blk]
+    movzx   ecx, byte [rdx + rax + PADA]
+    call    liq_kind
+    xor     r15d, r15d                          ; 1 = covered
+    cmp     eax, [rbp + MJ.m_lkind]
+    jne     .heights
+    mov     r15d, 1
+    movss   xmm0, [rel f_one]
+    movss   [rbp + MJ.m_hgt], xmm0
+    movss   [rbp + MJ.m_hgt+4], xmm0
+    movss   [rbp + MJ.m_hgt+8], xmm0
+    movss   [rbp + MJ.m_hgt+12], xmm0
+    jmp     .top_done
+.heights:
+    xor     ebx, ebx
+.hl:
+    mov     ecx, ebx
+    and     ecx, 1
+    mov     edx, ebx
+    shr     edx, 1
+    call    liquid_corner
+    lea     rax, [rbp + MJ.m_hgt]
+    movss   [rax + rbx*4], xmm0
+    inc     ebx
+    cmp     ebx, 4
+    jb      .hl
+    mov     ecx, FACE_PY
+    call    block_tile
+    mov     ecx, eax
+    mov     edx, RECT_FULL
+    call    set_tile_rect
+    mov     ecx, FACE_PY
+    call    liquid_face_geom
+    mov     ecx, FACE_PY
+    call    compute_face_light
+    call    pick_diagonal
+    mov     ecx, eax
+    call    emit_stage
+    cmp     dword [rbp + MJ.m_lkind], 1
+    jne     .top_done
+    mov     ecx, 2                              ; underside, for when you're swimming
+    call    emit_stage
+.top_done:
+    xor     ebx, ebx
+.side:
+    cmp     ebx, FACE_PY
+    je      .side_next
+    cmp     ebx, FACE_NY
+    je      .side_next
+    mov     eax, [rbp + MJ.m_p]
+    lea     rdx, [rel face_ndelta]
+    add     eax, [rdx + rbx*4]
+    lea     rdx, [rbp + MJ.pad_blk]
+    movzx   ecx, byte [rdx + rax]
+    mov     r12d, ecx
+    lea     rdx, [rbp + MJ.occ]
+    cmp     byte [rdx + rcx], 0
+    jne     .side_next
+    call    liq_kind
+    cmp     eax, [rbp + MJ.m_lkind]
+    je      .side_next
+    mov     ecx, ebx
+    call    block_tile
+    mov     ecx, eax
+    mov     edx, RECT_FULL
+    call    set_tile_rect
+    mov     ecx, ebx
+    call    liquid_face_geom
+    mov     ecx, ebx
+    call    compute_face_light
+    call    pick_diagonal
+    mov     ecx, eax
+    call    emit_stage
+.side_next:
+    inc     ebx
+    cmp     ebx, 6
+    jb      .side
+    mov     eax, [rbp + MJ.m_p]
+    lea     rdx, [rbp + MJ.pad_blk]
+    movzx   ecx, byte [rdx + rax - PADA]
+    lea     rdx, [rbp + MJ.occ]
+    cmp     byte [rdx + rcx], 0
+    jne     .done
+    call    liq_kind
+    cmp     eax, [rbp + MJ.m_lkind]
+    je      .done
+    mov     ecx, FACE_NY
+    call    block_tile
+    mov     ecx, eax
+    mov     edx, RECT_FULL
+    call    set_tile_rect
+    mov     ecx, FACE_NY
+    call    liquid_face_geom
+    mov     ecx, FACE_NY
+    call    compute_face_light
+    xor     ecx, ecx
+    call    emit_stage
+.done:
+    add     rsp, 16
+    pop     r15
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbx
+    ret
+
+; ecx face, top corners from m_hgt
+liquid_face_geom:
+    push    rbx
+    push    r12
+    push    r13
+    push    r14
+    sub     rsp, 8
+    mov     r12d, ecx
+    call    face_tint
+    mov     r14d, eax
+    lea     r13, [rel face_tab]
+    mov     eax, r12d
+    shl     eax, 7
+    add     r13, rax
+    lea     rbx, [rbp + MJ.stage]
+    xor     ecx, ecx
+.c:
+    call    stage_uv_std
+    mov     [rbx + SV.r], r14d
+    mov     byte [rbx + SV.flags], 0
+    movss   xmm0, [r13 + 0]
+    addss   xmm0, [rbp + MJ.m_bx]
+    movss   [rbx + SV.x], xmm0
+    movss   xmm0, [r13 + 8]
+    addss   xmm0, [rbp + MJ.m_bz]
+    movss   [rbx + SV.z], xmm0
+    movss   xmm1, [r13 + 4]
+    xorps   xmm2, xmm2
+    comiss  xmm1, xmm2
+    je      .ybottom
+    cvttss2si eax, [r13 + 0]
+    cvttss2si edx, [r13 + 8]
+    lea     eax, [rax + rdx*2]
+    lea     rdx, [rbp + MJ.m_hgt]
+    movss   xmm1, [rdx + rax*4]
+    movss   xmm0, xmm1
+    addss   xmm0, [rbp + MJ.m_by]
+    movss   [rbx + SV.y], xmm0
+    comiss  xmm1, [rel f_one]
+    jae     .noflag
+    mov     byte [rbx + SV.flags], VF_LIQUID
+.noflag:
+    cmp     r12d, FACE_PY
+    je      .next
+    movss   xmm0, [rel f_one]
+    subss   xmm0, xmm1
+    mulss   xmm0, [rel f_tile]
+    addss   xmm0, [rbp + MJ.m_uv + 4]                ; v0 + (1-h)/16
+    movss   [rbx + SV.v], xmm0
+    jmp     .next
+.ybottom:
+    movss   xmm0, [rbp + MJ.m_by]
+    movss   [rbx + SV.y], xmm0
+.next:
+    add     rbx, SV_size
+    add     r13, 32
+    inc     ecx
+    cmp     ecx, 4
+    jb      .c
+    add     rsp, 8
+    pop     r14
+    pop     r13
+    pop     r12
+    pop     rbx
+    ret
