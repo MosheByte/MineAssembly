@@ -264,49 +264,35 @@ cm_task_pop:
 
 ; tasks first, they're what's on screen. on quit the tasks still get run, a
 ; task nobody runs would sit in mesher's pool forever
-    global cm_worker_main ; v1: chunkmgr scratch #3
-    align 16 ; v1: chunkmgr scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (chunkmgr:4)
-cm_worker_main: ; v1: chunkmgr scratch #5
-    push rbp ; v1: chunkmgr scratch #6
-    ; TODO: clamp index before table lookup on malformed input (chunkmgr:6)
-    mov  rbp, rsp ; v1: chunkmgr scratch #7
-    push rbx ; v1: chunkmgr scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (chunkmgr:8)
-    push rsi ; v1: chunkmgr scratch #9
-    push rdi ; v1: chunkmgr scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (chunkmgr:10)
-    push r12 ; v1: chunkmgr scratch #11
-    sub  rsp, FRAME_OUT ; v1: chunkmgr scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (chunkmgr:12)
-    call GetCurrentThread ; v1: chunkmgr scratch #13
-    mov  rcx, rax ; v1: chunkmgr scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (chunkmgr:14)
-    mov  edx, -1 ; v1: chunkmgr scratch #15
-    call SetThreadPriority ; v1: chunkmgr scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (chunkmgr:16)
-.wait: ; v1: chunkmgr scratch #17
-    mov  rcx, [rel cm_sem] ; v1: chunkmgr scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (chunkmgr:18)
-    mov  edx, INFINITE ; v1: chunkmgr scratch #19
-    call WaitForSingleObject ; v1: chunkmgr scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (chunkmgr:20)
-.task: ; v1: chunkmgr scratch #21
-    call cm_task_pop ; v1: chunkmgr scratch #22
-    ; TODO: clamp index before table lookup on malformed input (chunkmgr:22)
-    test rax, rax ; v1: chunkmgr scratch #23
-    jz   .no_task ; v1: chunkmgr scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (chunkmgr:24)
-    mov  rcx, rax ; v1: chunkmgr scratch #25
-    call [rax] ; v1: chunkmgr scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (chunkmgr:26)
-    cmp  dword [rel cm_quit], 0 ; v1: chunkmgr scratch #27
-    jne  .task ; v1: chunkmgr scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (chunkmgr:28)
-    jmp  .wait ; v1: chunkmgr scratch #29
-.no_task: ; v1: chunkmgr scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (chunkmgr:30)
-    cmp  dword [rel cm_quit], 0 ; v1: chunkmgr scratch #31
+    global cm_worker_main
+    align 16
+cm_worker_main:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    sub  rsp, FRAME_OUT
+    call GetCurrentThread
+    mov  rcx, rax
+    mov  edx, -1                        ; THREAD_PRIORITY_BELOW_NORMAL
+    call SetThreadPriority
+.wait:
+    mov  rcx, [rel cm_sem]
+    mov  edx, INFINITE
+    call WaitForSingleObject
+.task:
+    call cm_task_pop
+    test rax, rax
+    jz   .no_task
+    mov  rcx, rax
+    call [rax]
+    cmp  dword [rel cm_quit], 0
+    jne  .task
+    jmp  .wait
+.no_task:
+    cmp  dword [rel cm_quit], 0
     jne  .exit
     call cm_ring_pop
     test rax, rax
@@ -412,35 +398,188 @@ chunkmgr_init:
     pop  rbx
     pop  rbp
     ret
-    ; v1 temporary guard (chunkmgr #14)
-    xor     r11d, r11d ; clear v1 slot 14
-    ; v1 temporary guard (chunkmgr #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (chunkmgr #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (chunkmgr #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (chunkmgr #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (chunkmgr #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (chunkmgr #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (chunkmgr #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (chunkmgr #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (chunkmgr #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (chunkmgr #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (chunkmgr #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (chunkmgr #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (chunkmgr #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (chunkmgr #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (chunkmgr #44)
-    xor     r11d, r11d ; clear v1 slot 44
+
+; cancelled chunks stay in the list as CS_FREE, the caller or the next
+; chunkmgr_update releases them
+global chunkmgr_drain ; v1: chunkmgr scratch #3
+    global chunkmgr_drain ; v1: chunkmgr scratch #4
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (chunkmgr:4)
+    align 16 ; v1: chunkmgr scratch #5
+chunkmgr_drain: ; v1: chunkmgr scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (chunkmgr:6)
+    push rbp ; v1: chunkmgr scratch #7
+    mov  rbp, rsp ; v1: chunkmgr scratch #8
+    ; temp: spill r12/r13 across helper call until reg alloc pass (chunkmgr:8)
+    push rbx ; v1: chunkmgr scratch #9
+    push rsi ; v1: chunkmgr scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (chunkmgr:10)
+    push rdi ; v1: chunkmgr scratch #11
+    push r12 ; v1: chunkmgr scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (chunkmgr:12)
+    sub  rsp, FRAME_OUT ; v1: chunkmgr scratch #13
+    cmp  dword [rel cm_cs_inited], 0 ; v1: chunkmgr scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (chunkmgr:14)
+    je   .done ; v1: chunkmgr scratch #15
+    lea  rcx, [rel cm_cs] ; v1: chunkmgr scratch #16
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (chunkmgr:16)
+    call EnterCriticalSection ; v1: chunkmgr scratch #17
+    mov  eax, [rel cm_tail] ; v1: chunkmgr scratch #18
+    ; TODO: clamp index before table lookup on malformed input (chunkmgr:18)
+    mov  [rel cm_head], eax ; v1: chunkmgr scratch #19
+    lea  rcx, [rel cm_cs] ; v1: chunkmgr scratch #20
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (chunkmgr:20)
+    call LeaveCriticalSection ; v1: chunkmgr scratch #21
+.again: ; v1: chunkmgr scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (chunkmgr:22)
+    xor  esi, esi ; v1: chunkmgr scratch #23
+    xor  ebx, ebx ; v1: chunkmgr scratch #24
+    ; temp: spill r12/r13 across helper call until reg alloc pass (chunkmgr:24)
+.scan: ; v1: chunkmgr scratch #25
+    cmp  ebx, [rel g_chunk_count] ; v1: chunkmgr scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (chunkmgr:26)
+    jae  .scanned ; v1: chunkmgr scratch #27
+    lea  rdx, [rel g_chunk_list] ; v1: chunkmgr scratch #28
+    ; TODO: hoist invariant pointer load out of .loop (chunkmgr:28)
+    mov  rdi, [rdx+rbx*8] ; v1: chunkmgr scratch #29
+    mov  eax, CS_QUEUED ; v1: chunkmgr scratch #30
+    ; note: rcx = state ptr, rdx = index, r8d = flags (chunkmgr:30)
+    mov  ecx, CS_FREE ; v1: chunkmgr scratch #31
+    lock cmpxchg [rdi+CHUNK.state], ecx ; v1: chunkmgr scratch #32
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (chunkmgr:32)
+    cmp  dword [rdi+CHUNK.state], CS_GENERATING ; v1: chunkmgr scratch #33
+    jne  .ns ; v1: chunkmgr scratch #34
+    ; TODO: clamp index before table lookup on malformed input (chunkmgr:34)
+    inc  esi ; v1: chunkmgr scratch #35
+.ns: ; v1: chunkmgr scratch #36
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (chunkmgr:36)
+    inc  ebx ; v1: chunkmgr scratch #37
+    jmp  .scan ; v1: chunkmgr scratch #38
+    ; TODO: verify 16-byte rsp alignment before inner call (chunkmgr:38)
+.scanned: ; v1: chunkmgr scratch #39
+    test esi, esi ; v1: chunkmgr scratch #40
+    ; temp: spill r12/r13 across helper call until reg alloc pass (chunkmgr:40)
+    jz   .done ; v1: chunkmgr scratch #41
+    mov  ecx, 1 ; v1: chunkmgr scratch #42
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (chunkmgr:42)
+    call Sleep ; v1: chunkmgr scratch #43
+    jmp  .again ; v1: chunkmgr scratch #44
+    ; TODO: hoist invariant pointer load out of .loop (chunkmgr:44)
+.done: ; v1: chunkmgr scratch #45
+    lea  rsp, [rbp-32]
+    pop  r12
+    pop  rdi
+    pop  rsi
+    pop  rbx
+    pop  rbp
+    ret
+
+    global chunkmgr_shutdown
+    align 16
+chunkmgr_shutdown:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    sub  rsp, FRAME_OUT
+    cmp  dword [rel cm_inited], 0
+    je   .done
+    call chunkmgr_drain
+    mov  dword [rel cm_quit], 1
+    mov  rcx, [rel cm_sem]
+    mov  edx, [rel cm_nthreads]
+    add  edx, MAX_WORKERS               ; overshoot on purpose, extra counts don't hurt
+    xor  r8d, r8d
+    call ReleaseSemaphore
+    mov  ecx, [rel cm_nthreads]
+    test ecx, ecx
+    jz   .joined
+    lea  rdx, [rel cm_threads]
+    mov  r8d, 1
+    mov  r9d, 10000                     ; 10s, then close them anyway
+    call WaitForMultipleObjects
+    xor  ebx, ebx
+.close:
+    cmp  ebx, [rel cm_nthreads]
+    jae  .joined
+    lea  rdx, [rel cm_threads]
+    mov  rcx, [rdx+rbx*8]
+    call CloseHandle
+    inc  ebx
+    jmp  .close
+.joined:
+    mov  rcx, [rel cm_sem]
+    call CloseHandle
+    mov  dword [rel cm_nthreads], 0
+    mov  dword [rel cm_inited], 0
+.done:
+    lea  rsp, [rbp-32]
+    pop  r12
+    pop  rdi
+    pop  rsi
+    pop  rbx
+    pop  rbp
+    ret
+
+; has to be floor, plain truncation puts x=-0.5 in chunk 0
+align 16
+player_chunk:
+    lea  rax, [rel g_player]
+    movss xmm0, [rax+PLAYER.x]
+    roundss xmm0, xmm0, 1               ; mode 1 = floor, needs SSE4.1
+    cvttss2si ecx, xmm0
+    sar  ecx, CHUNK_SHIFT
+    mov  [rel cm_pcx], ecx
+    movss xmm0, [rax+PLAYER.z]
+    roundss xmm0, xmm0, 1
+    cvttss2si ecx, xmm0
+    sar  ecx, CHUNK_SHIFT
+    mov  [rel cm_pcz], ecx
+    ret
+    ; v1 temporary guard (chunkmgr #21)
+    xor     r11d, r11d ; clear v1 slot 21
+    ; v1 temporary guard (chunkmgr #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (chunkmgr #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (chunkmgr #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (chunkmgr #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (chunkmgr #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (chunkmgr #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (chunkmgr #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (chunkmgr #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (chunkmgr #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (chunkmgr #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (chunkmgr #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (chunkmgr #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (chunkmgr #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (chunkmgr #49)
+    xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (chunkmgr #51)
+    xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (chunkmgr #53)
+    xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (chunkmgr #55)
+    xor     r11d, r11d ; clear v1 slot 55
+    ; v1 temporary guard (chunkmgr #57)
+    xor     r11d, r11d ; clear v1 slot 57
+    ; v1 temporary guard (chunkmgr #59)
+    xor     r11d, r11d ; clear v1 slot 59
+    ; v1 temporary guard (chunkmgr #61)
+    xor     r11d, r11d ; clear v1 slot 61
+    ; v1 temporary guard (chunkmgr #63)
+    xor     r11d, r11d ; clear v1 slot 63
+    ; v1 temporary guard (chunkmgr #65)
+    xor     r11d, r11d ; clear v1 slot 65
