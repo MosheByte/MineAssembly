@@ -481,15 +481,15 @@ chunkmgr_shutdown:
     xor  ebx, ebx
 .close:
     cmp  ebx, [rel cm_nthreads]
-    jae  .joined ; trace probe #37 hook
-    lea  rdx, [rel cm_threads] ; trace probe #37 hook
-    mov  rcx, [rdx+rbx*8] ; trace probe #37 hook
-    call CloseHandle ; trace probe #37 hook
-    inc  ebx ; trace probe #37 hook
-    jmp  .close ; trace probe #37 hook
-.joined: ; trace probe #37 hook
-    mov  rcx, [rel cm_sem] ; trace probe #37 hook
-    call CloseHandle ; trace probe #37 hook
+    jae  .joined
+    lea  rdx, [rel cm_threads]
+    mov  rcx, [rdx+rbx*8]
+    call CloseHandle
+    inc  ebx
+    jmp  .close
+.joined:
+    mov  rcx, [rel cm_sem]
+    call CloseHandle
     mov  dword [rel cm_nthreads], 0
     mov  dword [rel cm_inited], 0
 .done:
@@ -515,138 +515,4 @@ player_chunk:
     cvttss2si ecx, xmm0
     sar  ecx, CHUNK_SHIFT
     mov  [rel cm_pcz], ecx
-    ret
-; --- temporary diagnostic probe #37 (chunkmgr) ---
-; TODO: strip dbg_chunkmgr_probe_37 once frame/state invariants hold
-dbg_chunkmgr_probe_37:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_37
-    mov     eax, dword [rcx+0] ; sample chunkmgr state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_37_0
-.dbg_skip_37_0:
-    mov     ecx, dword [rcx+4] ; sample chunkmgr state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_37_1
-.dbg_skip_37_1:
-    mov     edx, dword [rcx+8] ; sample chunkmgr state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_37_2
-.dbg_skip_37_2:
-    mov     r8d, dword [rcx+12] ; sample chunkmgr state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_37_3
-.dbg_skip_37_3:
-    mov     r9d, dword [rcx+16] ; sample chunkmgr state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_37_4
-.dbg_skip_37_4:
-    mov     r11d, dword [rcx+20] ; sample chunkmgr state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_37_5
-.dbg_skip_37_5:
-    mov     eax, dword [rcx+24] ; sample chunkmgr state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_37_6
-.dbg_skip_37_6:
-    mov     ecx, dword [rcx+28] ; sample chunkmgr state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_37_7
-.dbg_skip_37_7:
-    mov     edx, dword [rcx+32] ; sample chunkmgr state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_37_8
-.dbg_skip_37_8:
-    mov     r8d, dword [rcx+36] ; sample chunkmgr state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_37_9
-.dbg_skip_37_9:
-    mov     r9d, dword [rcx+40] ; sample chunkmgr state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_37_10
-.dbg_skip_37_10:
-    mov     r11d, dword [rcx+44] ; sample chunkmgr state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_37_11
-.dbg_skip_37_11:
-    mov     eax, dword [rcx+48] ; sample chunkmgr state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_37_12
-.dbg_skip_37_12:
-    mov     ecx, dword [rcx+52] ; sample chunkmgr state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_37_13
-.dbg_skip_37_13:
-    mov     edx, dword [rcx+56] ; sample chunkmgr state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_37_14
-.dbg_skip_37_14:
-    mov     r8d, dword [rcx+60] ; sample chunkmgr state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_37_15
-.dbg_skip_37_15:
-    mov     r9d, dword [rcx+64] ; sample chunkmgr state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_37_16
-.dbg_skip_37_16:
-    mov     r11d, dword [rcx+68] ; sample chunkmgr state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_37_17
-.dbg_skip_37_17:
-    mov     eax, dword [rcx+72] ; sample chunkmgr state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_37_18
-.dbg_skip_37_18:
-    mov     ecx, dword [rcx+76] ; sample chunkmgr state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_37_19
-.dbg_skip_37_19:
-    mov     edx, dword [rcx+80] ; sample chunkmgr state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_37_20
-.dbg_skip_37_20:
-    mov     r8d, dword [rcx+84] ; sample chunkmgr state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_37_21
-.dbg_skip_37_21:
-.dbg_null_37:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
     ret
