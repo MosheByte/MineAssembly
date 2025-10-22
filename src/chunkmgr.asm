@@ -666,70 +666,49 @@ cm_watch_add:
     mov  [r10+r9*8], rax
     inc  r9d
     mov  [rel cm_wn], r9d
-.r: ret ; v1: chunkmgr scratch #0
-    ; temp: spill r12/r13 across helper call until reg alloc pass (chunkmgr:0)
+.r: ret
 
 ; ecx host R. host first, then the java players' bodies
-    global cm_watch_build ; v1: chunkmgr scratch #3
-    align 16 ; v1: chunkmgr scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (chunkmgr:4)
-cm_watch_build: ; v1: chunkmgr scratch #5
-    push rbp ; v1: chunkmgr scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (chunkmgr:6)
-    mov  rbp, rsp ; v1: chunkmgr scratch #7
-    push rbx ; v1: chunkmgr scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (chunkmgr:8)
-    push rsi ; v1: chunkmgr scratch #9
-    push rdi ; v1: chunkmgr scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (chunkmgr:10)
-    push r12 ; v1: chunkmgr scratch #11
-    sub  rsp, FRAME_OUT ; v1: chunkmgr scratch #12
-    ; TODO: clamp index before table lookup on malformed input (chunkmgr:12)
-    mov  dword [rel cm_wn], 0 ; v1: chunkmgr scratch #13
-    mov  dword [rel cm_wmax], 0 ; v1: chunkmgr scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (chunkmgr:14)
-    mov  edx, [rel cm_pcx] ; v1: chunkmgr scratch #15
-    mov  r8d, [rel cm_pcz] ; v1: chunkmgr scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (chunkmgr:16)
-    call cm_watch_add ; v1: chunkmgr scratch #17
-    lea  rbx, [rel g_entities] ; v1: chunkmgr scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (chunkmgr:18)
-    xor  esi, esi ; v1: chunkmgr scratch #19
-.l: ; v1: chunkmgr scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (chunkmgr:20)
-    cmp  byte [rbx+ENTITY.type], ENT_REMOTE ; v1: chunkmgr scratch #21
-    jne  .n ; v1: chunkmgr scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (chunkmgr:22)
-    mov  ecx, [rbx+ENTITY.timer] ; v1: chunkmgr scratch #23
-    test ecx, ecx ; v1: chunkmgr scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (chunkmgr:24)
-    jnz  .v ; v1: chunkmgr scratch #25
-    mov  ecx, REMOTE_VIEW_DEF ; v1: chunkmgr scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (chunkmgr:26)
-.v: ; v1: chunkmgr scratch #27
-    mov  eax, 2 ; v1: chunkmgr scratch #28
-    ; TODO: clamp index before table lookup on malformed input (chunkmgr:28)
-    cmp  ecx, eax ; v1: chunkmgr scratch #29
-    cmovl ecx, eax ; v1: chunkmgr scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (chunkmgr:30)
-    mov  eax, REMOTE_VIEW_MAX ; v1: chunkmgr scratch #31
-    cmp  ecx, eax ; v1: chunkmgr scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (chunkmgr:32)
-    cmovg ecx, eax ; v1: chunkmgr scratch #33
-    add  ecx, LOAD_MARGIN ; v1: chunkmgr scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (chunkmgr:34)
-    movss xmm0, [rbx+ENTITY.x] ; v1: chunkmgr scratch #35
-    roundss xmm0, xmm0, 1 ; v1: chunkmgr scratch #36
-    ; note: rcx = state ptr, rdx = index, r8d = flags (chunkmgr:36)
-    cvttss2si edx, xmm0 ; v1: chunkmgr scratch #37
-    sar  edx, CHUNK_SHIFT ; v1: chunkmgr scratch #38
-    ; TODO: hoist invariant pointer load out of .loop (chunkmgr:38)
-    movss xmm0, [rbx+ENTITY.z] ; v1: chunkmgr scratch #39
-    roundss xmm0, xmm0, 1 ; v1: chunkmgr scratch #40
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (chunkmgr:40)
-    cvttss2si r8d, xmm0 ; v1: chunkmgr scratch #41
-    sar  r8d, CHUNK_SHIFT ; v1: chunkmgr scratch #42
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (chunkmgr:42)
+    global cm_watch_build
+    align 16
+cm_watch_build:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    sub  rsp, FRAME_OUT
+    mov  dword [rel cm_wn], 0
+    mov  dword [rel cm_wmax], 0
+    mov  edx, [rel cm_pcx]
+    mov  r8d, [rel cm_pcz]
+    call cm_watch_add
+    lea  rbx, [rel g_entities]
+    xor  esi, esi
+.l:
+    cmp  byte [rbx+ENTITY.type], ENT_REMOTE
+    jne  .n
+    mov  ecx, [rbx+ENTITY.timer]
+    test ecx, ecx
+    jnz  .v
+    mov  ecx, REMOTE_VIEW_DEF
+.v:
+    mov  eax, 2
+    cmp  ecx, eax
+    cmovl ecx, eax
+    mov  eax, REMOTE_VIEW_MAX
+    cmp  ecx, eax
+    cmovg ecx, eax
+    add  ecx, LOAD_MARGIN               ; same margin as the host, edge chunks get lit
+    movss xmm0, [rbx+ENTITY.x]
+    roundss xmm0, xmm0, 1
+    cvttss2si edx, xmm0
+    sar  edx, CHUNK_SHIFT
+    movss xmm0, [rbx+ENTITY.z]
+    roundss xmm0, xmm0, 1
+    cvttss2si r8d, xmm0
+    sar  r8d, CHUNK_SHIFT
     call cm_watch_add
 .n:
     add  rbx, ENTITY_size
@@ -837,8 +816,172 @@ PROC chunkmgr_update, 32
     mov  rcx, rdi
     call render_free_chunk
 .release:
-    ; v1 temporary guard (chunkmgr #21)
-    xor     r11d, r11d ; clear v1 slot 21
+    mov  rcx, rdi ; v1: chunkmgr scratch #0
+    ; temp: spill r12/r13 across helper call until reg alloc pass (chunkmgr:0)
+    call world_release_chunk ; v1: chunkmgr scratch #1
+    jmp  .ul ; v1: chunkmgr scratch #2
+    ; TODO: clamp index before table lookup on malformed input (chunkmgr:2)
+.ul_done: ; v1: chunkmgr scratch #3
+
+    ; nearest first for every centre at once, so a far java player and the
+    ; host fill in at the same pace
+    mov  r15d, MAX_INFLIGHT ; v1: chunkmgr scratch #7
+    sub  r15d, r14d ; v1: chunkmgr scratch #8
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (chunkmgr:8)
+    mov  r13d, LIGHT_BUDGET ; v1: chunkmgr scratch #9
+    cmp  dword [rel g_state], ST_LOADING ; v1: chunkmgr scratch #10
+    ; TODO: hoist invariant pointer load out of .loop (chunkmgr:10)
+    jne  .lb ; v1: chunkmgr scratch #11
+    mov  r13d, LIGHT_BUDGET_LOADING ; v1: chunkmgr scratch #12
+    ; note: rcx = state ptr, rdx = index, r8d = flags (chunkmgr:12)
+.lb: ; v1: chunkmgr scratch #13
+    xor  r12d, r12d ; v1: chunkmgr scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (chunkmgr:14)
+.ol: ; v1: chunkmgr scratch #15
+    cmp  r12d, [rel cm_off_count] ; v1: chunkmgr scratch #16
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (chunkmgr:16)
+    jae  .done ; v1: chunkmgr scratch #17
+    lea  rax, [rel cm_offsets] ; v1: chunkmgr scratch #18
+    ; TODO: verify 16-byte rsp alignment before inner call (chunkmgr:18)
+    mov  esi, [rax+r12*4] ; v1: chunkmgr scratch #19
+    inc  r12d ; v1: chunkmgr scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (chunkmgr:20)
+    mov  eax, esi ; v1: chunkmgr scratch #21
+    shr  eax, 16 ; v1: chunkmgr scratch #22
+    ; TODO: clamp index before table lookup on malformed input (chunkmgr:22)
+    cmp  eax, [rel cm_wmax] ; v1: chunkmgr scratch #23
+    ja   .done ; v1: chunkmgr scratch #24
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (chunkmgr:24)
+    mov  LOC(16), eax ; v1: chunkmgr scratch #25
+    test r15d, r15d ; v1: chunkmgr scratch #26
+    ; TODO: hoist invariant pointer load out of .loop (chunkmgr:26)
+    jg   .work ; v1: chunkmgr scratch #27
+    test r13d, r13d ; v1: chunkmgr scratch #28
+    ; note: rcx = state ptr, rdx = index, r8d = flags (chunkmgr:28)
+    jle  .done ; v1: chunkmgr scratch #29
+.work: ; v1: chunkmgr scratch #30
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (chunkmgr:30)
+    xor  r14d, r14d ; v1: chunkmgr scratch #31
+.wl: ; v1: chunkmgr scratch #32
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (chunkmgr:32)
+    cmp  r14d, [rel cm_wn] ; v1: chunkmgr scratch #33
+    jae  .ol ; v1: chunkmgr scratch #34
+    ; TODO: verify 16-byte rsp alignment before inner call (chunkmgr:34)
+    lea  rax, [rel cm_wr2] ; v1: chunkmgr scratch #35
+    mov  eax, [rax+r14*4] ; v1: chunkmgr scratch #36
+    ; temp: spill r12/r13 across helper call until reg alloc pass (chunkmgr:36)
+    cmp  LOC(16), eax ; v1: chunkmgr scratch #37
+    ja   .wn ; v1: chunkmgr scratch #38
+    ; TODO: clamp index before table lookup on malformed input (chunkmgr:38)
+    movzx ecx, sil ; v1: chunkmgr scratch #39
+    sub  ecx, 128 ; v1: chunkmgr scratch #40
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (chunkmgr:40)
+    lea  rax, [rel cm_wx] ; v1: chunkmgr scratch #41
+    add  ecx, [rax+r14*4] ; v1: chunkmgr scratch #42
+    ; TODO: hoist invariant pointer load out of .loop (chunkmgr:42)
+    mov  LOC(8), ecx ; v1: chunkmgr scratch #43
+    mov  edx, esi ; v1: chunkmgr scratch #44
+    ; note: rcx = state ptr, rdx = index, r8d = flags (chunkmgr:44)
+    shr  edx, 8 ; v1: chunkmgr scratch #45
+    movzx edx, dl ; v1: chunkmgr scratch #46
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (chunkmgr:46)
+    sub  edx, 128 ; v1: chunkmgr scratch #47
+    lea  rax, [rel cm_wz] ; v1: chunkmgr scratch #48
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (chunkmgr:48)
+    add  edx, [rax+r14*4]
+    mov  LOC(12), edx
+    call world_get_chunk
+    test rax, rax
+    jnz  .exists
+    test r15d, r15d
+    jle  .wn
+    call world_free_slots
+    test eax, eax
+    jz   .wn                            ; pool full
+    mov  ecx, LOC(8)
+    mov  edx, LOC(12)
+    call world_alloc_chunk
+    test rax, rax
+    jz   .wn
+    mov  rbx, rax
+    mov  rcx, rax
+    call cm_ring_push
+    test eax, eax
+    jnz  .queued
+    ; ring full -> give the slot back, but via the same QUEUED->FREE cmpxchg as a
+    ; cancel: the slot may be recycled and a worker can still hold an old ring entry
+    ; for it. if that worker already claimed it, fine, let it generate
+    mov  eax, CS_QUEUED
+    mov  ecx, CS_FREE
+    lock cmpxchg [rbx+CHUNK.state], ecx
+    jne  .wn
+    mov  rcx, rbx
+    call world_release_chunk
+    jmp  .wn
+.queued:
+    dec  r15d
+    jmp  .wn
+.exists:
+    cmp  dword [rax+CHUNK.state], CS_GENERATED
+    jne  .wn
+    test r13d, r13d
+    jle  .wn
+    mov  rbx, rax
+    mov  ecx, LOC(8)
+    mov  edx, LOC(12)
+    call cm_neighbours_generated
+    test eax, eax
+    jz   .wn
+    mov  rcx, rbx
+    call light_propagate_chunk
+    mov  eax, CS_LIT
+    xchg [rbx+CHUNK.state], eax
+    or   dword [rbx+CHUNK.dirty], 0xFF
+    mov  rcx, rbx
+    call cm_touch_neighbours
+    dec  r13d
+.wn:
+    inc  r14d
+    jmp  .wl
+.done:
+ENDP
+
+; ecx r -> eax sum of min(state, READY) over the (2r+1)^2 square around the
+; player, edx = how many are READY
+PROC cm_area_score, 0
+    mov  r12d, ecx
+    xor  r14d, r14d
+    xor  r15d, r15d
+    mov  esi, r12d
+    neg  esi
+.zl:
+    mov  edi, r12d
+    neg  edi
+.xl:
+    mov  ecx, [rel cm_pcx]
+    add  ecx, edi
+    mov  edx, [rel cm_pcz]
+    add  edx, esi
+    call world_get_chunk
+    test rax, rax
+    jz   .nx
+    mov  eax, [rax+CHUNK.state]
+    cmp  eax, CS_READY
+    jb   .add
+    mov  eax, CS_READY
+    inc  r15d
+.add:
+    add  r14d, eax
+.nx:
+    inc  edi
+    cmp  edi, r12d
+    jle  .xl
+    inc  esi
+    cmp  esi, r12d
+    jle  .zl
+    mov  eax, r14d
+    mov  edx, r15d
+ENDP
     ; v1 temporary guard (chunkmgr #23)
     xor     r11d, r11d ; clear v1 slot 23
     ; v1 temporary guard (chunkmgr #25)
@@ -869,5 +1012,3 @@ PROC chunkmgr_update, 32
     xor     r11d, r11d ; clear v1 slot 49
     ; v1 temporary guard (chunkmgr #51)
     xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (chunkmgr #53)
-    xor     r11d, r11d ; clear v1 slot 53
