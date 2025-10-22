@@ -816,78 +816,55 @@ PROC chunkmgr_update, 32
     mov  rcx, rdi
     call render_free_chunk
 .release:
-    mov  rcx, rdi ; v1: chunkmgr scratch #0
-    ; temp: spill r12/r13 across helper call until reg alloc pass (chunkmgr:0)
-    call world_release_chunk ; v1: chunkmgr scratch #1
-    jmp  .ul ; v1: chunkmgr scratch #2
-    ; TODO: clamp index before table lookup on malformed input (chunkmgr:2)
-.ul_done: ; v1: chunkmgr scratch #3
+    mov  rcx, rdi
+    call world_release_chunk
+    jmp  .ul
+.ul_done:
 
     ; nearest first for every centre at once, so a far java player and the
     ; host fill in at the same pace
-    mov  r15d, MAX_INFLIGHT ; v1: chunkmgr scratch #7
-    sub  r15d, r14d ; v1: chunkmgr scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (chunkmgr:8)
-    mov  r13d, LIGHT_BUDGET ; v1: chunkmgr scratch #9
-    cmp  dword [rel g_state], ST_LOADING ; v1: chunkmgr scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (chunkmgr:10)
-    jne  .lb ; v1: chunkmgr scratch #11
-    mov  r13d, LIGHT_BUDGET_LOADING ; v1: chunkmgr scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (chunkmgr:12)
-.lb: ; v1: chunkmgr scratch #13
-    xor  r12d, r12d ; v1: chunkmgr scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (chunkmgr:14)
-.ol: ; v1: chunkmgr scratch #15
-    cmp  r12d, [rel cm_off_count] ; v1: chunkmgr scratch #16
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (chunkmgr:16)
-    jae  .done ; v1: chunkmgr scratch #17
-    lea  rax, [rel cm_offsets] ; v1: chunkmgr scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (chunkmgr:18)
-    mov  esi, [rax+r12*4] ; v1: chunkmgr scratch #19
-    inc  r12d ; v1: chunkmgr scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (chunkmgr:20)
-    mov  eax, esi ; v1: chunkmgr scratch #21
-    shr  eax, 16 ; v1: chunkmgr scratch #22
-    ; TODO: clamp index before table lookup on malformed input (chunkmgr:22)
-    cmp  eax, [rel cm_wmax] ; v1: chunkmgr scratch #23
-    ja   .done ; v1: chunkmgr scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (chunkmgr:24)
-    mov  LOC(16), eax ; v1: chunkmgr scratch #25
-    test r15d, r15d ; v1: chunkmgr scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (chunkmgr:26)
-    jg   .work ; v1: chunkmgr scratch #27
-    test r13d, r13d ; v1: chunkmgr scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (chunkmgr:28)
-    jle  .done ; v1: chunkmgr scratch #29
-.work: ; v1: chunkmgr scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (chunkmgr:30)
-    xor  r14d, r14d ; v1: chunkmgr scratch #31
-.wl: ; v1: chunkmgr scratch #32
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (chunkmgr:32)
-    cmp  r14d, [rel cm_wn] ; v1: chunkmgr scratch #33
-    jae  .ol ; v1: chunkmgr scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (chunkmgr:34)
-    lea  rax, [rel cm_wr2] ; v1: chunkmgr scratch #35
-    mov  eax, [rax+r14*4] ; v1: chunkmgr scratch #36
-    ; temp: spill r12/r13 across helper call until reg alloc pass (chunkmgr:36)
-    cmp  LOC(16), eax ; v1: chunkmgr scratch #37
-    ja   .wn ; v1: chunkmgr scratch #38
-    ; TODO: clamp index before table lookup on malformed input (chunkmgr:38)
-    movzx ecx, sil ; v1: chunkmgr scratch #39
-    sub  ecx, 128 ; v1: chunkmgr scratch #40
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (chunkmgr:40)
-    lea  rax, [rel cm_wx] ; v1: chunkmgr scratch #41
-    add  ecx, [rax+r14*4] ; v1: chunkmgr scratch #42
-    ; TODO: hoist invariant pointer load out of .loop (chunkmgr:42)
-    mov  LOC(8), ecx ; v1: chunkmgr scratch #43
-    mov  edx, esi ; v1: chunkmgr scratch #44
-    ; note: rcx = state ptr, rdx = index, r8d = flags (chunkmgr:44)
-    shr  edx, 8 ; v1: chunkmgr scratch #45
-    movzx edx, dl ; v1: chunkmgr scratch #46
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (chunkmgr:46)
-    sub  edx, 128 ; v1: chunkmgr scratch #47
-    lea  rax, [rel cm_wz] ; v1: chunkmgr scratch #48
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (chunkmgr:48)
+    mov  r15d, MAX_INFLIGHT
+    sub  r15d, r14d
+    mov  r13d, LIGHT_BUDGET
+    cmp  dword [rel g_state], ST_LOADING
+    jne  .lb
+    mov  r13d, LIGHT_BUDGET_LOADING
+.lb:
+    xor  r12d, r12d
+.ol:
+    cmp  r12d, [rel cm_off_count]
+    jae  .done
+    lea  rax, [rel cm_offsets]
+    mov  esi, [rax+r12*4]
+    inc  r12d
+    mov  eax, esi
+    shr  eax, 16
+    cmp  eax, [rel cm_wmax]
+    ja   .done                          ; table is sorted, rest is farther
+    mov  LOC(16), eax
+    test r15d, r15d
+    jg   .work
+    test r13d, r13d
+    jle  .done
+.work:
+    xor  r14d, r14d                     ; centre
+.wl:
+    cmp  r14d, [rel cm_wn]
+    jae  .ol
+    lea  rax, [rel cm_wr2]
+    mov  eax, [rax+r14*4]
+    cmp  LOC(16), eax
+    ja   .wn
+    movzx ecx, sil
+    sub  ecx, 128
+    lea  rax, [rel cm_wx]
+    add  ecx, [rax+r14*4]
+    mov  LOC(8), ecx
+    mov  edx, esi
+    shr  edx, 8
+    movzx edx, dl
+    sub  edx, 128
+    lea  rax, [rel cm_wz]
     add  edx, [rax+r14*4]
     mov  LOC(12), edx
     call world_get_chunk
@@ -982,33 +959,91 @@ PROC cm_area_score, 0
     mov  eax, r14d
     mov  edx, r15d
 ENDP
-    ; v1 temporary guard (chunkmgr #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (chunkmgr #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (chunkmgr #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (chunkmgr #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (chunkmgr #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (chunkmgr #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (chunkmgr #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (chunkmgr #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (chunkmgr #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (chunkmgr #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (chunkmgr #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (chunkmgr #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (chunkmgr #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (chunkmgr #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (chunkmgr #51)
-    xor     r11d, r11d ; clear v1 slot 51
+
+; loading bar: 5x5 around spawn, each chunk counts its state out of 5
+    global chunkmgr_progress
+    align 16
+chunkmgr_progress:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    sub  rsp, FRAME_OUT
+    call world_init
+    call player_chunk
+    mov  ecx, 2
+    call cm_area_score
+    cvtsi2ss xmm0, eax
+    mov  eax, __float32__(0.008)        ; 1 / (25 * CS_READY)
+    movd xmm1, eax
+    mulss xmm0, xmm1
+    mov  eax, __float32__(1.0)
+    movd xmm1, eax
+    minss xmm0, xmm1
+    lea  rsp, [rbp-32]
+    pop  r12
+    pop  rdi
+    pop  rsi
+    pop  rbx
+    pop  rbp
+    ret
+
+    global chunkmgr_spawn_ready
+    align 16
+chunkmgr_spawn_ready:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    sub  rsp, FRAME_OUT
+    call world_init
+    call player_chunk
+    mov  ecx, 2
+    call cm_area_score
+    xor  eax, eax
+    cmp  edx, 25
+    sete al
+    lea  rsp, [rbp-32]
+    pop  r12
+    pop  rdi
+    pop  rsi
+    pop  rbx
+    pop  rbp
+    ret
+
+    global chunkmgr_save_all
+    align 16
+chunkmgr_save_all:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    sub  rsp, FRAME_OUT
+    xor  ebx, ebx
+.l:
+    cmp  ebx, [rel g_chunk_count]
+    jae  .done
+    lea  rdx, [rel g_chunk_list]
+    mov  rdi, [rdx+rbx*8]
+    inc  ebx
+    cmp  dword [rdi+CHUNK.state], CS_GENERATED
+    jb   .l
+    cmp  dword [rdi+CHUNK.modified], 0
+    je   .l
+    mov  rcx, rdi
+    call save_chunk
+    jmp  .l
+.done:
+    lea  rsp, [rbp-32]
+    pop  r12
+    pop  rdi
+    pop  rsi
+    pop  rbx
+    pop  rbp
+    ret
