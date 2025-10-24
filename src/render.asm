@@ -1256,64 +1256,45 @@ ENDPX
 
 ; visible non-empty sections -> vis_*. column frustum test, then section aabb,
 ; then counting sort on int distance
-LPROCX r_collect_visible, 64 ; v1: render scratch #3
-    xor     r15d, r15d ; v1: render scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (render:4)
-    movss   xmm6, [rel g_cam_pos] ; v1: render scratch #5
-    movss   xmm7, [rel g_cam_pos + 4] ; v1: render scratch #6
-    ; TODO: clamp index before table lookup on malformed input (render:6)
-    movss   xmm8, [rel g_cam_pos + 8] ; v1: render scratch #7
-    call    r_render_dist ; v1: render scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (render:8)
-    shl     eax, 4 ; v1: render scratch #9
-    add     eax, 12 ; v1: render scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (render:10)
-    cvtsi2ss xmm9, eax ; v1: render scratch #11
-    mulss   xmm9, xmm9 ; v1: render scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (render:12)
-    xor     ebx, ebx ; v1: render scratch #13
-.cl: ; v1: render scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (render:14)
-    cmp     ebx, [rel g_chunk_count] ; v1: render scratch #15
-    jae     .sort ; v1: render scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (render:16)
-    lea     rax, [rel g_chunk_list] ; v1: render scratch #17
-    mov     rdi, [rax + rbx*8] ; v1: render scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (render:18)
-    inc     ebx ; v1: render scratch #19
-    test    rdi, rdi ; v1: render scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (render:20)
-    jz      .cl ; v1: render scratch #21
-    cmp     dword [rdi + CHUNK.state], CS_LIT ; v1: render scratch #22
-    ; TODO: clamp index before table lookup on malformed input (render:22)
-    jb      .cl ; v1: render scratch #23
-    cmp     qword [rdi + CHUNK.sec_flags], 0 ; v1: render scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (render:24)
-    je      .cl ; v1: render scratch #25
-    mov     eax, [rdi + CHUNK.cx] ; v1: render scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (render:26)
-    shl     eax, 4 ; v1: render scratch #27
-    cvtsi2ss xmm10, eax ; v1: render scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (render:28)
-    subss   xmm10, xmm6 ; v1: render scratch #29
-    mov     eax, [rdi + CHUNK.cz] ; v1: render scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (render:30)
-    shl     eax, 4 ; v1: render scratch #31
-    cvtsi2ss xmm11, eax ; v1: render scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (render:32)
-    subss   xmm11, xmm8 ; v1: render scratch #33
-    movss   xmm12, xmm10 ; v1: render scratch #34
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (render:34)
-    addss   xmm12, [rel f_eight] ; v1: render scratch #35
-    mulss   xmm12, xmm12 ; v1: render scratch #36
-    ; TODO: verify 16-byte rsp alignment before inner call (render:36)
-    movss   xmm0, xmm11 ; v1: render scratch #37
-    addss   xmm0, [rel f_eight] ; v1: render scratch #38
-    ; TODO: clamp index before table lookup on malformed input (render:38)
-    mulss   xmm0, xmm0 ; v1: render scratch #39
-    addss   xmm12, xmm0 ; v1: render scratch #40
-    ; note: rcx = state ptr, rdx = index, r8d = flags (render:40)
-    comiss  xmm12, xmm9 ; v1: render scratch #41
+LPROCX r_collect_visible, 64
+    xor     r15d, r15d
+    movss   xmm6, [rel g_cam_pos]
+    movss   xmm7, [rel g_cam_pos + 4]
+    movss   xmm8, [rel g_cam_pos + 8]
+    call    r_render_dist
+    shl     eax, 4
+    add     eax, 12
+    cvtsi2ss xmm9, eax
+    mulss   xmm9, xmm9
+    xor     ebx, ebx
+.cl:
+    cmp     ebx, [rel g_chunk_count]
+    jae     .sort
+    lea     rax, [rel g_chunk_list]
+    mov     rdi, [rax + rbx*8]
+    inc     ebx
+    test    rdi, rdi
+    jz      .cl
+    cmp     dword [rdi + CHUNK.state], CS_LIT
+    jb      .cl
+    cmp     qword [rdi + CHUNK.sec_flags], 0
+    je      .cl
+    mov     eax, [rdi + CHUNK.cx]
+    shl     eax, 4
+    cvtsi2ss xmm10, eax
+    subss   xmm10, xmm6
+    mov     eax, [rdi + CHUNK.cz]
+    shl     eax, 4
+    cvtsi2ss xmm11, eax
+    subss   xmm11, xmm8
+    movss   xmm12, xmm10
+    addss   xmm12, [rel f_eight]
+    mulss   xmm12, xmm12
+    movss   xmm0, xmm11
+    addss   xmm0, [rel f_eight]
+    mulss   xmm0, xmm0
+    addss   xmm12, xmm0
+    comiss  xmm12, xmm9
     ja      .cl
     ; whole column first
     lea     rdx, [rel r_aabb]
@@ -1547,8 +1528,302 @@ LPROCX r_draw_chunks, 64
     subss   xmm3, xmm8
     call    [rel pglUniform3f]
     mov     ecx, GL_ARRAY_BUFFER
-    ; v1 temporary guard (render #19)
-    xor     r11d, r11d ; clear v1 slot 19
+    mov     edx, [rdi + CHUNK.vbo + rsi*4] ; v1: render scratch #0
+    ; temp: spill r12/r13 across helper call until reg alloc pass (render:0)
+    call    [rel pglBindBuffer] ; v1: render scratch #1
+    inc     dword [rel g_stat_sections_drawn] ; v1: render scratch #2
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (render:2)
+    add     [rel g_stat_vertices], ebx ; v1: render scratch #3
+    ; 4 verts per quad -> 6 indices from the shared ibo, 65536 verts a batch
+    xor     eax, eax ; v1: render scratch #5
+    mov     LOC(0), rax ; v1: render scratch #6
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (render:6)
+.batch: ; v1: render scratch #7
+    mov     rax, LOC(0) ; v1: render scratch #8
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (render:8)
+    shl     rax, 4 ; v1: render scratch #9
+    mov     LOC(8), rax ; v1: render scratch #10
+    ; TODO: clamp index before table lookup on malformed input (render:10)
+    R_ATTRIB 0, 3, GL_SHORT, 0, VERTEX.x ; v1: render scratch #11
+    R_ATTRIB 1, 2, GL_UNSIGNED_BYTE, 0, VERTEX.u ; v1: render scratch #12
+    ; note: rcx = state ptr, rdx = index, r8d = flags (render:12)
+    R_ATTRIB 2, 4, GL_UNSIGNED_BYTE, 1, VERTEX.sky ; v1: render scratch #13
+    R_ATTRIB 3, 4, GL_UNSIGNED_BYTE, 1, VERTEX.r ; v1: render scratch #14
+    ; TODO: hoist invariant pointer load out of .loop (render:14)
+    mov     edx, ebx ; v1: render scratch #15
+    sub     edx, LOC(0) ; v1: render scratch #16
+    ; TODO: verify 16-byte rsp alignment before inner call (render:16)
+    cmp     edx, R_IBO_QUADS*4 ; v1: render scratch #17
+    jbe     .nq ; v1: render scratch #18
+    ; temp: spill r12/r13 across helper call until reg alloc pass (render:18)
+    mov     edx, R_IBO_QUADS*4 ; v1: render scratch #19
+.nq: ; v1: render scratch #20
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (render:20)
+    shr     edx, 2 ; v1: render scratch #21
+    lea     edx, [rdx + rdx*2] ; v1: render scratch #22
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (render:22)
+    add     edx, edx ; v1: render scratch #23
+    mov     ecx, GL_TRIANGLES ; v1: render scratch #24
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (render:24)
+    mov     r8d, GL_UNSIGNED_SHORT ; v1: render scratch #25
+    xor     r9d, r9d ; v1: render scratch #26
+    ; TODO: clamp index before table lookup on malformed input (render:26)
+    call    glDrawElements ; v1: render scratch #27
+    add     dword LOC(0), R_IBO_QUADS*4 ; v1: render scratch #28
+    ; note: rcx = state ptr, rdx = index, r8d = flags (render:28)
+    cmp     LOC(0), ebx ; v1: render scratch #29
+    jb      .batch ; v1: render scratch #30
+    ; TODO: hoist invariant pointer load out of .loop (render:30)
+    jmp     .loop ; v1: render scratch #31
+.end: ; v1: render scratch #32
+    ; TODO: verify 16-byte rsp alignment before inner call (render:32)
+    xor     ebx, ebx ; v1: render scratch #33
+.da: ; v1: render scratch #34
+    ; temp: spill r12/r13 across helper call until reg alloc pass (render:34)
+    mov     ecx, ebx ; v1: render scratch #35
+    call    [rel pglDisableVertexAttribArray] ; v1: render scratch #36
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (render:36)
+    inc     ebx ; v1: render scratch #37
+    cmp     ebx, 4 ; v1: render scratch #38
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (render:38)
+    jb      .da ; v1: render scratch #39
+    mov     ecx, GL_ARRAY_BUFFER ; v1: render scratch #40
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (render:40)
+    xor     edx, edx ; v1: render scratch #41
+    call    [rel pglBindBuffer] ; v1: render scratch #42
+    ; TODO: clamp index before table lookup on malformed input (render:42)
+    mov     ecx, GL_ELEMENT_ARRAY_BUFFER ; v1: render scratch #43
+    xor     edx, edx
+    call    [rel pglBindBuffer]
+    xor     ecx, ecx
+    call    [rel pglUseProgram]
+    test    r12d, r12d
+    jz      .ret
+    mov     ecx, GL_BLEND
+    call    glDisable
+    mov     ecx, 1
+    call    glDepthMask
+.ret:
+ENDPX
+
+PROCX render_world, 32
+    mov     dword [rel g_stat_sections_drawn], 0
+    mov     dword [rel g_stat_vertices], 0
+    call    r_setup_env
+    xor     ecx, ecx
+    xor     edx, edx
+    mov     r8d, [rel g_screen_w]
+    mov     r9d, [rel g_screen_h]
+    call    glViewport
+    ; atlas on unit 0, re-assert it
+    mov     ecx, GL_TEXTURE_2D
+    call    glEnable
+    mov     edx, [rel g_tex_atlas]
+    test    edx, edx
+    jz      .noatlas
+    mov     ecx, GL_TEXTURE_2D
+    call    glBindTexture
+.noatlas:
+    ; clear to fog colour, then sky
+    movss   xmm0, [rel r_fog]
+    movss   xmm1, [rel r_fog + 4]
+    movss   xmm2, [rel r_fog + 8]
+    movss   xmm3, [rel f_one]
+    call    glClearColor
+    mov     ecx, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT
+    call    glClear
+    call    r_load_world_matrices
+    cmp     dword [rel r_medium], 0
+    jne     .nosky
+    call    sky_render
+    call    r_load_world_matrices
+.nosky:
+    ; opaque + cutout, front to back
+    call    r_collect_visible
+    xor     ecx, ecx
+    call    r_draw_chunks
+    call    r_load_world_matrices
+    call    entity_render_all
+    call    r_load_world_matrices
+    cmp     dword [rel g_view_mode], 0
+    je      .noplayer
+    call    entity_render_player
+    call    r_load_world_matrices
+.noplayer:
+    call    particles_render
+    call    r_load_world_matrices
+    ; translucent, back to front
+    mov     ecx, 1
+    call    r_draw_chunks
+    call    r_load_world_matrices
+    cmp     dword [rel r_medium], 0
+    jne     .noclouds
+    call    sky_render_clouds
+    call    r_load_world_matrices
+.noclouds:
+    call    weather_render
+    call    r_load_world_matrices
+    cmp     dword [rel g_hide_hud], 0
+    jne     .nosel
+    call    r_draw_selection
+.nosel:
+    cmp     dword [rel g_view_mode], 0
+    jne     .nohand
+    cmp     dword [rel g_hide_hud], 0
+    jne     .nohand
+    cmp     dword [rel g_player + PLAYER.dead], 0   ; no arm floating over the death screen
+    jne     .nohand
+    call    r_draw_hand
+.nohand:
+    ; underwater / lava tint
+    cmp     dword [rel r_medium], 0
+    je      .notint
+    call    r_draw_tint
+.notint:
+    call    r_load_world_matrices
+ENDPX
+
+; ecx block id -> r_shape, outline box relative to the block
+r_shape_box:
+    lea     rax, [rel blk_model]
+    and     ecx, 255
+    movzx   eax, byte [rax + rcx]
+    lea     rdx, [rel shape_full]
+    cmp     eax, MODEL_TORCH
+    jne     .a
+    lea     rdx, [rel shape_torch]
+.a:
+    cmp     eax, MODEL_CROSS
+    jne     .b
+    lea     rdx, [rel shape_cross]
+.b:
+    cmp     eax, MODEL_LANTERN
+    jne     .c
+    lea     rdx, [rel shape_lantern]
+.c:
+    cmp     eax, MODEL_CACTUS
+    jne     .d
+    lea     rdx, [rel shape_cactus]
+.d:
+    movups  xmm0, [rdx]
+    movups  [rel r_shape], xmm0
+    movq    xmm0, [rdx + 16]
+    movq    [rel r_shape + 16], xmm0
+    ret
+
+; ecx/edx/r8d block, xmm3 grow -> rb_box, camera relative
+r_shape_to_cam:
+    cvtsi2ss xmm0, ecx
+    subss   xmm0, [rel g_cam_pos]
+    cvtsi2ss xmm1, edx
+    subss   xmm1, [rel g_cam_pos + 4]
+    cvtsi2ss xmm2, r8d
+    subss   xmm2, [rel g_cam_pos + 8]
+    lea     rax, [rel r_shape]
+    lea     rdx, [rel rb_box]
+    movss   xmm4, [rax + 0]
+    addss   xmm4, xmm0
+    subss   xmm4, xmm3
+    movss   [rdx + 0], xmm4
+    movss   xmm4, [rax + 4]
+    addss   xmm4, xmm1
+    subss   xmm4, xmm3
+    movss   [rdx + 4], xmm4
+    movss   xmm4, [rax + 8]
+    addss   xmm4, xmm2
+    subss   xmm4, xmm3
+    movss   [rdx + 8], xmm4
+    movss   xmm4, [rax + 12]
+    addss   xmm4, xmm0
+    addss   xmm4, xmm3
+    movss   [rdx + 12], xmm4
+    movss   xmm4, [rax + 16]
+    addss   xmm4, xmm1
+    addss   xmm4, xmm3
+    movss   [rdx + 16], xmm4
+    movss   xmm4, [rax + 20]
+    addss   xmm4, xmm2
+    addss   xmm4, xmm3
+    movss   [rdx + 20], xmm4
+    ret
+
+; outline around g_hit + cracks on the block being mined
+; (multiply blend, polygon offset against z-fighting)
+LPROCX r_draw_selection, 32
+    cmp     dword [rel g_hit + RAYHIT.hit], 0
+    je      .crack
+    mov     ecx, [rel g_hit + RAYHIT.block]
+    call    r_shape_box
+    mov     ecx, [rel g_hit + RAYHIT.x]
+    mov     edx, [rel g_hit + RAYHIT.y]
+    mov     r8d, [rel g_hit + RAYHIT.z]
+    movss   xmm3, [rel f_sel_grow]
+    call    r_shape_to_cam
+    mov     ecx, GL_TEXTURE_2D
+    call    glDisable
+    mov     ecx, GL_BLEND
+    call    glEnable
+    xorps   xmm0, xmm0
+    xorps   xmm1, xmm1
+    xorps   xmm2, xmm2
+    FARG    xmm3, 0.45
+    call    glColor4f
+    FARG    xmm0, 2.0
+    call    glLineWidth
+    mov     ecx, GL_LINES
+    call    glBegin
+    xor     ebx, ebx
+.edge:
+    lea     rax, [rel sel_edges]
+    movzx   esi, byte [rax + rbx]
+    lea     rdx, [rel rb_box]
+    ; x = bit0 ? max : min   (y bit1, z bit2)
+    mov     eax, esi
+    and     eax, 1
+    lea     eax, [rax*2 + rax]
+    movss   xmm0, [rdx + rax*4]
+    mov     eax, esi
+    shr     eax, 1
+    and     eax, 1
+    lea     eax, [rax*2 + rax + 1]
+    movss   xmm1, [rdx + rax*4]
+    mov     eax, esi
+    shr     eax, 2
+    lea     eax, [rax*2 + rax + 2]
+    movss   xmm2, [rdx + rax*4]
+    call    glVertex3f
+    inc     ebx
+    cmp     ebx, 24
+    jb      .edge
+    call    glEnd
+    movss   xmm0, [rel f_one]
+    call    glLineWidth
+    mov     ecx, GL_BLEND
+    call    glDisable
+    mov     ecx, GL_TEXTURE_2D
+    call    glEnable
+    movss   xmm0, [rel f_one]
+    movss   xmm1, xmm0
+    movss   xmm2, xmm0
+    movss   xmm3, xmm0
+    call    glColor4f
+.crack:
+    movss   xmm0, [rel g_player + PLAYER.break_progress]
+    xorps   xmm1, xmm1
+    comiss  xmm0, xmm1
+    jbe     .done
+    FARG    xmm1, 10.0
+    mulss   xmm0, xmm1
+    cvttss2si r12d, xmm0
+    cmp     r12d, 9
+    jle     .st
+    mov     r12d, 9
+.st:
+    add     r12d, T_DESTROY_0
+    mov     ecx, [rel g_player + PLAYER.break_x]
+    mov     edx, [rel g_player + PLAYER.break_y]
+    mov     r8d, [rel g_player + PLAYER.break_z]
+    call    world_get_block
     ; v1 temporary guard (render #21)
     xor     r11d, r11d ; clear v1 slot 21
     ; v1 temporary guard (render #23)
@@ -1591,3 +1866,5 @@ LPROCX r_draw_chunks, 64
     xor     r11d, r11d ; clear v1 slot 59
     ; v1 temporary guard (render #61)
     xor     r11d, r11d ; clear v1 slot 61
+    ; v1 temporary guard (render #63)
+    xor     r11d, r11d ; clear v1 slot 63
