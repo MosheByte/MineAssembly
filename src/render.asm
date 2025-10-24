@@ -239,55 +239,40 @@ sec_order: db 0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6, -6, 7, -7
 nb8_dx: db -1, 0, 1, -1, 1, -1, 0, 1
 nb8_dz: db -1,-1,-1,  0, 0,  1, 1, 1
 
-align 4 ; v1: render scratch #0
-    ; TODO: hoist invariant pointer load out of .loop (render:0)
-r_face_shade:   dd 0.6, 0.6, 1.0, 0.5, 0.8, 0.8 ; v1: render scratch #1
-liq_h:          dd 0.888889, 0.777778, 0.666667, 0.555556, 0.444444, 0.333333, 0.222222, 0.111111 ; v1: render scratch #2
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (render:2)
-                dd 0.888889, 0.666667, 0.444444, 0.222222 ; v1: render scratch #3
+align 4
+r_face_shade:   dd 0.6, 0.6, 1.0, 0.5, 0.8, 0.8
+liq_h:          dd 0.888889, 0.777778, 0.666667, 0.555556, 0.444444, 0.333333, 0.222222, 0.111111
+                dd 0.888889, 0.666667, 0.444444, 0.222222
 
-shape_full:     dd 0.0, 0.0, 0.0, 1.0, 1.0, 1.0 ; v1: render scratch #5
-shape_torch:    dd 0.375, 0.0, 0.375, 0.625, 0.625, 0.625 ; v1: render scratch #6
-    ; TODO: clamp index before table lookup on malformed input (render:6)
-shape_cross:    dd 0.1, 0.0, 0.1, 0.9, 0.8, 0.9 ; v1: render scratch #7
-shape_lantern:  dd 0.3125, 0.0, 0.3125, 0.6875, 0.5625, 0.6875 ; v1: render scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (render:8)
-shape_cactus:   dd 0.0625, 0.0, 0.0625, 0.9375, 1.0, 0.9375 ; v1: render scratch #9
-box_torch:      dd 0.4375, 0.0, 0.4375, 0.5625, 0.625, 0.5625 ; v1: render scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (render:10)
-box_lantern:    dd 0.3125, 0.0, 0.3125, 0.6875, 0.4375, 0.6875 ; v1: render scratch #11
-box_lantern_cap: dd 0.375, 0.4375, 0.375, 0.625, 0.5625, 0.625 ; v1: render scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (render:12)
-box_arm:        dd -0.1, -0.1, -0.78, 0.1, 0.1, 0.0 ; v1: render scratch #13
+shape_full:     dd 0.0, 0.0, 0.0, 1.0, 1.0, 1.0
+shape_torch:    dd 0.375, 0.0, 0.375, 0.625, 0.625, 0.625
+shape_cross:    dd 0.1, 0.0, 0.1, 0.9, 0.8, 0.9
+shape_lantern:  dd 0.3125, 0.0, 0.3125, 0.6875, 0.5625, 0.6875
+shape_cactus:   dd 0.0625, 0.0, 0.0625, 0.9375, 1.0, 0.9375
+box_torch:      dd 0.4375, 0.0, 0.4375, 0.5625, 0.625, 0.5625
+box_lantern:    dd 0.3125, 0.0, 0.3125, 0.6875, 0.4375, 0.6875
+box_lantern_cap: dd 0.375, 0.4375, 0.375, 0.625, 0.5625, 0.625
+box_arm:        dd -0.1, -0.1, -0.78, 0.1, 0.1, 0.0
 
-f_zero:     dd 0.0 ; v1: render scratch #15
-f_one:      dd 1.0 ; v1: render scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (render:16)
-f_half:     dd 0.5 ; v1: render scratch #17
-f_two:      dd 2.0 ; v1: render scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (render:18)
-f_three:    dd 3.0 ; v1: render scratch #19
-f_eight:    dd 8.0 ; v1: render scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (render:20)
-f_fifteenth: dd 0.06666667 ; v1: render scratch #21
-f_inv255:   dd 0.003921569 ; v1: render scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (render:22)
-f_texel:    dd 0.00390625 ; v1: render scratch #23
-f_inset:    dd 0.0009765625 ; v1: render scratch #24
-    ; TODO: clamp index before table lookup on malformed input (render:24)
-f_sixteenth: dd 0.0625 ; v1: render scratch #25
-f_pi:       dd 3.14159265 ; v1: render scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (render:26)
-f_two_pi:   dd 6.2831853 ; v1: render scratch #27
-f_deg2rad:  dd 0.017453293 ; v1: render scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (render:28)
-f_eye:      dd 1.62 ; v1: render scratch #29
-f_near:     dd 0.05 ; v1: render scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (render:30)
-f_70:       dd 70.0 ; v1: render scratch #31
-f_90:       dd 90.0 ; v1: render scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (render:32)
-f_m90:      dd -90.0 ; v1: render scratch #33
+f_zero:     dd 0.0
+f_one:      dd 1.0
+f_half:     dd 0.5
+f_two:      dd 2.0
+f_three:    dd 3.0
+f_eight:    dd 8.0
+f_fifteenth: dd 0.06666667
+f_inv255:   dd 0.003921569
+f_texel:    dd 0.00390625
+f_inset:    dd 0.0009765625
+f_sixteenth: dd 0.0625
+f_pi:       dd 3.14159265
+f_two_pi:   dd 6.2831853
+f_deg2rad:  dd 0.017453293
+f_eye:      dd 1.62
+f_near:     dd 0.05
+f_70:       dd 70.0
+f_90:       dd 90.0
+f_m90:      dd -90.0
 f_180:      dd 180.0
 f_1024:     dd 1024.0
 f_inv1024:  dd 0.0009765625
@@ -491,8 +476,282 @@ r_floor:
     roundss xmm0, xmm0, 1
     cvttss2si eax, xmm0
     ret
-    ; v1 temporary guard (render #15)
-    xor     r11d, r11d ; clear v1 slot 15
+
+; --bench only: once a second log meshes/s, resident chunk vbo bytes and how
+; long the main thread spent in here
+PROC render_update_meshes, 16 ; v1: render scratch #3
+    cmp     dword [rel g_run_mode], 2 ; v1: render scratch #4
+    ; TODO: clamp index before table lookup on malformed input (render:4)
+    je      .bench ; v1: render scratch #5
+    call    r_update_meshes_body ; v1: render scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (render:6)
+    jmp     .done ; v1: render scratch #7
+.bench: ; v1: render scratch #8
+    ; temp: spill r12/r13 across helper call until reg alloc pass (render:8)
+    call    time_seconds ; v1: render scratch #9
+    movsd   LOC(0), xmm0 ; v1: render scratch #10
+    ; note: rcx = state ptr, rdx = index, r8d = flags (render:10)
+    call    r_update_meshes_body ; v1: render scratch #11
+    call    time_seconds ; v1: render scratch #12
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (render:12)
+    movsd   xmm1, xmm0 ; v1: render scratch #13
+    subsd   xmm1, LOC(0) ; v1: render scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (render:14)
+    addsd   xmm1, [rel r_bench_acc] ; v1: render scratch #15
+    movsd   [rel r_bench_acc], xmm1 ; v1: render scratch #16
+    ; TODO: hoist invariant pointer load out of .loop (render:16)
+    movsd   xmm1, [rel r_bench_t0] ; v1: render scratch #17
+    xorpd   xmm2, xmm2 ; v1: render scratch #18
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (render:18)
+    ucomisd xmm1, xmm2 ; v1: render scratch #19
+    jne     .have_t0 ; v1: render scratch #20
+    ; TODO: clamp index before table lookup on malformed input (render:20)
+    movsd   [rel r_bench_t0], xmm0 ; v1: render scratch #21
+    mov     eax, [rel g_stat_meshes_built] ; v1: render scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (render:22)
+    mov     [rel r_bench_m0], eax ; v1: render scratch #23
+    jmp     .done ; v1: render scratch #24
+    ; temp: spill r12/r13 across helper call until reg alloc pass (render:24)
+.have_t0: ; v1: render scratch #25
+    movsd   xmm2, xmm0 ; v1: render scratch #26
+    ; note: rcx = state ptr, rdx = index, r8d = flags (render:26)
+    subsd   xmm2, xmm1 ; v1: render scratch #27
+    comisd  xmm2, [rel d_one] ; v1: render scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (render:28)
+    jb      .done ; v1: render scratch #29
+    movsd   [rel r_bench_t0], xmm0 ; v1: render scratch #30
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (render:30)
+    call    r_bench_log ; v1: render scratch #31
+.done: ; v1: render scratch #32
+    ; TODO: hoist invariant pointer load out of .loop (render:32)
+ENDP ; v1: render scratch #33
+
+LPROC r_bench_log, 32 ; v1: render scratch #35
+    ; resident = every chunk's vbos
+    xor     r12, r12 ; v1: render scratch #37
+    xor     ebx, ebx ; v1: render scratch #38
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (render:38)
+.cl: ; v1: render scratch #39
+    cmp     ebx, [rel g_chunk_count] ; v1: render scratch #40
+    ; TODO: clamp index before table lookup on malformed input (render:40)
+    jae     .sum ; v1: render scratch #41
+    lea     rax, [rel g_chunk_list]
+    mov     rdi, [rax + rbx*8]
+    inc     ebx
+    test    rdi, rdi
+    jz      .cl
+    xor     esi, esi
+.vl:
+    cmp     dword [rdi + CHUNK.vbo + rsi*4], 0
+    je      .vn
+    mov     eax, [rdi + CHUNK.vcount + rsi*4]
+    add     r12, rax
+.vn:
+    inc     esi
+    cmp     esi, 16
+    jb      .vl
+    jmp     .cl
+.sum:
+    imul    r12, r12, VERTEX_STRIDE
+    shr     r12, 10
+    mov     edx, [rel g_stat_meshes_built]
+    mov     eax, edx
+    sub     edx, [rel r_bench_m0]
+    mov     [rel r_bench_m0], eax
+    movsd   xmm0, [rel r_bench_acc]
+    mulsd   xmm0, [rel d_1000]
+    cvtsd2ss xmm0, xmm0
+    movd    eax, xmm0
+    mov     [rsp + 32], rax
+    xorpd   xmm0, xmm0
+    movsd   [rel r_bench_acc], xmm0
+    lea     rcx, [rel s_bench_mesh]
+    mov     r8, r12
+    mov     r9d, [rel g_fps]
+    call    log_printf
+ENDP
+
+; finished jobs go up first, then dirty sections get handed to mesher_submit.
+; candidates: lit chunks in range with dirty sections and all 8 neighbours lit
+; (else the border light is still wrong and we'd mesh it twice). nearest first,
+; dumb selection since n is small. on the workers the job pool is the limit.
+; without workers it meshes right here: 24 sections or 5ms, 160 / 30ms while
+; loading, and a LIT chunk's first mesh always finishes in one go
+LPROCX r_update_meshes_body, 64
+    mov     r15d, 24
+    movsd   xmm6, [rel d_budget_play]
+    mov     dword LOC(16), R_MESH_UPLOADS
+    cmp     dword [rel g_state], ST_LOADING
+    jne     .budget
+    mov     r15d, 160
+    movsd   xmm6, [rel d_budget_load]
+    mov     dword LOC(16), R_MESH_UPLOADS_LOAD
+.budget:
+    call    time_seconds
+    movsd   xmm7, xmm0
+    mov     ecx, LOC(16)
+    call    mesher_collect
+    sub     LOC(16), eax
+    movss   xmm0, [rel g_player + PLAYER.x]
+    call    r_floor
+    sar     eax, 4
+    mov     r12d, eax                           ; player chunk x
+    movss   xmm0, [rel g_player + PLAYER.z]
+    call    r_floor
+    sar     eax, 4
+    mov     r13d, eax                           ; player chunk z
+    movss   xmm0, [rel g_player + PLAYER.y]
+    call    r_floor
+    sar     eax, 4
+    cmp     eax, 0
+    jge     .ps1
+    xor     eax, eax
+.ps1:
+    cmp     eax, SECTIONS-1
+    jle     .ps2
+    mov     eax, SECTIONS-1
+.ps2:
+    mov     LOC(0), eax
+    call    r_render_dist
+    mov     r14d, eax
+
+    xor     esi, esi
+    xor     ebx, ebx
+.cl:
+    cmp     ebx, [rel g_chunk_count]
+    jae     .cdone
+    lea     rax, [rel g_chunk_list]
+    mov     rdi, [rax + rbx*8]
+    inc     ebx
+    test    rdi, rdi
+    jz      .cl
+    mov     eax, [rdi + CHUNK.state]
+    cmp     eax, CS_LIT
+    jb      .cl
+    cmp     dword [rdi + CHUNK.dirty], 0
+    jne     .dirty
+    ; clean LIT with nothing in the pool = meshed (chunkmgr dirties all 8 on LIT)
+    cmp     eax, CS_LIT
+    jne     .cl
+    mov     rcx, rdi
+    call    mesher_busy
+    test    edx, edx
+    jnz     .cl
+    mov     eax, CS_LIT
+    mov     ecx, CS_READY
+    lock cmpxchg [rdi + CHUNK.state], ecx
+    jmp     .cl
+.dirty:
+    mov     eax, [rdi + CHUNK.cx]
+    sub     eax, r12d
+    mov     ecx, [rdi + CHUNK.cz]
+    sub     ecx, r13d
+    mov     edx, eax
+    neg     edx
+    cmovl   edx, eax
+    cmp     edx, r14d
+    jg      .cl
+    mov     edx, ecx
+    neg     edx
+    cmovl   edx, ecx
+    cmp     edx, r14d
+    jg      .cl
+    imul    eax, eax
+    imul    ecx, ecx
+    add     eax, ecx
+    mov     LOC(4), eax
+    mov     rcx, rdi
+    call    r_neighbours_lit
+    test    eax, eax
+    jz      .cl
+    lea     rax, [rel cand_chunk]
+    mov     [rax + rsi*8], rdi
+    mov     eax, LOC(4)
+    lea     rdx, [rel cand_key]
+    mov     [rdx + rsi*4], eax
+    inc     esi
+    cmp     esi, MAX_CHUNKS
+    jb      .cl
+.cdone:
+    mov     LOC(8), esi
+    mov     dword LOC(12), 0                    ; sections meshed right here so far
+
+.select:
+    mov     eax, LOC(12)
+    cmp     eax, r15d
+    jae     .done
+    cmp     eax, 0                              ; always do at least one chunk
+    je      .sel_go
+    call    time_seconds
+    subsd   xmm0, xmm7
+    comisd  xmm0, xmm6
+    ja      .done
+.sel_go:
+    mov     ecx, LOC(8)
+    mov     edx, 0x7FFFFFFF
+    mov     r8d, -1
+    xor     r9d, r9d
+    lea     r10, [rel cand_key]
+.minl:
+    cmp     r9d, ecx
+    jae     .minend
+    mov     eax, [r10 + r9*4]
+    cmp     eax, edx
+    jge     .minnext
+    mov     edx, eax
+    mov     r8d, r9d
+.minnext:
+    inc     r9d
+    jmp     .minl
+.minend:
+    cmp     r8d, 0
+    jl      .done
+    mov     dword [r10 + r8*4], 0x7FFFFFFF      ; used up
+    lea     rax, [rel cand_chunk]
+    mov     rdi, [rax + r8*8]
+    mov     rcx, rdi
+    call    mesher_busy
+    mov     LOC(20), eax                        ; still on a worker, leave those be
+    xor     ebx, ebx
+.secl:
+    cmp     ebx, 15
+    jae     .select
+    lea     rax, [rel sec_order]
+    movsx   esi, byte [rax + rbx]
+    add     esi, LOC(0)
+    inc     ebx
+    cmp     esi, 0
+    jl      .secl
+    cmp     esi, SECTIONS
+    jge     .secl
+    bt      dword [rdi + CHUNK.dirty], esi
+    jnc     .secl
+    bt      dword LOC(20), esi
+    jc      .secl
+    mov     rcx, rdi
+    mov     edx, esi
+    call    mesher_submit
+    test    eax, eax
+    jz      .done                               ; pool full
+    cmp     eax, 2
+    jne     .secl
+    inc     dword LOC(12)
+    cmp     dword [rdi + CHUNK.state], CS_LIT
+    je      .secl
+    mov     eax, LOC(12)
+    cmp     eax, r15d
+    jae     .select
+    call    time_seconds
+    subsd   xmm0, xmm7
+    comisd  xmm0, xmm6
+    jbe     .secl
+    mov     LOC(12), r15d                       ; out of time, rest waits for next frame
+    jmp     .select
+.done:
+    ; whatever finished meanwhile (or got meshed right here)
+    mov     ecx, LOC(16)
+    call    mesher_collect
+ENDPX
     ; v1 temporary guard (render #17)
     xor     r11d, r11d ; clear v1 slot 17
     ; v1 temporary guard (render #19)
@@ -541,5 +800,3 @@ r_floor:
     xor     r11d, r11d ; clear v1 slot 61
     ; v1 temporary guard (render #63)
     xor     r11d, r11d ; clear v1 slot 63
-    ; v1 temporary guard (render #65)
-    xor     r11d, r11d ; clear v1 slot 65
