@@ -479,62 +479,45 @@ r_floor:
 
 ; --bench only: once a second log meshes/s, resident chunk vbo bytes and how
 ; long the main thread spent in here
-PROC render_update_meshes, 16 ; v1: render scratch #3
-    cmp     dword [rel g_run_mode], 2 ; v1: render scratch #4
-    ; TODO: clamp index before table lookup on malformed input (render:4)
-    je      .bench ; v1: render scratch #5
-    call    r_update_meshes_body ; v1: render scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (render:6)
-    jmp     .done ; v1: render scratch #7
-.bench: ; v1: render scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (render:8)
-    call    time_seconds ; v1: render scratch #9
-    movsd   LOC(0), xmm0 ; v1: render scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (render:10)
-    call    r_update_meshes_body ; v1: render scratch #11
-    call    time_seconds ; v1: render scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (render:12)
-    movsd   xmm1, xmm0 ; v1: render scratch #13
-    subsd   xmm1, LOC(0) ; v1: render scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (render:14)
-    addsd   xmm1, [rel r_bench_acc] ; v1: render scratch #15
-    movsd   [rel r_bench_acc], xmm1 ; v1: render scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (render:16)
-    movsd   xmm1, [rel r_bench_t0] ; v1: render scratch #17
-    xorpd   xmm2, xmm2 ; v1: render scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (render:18)
-    ucomisd xmm1, xmm2 ; v1: render scratch #19
-    jne     .have_t0 ; v1: render scratch #20
-    ; TODO: clamp index before table lookup on malformed input (render:20)
-    movsd   [rel r_bench_t0], xmm0 ; v1: render scratch #21
-    mov     eax, [rel g_stat_meshes_built] ; v1: render scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (render:22)
-    mov     [rel r_bench_m0], eax ; v1: render scratch #23
-    jmp     .done ; v1: render scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (render:24)
-.have_t0: ; v1: render scratch #25
-    movsd   xmm2, xmm0 ; v1: render scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (render:26)
-    subsd   xmm2, xmm1 ; v1: render scratch #27
-    comisd  xmm2, [rel d_one] ; v1: render scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (render:28)
-    jb      .done ; v1: render scratch #29
-    movsd   [rel r_bench_t0], xmm0 ; v1: render scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (render:30)
-    call    r_bench_log ; v1: render scratch #31
-.done: ; v1: render scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (render:32)
-ENDP ; v1: render scratch #33
+PROC render_update_meshes, 16
+    cmp     dword [rel g_run_mode], 2
+    je      .bench
+    call    r_update_meshes_body
+    jmp     .done
+.bench:
+    call    time_seconds
+    movsd   LOC(0), xmm0
+    call    r_update_meshes_body
+    call    time_seconds
+    movsd   xmm1, xmm0
+    subsd   xmm1, LOC(0)
+    addsd   xmm1, [rel r_bench_acc]
+    movsd   [rel r_bench_acc], xmm1
+    movsd   xmm1, [rel r_bench_t0]
+    xorpd   xmm2, xmm2
+    ucomisd xmm1, xmm2
+    jne     .have_t0
+    movsd   [rel r_bench_t0], xmm0
+    mov     eax, [rel g_stat_meshes_built]
+    mov     [rel r_bench_m0], eax
+    jmp     .done
+.have_t0:
+    movsd   xmm2, xmm0
+    subsd   xmm2, xmm1
+    comisd  xmm2, [rel d_one]
+    jb      .done
+    movsd   [rel r_bench_t0], xmm0
+    call    r_bench_log
+.done:
+ENDP
 
-LPROC r_bench_log, 32 ; v1: render scratch #35
+LPROC r_bench_log, 32
     ; resident = every chunk's vbos
-    xor     r12, r12 ; v1: render scratch #37
-    xor     ebx, ebx ; v1: render scratch #38
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (render:38)
-.cl: ; v1: render scratch #39
-    cmp     ebx, [rel g_chunk_count] ; v1: render scratch #40
-    ; TODO: clamp index before table lookup on malformed input (render:40)
-    jae     .sum ; v1: render scratch #41
+    xor     r12, r12
+    xor     ebx, ebx
+.cl:
+    cmp     ebx, [rel g_chunk_count]
+    jae     .sum
     lea     rax, [rel g_chunk_list]
     mov     rdi, [rax + rbx*8]
     inc     ebx
@@ -752,6 +735,298 @@ LPROCX r_update_meshes_body, 64
     mov     ecx, LOC(16)
     call    mesher_collect
 ENDPX
+
+LPROC r_neighbours_lit, 16 ; v1: render scratch #1
+    mov     r12, rcx ; v1: render scratch #2
+    ; TODO: hoist invariant pointer load out of .loop (render:2)
+    xor     ebx, ebx ; v1: render scratch #3
+.l: ; v1: render scratch #4
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (render:4)
+    lea     rax, [rel nb8_dx] ; v1: render scratch #5
+    movsx   ecx, byte [rax + rbx] ; v1: render scratch #6
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (render:6)
+    add     ecx, [r12 + CHUNK.cx] ; v1: render scratch #7
+    lea     rax, [rel nb8_dz] ; v1: render scratch #8
+    ; TODO: clamp index before table lookup on malformed input (render:8)
+    movsx   edx, byte [rax + rbx] ; v1: render scratch #9
+    add     edx, [r12 + CHUNK.cz] ; v1: render scratch #10
+    ; note: rcx = state ptr, rdx = index, r8d = flags (render:10)
+    call    world_get_chunk ; v1: render scratch #11
+    test    rax, rax ; v1: render scratch #12
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (render:12)
+    jz      .no ; v1: render scratch #13
+    cmp     dword [rax + CHUNK.state], CS_LIT ; v1: render scratch #14
+    ; temp: spill r12/r13 across helper call until reg alloc pass (render:14)
+    jb      .no ; v1: render scratch #15
+    inc     ebx ; v1: render scratch #16
+    ; TODO: verify 16-byte rsp alignment before inner call (render:16)
+    cmp     ebx, 8 ; v1: render scratch #17
+    jb      .l ; v1: render scratch #18
+    ; TODO: hoist invariant pointer load out of .loop (render:18)
+    mov     eax, 1 ; v1: render scratch #19
+    jmp     .done ; v1: render scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (render:20)
+.no: ; v1: render scratch #21
+    xor     eax, eax ; v1: render scratch #22
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (render:22)
+.done: ; v1: render scratch #23
+ENDP ; v1: render scratch #24
+    ; TODO: clamp index before table lookup on malformed input (render:24)
+
+; xmm0 degrees -> xmm0 sin, xmm1 cos
+r_sincos_deg: ; v1: render scratch #27
+    sub     rsp, 40 ; v1: render scratch #28
+    ; note: rcx = state ptr, rdx = index, r8d = flags (render:28)
+    mulss   xmm0, [rel f_deg2rad] ; v1: render scratch #29
+    call    math_sincos ; v1: render scratch #30
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (render:30)
+    add     rsp, 40 ; v1: render scratch #31
+    ret ; v1: render scratch #32
+    ; temp: spill r12/r13 across helper call until reg alloc pass (render:32)
+
+; locals: 0 eye, 12 yaw, 16 pitch, 20 roll, 24 dir, 36/40 bob, 44 fov target,
+; 48 raydir, 60 dist, 64 aspect. r_compute_dir_local pokes 12/16/24, don't move those
+PROCX render_set_camera, 96
+    movss   xmm0, [rel g_player + PLAYER.eye_height]
+    xorps   xmm1, xmm1
+    comiss  xmm0, xmm1
+    ja      .eh
+    movss   xmm0, [rel f_eye]
+.eh:
+    addss   xmm0, [rel g_player + PLAYER.y]
+    movss   LOC(4), xmm0
+    movss   xmm0, [rel g_player + PLAYER.x]
+    movss   LOC(0), xmm0
+    movss   xmm0, [rel g_player + PLAYER.z]
+    movss   LOC(8), xmm0
+    movss   xmm0, [rel g_player + PLAYER.yaw]
+    movss   LOC(12), xmm0
+    movss   xmm0, [rel g_player + PLAYER.pitch]
+    movss   LOC(16), xmm0
+    xorps   xmm0, xmm0
+    movss   LOC(20), xmm0
+    movss   LOC(36), xmm0
+    movss   LOC(40), xmm0
+    movss   xmm8, [rel g_frame_dt]
+
+    ; fov: setting * sprint/fly/underwater, eased into g_fov_current
+    movss   xmm0, [rel g_settings + SETTINGS.fov]
+    FARG    xmm1, 10.0
+    comiss  xmm0, xmm1
+    jae     .fov1
+    movss   xmm0, [rel f_70]
+.fov1:
+    cmp     dword [rel g_player + PLAYER.sprinting], 0
+    je      .fov2
+    FARG    xmm1, 1.12
+    mulss   xmm0, xmm1
+.fov2:
+    cmp     dword [rel g_player + PLAYER.flying], 0
+    je      .fov3
+    FARG    xmm1, 1.08
+    mulss   xmm0, xmm1
+.fov3:
+    cmp     dword [rel g_player + PLAYER.eye_in_water], 0
+    je      .fov4
+    FARG    xmm1, 0.92
+    mulss   xmm0, xmm1
+.fov4:
+    movss   xmm1, [rel g_fov_current]
+    FARG    xmm2, 1.0
+    comiss  xmm1, xmm2
+    jae     .fov5
+    movss   xmm1, xmm0                          ; first frame, just snap
+.fov5:
+    movss   xmm2, xmm8
+    FARG    xmm3, 8.0
+    mulss   xmm2, xmm3
+    minss   xmm2, [rel f_one]
+    movss   xmm3, xmm0
+    subss   xmm3, xmm1
+    mulss   xmm3, xmm2
+    addss   xmm1, xmm3
+    movss   [rel g_fov_current], xmm1
+
+    ; shake from explosions, decays 1.5/s
+    movss   xmm9, [rel g_shake]
+    xorps   xmm1, xmm1
+    comiss  xmm9, xmm1
+    jbe     .noshake
+    call    rng_float_signed
+    mulss   xmm0, xmm9
+    mulss   xmm0, [rel f_two]
+    addss   xmm0, LOC(12)
+    movss   LOC(12), xmm0
+    call    rng_float_signed
+    mulss   xmm0, xmm9
+    mulss   xmm0, [rel f_two]
+    addss   xmm0, LOC(16)
+    movss   LOC(16), xmm0
+    call    rng_float_signed
+    mulss   xmm0, xmm9
+    addss   xmm0, LOC(20)
+    movss   LOC(20), xmm0
+    FARG    xmm0, 1.5
+    mulss   xmm0, xmm8
+    subss   xmm9, xmm0
+    xorps   xmm0, xmm0
+    maxss   xmm9, xmm0
+    movss   [rel g_shake], xmm9
+.noshake:
+
+    ; hurt tilt, roll += 7 * sin(pi * t^2) with t = hurt_time/10. dead = flat 25
+    mov     eax, [rel g_player + PLAYER.hurt_time]
+    test    eax, eax
+    jle     .nohurt
+    cvtsi2ss xmm0, eax
+    FARG    xmm1, 0.1
+    mulss   xmm0, xmm1
+    minss   xmm0, [rel f_one]
+    mulss   xmm0, xmm0
+    mulss   xmm0, [rel f_pi]
+    call    math_sin
+    FARG    xmm1, 7.0
+    mulss   xmm0, xmm1
+    addss   xmm0, LOC(20)
+    movss   LOC(20), xmm0
+.nohurt:
+    cmp     dword [rel g_player + PLAYER.dead], 0
+    je      .nodead
+    FARG    xmm0, 25.0
+    addss   xmm0, LOC(20)
+    movss   LOC(20), xmm0
+.nodead:
+
+    ; view bob, first person only
+    cmp     dword [rel g_view_mode], 0
+    jne     .nobob
+    cmp     dword [rel g_settings + SETTINGS.view_bob], 0
+    je      .nobob
+    movss   xmm10, [rel g_player + PLAYER.bob_amount]
+    xorps   xmm0, xmm0
+    maxss   xmm10, xmm0
+    minss   xmm10, [rel f_one]
+    comiss  xmm10, xmm0
+    jbe     .nobob
+    movss   xmm0, [rel g_player + PLAYER.bob]
+    call    math_sincos
+    movaps  xmm2, xmm1
+    andps   xmm2, [rel abs_mask]                ; |cos|, one dip per step
+    FARG    xmm3, 0.05
+    mulss   xmm3, xmm0
+    mulss   xmm3, xmm10
+    movss   LOC(36), xmm3
+    FARG    xmm3, -0.07
+    mulss   xmm3, xmm2
+    mulss   xmm3, xmm10
+    movss   LOC(40), xmm3
+    FARG    xmm3, 0.8
+    mulss   xmm3, xmm0
+    mulss   xmm3, xmm10
+    addss   xmm3, LOC(20)
+    movss   LOC(20), xmm3
+    FARG    xmm3, 1.0
+    mulss   xmm3, xmm2
+    mulss   xmm3, xmm10
+    movss   xmm4, LOC(16)
+    subss   xmm4, xmm3
+    movss   LOC(16), xmm4
+.nobob:
+    movss   xmm0, LOC(16)
+    maxss   xmm0, [rel f_m90]
+    minss   xmm0, [rel f_90]
+    movss   LOC(16), xmm0
+
+    call    r_compute_dir_local
+    ; third person cam raycasts back from the eye so it doesn't clip into walls
+    mov     eax, [rel g_view_mode]
+    test    eax, eax
+    jz      .first
+    ; mode 1 = behind (-dir), mode 2 = in front (+dir)
+    movss   xmm0, LOC(24)
+    movss   xmm1, LOC(28)
+    movss   xmm2, LOC(32)
+    cmp     eax, 1
+    jne     .rd
+    xorps   xmm0, [rel sign_mask]
+    xorps   xmm1, [rel sign_mask]
+    xorps   xmm2, [rel sign_mask]
+.rd:
+    movss   LOC(48), xmm0
+    movss   LOC(52), xmm1
+    movss   LOC(56), xmm2
+    lea     r9, [rel r_hit]
+    mov     dword [r9 + RAYHIT.hit], 0
+    lea     rcx, LOC(0)
+    lea     rdx, LOC(48)
+    movss   xmm2, [rel f_tp_dist]
+    call    raycast_blocks
+    movss   xmm0, [rel f_tp_dist]
+    test    eax, eax
+    jz      .boom
+    movss   xmm0, [rel r_hit + RAYHIT.dist]
+    subss   xmm0, [rel f_tp_min]
+    maxss   xmm0, [rel f_tp_min]
+.boom:
+    movss   xmm1, LOC(48)
+    mulss   xmm1, xmm0
+    addss   xmm1, LOC(0)
+    movss   LOC(0), xmm1
+    movss   xmm1, LOC(52)
+    mulss   xmm1, xmm0
+    addss   xmm1, LOC(4)
+    movss   LOC(4), xmm1
+    movss   xmm1, LOC(56)
+    mulss   xmm1, xmm0
+    addss   xmm1, LOC(8)
+    movss   LOC(8), xmm1
+    cmp     dword [rel g_view_mode], 2
+    jne     .first
+    ; front view, turn around and look back at the player
+    movss   xmm0, LOC(12)
+    addss   xmm0, [rel f_180]
+    movss   LOC(12), xmm0
+    movss   xmm0, LOC(16)
+    xorps   xmm0, [rel sign_mask]
+    movss   LOC(16), xmm0
+    call    r_compute_dir_local
+.first:
+    movss   xmm0, LOC(12)
+    call    r_sincos_deg
+    movss   [rel g_cam_right], xmm1
+    xorps   xmm2, xmm2
+    movss   [rel g_cam_right + 4], xmm2
+    movss   [rel g_cam_right + 8], xmm0
+    movss   xmm2, LOC(36)
+    mulss   xmm1, xmm2
+    mulss   xmm0, xmm2
+    addss   xmm1, LOC(0)
+    movss   [rel g_cam_pos], xmm1
+    movss   xmm1, LOC(4)
+    addss   xmm1, LOC(40)
+    movss   [rel g_cam_pos + 4], xmm1
+    addss   xmm0, LOC(8)
+    movss   [rel g_cam_pos + 8], xmm0
+    movss   xmm0, LOC(12)
+    movss   [rel g_cam_yaw], xmm0
+    movss   xmm0, LOC(16)
+    movss   [rel g_cam_pitch], xmm0
+    movss   xmm0, LOC(24)
+    movss   [rel g_cam_dir], xmm0
+    movss   xmm0, LOC(28)
+    movss   [rel g_cam_dir + 4], xmm0
+    movss   xmm0, LOC(32)
+    movss   [rel g_cam_dir + 8], xmm0
+    ; up = right x dir = (-rz*dy, rz*dx - rx*dz, rx*dy)
+    movss   xmm0, [rel g_cam_right + 8]
+    mulss   xmm0, LOC(28)
+    xorps   xmm0, [rel sign_mask]
+    movss   [rel g_cam_up], xmm0
+    movss   xmm0, [rel g_cam_right + 8]
+    mulss   xmm0, LOC(24)
+    movss   xmm1, [rel g_cam_right]
+    ; v1 temporary guard (render #15)
+    xor     r11d, r11d ; clear v1 slot 15
     ; v1 temporary guard (render #17)
     xor     r11d, r11d ; clear v1 slot 17
     ; v1 temporary guard (render #19)
@@ -796,7 +1071,3 @@ ENDPX
     xor     r11d, r11d ; clear v1 slot 57
     ; v1 temporary guard (render #59)
     xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (render #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (render #63)
-    xor     r11d, r11d ; clear v1 slot 63
