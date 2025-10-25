@@ -2779,3 +2779,59 @@ LPROCX r_draw_hand, 32
 .restore:
     call    r_load_world_matrices
 ENDPX
+
+; full screen wash in water / lava
+LPROC r_draw_tint, 16
+    mov     ecx, GL_PROJECTION
+    call    glMatrixMode
+    call    glLoadIdentity
+    mov     ecx, GL_MODELVIEW
+    call    glMatrixMode
+    call    glLoadIdentity
+    mov     ecx, GL_DEPTH_TEST
+    call    glDisable
+    mov     ecx, GL_TEXTURE_2D
+    call    glDisable
+    mov     ecx, GL_BLEND
+    call    glEnable
+    cmp     dword [rel r_medium], 2
+    je      .lava
+    FARG    xmm0, 0.10
+    FARG    xmm1, 0.25
+    FARG    xmm2, 0.62
+    FARG    xmm3, 0.32
+    jmp     .col
+.lava:
+    FARG    xmm0, 0.85
+    FARG    xmm1, 0.30
+    FARG    xmm2, 0.05
+    FARG    xmm3, 0.60
+.col:
+    call    glColor4f
+    mov     ecx, GL_QUADS
+    call    glBegin
+    FARG    xmm0, -1.0
+    FARG    xmm1, -1.0
+    call    glVertex2f
+    FARG    xmm0, 1.0
+    FARG    xmm1, -1.0
+    call    glVertex2f
+    FARG    xmm0, 1.0
+    FARG    xmm1, 1.0
+    call    glVertex2f
+    FARG    xmm0, -1.0
+    FARG    xmm1, 1.0
+    call    glVertex2f
+    call    glEnd
+    mov     ecx, GL_BLEND
+    call    glDisable
+    mov     ecx, GL_TEXTURE_2D
+    call    glEnable
+    mov     ecx, GL_DEPTH_TEST
+    call    glEnable
+    movss   xmm0, [rel f_one]
+    movss   xmm1, xmm0
+    movss   xmm2, xmm0
+    movss   xmm3, xmm0
+    call    glColor4f
+ENDP
