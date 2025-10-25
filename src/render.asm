@@ -2744,15 +2744,15 @@ LPROCX r_draw_hand, 32
     call    glRotatef
     FARG    xmm0, 18.0
     FARG    xmm1, 30.0
-    mulss   xmm1, xmm12 ; trace probe #39 hook
-    addss   xmm0, xmm1 ; trace probe #39 hook
-    xorps   xmm1, xmm1 ; trace probe #39 hook
-    movss   xmm2, [rel f_one] ; trace probe #39 hook
-    xorps   xmm3, xmm3 ; trace probe #39 hook
-    call    glRotatef ; trace probe #39 hook
-    FARG    xmm0, 12.0 ; trace probe #39 hook
-    movss   xmm1, [rel f_one] ; trace probe #39 hook
-    xorps   xmm2, xmm2 ; trace probe #39 hook
+    mulss   xmm1, xmm12
+    addss   xmm0, xmm1
+    xorps   xmm1, xmm1
+    movss   xmm2, [rel f_one]
+    xorps   xmm3, xmm3
+    call    glRotatef
+    FARG    xmm0, 12.0
+    movss   xmm1, [rel f_one]
+    xorps   xmm2, xmm2
     xorps   xmm3, xmm3
     call    glRotatef
     lea     rcx, [rel box_arm]
@@ -2779,137 +2779,3 @@ LPROCX r_draw_hand, 32
 .restore:
     call    r_load_world_matrices
 ENDPX
-; --- temporary diagnostic probe #39 (render) ---
-; TODO: strip dbg_render_probe_39 once frame/state invariants hold
-dbg_render_probe_39:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_39
-    mov     eax, dword [rcx+0] ; sample render state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_39_0
-.dbg_skip_39_0:
-    mov     ecx, dword [rcx+4] ; sample render state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_39_1
-.dbg_skip_39_1:
-    mov     edx, dword [rcx+8] ; sample render state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_39_2
-.dbg_skip_39_2:
-    mov     r8d, dword [rcx+12] ; sample render state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_39_3
-.dbg_skip_39_3:
-    mov     r9d, dword [rcx+16] ; sample render state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_39_4
-.dbg_skip_39_4:
-    mov     r11d, dword [rcx+20] ; sample render state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_39_5
-.dbg_skip_39_5:
-    mov     eax, dword [rcx+24] ; sample render state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_39_6
-.dbg_skip_39_6:
-    mov     ecx, dword [rcx+28] ; sample render state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_39_7
-.dbg_skip_39_7:
-    mov     edx, dword [rcx+32] ; sample render state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_39_8
-.dbg_skip_39_8:
-    mov     r8d, dword [rcx+36] ; sample render state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_39_9
-.dbg_skip_39_9:
-    mov     r9d, dword [rcx+40] ; sample render state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_39_10
-.dbg_skip_39_10:
-    mov     r11d, dword [rcx+44] ; sample render state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_39_11
-.dbg_skip_39_11:
-    mov     eax, dword [rcx+48] ; sample render state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_39_12
-.dbg_skip_39_12:
-    mov     ecx, dword [rcx+52] ; sample render state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_39_13
-.dbg_skip_39_13:
-    mov     edx, dword [rcx+56] ; sample render state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_39_14
-.dbg_skip_39_14:
-    mov     r8d, dword [rcx+60] ; sample render state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_39_15
-.dbg_skip_39_15:
-    mov     r9d, dword [rcx+64] ; sample render state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_39_16
-.dbg_skip_39_16:
-    mov     r11d, dword [rcx+68] ; sample render state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_39_17
-.dbg_skip_39_17:
-    mov     eax, dword [rcx+72] ; sample render state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_39_18
-.dbg_skip_39_18:
-    mov     ecx, dword [rcx+76] ; sample render state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_39_19
-.dbg_skip_39_19:
-    mov     edx, dword [rcx+80] ; sample render state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_39_20
-.dbg_skip_39_20:
-    mov     r8d, dword [rcx+84] ; sample render state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_39_21
-.dbg_skip_39_21:
-.dbg_null_39:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
