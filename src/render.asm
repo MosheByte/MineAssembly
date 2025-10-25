@@ -2061,58 +2061,42 @@ LPROCX r_imm_box, 32
 ENDPX
 
 ; ecx id -> rb_tile/rb_tint/rb_rect
-LPROC rb_setup_block, 16 ; v1: render scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (render:2)
-    mov     r12d, ecx ; v1: render scratch #3
-    xor     ebx, ebx ; v1: render scratch #4
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (render:4)
-.l: ; v1: render scratch #5
-    imul    eax, r12d, 6 ; v1: render scratch #6
-    ; note: rcx = state ptr, rdx = index, r8d = flags (render:6)
-    add     eax, ebx ; v1: render scratch #7
-    lea     rdx, [rel blk_tex] ; v1: render scratch #8
-    ; TODO: clamp index before table lookup on malformed input (render:8)
-    movzx   eax, byte [rdx + rax] ; v1: render scratch #9
-    lea     rdx, [rel rb_tile] ; v1: render scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (render:10)
-    mov     [rdx + rbx], al ; v1: render scratch #11
-    lea     rdx, [rel rb_rect] ; v1: render scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (render:12)
-    mov     dword [rdx + rbx*4], RECT_FULL ; v1: render scratch #13
-    mov     ecx, r12d ; v1: render scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (render:14)
-    mov     edx, ebx ; v1: render scratch #15
-    call    r_item_tint ; v1: render scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (render:16)
-    lea     rdx, [rel rb_tint] ; v1: render scratch #17
-    mov     [rdx + rbx*4], eax ; v1: render scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (render:18)
-    inc     ebx ; v1: render scratch #19
-    cmp     ebx, 6 ; v1: render scratch #20
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (render:20)
-    jb      .l ; v1: render scratch #21
-ENDP ; v1: render scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (render:22)
+LPROC rb_setup_block, 16
+    mov     r12d, ecx
+    xor     ebx, ebx
+.l:
+    imul    eax, r12d, 6
+    add     eax, ebx
+    lea     rdx, [rel blk_tex]
+    movzx   eax, byte [rdx + rax]
+    lea     rdx, [rel rb_tile]
+    mov     [rdx + rbx], al
+    lea     rdx, [rel rb_rect]
+    mov     dword [rdx + rbx*4], RECT_FULL
+    mov     ecx, r12d
+    mov     edx, ebx
+    call    r_item_tint
+    lea     rdx, [rel rb_tint]
+    mov     [rdx + rbx*4], eax
+    inc     ebx
+    cmp     ebx, 6
+    jb      .l
+ENDP
 
-rb_load_box: ; v1: render scratch #24
-    ; TODO: clamp index before table lookup on malformed input (render:24)
-    movups  xmm0, [rcx] ; v1: render scratch #25
-    movups  [rel rb_box], xmm0 ; v1: render scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (render:26)
-    movq    xmm0, [rcx + 16] ; v1: render scratch #27
-    movq    [rel rb_box + 16], xmm0 ; v1: render scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (render:28)
-    ret ; v1: render scratch #29
+rb_load_box:
+    movups  xmm0, [rcx]
+    movups  [rel rb_box], xmm0
+    movq    xmm0, [rcx + 16]
+    movq    [rel rb_box + 16], xmm0
+    ret
 
 ; unit cube at the current matrix, knows plants/torch/lantern/cactus.
 ; turns alpha test on for cutout tiles and puts it back after
-PROCX render_block_cube, 32 ; v1: render scratch #33
-    and     ecx, 255 ; v1: render scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (render:34)
-    cmp     ecx, BLOCK_COUNT ; v1: render scratch #35
-    jae     .done ; v1: render scratch #36
-    ; TODO: hoist invariant pointer load out of .loop (render:36)
-    test    ecx, ecx ; v1: render scratch #37
+PROCX render_block_cube, 32
+    and     ecx, 255
+    cmp     ecx, BLOCK_COUNT
+    jae     .done
+    test    ecx, ecx
     jz      .done
     mov     r12d, ecx
     movss   [rel rb_bright], xmm1
@@ -2312,51 +2296,283 @@ PROCX render_item_sprite, 64
     movaps  xmm13, xmm12
     xorps   xmm13, [rel sign_mask]
 
-    ; v1 temporary guard (render #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (render #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (render #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (render #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (render #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (render #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (render #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (render #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (render #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (render #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (render #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (render #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (render #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (render #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (render #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (render #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (render #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (render #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (render #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (render #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (render #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (render #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (render #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (render #62)
-    xor     r11d, r11d ; clear v1 slot 62
+    mov     ecx, GL_QUADS ; v1: render scratch #0
+    ; note: rcx = state ptr, rdx = index, r8d = flags (render:0)
+    call    glBegin ; v1: render scratch #1
+    mov     eax, r15d ; v1: render scratch #2
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (render:2)
+    movss   xmm0, LOC(0) ; v1: render scratch #3
+    call    r_color ; v1: render scratch #4
+    ; TODO: clamp index before table lookup on malformed input (render:4)
+    movss   xmm0, [rel r_uv] ; v1: render scratch #5
+    movss   xmm1, [rel r_uv + 12] ; v1: render scratch #6
+    ; temp: spill r12/r13 across helper call until reg alloc pass (render:6)
+    movaps  xmm2, xmm13 ; v1: render scratch #7
+    movaps  xmm3, xmm13 ; v1: render scratch #8
+    ; TODO: verify 16-byte rsp alignment before inner call (render:8)
+    movaps  xmm4, xmm10 ; v1: render scratch #9
+    call    imm_v ; v1: render scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (render:10)
+    movss   xmm0, [rel r_uv + 8] ; v1: render scratch #11
+    movss   xmm1, [rel r_uv + 12] ; v1: render scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (render:12)
+    movaps  xmm2, xmm12 ; v1: render scratch #13
+    movaps  xmm3, xmm13 ; v1: render scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (render:14)
+    movaps  xmm4, xmm10 ; v1: render scratch #15
+    call    imm_v ; v1: render scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (render:16)
+    movss   xmm0, [rel r_uv + 8] ; v1: render scratch #17
+    movss   xmm1, [rel r_uv + 4] ; v1: render scratch #18
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (render:18)
+    movaps  xmm2, xmm12 ; v1: render scratch #19
+    movaps  xmm3, xmm12 ; v1: render scratch #20
+    ; TODO: clamp index before table lookup on malformed input (render:20)
+    movaps  xmm4, xmm10 ; v1: render scratch #21
+    call    imm_v ; v1: render scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (render:22)
+    movss   xmm0, [rel r_uv] ; v1: render scratch #23
+    movss   xmm1, [rel r_uv + 4] ; v1: render scratch #24
+    ; TODO: verify 16-byte rsp alignment before inner call (render:24)
+    movaps  xmm2, xmm13 ; v1: render scratch #25
+    movaps  xmm3, xmm12 ; v1: render scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (render:26)
+    movaps  xmm4, xmm10 ; v1: render scratch #27
+    call    imm_v ; v1: render scratch #28
+    ; TODO: hoist invariant pointer load out of .loop (render:28)
+    ; back, mirrored
+    mov     eax, r15d ; v1: render scratch #30
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (render:30)
+    movss   xmm0, LOC(0) ; v1: render scratch #31
+    FARG    xmm1, 0.8 ; v1: render scratch #32
+    ; note: rcx = state ptr, rdx = index, r8d = flags (render:32)
+    mulss   xmm0, xmm1 ; v1: render scratch #33
+    call    r_color ; v1: render scratch #34
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (render:34)
+    movss   xmm0, [rel r_uv] ; v1: render scratch #35
+    movss   xmm1, [rel r_uv + 12] ; v1: render scratch #36
+    ; TODO: clamp index before table lookup on malformed input (render:36)
+    movaps  xmm2, xmm13 ; v1: render scratch #37
+    movaps  xmm3, xmm13 ; v1: render scratch #38
+    ; temp: spill r12/r13 across helper call until reg alloc pass (render:38)
+    movaps  xmm4, xmm11 ; v1: render scratch #39
+    call    imm_v ; v1: render scratch #40
+    ; TODO: verify 16-byte rsp alignment before inner call (render:40)
+    movss   xmm0, [rel r_uv] ; v1: render scratch #41
+    movss   xmm1, [rel r_uv + 4] ; v1: render scratch #42
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (render:42)
+    movaps  xmm2, xmm13 ; v1: render scratch #43
+    movaps  xmm3, xmm12 ; v1: render scratch #44
+    ; TODO: hoist invariant pointer load out of .loop (render:44)
+    movaps  xmm4, xmm11 ; v1: render scratch #45
+    call    imm_v
+    movss   xmm0, [rel r_uv + 8]
+    movss   xmm1, [rel r_uv + 4]
+    movaps  xmm2, xmm12
+    movaps  xmm3, xmm12
+    movaps  xmm4, xmm11
+    call    imm_v
+    movss   xmm0, [rel r_uv + 8]
+    movss   xmm1, [rel r_uv + 12]
+    movaps  xmm2, xmm12
+    movaps  xmm3, xmm13
+    movaps  xmm4, xmm11
+    call    imm_v
+    ; edge strips
+    mov     eax, r15d
+    movss   xmm0, LOC(0)
+    FARG    xmm1, 0.7
+    mulss   xmm0, xmm1
+    call    r_color
+    xor     ebx, ebx
+.strip:
+    ; column ebx: x_left = -0.5 + i/16, u_c = u0 + (i + 0.5)/256
+    cvtsi2ss xmm6, ebx
+    movaps  xmm7, xmm6
+    mulss   xmm6, [rel f_sixteenth]
+    addss   xmm6, xmm13                         ; x_left (also y_top = -x_left)
+    addss   xmm7, [rel f_half]
+    mulss   xmm7, [rel f_texel]
+    movaps  xmm8, xmm7
+    addss   xmm7, LOC(8)
+    addss   xmm8, LOC(12)
+    movaps  xmm0, xmm7
+    movss   xmm1, [rel r_uv + 12]
+    movaps  xmm2, xmm6
+    movaps  xmm3, xmm13
+    movaps  xmm4, xmm11
+    call    imm_v
+    movaps  xmm0, xmm7
+    movss   xmm1, [rel r_uv + 12]
+    movaps  xmm2, xmm6
+    movaps  xmm3, xmm13
+    movaps  xmm4, xmm10
+    call    imm_v
+    movaps  xmm0, xmm7
+    movss   xmm1, [rel r_uv + 4]
+    movaps  xmm2, xmm6
+    movaps  xmm3, xmm12
+    movaps  xmm4, xmm10
+    call    imm_v
+    movaps  xmm0, xmm7
+    movss   xmm1, [rel r_uv + 4]
+    movaps  xmm2, xmm6
+    movaps  xmm3, xmm12
+    movaps  xmm4, xmm11
+    call    imm_v
+    movaps  xmm9, xmm6
+    addss   xmm9, [rel f_sixteenth]
+    movaps  xmm0, xmm7
+    movss   xmm1, [rel r_uv + 12]
+    movaps  xmm2, xmm9
+    movaps  xmm3, xmm13
+    movaps  xmm4, xmm10
+    call    imm_v
+    movaps  xmm0, xmm7
+    movss   xmm1, [rel r_uv + 12]
+    movaps  xmm2, xmm9
+    movaps  xmm3, xmm13
+    movaps  xmm4, xmm11
+    call    imm_v
+    movaps  xmm0, xmm7
+    movss   xmm1, [rel r_uv + 4]
+    movaps  xmm2, xmm9
+    movaps  xmm3, xmm12
+    movaps  xmm4, xmm11
+    call    imm_v
+    movaps  xmm0, xmm7
+    movss   xmm1, [rel r_uv + 4]
+    movaps  xmm2, xmm9
+    movaps  xmm3, xmm12
+    movaps  xmm4, xmm10
+    call    imm_v
+    ; row ebx: y_top = 0.5 - i/16 = -x_left, y_bottom = y_top - 1/16
+    movaps  xmm9, xmm6
+    xorps   xmm9, [rel sign_mask]
+    movss   xmm0, [rel r_uv]
+    movaps  xmm1, xmm8
+    movaps  xmm2, xmm13
+    movaps  xmm3, xmm9
+    movaps  xmm4, xmm10
+    call    imm_v
+    movss   xmm0, [rel r_uv + 8]
+    movaps  xmm1, xmm8
+    movaps  xmm2, xmm12
+    movaps  xmm3, xmm9
+    movaps  xmm4, xmm10
+    call    imm_v
+    movss   xmm0, [rel r_uv + 8]
+    movaps  xmm1, xmm8
+    movaps  xmm2, xmm12
+    movaps  xmm3, xmm9
+    movaps  xmm4, xmm11
+    call    imm_v
+    movss   xmm0, [rel r_uv]
+    movaps  xmm1, xmm8
+    movaps  xmm2, xmm13
+    movaps  xmm3, xmm9
+    movaps  xmm4, xmm11
+    call    imm_v
+    subss   xmm9, [rel f_sixteenth]
+    movss   xmm0, [rel r_uv + 8]
+    movaps  xmm1, xmm8
+    movaps  xmm2, xmm12
+    movaps  xmm3, xmm9
+    movaps  xmm4, xmm10
+    call    imm_v
+    movss   xmm0, [rel r_uv]
+    movaps  xmm1, xmm8
+    movaps  xmm2, xmm13
+    movaps  xmm3, xmm9
+    movaps  xmm4, xmm10
+    call    imm_v
+    movss   xmm0, [rel r_uv]
+    movaps  xmm1, xmm8
+    movaps  xmm2, xmm13
+    movaps  xmm3, xmm9
+    movaps  xmm4, xmm11
+    call    imm_v
+    movss   xmm0, [rel r_uv + 8]
+    movaps  xmm1, xmm8
+    movaps  xmm2, xmm12
+    movaps  xmm3, xmm9
+    movaps  xmm4, xmm11
+    call    imm_v
+    inc     ebx
+    cmp     ebx, 16
+    jb      .strip
+    call    glEnd
+    test    r14d, r14d
+    jnz     .white
+    mov     ecx, GL_ALPHA_TEST
+    call    glDisable
+.white:
+    movss   xmm0, [rel f_one]
+    movss   xmm1, xmm0
+    movss   xmm2, xmm0
+    movss   xmm3, xmm0
+    call    glColor4f
+.done:
+ENDPX
+
+; light at the eye through the chunk shader's curve, for the hand
+LPROCX r_player_brightness, 16
+    movss   xmm0, [rel g_player + PLAYER.x]
+    call    r_floor
+    mov     r12d, eax
+    movss   xmm0, [rel g_player + PLAYER.eye_height]
+    xorps   xmm1, xmm1
+    comiss  xmm0, xmm1
+    ja      .e
+    movss   xmm0, [rel f_eye]
+.e:
+    addss   xmm0, [rel g_player + PLAYER.y]
+    call    r_floor
+    mov     r13d, eax
+    movss   xmm0, [rel g_player + PLAYER.z]
+    call    r_floor
+    mov     r8d, eax
+    mov     ecx, r12d
+    mov     edx, r13d
+    call    world_get_light
+    mov     ebx, eax
+    shr     eax, 4
+    and     eax, 15
+    cvtsi2ss xmm0, eax
+    mulss   xmm0, [rel f_fifteenth]
+    call    r_curve
+    mulss   xmm0, [rel r_daylight]
+    movss   xmm6, xmm0
+    ; block light, the warm tint is ignored here
+    mov     eax, ebx
+    and     eax, 15
+    cvtsi2ss xmm0, eax
+    mulss   xmm0, [rel f_fifteenth]
+    call    r_curve
+    maxss   xmm0, xmm6
+    maxss   xmm0, [rel f_min_bright]
+    minss   xmm0, [rel f_one]
+ENDPX
+
+    ; v1 temporary guard (render #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (render #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (render #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (render #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (render #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (render #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (render #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (render #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (render #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (render #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (render #43)
+    xor     r11d, r11d ; clear v1 slot 43
