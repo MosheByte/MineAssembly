@@ -127,66 +127,46 @@ PROC case_degenerate_args, 0
     CHECK_EQ32 eax, 7, "zero slots: all left over"
 ENDP
 
-PROC case_count_and_capacity, 0 ; v1: test_inventory scratch #1
-    TEST "inv_count / inv_capacity" ; v1: test_inventory scratch #2
-    ; TODO: verify 16-byte rsp alignment before inner call (test_inventory:2)
-    call  h_reset ; v1: test_inventory scratch #3
-    call  clear_arrs ; v1: test_inventory scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_inventory:4)
-    SET_STK [rel arr_a+0], 1, 10, 0 ; v1: test_inventory scratch #5
-    SET_STK [rel arr_a+4], 2, 3, 0 ; v1: test_inventory scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_inventory:6)
-    SET_STK [rel arr_a+8], 1, 64, 0 ; v1: test_inventory scratch #7
-    lea   rcx, [rel arr_a] ; v1: test_inventory scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_inventory:8)
-    mov   edx, 4 ; v1: test_inventory scratch #9
-    mov   r8d, 1 ; v1: test_inventory scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_inventory:10)
-    call  inv_count ; v1: test_inventory scratch #11
-    CHECK_EQ32 eax, 74, "count item 1" ; v1: test_inventory scratch #12
-    ; TODO: clamp index before table lookup on malformed input (test_inventory:12)
-    lea   rcx, [rel arr_a] ; v1: test_inventory scratch #13
-    mov   edx, 4 ; v1: test_inventory scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (test_inventory:14)
-    mov   r8d, 2 ; v1: test_inventory scratch #15
-    call  inv_count ; v1: test_inventory scratch #16
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_inventory:16)
-    CHECK_EQ32 eax, 3, "count item 2" ; v1: test_inventory scratch #17
-    lea   rcx, [rel arr_a] ; v1: test_inventory scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (test_inventory:18)
-    mov   edx, 4 ; v1: test_inventory scratch #19
-    mov   r8d, 1 ; v1: test_inventory scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_inventory:20)
-    call  inv_capacity ; v1: test_inventory scratch #21
-    CHECK_EQ32 eax, 54+64, "capacity item 1" ; v1: test_inventory scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_inventory:22)
-    lea   rcx, [rel arr_a] ; v1: test_inventory scratch #23
-    mov   edx, 4 ; v1: test_inventory scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_inventory:24)
-    mov   r8d, 2 ; v1: test_inventory scratch #25
-    call  inv_capacity ; v1: test_inventory scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_inventory:26)
-    CHECK_EQ32 eax, 61+64, "capacity item 2" ; v1: test_inventory scratch #27
-ENDP ; v1: test_inventory scratch #28
-    ; TODO: clamp index before table lookup on malformed input (test_inventory:28)
+PROC case_count_and_capacity, 0
+    TEST "inv_count / inv_capacity"
+    call  h_reset
+    call  clear_arrs
+    SET_STK [rel arr_a+0], 1, 10, 0
+    SET_STK [rel arr_a+4], 2, 3, 0
+    SET_STK [rel arr_a+8], 1, 64, 0
+    lea   rcx, [rel arr_a]
+    mov   edx, 4
+    mov   r8d, 1
+    call  inv_count
+    CHECK_EQ32 eax, 74, "count item 1"
+    lea   rcx, [rel arr_a]
+    mov   edx, 4
+    mov   r8d, 2
+    call  inv_count
+    CHECK_EQ32 eax, 3, "count item 2"
+    lea   rcx, [rel arr_a]
+    mov   edx, 4
+    mov   r8d, 1
+    call  inv_capacity
+    CHECK_EQ32 eax, 54+64, "capacity item 1"
+    lea   rcx, [rel arr_a]
+    mov   edx, 4
+    mov   r8d, 2
+    call  inv_capacity
+    CHECK_EQ32 eax, 61+64, "capacity item 2"
+ENDP
 
-PROC case_move_range_reverse, 0 ; v1: test_inventory scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (test_inventory:30)
-    TEST "inv_move_range: keeps damage, reverse" ; v1: test_inventory scratch #31
-    call  h_reset ; v1: test_inventory scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_inventory:32)
-    call  clear_arrs ; v1: test_inventory scratch #33
-    SET_STK [rel arr_a], I_PICK_WOOD, 1, 37 ; v1: test_inventory scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (test_inventory:34)
-    lea   rcx, [rel arr_a] ; v1: test_inventory scratch #35
-    lea   rdx, [rel arr_b] ; v1: test_inventory scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_inventory:36)
-    xor   r8d, r8d ; v1: test_inventory scratch #37
-    mov   r9d, 3 ; v1: test_inventory scratch #38
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_inventory:38)
-    mov   qword [rsp+32], 1 ; v1: test_inventory scratch #39
-    call  inv_move_range ; v1: test_inventory scratch #40
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_inventory:40)
+PROC case_move_range_reverse, 0
+    TEST "inv_move_range: keeps damage, reverse"
+    call  h_reset
+    call  clear_arrs
+    SET_STK [rel arr_a], I_PICK_WOOD, 1, 37
+    lea   rcx, [rel arr_a]
+    lea   rdx, [rel arr_b]
+    xor   r8d, r8d
+    mov   r9d, 3
+    mov   qword [rsp+32], 1
+    call  inv_move_range
     CHECK_EQ32 eax, 0, "nothing left"
     CHECK_STK [rel arr_a], 0, 0, 0, "src cleared"
     CHECK_STK [rel arr_b+8], I_PICK_WOOD, 1, 37, "reverse: last slot first"
@@ -272,33 +252,90 @@ PROC case_held_consume, 0
     call  inv_consume_held
     CHECK_STK [rel INVS(3)], 0, 0, 0, "over-consume empties"
 ENDP
-    ; v1 temporary guard (test_inventory #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_inventory #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_inventory #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_inventory #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_inventory #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_inventory #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_inventory #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_inventory #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_inventory #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_inventory #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_inventory #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_inventory #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_inventory #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_inventory #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_inventory #48)
-    xor     r11d, r11d ; clear v1 slot 48
+
+PROC case_bad_selection, 0
+    TEST "inv_held: bad selection clamped"
+    call  h_reset
+    mov   dword [rel g_player+P_SELECTED], 99
+    call  inv_held
+    lea   rdx, [rel INVS(0)]
+    CHECK_EQ rax, rdx, "clamped to slot 0"
+ENDP
+
+PROC case_tool_wear, 0
+    TEST "inv_damage_held: wear and break"
+    call  h_reset
+    lea   rax, [rel item_durability]
+    mov   word [rax+2*I_PICK_WOOD], 10
+    SET_STK [rel INVS(0)], I_PICK_WOOD, 1, 0
+    mov   ecx, 4
+    call  inv_damage_held
+    CHECK_STK [rel INVS(0)], I_PICK_WOOD, 1, 4, "worn 4"
+    mov   dword [rel g_gamemode], GM_CREATIVE
+    mov   ecx, 100
+    call  inv_damage_held
+    CHECK_STK [rel INVS(0)], I_PICK_WOOD, 1, 4, "creative: no wear"
+    mov   dword [rel g_gamemode], GM_SURVIVAL
+    mov   ecx, 5
+    call  inv_damage_held
+    CHECK_STK [rel INVS(0)], I_PICK_WOOD, 1, 9, "worn 9"
+    mov   ecx, 1
+    call  inv_damage_held                ; reaches durability: shatters
+    CHECK_STK [rel INVS(0)], 0, 0, 0, "shattered"
+ENDP
+
+PROC case_non_tool, 0
+    TEST "inv_damage_held: non-tool not damaged"
+    call  h_reset
+    SET_STK [rel INVS(0)], B_LOG, 3, 0
+    mov   ecx, 1
+    call  inv_damage_held
+    CHECK_STK [rel INVS(0)], B_LOG, 3, 0, "log unchanged"
+ENDP
+
+PROC case_clear_and_drop_all, 0
+    TEST "inv_drop_all / inv_clear_player"
+    call  h_reset
+    SET_STK [rel INVS(0)], 1, 5, 0
+    SET_STK [rel INVS(35)], 2, 7, 0
+    SET_STK [rel CURSORS], 3, 2, 0
+    SET_STK [rel CRAFTS(4)], 4, 1, 0
+    call  inv_drop_all
+    CHECK_EQ32 [rel fake_spawn_count], 4, "spawned 4 entities"
+    CHECK_EQ32 [rel fake_spawn_items], 15, "15 items dropped"
+    CHECK_STK [rel INVS(0)], 0, 0, 0, "slot 0 empty"
+    CHECK_STK [rel CURSORS], 0, 0, 0, "cursor empty"
+    CHECK_STK [rel CRAFTS(4)], 0, 0, 0, "craft 4 empty"
+    SET_STK [rel INVS(5)], 1, 5, 0
+    SET_STK [rel CRAFTS(0)], 1, 1, 0
+    call  inv_clear_player
+    ; every byte from PLAYER.inv to the end of craft_out must be zero
+    lea   rax, [rel INVS(0)]
+    xor   edx, edx
+    mov   ecx, P_CRAFT_OUT + 4 - P_INV
+.or:
+    movzx r8d, byte [rax]
+    or    edx, r8d
+    inc   rax
+    dec   ecx
+    jnz   .or
+    CHECK_EQ32 edx, 0, "everything cleared"
+ENDP
+
+PROC test_main, 0
+    call  case_merge_before_empty
+    call  case_overflow_into_empty
+    call  case_respects_max_stack
+    call  case_unstackable_tools
+    call  case_degenerate_args
+    call  case_count_and_capacity
+    call  case_move_range_reverse
+    call  case_move_range_partial
+    call  case_give_hotbar_first
+    call  case_give_full_leftover
+    call  case_held_consume
+    call  case_bad_selection
+    call  case_tool_wear
+    call  case_non_tool
+    call  case_clear_and_drop_all
+ENDP
