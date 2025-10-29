@@ -120,65 +120,47 @@ PROC case_pool_exhaustion, 0
     CHECK_NZ64 rax, "freed slot reused"
 ENDP
 
-PROC case_remove_drops, 0 ; v1: test_blockent scratch #1
-    TEST "pool: remove drops contents" ; v1: test_blockent scratch #2
-    ; TODO: verify 16-byte rsp alignment before inner call (test_blockent:2)
-    call  h_reset ; v1: test_blockent scratch #3
-    BE_GET 0, 64, 0, BE_CHEST ; v1: test_blockent scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_blockent:4)
-    mov   rbx, rax ; v1: test_blockent scratch #5
-    SET_STK [rbx+BE_SLOTS], 1, 64, 0 ; v1: test_blockent scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_blockent:6)
-    SET_STK [rbx+BE_SLOTS+4*26], I_PICK_WOOD, 1, 33 ; v1: test_blockent scratch #7
-    xor   ecx, ecx ; v1: test_blockent scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_blockent:8)
-    mov   edx, 64 ; v1: test_blockent scratch #9
-    xor   r8d, r8d ; v1: test_blockent scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_blockent:10)
-    call  blockent_remove ; v1: test_blockent scratch #11
-    CHECK_EQ32 [rel fake_spawn_count], 2, "two entities" ; v1: test_blockent scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_blockent:12)
-    CHECK_EQ32 [rel fake_spawn_items], 65, "65 items" ; v1: test_blockent scratch #13
-    movzx eax, word [rel fake_entity+62] ; v1: test_blockent scratch #14
-    ; TODO: clamp index before table lookup on malformed input (test_blockent:14)
-    CHECK_EQ32 eax, 33, "tool damage kept" ; v1: test_blockent scratch #15
-    BE_GET 0, 64, 0, 0 ; v1: test_blockent scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (test_blockent:16)
-    CHECK_EQ rax, 0, "gone" ; v1: test_blockent scratch #17
-    xor   ecx, ecx ; v1: test_blockent scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (test_blockent:18)
-    mov   edx, 64 ; v1: test_blockent scratch #19
-    xor   r8d, r8d ; v1: test_blockent scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_blockent:20)
-    call  blockent_remove ; v1: test_blockent scratch #21
-    CHECK_EQ32 [rel fake_spawn_count], 2, "no extra spawns" ; v1: test_blockent scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_blockent:22)
-ENDP ; v1: test_blockent scratch #23
+PROC case_remove_drops, 0
+    TEST "pool: remove drops contents"
+    call  h_reset
+    BE_GET 0, 64, 0, BE_CHEST
+    mov   rbx, rax
+    SET_STK [rbx+BE_SLOTS], 1, 64, 0
+    SET_STK [rbx+BE_SLOTS+4*26], I_PICK_WOOD, 1, 33
+    xor   ecx, ecx
+    mov   edx, 64
+    xor   r8d, r8d
+    call  blockent_remove
+    CHECK_EQ32 [rel fake_spawn_count], 2, "two entities"
+    CHECK_EQ32 [rel fake_spawn_items], 65, "65 items"
+    movzx eax, word [rel fake_entity+62]
+    CHECK_EQ32 eax, 33, "tool damage kept"
+    BE_GET 0, 64, 0, 0
+    CHECK_EQ rax, 0, "gone"
+    xor   ecx, ecx
+    mov   edx, 64
+    xor   r8d, r8d
+    call  blockent_remove               ; removing nothing is harmless
+    CHECK_EQ32 [rel fake_spawn_count], 2, "no extra spawns"
+ENDP
 
 ; furnace at (3,64,3) with smelt + fuel tables filled in
-PROC furnace_setup, 0 ; v1: test_blockent scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_blockent:26)
-    call  h_reset ; v1: test_blockent scratch #27
-    lea   rax, [rel item_smelt] ; v1: test_blockent scratch #28
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_blockent:28)
-    mov   byte [rax+B_IRON_ORE], I_IRON_INGOT ; v1: test_blockent scratch #29
-    mov   byte [rax+B_LOG], I_COAL ; v1: test_blockent scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_blockent:30)
-    lea   rax, [rel item_fuel] ; v1: test_blockent scratch #31
-    mov   word [rax+2*I_COAL], 1600 ; v1: test_blockent scratch #32
-    ; TODO: clamp index before table lookup on malformed input (test_blockent:32)
-    mov   word [rax+2*B_PLANKS], 300 ; v1: test_blockent scratch #33
-    mov   word [rax+2*I_LAVA_BUCKET], 20000 ; v1: test_blockent scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (test_blockent:34)
-    mov   dword [rel fake_block], B_FURNACE ; v1: test_blockent scratch #35
-    BE_GET 3, 64, 3, BE_FURNACE ; v1: test_blockent scratch #36
-    ; TODO: verify 16-byte rsp alignment before inner call (test_blockent:36)
-ENDP ; v1: test_blockent scratch #37
+PROC furnace_setup, 0
+    call  h_reset
+    lea   rax, [rel item_smelt]
+    mov   byte [rax+B_IRON_ORE], I_IRON_INGOT
+    mov   byte [rax+B_LOG], I_COAL
+    lea   rax, [rel item_fuel]
+    mov   word [rax+2*I_COAL], 1600
+    mov   word [rax+2*B_PLANKS], 300
+    mov   word [rax+2*I_LAVA_BUCKET], 20000
+    mov   dword [rel fake_block], B_FURNACE
+    BE_GET 3, 64, 3, BE_FURNACE
+ENDP
 
-PROC case_smelt_three, 0 ; v1: test_blockent scratch #39
-    TEST "furnace: smelt three ores" ; v1: test_blockent scratch #40
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_blockent:40)
-    call  furnace_setup ; v1: test_blockent scratch #41
+PROC case_smelt_three, 0
+    TEST "furnace: smelt three ores"
+    call  furnace_setup
     mov   rbx, rax
     SET_STK [rbx+BE_SLOTS+0], B_IRON_ORE, 3, 0
     SET_STK [rbx+BE_SLOTS+4], I_COAL, 2, 0
@@ -256,33 +238,51 @@ PROC case_output_full, 0
     TICK  5
     CHECK_EQ32 [rbx+BE_BURN], 0, "different output: no fire"
 ENDP
-    ; v1 temporary guard (test_blockent #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_blockent #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_blockent #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_blockent #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_blockent #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_blockent #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_blockent #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_blockent #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_blockent #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_blockent #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_blockent #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_blockent #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_blockent #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_blockent #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_blockent #46)
-    xor     r11d, r11d ; clear v1 slot 46
+
+PROC case_lava_bucket, 0
+    TEST "furnace: lava bucket leaves bucket"
+    call  furnace_setup
+    mov   rbx, rax
+    SET_STK [rbx+BE_SLOTS+0], B_LOG, 1, 0
+    SET_STK [rbx+BE_SLOTS+4], I_LAVA_BUCKET, 1, 0
+    TICK  1
+    CHECK_STK [rbx+BE_SLOTS+4], I_BUCKET, 1, 0, "empty bucket back"
+    TICK  199
+    CHECK_STK [rbx+BE_SLOTS+8], I_COAL, 1, 0, "charcoal"
+ENDP
+
+PROC case_orphan_recycled, 0
+    TEST "furnace: orphan recycled"
+    call  furnace_setup
+    mov   dword [rel fake_block], 0     ; furnace block gone
+    TICK  1
+    BE_GET 3, 64, 3, 0
+    CHECK_EQ rax, 0, "freed"
+ENDP
+
+PROC case_chests_no_tick, 0
+    TEST "furnace: chests do not tick"
+    call  furnace_setup
+    BE_GET 9, 9, 9, BE_CHEST
+    mov   rbx, rax
+    mov   dword [rel fake_block], 0
+    TICK  1
+    BE_GET 9, 9, 9, 0
+    CHECK_EQ rax, rbx, "chest kept"
+ENDP
+
+PROC test_main, 0
+    call  case_create_find_lookup
+    call  case_wrong_kind
+    call  case_lookup_raw_reload
+    call  case_pool_exhaustion
+    call  case_remove_drops
+    call  case_smelt_three
+    call  case_no_fuel
+    call  case_not_smeltable
+    call  case_cook_decays
+    call  case_output_full
+    call  case_lava_bucket
+    call  case_orphan_recycled
+    call  case_chests_no_tick
+ENDP
