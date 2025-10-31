@@ -1,20 +1,20 @@
 # tests/lib
 
-The unit-test framework, all NASM. A test is a small console program built from one `tests/<dir>/test_*.asm`, plus `tests/lib/testlib.asm` (the entry point and the `t_*` runtime), plus `src/globals.asm`, plus whatever the test lists in `; @link` lines. Any `api.inc` symbol the linked objects don't define gets stubbed (functions return 0, data symbols point at 256 KB of zeroes). <!-- draft rev 2 -->
+The unit-test framework, all NASM. A test is a small console program built from one `tests/<dir>/test_*.asm`, plus `tests/lib/testlib.asm` (the entry point and the `t_*` runtime), plus `src/globals.asm`, plus whatever the test lists in `; @link` lines. Any `api.inc` symbol the linked objects don't define gets stubbed (functions return 0, data symbols point at 256 KB of zeroes).
 
-What's in here: `testlib.inc` is the contract (externs and the `TEST` / `CHECK_*` / `PRINT` macros), `testlib.asm` is the implementation including `start`, `test_selftest.asm` tests the library itself including its failure paths, and `test_png.asm` tests the PNG encoder in `tools/mb_png.asm`. <!-- draft rev 4 -->
+What's in here: `testlib.inc` is the contract (externs and the `TEST` / `CHECK_*` / `PRINT` macros), `testlib.asm` is the implementation including `start`, `test_selftest.asm` tests the library itself including its failure paths, and `test_png.asm` tests the PNG encoder in `tools/mb_png.asm`.
 
 ## A minimal test
 
-```nasm <!-- draft rev 8 -->
-;  MineAssembly - tests/mathnoise/test_example.asm : lerp and floor. <!-- draft rev 9 -->
-; @link src/math.asm <!-- draft rev 10 -->
-; @timeout 30 <!-- draft rev 11 -->
-%include "common.inc" <!-- draft rev 12 -->
-%include "testlib.inc"          ; tests\lib is on the include path <!-- draft rev 13 -->
+```nasm
+;  MineAssembly - tests/mathnoise/test_example.asm : lerp and floor.
+; @link src/math.asm
+; @timeout 30
+%include "common.inc"
+%include "testlib.inc"          ; tests\lib is on the include path
 
-section .text <!-- draft rev 15 -->
-PROC test_main, 64              ; must be a PROC: the macros write [rsp+32..47] <!-- draft rev 16 -->
+section .text
+PROC test_main, 64              ; must be a PROC: the macros write [rsp+32..47]
     TEST "lerp"
     FCONST xmm0, 2.0
     FCONST xmm1, 6.0
@@ -117,5 +117,34 @@ Win64 ABI; every function preserves rbx rbp rsi rdi r12-r15 xmm6-xmm15.
 | `t_abi_call` | see below |
 | `t_abi_mask_name` | ecx mask, rdx buf (>= 128 bytes). Writes e.g. `rbx xmm7 rsp`, or `""` for 0 |
 
-<!-- TODO(README): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/README.asm -->
+The library also exports `t_fmt_double`, which isn't in testlib.inc: rcx buf (>= 64 bytes), xmm1 double, r8d decimals, writes a zstr and returns rax = length. Declare `extern t_fmt_double` yourself if you want it.
+
+Float printing rounds correctly, like `printf("%.*f")`. The digits come from an exact 128-bit fixed-point expansion and exact ties round to even, so 0.125 at 2 decimals prints `0.12` and 0.1 at 17 decimals prints `0.10000000000000001`. `nan`, `inf` and `-inf` print as words, and values >= 2^63 print their significant digits followed by zeros.
+
+## The ABI checker
+
+`t_abi_call(rcx fn, rdx args)` calls `fn` the way a strict caller would. `args` points to `qword a1, a2, a3, a4, nstack, stack[8]`. `a1..a4` go into rcx, rdx, r8, r9 and the same bit patterns into xmm0..xmm3, and the `nstack` stack arguments (0..8) are copied to `[rsp+32]` and up. rsp is 16-byte aligned at the `call` with 32 bytes of shadow space. Sentinels go into rbx, rbp, rsi, rdi, r12-r15 and xmm6-xmm15 and get compared after the call.
+
+It returns the callee's rax and xmm0, plus a clobber mask in ecx: bits 0..7 are rbx, rbp, rsi, rdi, r12, r13, r14, r15, bits 8..17 are xmm6..xmm15, and bit 31 means rsp was different after the return.
+
+```nasm
+section .data
+args: dq 1, 2, 3, 4, 2, 100, 200, 0,0,0,0,0,0
+section .text
+    lea  rcx, [rel my_function]
+    lea  rdx, [rel args]
+    call t_abi_call
+    mov  ebx, ecx                       ; the mask is in ecx: move it out first
+    CHECK_EQ32 ebx, 0, "my_function preserves nonvolatile registers"
+```
+
+To print which registers got clobbered, call `t_abi_mask_name` with ecx = mask and rdx = a 128-byte buffer, then pass that buffer to `t_fail_detail`. The checker keeps state in statics, so don't call it from two threads at once.
+
+## Things that will bite you
+
+- Don't pass rcx, rdx, r8 or r9 as operands to `CHECK_EQ`, `CHECK_EQ32`, `CHECK_MEM` or `CHECK_STR` (and not rax for `CHECK_EQ32`). The macro loads its argument registers in order, so `CHECK_EQ rdx, rcx` reads an rcx that's already been overwritten. Move values into rbx, rsi, rdi or r12-r15 first. `CHECK_NEAR` and `CHECK_NEAR_X` take any xmm register, except that the want register for `CHECK_NEAR_X` can't be xmm0.
+- Every check clobbers rax, rcx, rdx, r8-r11 and xmm0-xmm5. Keep loop counters and pointers in nonvolatile registers.
+- `test_main` has to be a `PROC` (or `PROCX` if it uses xmm6-15), because the macros store outgoing stack args at `[rsp+32]` and `[rsp+40]`.
+- Each check returns eax = 1 on pass and 0 on fail, so you can branch on it, add context with `t_fail_detail`, or skip checks that depend on it.
+- For deterministic data use `t_rng_*`. It doesn't touch the game's `rng_*` state.
+- Images go to the current directory (the runner uses the test's build directory) unless you give a path.
