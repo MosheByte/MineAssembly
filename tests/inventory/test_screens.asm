@@ -727,51 +727,37 @@ PROC case_drag_no_release, 0
     CHECK_STK [rel INVS(10)], 1, 2, 0, "slot 10"
 ENDP
 
-PROC case_escape_closes, 0 ; v1: test_screens scratch #1
-    TEST "slots: escape closes" ; v1: test_screens scratch #2
-    ; TODO: clamp index before table lookup on malformed input (test_screens:2)
-    call  slots_setup ; v1: test_screens scratch #3
-    SET_STK [rel CURSORS], 1, 6, 0 ; v1: test_screens scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_screens:4)
-    KEY   VK_ESCAPE_ ; v1: test_screens scratch #5
-    CHECK_STK [rel INVS(0)], 1, 6, 0, "cursor returned" ; v1: test_screens scratch #6
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_screens:6)
-ENDP ; v1: test_screens scratch #7
+PROC case_escape_closes, 0
+    TEST "slots: escape closes"
+    call  slots_setup
+    SET_STK [rel CURSORS], 1, 6, 0
+    KEY   VK_ESCAPE_
+    CHECK_STK [rel INVS(0)], 1, 6, 0, "cursor returned"
+ENDP
 
-PROC case_left_drag_room_kind, 0 ; v1: test_screens scratch #9
-    TEST "slots: left drag respects room and kind" ; v1: test_screens scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_screens:10)
-    call  slots_setup ; v1: test_screens scratch #11
-    SET_STK [rel CURSORS], 1, 20, 0 ; v1: test_screens scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_screens:12)
-    SET_STK [rel INVS(10)], 1, 60, 0 ; v1: test_screens scratch #13
-    SET_STK [rel INVS(11)], 2, 5, 0 ; v1: test_screens scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (test_screens:14)
-    HOVER G_MAIN, 9 ; v1: test_screens scratch #15
-    PRESS MB_LEFT ; v1: test_screens scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (test_screens:16)
-    MOVE  G_MAIN, 10 ; v1: test_screens scratch #17
-    MOVE  G_MAIN, 11 ; v1: test_screens scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_screens:18)
-    RELEASE MB_LEFT ; v1: test_screens scratch #19
-    CHECK_STK [rel INVS(9)], 1, 10, 0, "slot 9" ; v1: test_screens scratch #20
-    ; TODO: clamp index before table lookup on malformed input (test_screens:20)
-    CHECK_STK [rel INVS(10)], 1, 64, 0, "slot 10 topped" ; v1: test_screens scratch #21
-    CHECK_STK [rel INVS(11)], 2, 5, 0, "slot 11 skipped" ; v1: test_screens scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_screens:22)
-    CHECK_STK [rel CURSORS], 1, 6, 0, "remainder on cursor" ; v1: test_screens scratch #23
-ENDP ; v1: test_screens scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_screens:24)
+PROC case_left_drag_room_kind, 0
+    TEST "slots: left drag respects room and kind"
+    call  slots_setup
+    SET_STK [rel CURSORS], 1, 20, 0
+    SET_STK [rel INVS(10)], 1, 60, 0
+    SET_STK [rel INVS(11)], 2, 5, 0
+    HOVER G_MAIN, 9
+    PRESS MB_LEFT
+    MOVE  G_MAIN, 10
+    MOVE  G_MAIN, 11                    ; different item: skipped
+    RELEASE MB_LEFT
+    CHECK_STK [rel INVS(9)], 1, 10, 0, "slot 9"
+    CHECK_STK [rel INVS(10)], 1, 64, 0, "slot 10 topped"
+    CHECK_STK [rel INVS(11)], 2, 5, 0, "slot 11 skipped"
+    CHECK_STK [rel CURSORS], 1, 6, 0, "remainder on cursor"
+ENDP
 
-PROC case_left_drag_even, 0 ; v1: test_screens scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_screens:26)
-    TEST "slots: left drag spreads evenly" ; v1: test_screens scratch #27
-    call  slots_setup ; v1: test_screens scratch #28
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_screens:28)
-    SET_STK [rel CURSORS], 1, 10, 0 ; v1: test_screens scratch #29
-    HOVER G_MAIN, 9 ; v1: test_screens scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (test_screens:30)
-    PRESS MB_LEFT ; v1: test_screens scratch #31
+PROC case_left_drag_even, 0
+    TEST "slots: left drag spreads evenly"
+    call  slots_setup
+    SET_STK [rel CURSORS], 1, 10, 0
+    HOVER G_MAIN, 9
+    PRESS MB_LEFT
     MOVE  G_MAIN, 10
     MOVE  G_MAIN, 11
     MOVE  G_MAIN, 10                    ; revisiting adds nothing
@@ -850,45 +836,91 @@ PROC case_player_layout, 0
     call  h_layout
     CHECK_STK [rel CROUTS], I_STICK, 4, 0, "diagonal planks -> sticks"
 ENDP
-    ; v1 temporary guard (test_screens #14)
-    xor     r11d, r11d ; clear v1 slot 14
-    ; v1 temporary guard (test_screens #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (test_screens #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_screens #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_screens #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_screens #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_screens #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_screens #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_screens #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_screens #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_screens #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_screens #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_screens #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_screens #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_screens #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_screens #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_screens #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_screens #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_screens #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_screens #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_screens #54)
-    xor     r11d, r11d ; clear v1 slot 54
+
+PROC case_right_drag, 0
+    TEST "slots: right drag paints one each"
+    call  slots_setup
+    SET_STK [rel CURSORS], 1, 5, 0
+    HOVER G_MAIN, 9
+    PRESS MB_RIGHT
+    MOVE  G_MAIN, 10
+    MOVE  G_MAIN, 11
+    RELEASE MB_RIGHT
+    CHECK_STK [rel INVS(9)], 1, 1, 0, "slot 9"
+    CHECK_STK [rel INVS(10)], 1, 1, 0, "slot 10"
+    CHECK_STK [rel INVS(11)], 1, 1, 0, "slot 11"
+    CHECK_STK [rel CURSORS], 1, 2, 0, "remainder"
+ENDP
+
+PROC case_right_half_one, 0
+    TEST "slots: right half and one"
+    call  slots_setup
+    SET_STK [rel INVS(9)], 1, 7, 0
+    CLICK G_MAIN, 9, MB_RIGHT
+    CHECK_STK [rel CURSORS], 1, 4, 0, "picked half (rounded up)"
+    CHECK_STK [rel INVS(9)], 1, 3, 0, "left 3"
+    CLICK G_MAIN, 12, MB_RIGHT
+    CHECK_STK [rel INVS(12)], 1, 1, 0, "put one"
+    CHECK_STK [rel CURSORS], 1, 3, 0, "cursor 3"
+    CLICK G_MAIN, 9, MB_RIGHT
+    CHECK_STK [rel INVS(9)], 1, 4, 0, "put one more"
+    SET_STK [rel INVS(13)], 1, 1, 0
+    SET_STK [rel CURSORS], 0, 0, 0
+    CLICK G_MAIN, 13, MB_RIGHT          ; half of 1 = 1
+    CHECK_STK [rel CURSORS], 1, 1, 0, "half of 1"
+    CHECK_STK [rel INVS(13)], 0, 0, 0, "slot emptied"
+ENDP
+
+PROC case_shift_hotbar_main, 0
+    TEST "slots: shift between hotbar and main"
+    call  slots_setup
+    SET_STK [rel INVS(0)], 1, 10, 0
+    CLICK G_HOTBAR, 0, MB_LEFT, 1
+    CHECK_STK [rel INVS(0)], 0, 0, 0, "hotbar emptied"
+    CHECK_STK [rel INVS(9)], 1, 10, 0, "moved to main"
+    CLICK G_MAIN, 9, MB_LEFT, 1
+    CHECK_STK [rel INVS(0)], 1, 10, 0, "moved back"
+    SET_STK [rel CRAFTS(1)], B_LOG, 2, 0
+    CLICK G_CRAFT, 1, MB_LEFT, 1        ; grid -> inventory
+    CHECK_STK [rel INVS(1)], B_LOG, 2, 0, "grid to inventory"
+ENDP
+
+PROC test_main, 0
+    call  case_chest_quick_move
+    call  case_furnace_routing
+    call  case_block_destroyed_closes
+    call  case_close_returns
+    call  case_close_full_throws
+    call  case_crafting_layout
+    call  case_place_take_result
+    call  case_result_blocked
+    call  case_shift_craft_all
+    call  case_shift_craft_full
+    call  case_two_by_two_on_3x3
+    call  case_walking_away
+    call  case_opens_creative_scrolls
+    call  case_pick_fill_delete
+    call  case_search
+    call  case_shift_hotbar_middle
+    call  case_tab_origin_short_ui
+    call  case_tabs
+    call  case_tabs_stay_put
+    call  case_autorepeat_digits
+    call  case_autorepeat_e
+    call  case_click_current_cursor
+    call  case_full_stack_same_item
+    call  case_same_tool_swaps
+    call  case_click_outside
+    call  case_double_click
+    call  case_drag_no_release
+    call  case_escape_closes
+    call  case_left_drag_room_kind
+    call  case_left_drag_even
+    call  case_left_pick_place
+    call  case_number_keys_drop
+    call  case_player_layout
+    call  case_right_drag
+    call  case_right_half_one
+    call  case_shift_hotbar_main
+    call  h_reset                       ; leave no screen open
+ENDP
