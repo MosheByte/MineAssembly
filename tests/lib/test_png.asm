@@ -4,64 +4,45 @@
 ; @link tools/mb_png.asm
 ; @timeout 60
 
-%include "common.inc" ; v1: test_png scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_png:6)
-%include "testlib.inc" ; v1: test_png scratch #7
+%include "common.inc"
+%include "testlib.inc"
 
-extern png_init_tables, png_crc32, png_adler32, png_convert_bmp ; v1: test_png scratch #9
-extern png_read_file, png_write_file, png_free ; v1: test_png scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_png:10)
+extern png_init_tables, png_crc32, png_adler32, png_convert_bmp
+extern png_read_file, png_write_file, png_free
 
-section .rdata ; v1: test_png scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_png:12)
-tp_s_123:       db "123456789" ; v1: test_png scratch #13
-tp_s_wiki:      db "Wikipedia" ; v1: test_png scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (test_png:14)
+section .rdata
+tp_s_123:       db "123456789"
+tp_s_wiki:      db "Wikipedia"
 
-tp_f_bmp:       db "tp_gold.bmp", 0 ; v1: test_png scratch #16
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_png:16)
-tp_f_png:       db "tp_gold.png", 0 ; v1: test_png scratch #17
-tp_f_none:      db "tp_does_not_exist.bmp", 0 ; v1: test_png scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_png:18)
-tp_f_trunc:     db "tp_trunc.bmp", 0 ; v1: test_png scratch #19
-tp_f_big:       db "tp_big.bmp", 0 ; v1: test_png scratch #20
-    ; TODO: clamp index before table lookup on malformed input (test_png:20)
-tp_f_bigpng:    db "tp_big.png", 0 ; v1: test_png scratch #21
-tp_f_abipng:    db "tp_abi.png", 0 ; v1: test_png scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (test_png:22)
+tp_f_bmp:       db "tp_gold.bmp", 0
+tp_f_png:       db "tp_gold.png", 0
+tp_f_none:      db "tp_does_not_exist.bmp", 0
+tp_f_trunc:     db "tp_trunc.bmp", 0
+tp_f_big:       db "tp_big.bmp", 0
+tp_f_bigpng:    db "tp_big.png", 0
+tp_f_abipng:    db "tp_abi.png", 0
 
-align 8 ; v1: test_png scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_png:24)
-tp_gold_bmp: ; v1: test_png scratch #25
-    db 0x42, 0x4D, 0x06, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00, 0x28, 0x00 ; v1: test_png scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_png:26)
-    db 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x01, 0x00, 0x18, 0x00, 0x00, 0x00 ; v1: test_png scratch #27
-    db 0x00, 0x00, 0xD0, 0x02, 0x00, 0x00, 0x13, 0x0B, 0x00, 0x00, 0x13, 0x0B, 0x00, 0x00, 0x00, 0x00 ; v1: test_png scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_png:28)
-    db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5A, 0xE1, 0x00, 0x5A, 0xE1, 0x0A, 0x5A, 0xE1, 0x14, 0x57 ; v1: test_png scratch #29
-    db 0x9F, 0xB3, 0x37, 0x77, 0xFD, 0xDB, 0x29, 0xD8, 0x0B, 0x1D, 0x9C, 0x24, 0x09, 0x71, 0x77, 0xF8 ; v1: test_png scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (test_png:30)
-    db 0x83, 0x5A, 0xE1, 0x5A, 0x5A, 0xE1, 0x64, 0x5A, 0xE1, 0x6E, 0x5A, 0xE1, 0x78, 0x5A, 0xE1, 0x82 ; v1: test_png scratch #31
-    db 0x5A, 0xE1, 0x8C, 0x5A, 0xE1, 0x96, 0x5A, 0xE1, 0xA0, 0x5A, 0xE1, 0xAA, 0x5A, 0xE1, 0xB4, 0x5A ; v1: test_png scratch #32
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_png:32)
-    db 0xE1, 0xBE, 0x5A, 0xE1, 0xC8, 0x5A, 0xE1, 0xD2, 0x5A, 0xE1, 0xDC, 0x5A, 0xE1, 0xE6, 0x5A, 0xC8 ; v1: test_png scratch #33
-    db 0x00, 0x5A, 0xC8, 0x0A, 0x5A, 0xC8, 0x14, 0xD1, 0x77, 0x1E, 0x47, 0x57, 0x4D, 0xFD, 0x41, 0xB8 ; v1: test_png scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_png:34)
-    db 0x81, 0x7A, 0x71, 0x82, 0x8D, 0x95, 0xCA, 0xCE, 0xFE, 0x5A, 0xC8, 0x5A, 0x5A, 0xC8, 0x64, 0x5A ; v1: test_png scratch #35
-    db 0xC8, 0x6E, 0x5A, 0xC8, 0x78, 0x5A, 0xC8, 0x82, 0x5A, 0xC8, 0x8C, 0x5A, 0xC8, 0x96, 0x5A, 0xC8 ; v1: test_png scratch #36
-    ; TODO: clamp index before table lookup on malformed input (test_png:36)
-    db 0xA0, 0x5A, 0xC8, 0xAA, 0x5A, 0xC8, 0xB4, 0x5A, 0xC8, 0xBE, 0x5A, 0xC8, 0xC8, 0x5A, 0xC8, 0xD2 ; v1: test_png scratch #37
-    db 0x5A, 0xC8, 0xDC, 0x5A, 0xC8, 0xE6, 0x5A, 0xAF, 0x00, 0x5A, 0xAF, 0x0A, 0x5A, 0xAF, 0x14, 0xAF ; v1: test_png scratch #38
-    ; TODO: verify 16-byte rsp alignment before inner call (test_png:38)
-    db 0xA0, 0xF1, 0xC6, 0x94, 0xE5, 0x0E, 0x39, 0xD5, 0xDF, 0x48, 0x4C, 0x7F, 0x01, 0xE9, 0xCC, 0x21 ; v1: test_png scratch #39
-    db 0xD2, 0x5A, 0xAF, 0x5A, 0x5A, 0xAF, 0x64, 0x5A, 0xAF, 0x6E, 0x5A, 0xAF, 0x78, 0x5A, 0xAF, 0x82 ; v1: test_png scratch #40
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_png:40)
-    db 0x5A, 0xAF, 0x8C, 0x5A, 0xAF, 0x96, 0x5A, 0xAF, 0xA0, 0x5A, 0xAF, 0xAA, 0x5A, 0xAF, 0xB4, 0x5A ; v1: test_png scratch #41
-    db 0xAF, 0xBE, 0x5A, 0xAF, 0xC8, 0x5A, 0xAF, 0xD2, 0x5A, 0xAF, 0xDC, 0x5A, 0xAF, 0xE6, 0x5A, 0x96 ; v1: test_png scratch #42
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_png:42)
-    db 0x00, 0x5A, 0x96, 0x0A, 0x5A, 0x96, 0x14, 0x5A, 0x96, 0x1E, 0x5A, 0x96, 0x28, 0x5A, 0x96, 0x32 ; v1: test_png scratch #43
-    db 0x5A, 0x96, 0x3C, 0x5A, 0x96, 0x46, 0x5A, 0x96, 0x50, 0x5A, 0x96, 0x5A, 0x5A, 0x96, 0x64, 0x5A ; v1: test_png scratch #44
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_png:44)
+align 8
+tp_gold_bmp:
+    db 0x42, 0x4D, 0x06, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x36, 0x00, 0x00, 0x00, 0x28, 0x00
+    db 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x01, 0x00, 0x18, 0x00, 0x00, 0x00
+    db 0x00, 0x00, 0xD0, 0x02, 0x00, 0x00, 0x13, 0x0B, 0x00, 0x00, 0x13, 0x0B, 0x00, 0x00, 0x00, 0x00
+    db 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5A, 0xE1, 0x00, 0x5A, 0xE1, 0x0A, 0x5A, 0xE1, 0x14, 0x57
+    db 0x9F, 0xB3, 0x37, 0x77, 0xFD, 0xDB, 0x29, 0xD8, 0x0B, 0x1D, 0x9C, 0x24, 0x09, 0x71, 0x77, 0xF8
+    db 0x83, 0x5A, 0xE1, 0x5A, 0x5A, 0xE1, 0x64, 0x5A, 0xE1, 0x6E, 0x5A, 0xE1, 0x78, 0x5A, 0xE1, 0x82
+    db 0x5A, 0xE1, 0x8C, 0x5A, 0xE1, 0x96, 0x5A, 0xE1, 0xA0, 0x5A, 0xE1, 0xAA, 0x5A, 0xE1, 0xB4, 0x5A
+    db 0xE1, 0xBE, 0x5A, 0xE1, 0xC8, 0x5A, 0xE1, 0xD2, 0x5A, 0xE1, 0xDC, 0x5A, 0xE1, 0xE6, 0x5A, 0xC8
+    db 0x00, 0x5A, 0xC8, 0x0A, 0x5A, 0xC8, 0x14, 0xD1, 0x77, 0x1E, 0x47, 0x57, 0x4D, 0xFD, 0x41, 0xB8
+    db 0x81, 0x7A, 0x71, 0x82, 0x8D, 0x95, 0xCA, 0xCE, 0xFE, 0x5A, 0xC8, 0x5A, 0x5A, 0xC8, 0x64, 0x5A
+    db 0xC8, 0x6E, 0x5A, 0xC8, 0x78, 0x5A, 0xC8, 0x82, 0x5A, 0xC8, 0x8C, 0x5A, 0xC8, 0x96, 0x5A, 0xC8
+    db 0xA0, 0x5A, 0xC8, 0xAA, 0x5A, 0xC8, 0xB4, 0x5A, 0xC8, 0xBE, 0x5A, 0xC8, 0xC8, 0x5A, 0xC8, 0xD2
+    db 0x5A, 0xC8, 0xDC, 0x5A, 0xC8, 0xE6, 0x5A, 0xAF, 0x00, 0x5A, 0xAF, 0x0A, 0x5A, 0xAF, 0x14, 0xAF
+    db 0xA0, 0xF1, 0xC6, 0x94, 0xE5, 0x0E, 0x39, 0xD5, 0xDF, 0x48, 0x4C, 0x7F, 0x01, 0xE9, 0xCC, 0x21
+    db 0xD2, 0x5A, 0xAF, 0x5A, 0x5A, 0xAF, 0x64, 0x5A, 0xAF, 0x6E, 0x5A, 0xAF, 0x78, 0x5A, 0xAF, 0x82
+    db 0x5A, 0xAF, 0x8C, 0x5A, 0xAF, 0x96, 0x5A, 0xAF, 0xA0, 0x5A, 0xAF, 0xAA, 0x5A, 0xAF, 0xB4, 0x5A
+    db 0xAF, 0xBE, 0x5A, 0xAF, 0xC8, 0x5A, 0xAF, 0xD2, 0x5A, 0xAF, 0xDC, 0x5A, 0xAF, 0xE6, 0x5A, 0x96
+    db 0x00, 0x5A, 0x96, 0x0A, 0x5A, 0x96, 0x14, 0x5A, 0x96, 0x1E, 0x5A, 0x96, 0x28, 0x5A, 0x96, 0x32
+    db 0x5A, 0x96, 0x3C, 0x5A, 0x96, 0x46, 0x5A, 0x96, 0x50, 0x5A, 0x96, 0x5A, 0x5A, 0x96, 0x64, 0x5A
     db 0x96, 0x6E, 0x5A, 0x96, 0x78, 0x5A, 0x96, 0x82, 0x5A, 0x96, 0x8C, 0x5A, 0x96, 0x96, 0x5A, 0x96
     db 0xA0, 0x5A, 0x96, 0xAA, 0x5A, 0x96, 0xB4, 0x5A, 0x96, 0xBE, 0x5A, 0x96, 0xC8, 0x5A, 0x96, 0xD2
     db 0x5A, 0x96, 0xDC, 0x5A, 0x96, 0xE6, 0xC8, 0xC8, 0xC8, 0xC8, 0xC8, 0xC8, 0xC8, 0xC8, 0xC8, 0xC8
@@ -127,41 +108,160 @@ section .text
 PROC test_main, 32
     call png_init_tables
 
-    ; v1 temporary guard (test_png #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (test_png #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (test_png #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (test_png #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (test_png #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (test_png #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (test_png #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (test_png #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (test_png #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (test_png #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (test_png #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (test_png #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (test_png #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (test_png #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (test_png #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (test_png #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (test_png #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (test_png #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (test_png #55)
-    xor     r11d, r11d ; clear v1 slot 55
+    TEST "crc32"
+    lea  rcx, [rel tp_s_123]
+    mov  edx, 9
+    call png_crc32
+    CHECK_EQ32 eax, 0xCBF43926, "crc32('123456789')"
+    xor  ecx, ecx
+    xor  edx, edx
+    call png_crc32
+    CHECK_EQ32 eax, 0, "crc32 of nothing"
+
+    TEST "adler32"
+    lea  rcx, [rel tp_s_wiki]
+    mov  edx, 9
+    call png_adler32
+    CHECK_EQ32 eax, 0x11E60398, "adler32('Wikipedia')"
+    xor  ecx, ecx
+    xor  edx, edx
+    call png_adler32
+    CHECK_EQ32 eax, 1, "adler32 of nothing"
+
+    TEST "golden 24x10 image"
+    lea  rcx, [rel tp_f_bmp]
+    lea  rdx, [rel tp_gold_bmp]
+    mov  r8d, tp_gold_bmp_end - tp_gold_bmp
+    call png_write_file
+    CHECK_EQ32 eax, 1, "write the BMP"
+    lea  rcx, [rel tp_f_bmp]
+    lea  rdx, [rel tp_f_png]
+    call png_convert_bmp
+    CHECK_EQ32 eax, 1, "png_convert_bmp ok"
+    mov  qword [rel tp_size], 0
+    lea  rcx, [rel tp_f_png]
+    lea  rdx, [rel tp_size]
+    call png_read_file
+    mov  rbx, rax
+    CHECK_TRUE ebx, "PNG written"
+    test rbx, rbx
+    jz   .no_gold
+    CHECK_EQ [rel tp_size], tp_gold_png_end - tp_gold_png, "PNG size"
+    lea  rsi, [rel tp_gold_png]
+    CHECK_MEM rbx, rsi, tp_gold_png_end - tp_gold_png, "PNG bytes == golden"
+    mov  rcx, rbx
+    call png_free
+.no_gold:
+
+    TEST "bad input"
+    lea  rcx, [rel tp_f_none]
+    lea  rdx, [rel tp_f_png]
+    call png_convert_bmp
+    CHECK_EQ32 eax, 0, "missing file"
+    lea  rcx, [rel tp_f_trunc]          ; header claims more pixels than present
+    lea  rdx, [rel tp_gold_bmp]
+    mov  r8d, 100
+    call png_write_file
+    lea  rcx, [rel tp_f_trunc]
+    lea  rdx, [rel tp_f_png]
+    call png_convert_bmp
+    CHECK_EQ32 eax, 0, "truncated BMP"
+
+    TEST "abi"
+    lea  rax, [rel tp_f_bmp]
+    mov  [rel tp_abi_args], rax
+    lea  rax, [rel tp_f_abipng]
+    mov  [rel tp_abi_args+8], rax
+    lea  rcx, [rel png_convert_bmp]
+    lea  rdx, [rel tp_abi_args]
+    call t_abi_call
+    mov  ebx, ecx
+    CHECK_EQ32 eax, 1, "convert via ABI checker"
+    CHECK_EQ32 ebx, 0, "nonvolatile registers preserved"
+
+    TEST "1280x720 speed"
+    ; screenshot-like: 16x16 coloured tiles with a little per-pixel noise
+    mov  ecx, BIG_SIZE + 64
+    call t_alloc
+    mov  r12, rax
+    mov  word [r12], 'BM'
+    mov  dword [r12+2], BIG_SIZE
+    mov  dword [r12+10], 54
+    mov  dword [r12+14], 40
+    mov  dword [r12+18], BIG_W
+    mov  dword [r12+22], BIG_H
+    mov  word [r12+26], 1
+    mov  word [r12+28], 24
+    mov  ecx, 12345
+    call t_rng_seed
+    lea  r13, [r12+54]
+    xor  r14d, r14d
+.by:
+    xor  r15d, r15d
+.bx:
+    mov  eax, r14d                      ; tile colour from (x>>4, y>>4)
+    shr  eax, 4
+    imul eax, eax, 37
+    mov  ecx, r15d
+    shr  ecx, 4
+    imul ecx, ecx, 91
+    add  eax, ecx
+    mov  ebx, eax
+    call t_rng_next
+    and  eax, 7
+    lea  ecx, [rbx+rax]
+    mov  [r13], cl
+    lea  ecx, [rbx*2+rax]
+    mov  [r13+1], cl
+    lea  ecx, [rbx*4+rax]
+    mov  [r13+2], cl
+    add  r13, 3
+    inc  r15d
+    cmp  r15d, BIG_W
+    jb   .bx
+    inc  r14d
+    cmp  r14d, BIG_H
+    jb   .by
+    lea  rcx, [rel tp_f_big]
+    mov  rdx, r12
+    mov  r8d, BIG_SIZE
+    call png_write_file
+    CHECK_EQ32 eax, 1, "write the big BMP"
+    call t_time_ms
+    mov  [rel tp_t0], rax
+    lea  rcx, [rel tp_f_big]
+    lea  rdx, [rel tp_f_bigpng]
+    call png_convert_bmp
+    mov  ebx, eax
+    call t_time_ms
+    sub  rax, [rel tp_t0]
+    mov  r14, rax
+    CHECK_EQ32 ebx, 1, "convert 1280x720"
+    lea  rcx, [rel tp_s_ms]
+    call t_print
+    mov  rcx, r14
+    call t_print_int
+    call t_newline
+    xor  eax, eax
+    cmp  r14, 400
+    setb al
+    CHECK_TRUE eax, "1280x720 converts in < 400 ms"
+    mov  qword [rel tp_size], 0
+    lea  rcx, [rel tp_f_bigpng]
+    lea  rdx, [rel tp_size]
+    call png_read_file
+    mov  rcx, rax
+    call png_free
+    xor  eax, eax
+    cmp  qword [rel tp_size], BIG_SIZE/2
+    setb al
+    CHECK_TRUE eax, "PNG at most half the BMP size"
+    mov  rax, [rel tp_size]
+    xor  ecx, ecx
+    cmp  rax, 1000
+    seta cl
+    CHECK_TRUE ecx, "PNG not empty"
+ENDP
+
+section .rdata
+tp_s_ms:        db "  1280x720 conversion ms: ", 0
