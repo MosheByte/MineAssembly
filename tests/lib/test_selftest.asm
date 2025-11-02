@@ -120,50 +120,36 @@ PROC test_main, 512
     call t_newline
 
 
-    TEST "float formatting" ; v1: test_selftest scratch #1
-    FMTCHK 3.14159, 2, "3.14" ; v1: test_selftest scratch #2
-    ; TODO: clamp index before table lookup on malformed input (test_selftest:2)
-    FMTCHK 0.125, 2, "0.12" ; v1: test_selftest scratch #3
-    FMTCHK 0.375, 2, "0.38" ; v1: test_selftest scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_selftest:4)
-    FMTCHK 2.5, 0, "2" ; v1: test_selftest scratch #5
-    FMTCHK 3.5, 0, "4" ; v1: test_selftest scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_selftest:6)
-    FMTCHK -0.0001, 2, "-0.00" ; v1: test_selftest scratch #7
-    FMTCHK 0.9999, 3, "1.000" ; v1: test_selftest scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_selftest:8)
-    FMTCHK 1.0e20, 1, "100000000000000000000.0" ; v1: test_selftest scratch #9
-    FMTCHK 123456.789, 3, "123456.789" ; v1: test_selftest scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (test_selftest:10)
-    FMTCHK 1.005, 2, "1.00" ; v1: test_selftest scratch #11
-    FMTCHK -7.25, 1, "-7.2" ; v1: test_selftest scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (test_selftest:12)
-    FMTCHK 0.1, 17, "0.10000000000000001" ; v1: test_selftest scratch #13
-    FMTCHK 42.0, 0, "42" ; v1: test_selftest scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_selftest:14)
-    FMTCHK 1.5, -3, "2" ; v1: test_selftest scratch #15
-    FMTCHK 0.0, 3, "0.000" ; v1: test_selftest scratch #16
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_selftest:16)
-    FMTCHK __?Infinity?__, 2, "inf" ; v1: test_selftest scratch #17
-    FMTCHK -__?Infinity?__, 2, "-inf" ; v1: test_selftest scratch #18
-    ; TODO: clamp index before table lookup on malformed input (test_selftest:18)
-    FMTCHK __?QNaN?__, 2, "nan" ; v1: test_selftest scratch #19
+    TEST "float formatting"
+    FMTCHK 3.14159, 2, "3.14"
+    FMTCHK 0.125, 2, "0.12"
+    FMTCHK 0.375, 2, "0.38"
+    FMTCHK 2.5, 0, "2"
+    FMTCHK 3.5, 0, "4"
+    FMTCHK -0.0001, 2, "-0.00"
+    FMTCHK 0.9999, 3, "1.000"
+    FMTCHK 1.0e20, 1, "100000000000000000000.0"
+    FMTCHK 123456.789, 3, "123456.789"
+    FMTCHK 1.005, 2, "1.00"
+    FMTCHK -7.25, 1, "-7.2"
+    FMTCHK 0.1, 17, "0.10000000000000001"
+    FMTCHK 42.0, 0, "42"
+    FMTCHK 1.5, -3, "2"
+    FMTCHK 0.0, 3, "0.000"
+    FMTCHK __?Infinity?__, 2, "inf"
+    FMTCHK -__?Infinity?__, 2, "-inf"
+    FMTCHK __?QNaN?__, 2, "nan"
 
 
-    TEST "passing checks" ; v1: test_selftest scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_selftest:22)
-    CHECK_TRUE 1, "check_true" ; v1: test_selftest scratch #23
-    mov  rbx, 0x123456789 ; v1: test_selftest scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_selftest:24)
-    CHECK_EQ rbx, 0x123456789, "check_eq" ; v1: test_selftest scratch #25
-    mov  esi, -5 ; v1: test_selftest scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_selftest:26)
-    CHECK_EQ32 esi, -5, "check_eq32" ; v1: test_selftest scratch #27
-    FCONST xmm0, 1.0 ; v1: test_selftest scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (test_selftest:28)
-    CHECK_NEAR xmm0, 1.00001, 0.0001, "check_near" ; v1: test_selftest scratch #29
-    FCONST xmm0, 2.0 ; v1: test_selftest scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (test_selftest:30)
+    TEST "passing checks"
+    CHECK_TRUE 1, "check_true"
+    mov  rbx, 0x123456789
+    CHECK_EQ rbx, 0x123456789, "check_eq"
+    mov  esi, -5
+    CHECK_EQ32 esi, -5, "check_eq32"
+    FCONST xmm0, 1.0
+    CHECK_NEAR xmm0, 1.00001, 0.0001, "check_near"
+    FCONST xmm0, 2.0
     FCONST xmm1, 2.5
     CHECK_NEAR_X xmm0, xmm1, 0.5, "check_near_x (diff == tol)"
     lea  rbx, [rel blob_a]
@@ -271,47 +257,122 @@ PROC test_main, 512
     jnz  .rf
     CHECK_EQ32 ebx, 0, "rng_float in [0,1)"
 
-    ; v1 temporary guard (test_selftest #14)
-    xor     r11d, r11d ; clear v1 slot 14
-    ; v1 temporary guard (test_selftest #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (test_selftest #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_selftest #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_selftest #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_selftest #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_selftest #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_selftest #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_selftest #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_selftest #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_selftest #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_selftest #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_selftest #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_selftest #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_selftest #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_selftest #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_selftest #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_selftest #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_selftest #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_selftest #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_selftest #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_selftest #56)
-    xor     r11d, r11d ; clear v1 slot 56
+
+    TEST "alloc"
+    mov  ecx, 100000
+    call t_alloc
+    mov  rbx, rax
+    CHECK_TRUE ebx, "t_alloc non-null"
+    mov  eax, [rbx+99996]
+    or   eax, [rbx]
+    CHECK_EQ32 eax, 0, "t_alloc zeroed"
+    mov  dword [rbx+50000], 0x11223344
+    CHECK_EQ32 [rbx+50000], 0x11223344, "t_alloc writable"
+
+
+    TEST "time"
+    call t_time_ms
+    mov  rbx, rax
+    mov  ecx, 30
+    call Sleep
+    call t_time_ms
+    sub  rax, rbx
+    mov  rsi, rax
+    cmp  rsi, 20
+    setae al
+    cmp  rsi, 2000
+    setb cl
+    and  al, cl
+    movzx eax, al
+    CHECK_TRUE eax, "Sleep(30) measured within [20,2000) ms"
+
+
+    TEST "bmp"
+    lea  rcx, [rel bmp_name]
+    lea  rdx, [rel bmp_px]
+    mov  r8d, 3
+    mov  r9d, 2
+    call t_write_bmp
+    CHECK_EQ32 eax, 1, "t_write_bmp ok"
+    lea  rcx, [rel bmp_name]
+    mov  edx, 0x80000000                ; GENERIC_READ
+    mov  r8d, 1
+    xor  r9d, r9d
+    mov  qword [rsp+32], 3              ; OPEN_EXISTING
+    mov  qword [rsp+40], 0x80
+    mov  qword [rsp+48], 0
+    call CreateFileA
+    mov  rbx, rax
+    mov  rcx, rax
+    lea  rdx, LOC(0)
+    mov  r8d, 200
+    lea  r9, LOC(256)
+    mov  qword LOC(256), 0
+    mov  qword [rsp+32], 0
+    call ReadFile
+    mov  rcx, rbx
+    call CloseHandle
+    CHECK_EQ32 LOC(256), 78, "bmp file size"
+    lea  rbx, LOC(0)
+    lea  rsi, [rel bmp_gold]
+    CHECK_MEM rbx, rsi, 78, "bmp bytes == golden"
+    lea  rcx, [rel bmp_name]
+    call DeleteFileA
+    xor  ecx, ecx
+    lea  rdx, [rel bmp_px]
+    mov  r8d, 0
+    mov  r9d, 2
+    call t_write_bmp
+    CHECK_EQ32 eax, 0, "t_write_bmp rejects w=0"
+
+
+    TEST "abi checker"
+    lea  rcx, [rel abi_good]
+    lea  rdx, [rel abi_args]
+    call t_abi_call
+    mov  ebx, ecx
+    CHECK_EQ rax, 310, "args + stack args passed"
+    CHECK_EQ32 ebx, 0, "clean function -> mask 0"
+    lea  rcx, [rel abi_xmm]
+    lea  rdx, [rel abi_args]
+    call t_abi_call
+    mov  ebx, ecx
+    movq rsi, xmm0
+    CHECK_EQ rax, 2, "xmm1 = a2 bits"
+    CHECK_EQ rsi, 1, "xmm0 returned = a1 bits"
+    CHECK_EQ32 ebx, 0, "leaf -> mask 0"
+    lea  rcx, [rel abi_bad]
+    lea  rdx, [rel abi_args]
+    call t_abi_call
+    mov  ebx, ecx
+    CHECK_EQ32 ebx, 0x201, "rbx+xmm7 clobber detected"
+    lea  rcx, [rel abi_badmany]
+    lea  rdx, [rel abi_args]
+    call t_abi_call
+    mov  ebx, ecx
+    CHECK_EQ32 ebx, 0x20088, "r15+rdi+xmm15 clobber detected"
+    lea  rcx, [rel abi_rsp]
+    lea  rdx, [rel abi_args]
+    call t_abi_call
+    mov  ebx, ecx
+    CHECK_EQ32 ebx, 0x80000000, "rsp change detected"
+    lea  rcx, [rel abi_align]
+    lea  rdx, [rel abi_args]
+    call t_abi_call
+    CHECK_EQ rax, 0, "callee sees aligned stack"
+    mov  ecx, 0x80000201
+    lea  rdx, LOC(0)
+    call t_abi_mask_name
+    lea  rbx, LOC(0)
+    CHECK_STR rbx, "rbx xmm7 rsp", "mask name"
+    mov  ecx, 0x3FFFF
+    lea  rdx, LOC(0)
+    call t_abi_mask_name
+    lea  rbx, LOC(0)
+    CHECK_STR rbx, "rbx rbp rsi rdi r12 r13 r14 r15 xmm6 xmm7 xmm8 xmm9 xmm10 xmm11 xmm12 xmm13 xmm14 xmm15", "mask name all"
+    xor  ecx, ecx
+    lea  rdx, LOC(0)
+    call t_abi_mask_name
+    lea  rbx, LOC(0)
+    CHECK_STR rbx, "", "mask name empty"
+ENDP
