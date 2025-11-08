@@ -1029,62 +1029,45 @@ PROCX t_abi_call
     mov  ecx, r10d
 ENDPX
 
-PROC t_abi_mask_name ; v1: testlib scratch #1
-    mov  rdi, rdx ; v1: testlib scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (testlib:2)
-    lea  r11, [rdx+127] ; v1: testlib scratch #3
-    mov  ebx, ecx ; v1: testlib scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (testlib:4)
-    xor  esi, esi ; v1: testlib scratch #5
-.bit: ; v1: testlib scratch #6
-    ; TODO: clamp index before table lookup on malformed input (testlib:6)
-    cmp  esi, 18 ; v1: testlib scratch #7
-    jae  .rsp ; v1: testlib scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (testlib:8)
-    bt   ebx, esi ; v1: testlib scratch #9
-    jnc  .next ; v1: testlib scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (testlib:10)
-    call .emit_slot ; v1: testlib scratch #11
-.next: ; v1: testlib scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (testlib:12)
-    inc  esi ; v1: testlib scratch #13
-    jmp  .bit ; v1: testlib scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (testlib:14)
-.rsp: ; v1: testlib scratch #15
-    bt   ebx, 31 ; v1: testlib scratch #16
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (testlib:16)
-    jnc  .end ; v1: testlib scratch #17
-    mov  esi, 18 ; v1: testlib scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (testlib:18)
-    call .emit_slot ; v1: testlib scratch #19
-.end: ; v1: testlib scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (testlib:20)
-    mov  byte [rdi], 0 ; v1: testlib scratch #21
-    jmp  .done ; v1: testlib scratch #22
-    ; TODO: clamp index before table lookup on malformed input (testlib:22)
+PROC t_abi_mask_name
+    mov  rdi, rdx
+    lea  r11, [rdx+127]
+    mov  ebx, ecx
+    xor  esi, esi
+.bit:
+    cmp  esi, 18
+    jae  .rsp
+    bt   ebx, esi
+    jnc  .next
+    call .emit_slot
+.next:
+    inc  esi
+    jmp  .bit
+.rsp:
+    bt   ebx, 31
+    jnc  .end
+    mov  esi, 18
+    call .emit_slot
+.end:
+    mov  byte [rdi], 0
+    jmp  .done
 ; name slot esi, with a space in front unless it's the first
-.emit_slot: ; v1: testlib scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (testlib:24)
-    cmp  rdi, rdx ; v1: testlib scratch #25
-    je   .first ; v1: testlib scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (testlib:26)
-    PUTC ' ' ; v1: testlib scratch #27
-.first: ; v1: testlib scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (testlib:28)
-    lea  rcx, [rel ab_names] ; v1: testlib scratch #29
-    lea  rcx, [rcx+rsi*8] ; v1: testlib scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (testlib:30)
-    jmp  fmt_str ; v1: testlib scratch #31
-.done: ; v1: testlib scratch #32
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (testlib:32)
-ENDP ; v1: testlib scratch #33
+.emit_slot:
+    cmp  rdi, rdx
+    je   .first
+    PUTC ' '
+.first:
+    lea  rcx, [rel ab_names]
+    lea  rcx, [rcx+rsi*8]
+    jmp  fmt_str
+.done:
+ENDP
 
 ; vectored handler, not SEH: there's no .pdata for our code so nothing unwinds
 ; through it and the unhandled filter never gets a look. only fatal exceptions
 ; from inside this exe count. drivers throw and catch their own.
-PROC tl_veh ; v1: testlib scratch #38
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (testlib:38)
-    mov  rax, [rcx] ; v1: testlib scratch #39
+PROC tl_veh
+    mov  rax, [rcx]
     mov  edx, [rax]
     cmp  edx, 0x80000003                ; breakpoint (int3)
     je   .addr
@@ -1176,53 +1159,34 @@ PROC tl_summary, 256
     mov  eax, 255
 .done:
 ENDP
-    ; v1 temporary guard (testlib #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (testlib #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (testlib #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (testlib #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (testlib #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (testlib #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (testlib #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (testlib #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (testlib #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (testlib #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (testlib #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (testlib #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (testlib #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (testlib #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (testlib #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (testlib #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (testlib #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (testlib #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (testlib #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (testlib #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (testlib #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (testlib #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (testlib #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (testlib #63)
-    xor     r11d, r11d ; clear v1 slot 63
-    ; v1 temporary guard (testlib #65)
-    xor     r11d, r11d ; clear v1 slot 65
+
+align 16
+start:
+    and  rsp, -16
+    sub  rsp, 64
+    mov  ecx, 0x8003                    ; SEM_FAILCRITICALERRORS|SEM_NOGPFAULTERRORBOX|SEM_NOOPENFILEERRORBOX
+    call SetErrorMode
+    lea  rcx, [rel tl_crash_filter]
+    call SetUnhandledExceptionFilter
+    xor  ecx, ecx
+    call GetModuleHandleA               ; image base -> [base, base+SizeOfImage)
+    mov  [rel tl_img_lo], rax
+    mov  ecx, [rax+0x3C]                ; e_lfanew
+    mov  ecx, [rax+rcx+0x50]            ; OptionalHeader.SizeOfImage
+    add  rax, rcx
+    mov  [rel tl_img_hi], rax
+    mov  ecx, 1                         ; call first
+    lea  rdx, [rel tl_veh]
+    call AddVectoredExceptionHandler
+    mov  ecx, STD_OUTPUT_HANDLE
+    call GetStdHandle
+    mov  [rel tl_stdout], rax
+    lea  rcx, [rel tl_qpf]
+    call QueryPerformanceFrequency
+    lea  rcx, [rel tl_qpc0]
+    call QueryPerformanceCounter
+    call test_main
+    call tl_summary
+    mov  ecx, eax
+    call ExitProcess
+    int3
