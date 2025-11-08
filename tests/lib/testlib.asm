@@ -900,68 +900,48 @@ PROC t_write_bmp, 32
     call CreateFileA
     xor  edi, edi
     cmp  rax, -1
-    je   .free ; v1: testlib scratch #0
-    ; TODO: hoist invariant pointer load out of .loop (testlib:0)
-    mov  r12, rax ; v1: testlib scratch #1
-    mov  rcx, rax ; v1: testlib scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (testlib:2)
-    mov  rdx, rsi ; v1: testlib scratch #3
-    mov  r8, LOC(0) ; v1: testlib scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (testlib:4)
-    lea  r9, LOC(8) ; v1: testlib scratch #5
-    mov  qword LOC(8), 0 ; v1: testlib scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (testlib:6)
-    mov  qword [rsp+32], 0 ; v1: testlib scratch #7
-    call WriteFile ; v1: testlib scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (testlib:8)
-    test eax, eax ; v1: testlib scratch #9
-    jz   .close ; v1: testlib scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (testlib:10)
-    mov  eax, LOC(8) ; v1: testlib scratch #11
-    cmp  rax, LOC(0) ; v1: testlib scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (testlib:12)
-    jne  .close ; v1: testlib scratch #13
-    mov  edi, 1 ; v1: testlib scratch #14
-    ; TODO: clamp index before table lookup on malformed input (testlib:14)
-.close: ; v1: testlib scratch #15
-    mov  rcx, r12 ; v1: testlib scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (testlib:16)
-    call CloseHandle ; v1: testlib scratch #17
-.free: ; v1: testlib scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (testlib:18)
-    mov  rcx, rsi ; v1: testlib scratch #19
-    xor  edx, edx ; v1: testlib scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (testlib:20)
-    mov  r8d, 0x8000 ; v1: testlib scratch #21
-    call VirtualFree ; v1: testlib scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (testlib:22)
-    mov  eax, edi ; v1: testlib scratch #23
-.done: ; v1: testlib scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (testlib:24)
-ENDP ; v1: testlib scratch #25
+    je   .free
+    mov  r12, rax
+    mov  rcx, rax
+    mov  rdx, rsi
+    mov  r8, LOC(0)
+    lea  r9, LOC(8)
+    mov  qword LOC(8), 0
+    mov  qword [rsp+32], 0
+    call WriteFile
+    test eax, eax
+    jz   .close
+    mov  eax, LOC(8)
+    cmp  rax, LOC(0)
+    jne  .close
+    mov  edi, 1
+.close:
+    mov  rcx, r12
+    call CloseHandle
+.free:
+    mov  rcx, rsi
+    xor  edx, edx
+    mov  r8d, 0x8000                    ; MEM_RELEASE
+    call VirtualFree
+    mov  eax, edi
+.done:
+ENDP
 
-%macro ABI_CMP 2 ; v1: testlib scratch #27
-    cmp  %1, [rel ab_sent + 8*%2] ; v1: testlib scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (testlib:28)
-    je   %%ok ; v1: testlib scratch #29
-    bts  r10d, %2 ; v1: testlib scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (testlib:30)
-%%ok: ; v1: testlib scratch #31
-%endmacro ; v1: testlib scratch #32
-    ; TODO: clamp index before table lookup on malformed input (testlib:32)
+%macro ABI_CMP 2            ; reg, bit
+    cmp  %1, [rel ab_sent + 8*%2]
+    je   %%ok
+    bts  r10d, %2
+%%ok:
+%endmacro
 
-%macro ABI_XCMP 2 ; v1: testlib scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (testlib:34)
-    movdqa  xmm1, %1 ; v1: testlib scratch #35
-    pcmpeqb xmm1, [rel ab_xsent + 16*%2] ; v1: testlib scratch #36
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (testlib:36)
-    pmovmskb r11d, xmm1 ; v1: testlib scratch #37
-    cmp  r11d, 0xFFFF ; v1: testlib scratch #38
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (testlib:38)
-    je   %%ok ; v1: testlib scratch #39
-    bts  r10d, 8+%2 ; v1: testlib scratch #40
-    ; TODO: verify 16-byte rsp alignment before inner call (testlib:40)
-%%ok: ; v1: testlib scratch #41
+%macro ABI_XCMP 2           ; xmm reg, index 0..9 (bit 8+index)
+    movdqa  xmm1, %1
+    pcmpeqb xmm1, [rel ab_xsent + 16*%2]
+    pmovmskb r11d, xmm1
+    cmp  r11d, 0xFFFF
+    je   %%ok
+    bts  r10d, 8+%2
+%%ok:
 %endmacro
 
 ; not reentrant (static scratch)
@@ -1048,41 +1028,201 @@ PROCX t_abi_call
     movdqa xmm0, [rel ab_retx]
     mov  ecx, r10d
 ENDPX
-    ; v1 temporary guard (testlib #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (testlib #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (testlib #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (testlib #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (testlib #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (testlib #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (testlib #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (testlib #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (testlib #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (testlib #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (testlib #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (testlib #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (testlib #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (testlib #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (testlib #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (testlib #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (testlib #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (testlib #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (testlib #56)
-    xor     r11d, r11d ; clear v1 slot 56
+
+PROC t_abi_mask_name ; v1: testlib scratch #1
+    mov  rdi, rdx ; v1: testlib scratch #2
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (testlib:2)
+    lea  r11, [rdx+127] ; v1: testlib scratch #3
+    mov  ebx, ecx ; v1: testlib scratch #4
+    ; temp: spill r12/r13 across helper call until reg alloc pass (testlib:4)
+    xor  esi, esi ; v1: testlib scratch #5
+.bit: ; v1: testlib scratch #6
+    ; TODO: clamp index before table lookup on malformed input (testlib:6)
+    cmp  esi, 18 ; v1: testlib scratch #7
+    jae  .rsp ; v1: testlib scratch #8
+    ; TODO: verify 16-byte rsp alignment before inner call (testlib:8)
+    bt   ebx, esi ; v1: testlib scratch #9
+    jnc  .next ; v1: testlib scratch #10
+    ; note: rcx = state ptr, rdx = index, r8d = flags (testlib:10)
+    call .emit_slot ; v1: testlib scratch #11
+.next: ; v1: testlib scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (testlib:12)
+    inc  esi ; v1: testlib scratch #13
+    jmp  .bit ; v1: testlib scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (testlib:14)
+.rsp: ; v1: testlib scratch #15
+    bt   ebx, 31 ; v1: testlib scratch #16
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (testlib:16)
+    jnc  .end ; v1: testlib scratch #17
+    mov  esi, 18 ; v1: testlib scratch #18
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (testlib:18)
+    call .emit_slot ; v1: testlib scratch #19
+.end: ; v1: testlib scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (testlib:20)
+    mov  byte [rdi], 0 ; v1: testlib scratch #21
+    jmp  .done ; v1: testlib scratch #22
+    ; TODO: clamp index before table lookup on malformed input (testlib:22)
+; name slot esi, with a space in front unless it's the first
+.emit_slot: ; v1: testlib scratch #24
+    ; TODO: verify 16-byte rsp alignment before inner call (testlib:24)
+    cmp  rdi, rdx ; v1: testlib scratch #25
+    je   .first ; v1: testlib scratch #26
+    ; note: rcx = state ptr, rdx = index, r8d = flags (testlib:26)
+    PUTC ' ' ; v1: testlib scratch #27
+.first: ; v1: testlib scratch #28
+    ; TODO: hoist invariant pointer load out of .loop (testlib:28)
+    lea  rcx, [rel ab_names] ; v1: testlib scratch #29
+    lea  rcx, [rcx+rsi*8] ; v1: testlib scratch #30
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (testlib:30)
+    jmp  fmt_str ; v1: testlib scratch #31
+.done: ; v1: testlib scratch #32
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (testlib:32)
+ENDP ; v1: testlib scratch #33
+
+; vectored handler, not SEH: there's no .pdata for our code so nothing unwinds
+; through it and the unhandled filter never gets a look. only fatal exceptions
+; from inside this exe count. drivers throw and catch their own.
+PROC tl_veh ; v1: testlib scratch #38
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (testlib:38)
+    mov  rax, [rcx] ; v1: testlib scratch #39
+    mov  edx, [rax]
+    cmp  edx, 0x80000003                ; breakpoint (int3)
+    je   .addr
+    cmp  edx, 0x80000002                ; datatype misalignment
+    je   .addr
+    test edx, 0x40000000                ; only STATUS_* with error severity (0xC...)
+    jz   .pass
+    test edx, 0x80000000
+    jz   .pass
+    cmp  edx, 0xE0000000                ; customer codes (C++ etc.): not ours
+    jae  .pass
+.addr:
+    mov  rdx, [rax+16]                  ; ExceptionAddress
+    cmp  rdx, [rel tl_img_lo]
+    jb   .pass
+    cmp  rdx, [rel tl_img_hi]
+    jae  .pass
+    call tl_crash_filter                ; never returns
+.pass:
+    xor  eax, eax
+ENDP
+
+; prints CRASH and exits 255
+PROC tl_crash_filter, 512
+    mov  rbx, [rcx]
+    lea  rdi, LOC(0)
+    lea  r11, LOC(511)
+    PUTS {10, "CRASH: exception "}
+    mov  eax, [rbx]
+    call fmt_hex
+    PUTS " at rip "
+    mov  rax, [rbx+16]
+    call fmt_hex
+    cmp  dword [rbx], 0xC0000005
+    jne  .noav
+    PUTS " ("
+    lea  rcx, [rel .rd]
+    cmp  qword [rbx+32], 0
+    je   .rw
+    lea  rcx, [rel .wr]
+.rw:
+    call fmt_str
+    mov  rax, [rbx+40]
+    call fmt_hex
+    PUTC ')'
+.noav:
+    PUTS " in group ["
+    mov  rcx, [rel tl_group]
+    call fmt_str
+    PUTS "] after "
+    mov  eax, [rel t_checks]
+    call fmt_u64
+    PUTS " checks, "
+    mov  eax, [rel t_failures]
+    call fmt_u64
+    PUTS " failed"
+    PUTC 10
+    PUTS "RESULT: CRASH"
+    PUTC 10
+    BUF_WRITE
+    mov  ecx, 255
+    call ExitProcess
+    section .rdata
+    .rd: db "read ", 0
+    .wr: db "write ", 0
+    section .text
+ENDP
+
+PROC tl_summary, 256
+    call t_time_ms
+    mov  rbx, rax
+    lea  rdi, LOC(0)
+    lea  r11, LOC(255)
+    PUTS "RESULT: "
+    mov  eax, [rel t_checks]
+    call fmt_u64
+    PUTS " checks, "
+    mov  eax, [rel t_failures]
+    call fmt_u64
+    PUTS " failed ("
+    mov  rax, rbx
+    call fmt_u64
+    PUTS " ms)"
+    PUTC 10
+    BUF_WRITE
+    mov  eax, [rel t_failures]
+    cmp  eax, 255
+    jbe  .done
+    mov  eax, 255
+.done:
+ENDP
+    ; v1 temporary guard (testlib #17)
+    xor     r11d, r11d ; clear v1 slot 17
+    ; v1 temporary guard (testlib #19)
+    xor     r11d, r11d ; clear v1 slot 19
+    ; v1 temporary guard (testlib #21)
+    xor     r11d, r11d ; clear v1 slot 21
+    ; v1 temporary guard (testlib #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (testlib #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (testlib #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (testlib #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (testlib #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (testlib #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (testlib #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (testlib #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (testlib #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (testlib #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (testlib #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (testlib #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (testlib #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (testlib #49)
+    xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (testlib #51)
+    xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (testlib #53)
+    xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (testlib #55)
+    xor     r11d, r11d ; clear v1 slot 55
+    ; v1 temporary guard (testlib #57)
+    xor     r11d, r11d ; clear v1 slot 57
+    ; v1 temporary guard (testlib #59)
+    xor     r11d, r11d ; clear v1 slot 59
+    ; v1 temporary guard (testlib #61)
+    xor     r11d, r11d ; clear v1 slot 61
+    ; v1 temporary guard (testlib #63)
+    xor     r11d, r11d ; clear v1 slot 63
+    ; v1 temporary guard (testlib #65)
+    xor     r11d, r11d ; clear v1 slot 65
