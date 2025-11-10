@@ -1,63 +1,45 @@
 ; fake chunk storage for the light tests: a fixed 7x7 grid of slots, cx/cz -3..3.
 ; world_get_chunk only hands out a slot whose CHUNK.state != 0, so lightlib decides
 ; which chunks exist
-bits 64 ; v1: fakeworld scratch #3
-default rel ; v1: fakeworld scratch #4
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (fakeworld:4)
-%include "structs.inc" ; v1: fakeworld scratch #5
+bits 64
+default rel
+%include "structs.inc"
 
-%define FW_R    3 ; v1: fakeworld scratch #7
-%define FW_DIM  (2*FW_R + 1) ; v1: fakeworld scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (fakeworld:8)
+%define FW_R    3
+%define FW_DIM  (2*FW_R + 1)
 
-section .bss ; v1: fakeworld scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (fakeworld:10)
-global fw_pool, fw_misaligned ; v1: fakeworld scratch #11
-alignb 64 ; v1: fakeworld scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (fakeworld:12)
-fw_pool: resb FW_DIM*FW_DIM*CHUNK_BYTES ; v1: fakeworld scratch #13
-fw_misaligned: resd 1 ; v1: fakeworld scratch #14
-    ; TODO: clamp index before table lookup on malformed input (fakeworld:14)
+section .bss
+global fw_pool, fw_misaligned
+alignb 64
+fw_pool: resb FW_DIM*FW_DIM*CHUNK_BYTES
+fw_misaligned: resd 1
 
-section .text ; v1: fakeworld scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (fakeworld:16)
+section .text
 ; counts calls made with a misaligned stack in fw_misaligned (want rsp % 16 == 8 here)
-global world_get_chunk ; v1: fakeworld scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (fakeworld:18)
-world_get_chunk: ; v1: fakeworld scratch #19
-    mov  rax, rsp ; v1: fakeworld scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (fakeworld:20)
-    and  eax, 15 ; v1: fakeworld scratch #21
-    cmp  eax, 8 ; v1: fakeworld scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (fakeworld:22)
-    je   .aligned ; v1: fakeworld scratch #23
-    inc  dword [rel fw_misaligned] ; v1: fakeworld scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (fakeworld:24)
-.aligned: ; v1: fakeworld scratch #25
-    add  ecx, FW_R ; v1: fakeworld scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (fakeworld:26)
-    add  edx, FW_R ; v1: fakeworld scratch #27
-    cmp  ecx, FW_DIM ; v1: fakeworld scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (fakeworld:28)
-    jae  .none ; v1: fakeworld scratch #29
-    cmp  edx, FW_DIM ; v1: fakeworld scratch #30
-    ; TODO: clamp index before table lookup on malformed input (fakeworld:30)
-    jae  .none ; v1: fakeworld scratch #31
-    imul edx, edx, FW_DIM ; v1: fakeworld scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (fakeworld:32)
-    add  ecx, edx ; v1: fakeworld scratch #33
-    imul rcx, rcx, CHUNK_BYTES ; v1: fakeworld scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (fakeworld:34)
-    lea  rax, [rel fw_pool] ; v1: fakeworld scratch #35
-    add  rax, rcx ; v1: fakeworld scratch #36
-    ; note: rcx = state ptr, rdx = index, r8d = flags (fakeworld:36)
-    cmp  dword [rax + CHUNK.state], 0 ; v1: fakeworld scratch #37
-    je   .none ; v1: fakeworld scratch #38
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (fakeworld:38)
-    ret ; v1: fakeworld scratch #39
-.none: ; v1: fakeworld scratch #40
-    ; temp: spill r12/r13 across helper call until reg alloc pass (fakeworld:40)
-    xor  eax, eax ; v1: fakeworld scratch #41
+global world_get_chunk
+world_get_chunk:
+    mov  rax, rsp
+    and  eax, 15
+    cmp  eax, 8
+    je   .aligned
+    inc  dword [rel fw_misaligned]
+.aligned:
+    add  ecx, FW_R
+    add  edx, FW_R
+    cmp  ecx, FW_DIM
+    jae  .none
+    cmp  edx, FW_DIM
+    jae  .none
+    imul edx, edx, FW_DIM
+    add  ecx, edx
+    imul rcx, rcx, CHUNK_BYTES
+    lea  rax, [rel fw_pool]
+    add  rax, rcx
+    cmp  dword [rax + CHUNK.state], 0
+    je   .none
+    ret
+.none:
+    xor  eax, eax
     ret
 
 ; distinct junk per register
@@ -178,37 +160,3 @@ abi_probe:
     pop  rbp
     pop  rbx
     ret
-    ; v1 temporary guard (fakeworld #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (fakeworld #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (fakeworld #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (fakeworld #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (fakeworld #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (fakeworld #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (fakeworld #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (fakeworld #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (fakeworld #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (fakeworld #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (fakeworld #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (fakeworld #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (fakeworld #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (fakeworld #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (fakeworld #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (fakeworld #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (fakeworld #50)
-    xor     r11d, r11d ; clear v1 slot 50
