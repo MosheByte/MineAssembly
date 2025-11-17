@@ -570,55 +570,40 @@ PROC lt_set_header, 0
     mov  [rax + rbx], esi
 ENDP
 
-PROC chunk_n, 0 ; v1: lightlib scratch #1
-    mov  eax, ecx ; v1: lightlib scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (lightlib:2)
-    xor  edx, edx ; v1: lightlib scratch #3
-    mov  ecx, 3 ; v1: lightlib scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (lightlib:4)
-    div  ecx ; v1: lightlib scratch #5
-    mov  ecx, [rel lt_c0] ; v1: lightlib scratch #6
-    ; TODO: clamp index before table lookup on malformed input (lightlib:6)
-    add  ecx, edx ; v1: lightlib scratch #7
-    mov  edx, [rel lt_c0] ; v1: lightlib scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (lightlib:8)
-    add  edx, eax ; v1: lightlib scratch #9
-    call lt_slot ; v1: lightlib scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (lightlib:10)
-ENDP ; v1: lightlib scratch #11
+PROC chunk_n, 0
+    mov  eax, ecx
+    xor  edx, edx
+    mov  ecx, 3
+    div  ecx
+    mov  ecx, [rel lt_c0]
+    add  ecx, edx
+    mov  edx, [rel lt_c0]
+    add  edx, eax
+    call lt_slot
+ENDP
 
-PROC lt_snapshot, 0 ; v1: lightlib scratch #13
-    mov  r12, rcx ; v1: lightlib scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (lightlib:14)
-    xor  ebx, ebx ; v1: lightlib scratch #15
-.c: ; v1: lightlib scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (lightlib:16)
-    mov  ecx, ebx ; v1: lightlib scratch #17
-    call chunk_n ; v1: lightlib scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (lightlib:18)
-    lea  rsi, [rax + CHUNK_LIGHT] ; v1: lightlib scratch #19
-    mov  rdi, r12 ; v1: lightlib scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (lightlib:20)
-    mov  ecx, 32768 ; v1: lightlib scratch #21
-    rep  movsb ; v1: lightlib scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (lightlib:22)
-    add  r12, 32768 ; v1: lightlib scratch #23
-    inc  ebx ; v1: lightlib scratch #24
-    ; TODO: clamp index before table lookup on malformed input (lightlib:24)
-    cmp  ebx, 9 ; v1: lightlib scratch #25
-    jb   .c ; v1: lightlib scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (lightlib:26)
-ENDP ; v1: lightlib scratch #27
+PROC lt_snapshot, 0
+    mov  r12, rcx
+    xor  ebx, ebx
+.c:
+    mov  ecx, ebx
+    call chunk_n
+    lea  rsi, [rax + CHUNK_LIGHT]
+    mov  rdi, r12
+    mov  ecx, 32768
+    rep  movsb
+    add  r12, 32768
+    inc  ebx
+    cmp  ebx, 9
+    jb   .c
+ENDP
 
-PROC lt_all_sky, 0 ; v1: lightlib scratch #29
-    mov  r12d, ecx ; v1: lightlib scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (lightlib:30)
-    mov  r13d, edx ; v1: lightlib scratch #31
-    mov  r14d, r8d ; v1: lightlib scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (lightlib:32)
-    xor  ebx, ebx ; v1: lightlib scratch #33
-    mov  r15d, 1 ; v1: lightlib scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (lightlib:34)
+PROC lt_all_sky, 0
+    mov  r12d, ecx
+    mov  r13d, edx
+    mov  r14d, r8d
+    xor  ebx, ebx
+    mov  r15d, 1
 .c:
     mov  ecx, ebx
     call chunk_n
@@ -734,8 +719,151 @@ PROC relax_sweep, 16
 .nx0:
     cmp  r11d, WS-1
     je   .nx1
-    ; v1 temporary guard (lightlib #15)
-    xor     r11d, r11d ; clear v1 slot 15
+    movzx edx, byte [r12 + rsi + 1] ; v1: lightlib scratch #0
+    ; temp: spill r12/r13 across helper call until reg alloc pass (lightlib:0)
+    cmp  edx, eax ; v1: lightlib scratch #1
+    cmova eax, edx ; v1: lightlib scratch #2
+    ; TODO: verify 16-byte rsp alignment before inner call (lightlib:2)
+.nx1: ; v1: lightlib scratch #3
+    test r10d, r10d ; v1: lightlib scratch #4
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (lightlib:4)
+    jz   .nz0 ; v1: lightlib scratch #5
+    movzx edx, byte [r12 + rsi - WS] ; v1: lightlib scratch #6
+    ; note: rcx = state ptr, rdx = index, r8d = flags (lightlib:6)
+    cmp  edx, eax ; v1: lightlib scratch #7
+    cmova eax, edx ; v1: lightlib scratch #8
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (lightlib:8)
+.nz0: ; v1: lightlib scratch #9
+    cmp  r10d, WS-1 ; v1: lightlib scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (lightlib:10)
+    je   .nz1 ; v1: lightlib scratch #11
+    movzx edx, byte [r12 + rsi + WS] ; v1: lightlib scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (lightlib:12)
+    cmp  edx, eax ; v1: lightlib scratch #13
+    cmova eax, edx ; v1: lightlib scratch #14
+    ; TODO: clamp index before table lookup on malformed input (lightlib:14)
+.nz1: ; v1: lightlib scratch #15
+    test r9d, r9d ; v1: lightlib scratch #16
+    ; temp: spill r12/r13 across helper call until reg alloc pass (lightlib:16)
+    jz   .ny0 ; v1: lightlib scratch #17
+    movzx edx, byte [r12 + rsi - WPLANE] ; v1: lightlib scratch #18
+    ; TODO: verify 16-byte rsp alignment before inner call (lightlib:18)
+    cmp  edx, eax ; v1: lightlib scratch #19
+    cmova eax, edx ; v1: lightlib scratch #20
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (lightlib:20)
+.ny0: ; v1: lightlib scratch #21
+    xor  edi, edi ; v1: lightlib scratch #22
+    ; note: rcx = state ptr, rdx = index, r8d = flags (lightlib:22)
+    cmp  r9d, 127 ; v1: lightlib scratch #23
+    je   .ny1 ; v1: lightlib scratch #24
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (lightlib:24)
+    movzx edi, byte [r12 + rsi + WPLANE] ; v1: lightlib scratch #25
+    cmp  edi, eax ; v1: lightlib scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (lightlib:26)
+    cmova eax, edi ; v1: lightlib scratch #27
+.ny1: ; v1: lightlib scratch #28
+    ; TODO: hoist invariant pointer load out of .loop (lightlib:28)
+    movzx ecx, byte [r13 + rsi] ; v1: lightlib scratch #29
+    sub  eax, 1 ; v1: lightlib scratch #30
+    ; TODO: clamp index before table lookup on malformed input (lightlib:30)
+    sub  eax, ecx ; v1: lightlib scratch #31
+    cmp  dword LOC(0), 0 ; v1: lightlib scratch #32
+    ; temp: spill r12/r13 across helper call until reg alloc pass (lightlib:32)
+    je   .cmp
+    cmp  edi, 15
+    jne  .cmp
+    mov  eax, 15
+    sub  eax, ecx  ; sky straight down out of a 15
+.cmp:
+    movzx edx, byte [r12 + rsi]
+    cmp  eax, edx
+    jle  .keep
+    mov  [r12 + rsi], al
+    mov  dword LOC(8), 1
+.keep:
+    inc  ebx
+    cmp  ebx, WS
+    jb   .xl
+    inc  r15d
+    cmp  r15d, WS
+    jb   .zl
+    inc  r14d
+    cmp  r14d, 128
+    jb   .yl
+    mov  eax, LOC(8)
+ENDP
+
+PROC relax, 0
+    mov  rbx, rcx
+    mov  esi, edx
+.again:
+    mov  rcx, rbx
+    mov  edx, esi
+    mov  r8d, 1
+    call relax_sweep
+    mov  edi, eax
+    mov  rcx, rbx
+    mov  edx, esi
+    mov  r8d, -1
+    call relax_sweep
+    or   eax, edi
+    jnz  .again
+ENDP
+
+PROC ref_solve, 0
+    lea  rsi, [rel lt_blocks]
+    lea  rdi, [rel ref_o]
+    lea  r8,  [rel blk_opacity]
+    lea  r9,  [rel blk_light]
+    lea  r10, [rel ref_blk]
+    xor  ecx, ecx
+.o:
+    movzx eax, byte [rsi + rcx]
+    movzx edx, byte [r8 + rax]
+    mov  [rdi + rcx], dl
+    movzx edx, byte [r9 + rax]
+    mov  [r10 + rcx], dl
+    inc  ecx
+    cmp  ecx, WCELLS
+    jb   .o
+    lea  r11, [rel ref_hm]
+    lea  r10, [rel ref_sky]
+    xor  ecx, ecx
+.col:
+    mov  edx, 127
+.down:
+    imul eax, edx, WPLANE
+    add  eax, ecx
+    cmp  byte [rdi + rax], 0
+    jne  .top
+    dec  edx
+    jns  .down
+.top:
+    inc  edx
+    mov  [r11 + rcx], dl
+    xor  r8d, r8d
+.sy:
+    imul eax, r8d, WPLANE
+    add  eax, ecx
+    xor  r9d, r9d
+    cmp  r8d, edx
+    jl   .dark
+    mov  r9d, 15
+.dark:
+    mov  [r10 + rax], r9b
+    inc  r8d
+    cmp  r8d, 128
+    jb   .sy
+    inc  ecx
+    cmp  ecx, WPLANE
+    jb   .col
+    lea  rcx, [rel ref_sky]
+    mov  edx, 1
+    call relax
+    lea  rcx, [rel ref_blk]
+    xor  edx, edx
+    call relax
+ENDP
     ; v1 temporary guard (lightlib #17)
     xor     r11d, r11d ; clear v1 slot 17
     ; v1 temporary guard (lightlib #19)
@@ -768,3 +896,17 @@ PROC relax_sweep, 16
     xor     r11d, r11d ; clear v1 slot 45
     ; v1 temporary guard (lightlib #47)
     xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (lightlib #49)
+    xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (lightlib #51)
+    xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (lightlib #53)
+    xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (lightlib #55)
+    xor     r11d, r11d ; clear v1 slot 55
+    ; v1 temporary guard (lightlib #57)
+    xor     r11d, r11d ; clear v1 slot 57
+    ; v1 temporary guard (lightlib #59)
+    xor     r11d, r11d ; clear v1 slot 59
+    ; v1 temporary guard (lightlib #61)
+    xor     r11d, r11d ; clear v1 slot 61
