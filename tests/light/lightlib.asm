@@ -848,57 +848,41 @@ PROC ref_solve, 0
     call relax
 ENDP
 
-PROC engine_light_ptr, 0 ; v1: lightlib scratch #1
-    add  ecx, [rel lt_x0] ; v1: lightlib scratch #2
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (lightlib:2)
-    add  r8d, [rel lt_x0] ; v1: lightlib scratch #3
-    call cell_ptr ; v1: lightlib scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (lightlib:4)
-    add  rax, LIGHT_OFS ; v1: lightlib scratch #5
-ENDP ; v1: lightlib scratch #6
-    ; note: rcx = state ptr, rdx = index, r8d = flags (lightlib:6)
+PROC engine_light_ptr, 0
+    add  ecx, [rel lt_x0]
+    add  r8d, [rel lt_x0]
+    call cell_ptr
+    add  rax, LIGHT_OFS
+ENDP
 
-PROC report_mismatch, 0 ; v1: lightlib scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (lightlib:8)
-    mov  ebx, edx ; v1: lightlib scratch #9
-    mov  esi, r8d ; v1: lightlib scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (lightlib:10)
-    mov  edi, r9d ; v1: lightlib scratch #11
-    mov  r12, rcx ; v1: lightlib scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (lightlib:12)
-    call fb_reset ; v1: lightlib scratch #13
-    mov  rcx, r12 ; v1: lightlib scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (lightlib:14)
-    call fb_str ; v1: lightlib scratch #15
-    movsxd rcx, ebx ; v1: lightlib scratch #16
-    ; TODO: clamp index before table lookup on malformed input (lightlib:16)
-    call fb_int ; v1: lightlib scratch #17
-    lea  rcx, [rel s_cells] ; v1: lightlib scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (lightlib:18)
-    call fb_str ; v1: lightlib scratch #19
+PROC report_mismatch, 0
+    mov  ebx, edx
+    mov  esi, r8d
+    mov  edi, r9d
+    mov  r12, rcx
+    call fb_reset
+    mov  rcx, r12
+    call fb_str
+    movsxd rcx, ebx
+    call fb_int
+    lea  rcx, [rel s_cells]
+    call fb_str
     ; first bad cell index -> world x, y, z
-    mov  eax, esi ; v1: lightlib scratch #21
-    xor  edx, edx ; v1: lightlib scratch #22
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (lightlib:22)
-    mov  ecx, WPLANE ; v1: lightlib scratch #23
-    div  ecx ; v1: lightlib scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (lightlib:24)
-    mov  r13d, eax ; v1: lightlib scratch #25
-    mov  eax, edx ; v1: lightlib scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (lightlib:26)
-    xor  edx, edx ; v1: lightlib scratch #27
-    mov  ecx, WS ; v1: lightlib scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (lightlib:28)
-    div  ecx ; v1: lightlib scratch #29
-    mov  r14d, eax ; v1: lightlib scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (lightlib:30)
-    mov  r15d, edx ; v1: lightlib scratch #31
-    movsxd rcx, r15d ; v1: lightlib scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (lightlib:32)
-    movsxd rax, dword [rel lt_x0] ; v1: lightlib scratch #33
-    add  rcx, rax ; v1: lightlib scratch #34
-    ; TODO: clamp index before table lookup on malformed input (lightlib:34)
-    call fb_int ; v1: lightlib scratch #35
+    mov  eax, esi
+    xor  edx, edx
+    mov  ecx, WPLANE
+    div  ecx
+    mov  r13d, eax
+    mov  eax, edx
+    xor  edx, edx
+    mov  ecx, WS
+    div  ecx
+    mov  r14d, eax
+    mov  r15d, edx
+    movsxd rcx, r15d
+    movsxd rax, dword [rel lt_x0]
+    add  rcx, rax
+    call fb_int
     cmp  dword ARG6, 0
     jne  .noy
     lea  rcx, [rel s_y]
@@ -1013,47 +997,133 @@ PROC lt_check_ref, 64
     jb   .cells
     mov  eax, LOC(32)
     or   eax, r12d
-    ; v1 temporary guard (lightlib #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (lightlib #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (lightlib #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (lightlib #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (lightlib #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (lightlib #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (lightlib #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (lightlib #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (lightlib #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (lightlib #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (lightlib #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (lightlib #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (lightlib #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (lightlib #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (lightlib #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (lightlib #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (lightlib #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (lightlib #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (lightlib #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (lightlib #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (lightlib #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (lightlib #58)
-    xor     r11d, r11d ; clear v1 slot 58
+    or   eax, r14d
+    or   eax, [rel light_stat_overflow]
+    jnz  .fail
+    call t_pass
+    mov  eax, 1
+    jmp  .ret
+.fail:
+    mov  rcx, LOC(0)
+    mov  rdx, LOC(8)
+    mov  r8d, LOC(16)
+    call t_fail
+    cmp  dword LOC(32), 0
+    je   .d_sky
+    ; a column index z*48+x is also the cell index of (x, 0, z)
+    lea  rcx, [rel s_hm]
+    mov  edx, LOC(32)
+    mov  r8d, LOC(56)
+    mov  r9d, LOC(24)
+    mov  eax, LOC(28)
+    mov  [rsp+32], rax
+    mov  qword [rsp+40], 1
+    call report_mismatch
+.d_sky:
+    test r12d, r12d
+    jz   .d_blk
+    lea  rcx, [rel s_sky]
+    mov  edx, r12d
+    mov  r8d, r13d
+    mov  r9d, LOC(40)
+    mov  eax, LOC(44)
+    mov  [rsp+32], rax
+    mov  qword [rsp+40], 0
+    call report_mismatch
+.d_blk:
+    test r14d, r14d
+    jz   .d_ovf
+    lea  rcx, [rel s_blk]
+    mov  edx, r14d
+    mov  r8d, r15d
+    mov  r9d, LOC(48)
+    mov  eax, LOC(52)
+    mov  [rsp+32], rax
+    mov  qword [rsp+40], 0
+    call report_mismatch
+.d_ovf:
+    cmp  dword [rel light_stat_overflow], 0
+    je   .done
+    call fb_reset
+    lea  rcx, [rel s_ovf]
+    call fb_str
+    mov  ecx, [rel light_stat_overflow]
+    call fb_int
+    lea  rcx, [rel lt_fb]
+    call t_fail_detail
+.done:
+    xor  eax, eax
+.ret:
+ENDP
+
+PROC lt_probe, 160
+    mov  dword [rel fw_misaligned], 0
+    mov  rax, ARG5
+    mov  [rsp+32], rax
+    call abi_probe
+    mov  ebx, eax
+    mov  esi, [rel fw_misaligned]
+    mov  eax, ebx
+    or   eax, esi
+    jnz  .fail
+    call t_pass
+    jmp  .done
+.fail:
+    mov  rcx, ARG6
+    mov  rdx, ARG7
+    mov  r8d, ARG8
+    call t_fail
+    test ebx, ebx
+    jz   .mis
+    call fb_reset
+    lea  rcx, [rel s_clob]
+    call fb_str
+    mov  ecx, ebx
+    lea  rdx, LOC(0)
+    call t_abi_mask_name
+    lea  rcx, LOC(0)
+    call fb_str
+    lea  rcx, [rel lt_fb]
+    call t_fail_detail
+.mis:
+    test esi, esi
+    jz   .done
+    call fb_reset
+    lea  rcx, [rel s_mis]
+    call fb_str
+    mov  ecx, esi
+    call fb_int
+    lea  rcx, [rel lt_fb]
+    call t_fail_detail
+.done:
+ENDP
+
+PROC lt_print_edit, 0
+    mov  ebx, ecx
+    mov  esi, edx
+    mov  edi, r8d
+    mov  r12d, r9d
+    call fb_reset
+    lea  rcx, [rel s_edit]
+    call fb_str
+    movsxd rcx, ebx
+    call fb_int
+    lea  rcx, [rel s_at]
+    call fb_str
+    movsxd rcx, esi
+    call fb_int
+    lea  rcx, [rel s_comma]
+    call fb_str
+    movsxd rcx, edi
+    call fb_int
+    lea  rcx, [rel s_comma]
+    call fb_str
+    movsxd rcx, r12d
+    call fb_int
+    lea  rcx, [rel s_arrow]
+    call fb_str
+    movsxd rcx, dword ARG5
+    call fb_int
+    lea  rcx, [rel lt_fb]
+    call t_fail_detail
+ENDP
