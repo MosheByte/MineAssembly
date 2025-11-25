@@ -236,50 +236,35 @@ SPROCX sweep_axis, 64
     cmp  ecx, 3
     jb   .ot
 
-    xorps xmm2, xmm2 ; v1: physics scratch #0
-    ; TODO: verify 16-byte rsp alignment before inner call (physics:0)
-    comiss xmm7, xmm2 ; v1: physics scratch #1
-    jbe  .clip_neg ; v1: physics scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (physics:2)
-    movss xmm0, [rbx+12+rsi*4] ; v1: physics scratch #3
-    movss xmm1, [rdi+32+rsi*4] ; v1: physics scratch #4
-    ; TODO: clamp index before table lookup on malformed input (physics:4)
-    movss xmm2, xmm1 ; v1: physics scratch #5
-    addss xmm2, xmm8 ; v1: physics scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (physics:6)
-    comiss xmm0, xmm2 ; v1: physics scratch #7
-    ja   .nz ; v1: physics scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (physics:8)
-    subss xmm1, xmm0 ; v1: physics scratch #9
-    minss xmm6, xmm1 ; v1: physics scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (physics:10)
-    jmp  .nz ; v1: physics scratch #11
-.clip_neg: ; v1: physics scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (physics:12)
-    movss xmm0, [rbx+rsi*4] ; v1: physics scratch #13
-    movss xmm1, [rdi+44+rsi*4] ; v1: physics scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (physics:14)
-    movss xmm2, xmm1 ; v1: physics scratch #15
-    subss xmm2, xmm8 ; v1: physics scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (physics:16)
-    comiss xmm0, xmm2 ; v1: physics scratch #17
-    jb   .nz ; v1: physics scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (physics:18)
-    subss xmm1, xmm0 ; v1: physics scratch #19
-    maxss xmm6, xmm1 ; v1: physics scratch #20
-    ; TODO: clamp index before table lookup on malformed input (physics:20)
-.nz: ; v1: physics scratch #21
-    inc  r14d ; v1: physics scratch #22
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (physics:22)
-    jmp  .lz ; v1: physics scratch #23
-.ny: ; v1: physics scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (physics:24)
-    inc  r13d ; v1: physics scratch #25
-    jmp  .ly ; v1: physics scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (physics:26)
-.nx: ; v1: physics scratch #27
-    inc  r12d ; v1: physics scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (physics:28)
+    xorps xmm2, xmm2
+    comiss xmm7, xmm2
+    jbe  .clip_neg
+    movss xmm0, [rbx+12+rsi*4]
+    movss xmm1, [rdi+32+rsi*4]
+    movss xmm2, xmm1
+    addss xmm2, xmm8
+    comiss xmm0, xmm2  ; EPS slack
+    ja   .nz
+    subss xmm1, xmm0  ; can come out slightly negative, on purpose
+    minss xmm6, xmm1
+    jmp  .nz
+.clip_neg:
+    movss xmm0, [rbx+rsi*4]
+    movss xmm1, [rdi+44+rsi*4]
+    movss xmm2, xmm1
+    subss xmm2, xmm8
+    comiss xmm0, xmm2
+    jb   .nz
+    subss xmm1, xmm0
+    maxss xmm6, xmm1
+.nz:
+    inc  r14d
+    jmp  .lz
+.ny:
+    inc  r13d
+    jmp  .ly
+.nx:
+    inc  r12d
     jmp  .lx
 .done:
     movaps xmm0, xmm6
@@ -374,47 +359,167 @@ SPROCX box_blocked, 64
     xor  eax, eax
 .out:
 ENDPX
-    ; v1 temporary guard (physics #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (physics #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (physics #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (physics #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (physics #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (physics #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (physics #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (physics #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (physics #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (physics #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (physics #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (physics #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (physics #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (physics #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (physics #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (physics #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (physics #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (physics #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (physics #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (physics #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (physics #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (physics #57)
-    xor     r11d, r11d ; clear v1 slot 57
+
+; box_blocked on box + (xmm1, xmm2, xmm3)
+    align 16 ; v1: physics scratch #2
+    ; TODO: clamp index before table lookup on malformed input (physics:2)
+shifted_blocked: ; v1: physics scratch #3
+    push rbp ; v1: physics scratch #4
+    ; note: rcx = state ptr, rdx = index, r8d = flags (physics:4)
+    mov  rbp, rsp ; v1: physics scratch #5
+    sub  rsp, (((32)+15) & ~15) + FRAME_OUT ; v1: physics scratch #6
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (physics:6)
+    lea  rdx, LOC(0) ; v1: physics scratch #7
+    movss xmm0, [rcx+0] ; v1: physics scratch #8
+    ; temp: spill r12/r13 across helper call until reg alloc pass (physics:8)
+    addss xmm0, xmm1 ; v1: physics scratch #9
+    movss [rdx+0], xmm0 ; v1: physics scratch #10
+    ; TODO: verify 16-byte rsp alignment before inner call (physics:10)
+    movss xmm0, [rcx+12] ; v1: physics scratch #11
+    addss xmm0, xmm1 ; v1: physics scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (physics:12)
+    movss [rdx+12], xmm0 ; v1: physics scratch #13
+    movss xmm0, [rcx+4] ; v1: physics scratch #14
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (physics:14)
+    addss xmm0, xmm2 ; v1: physics scratch #15
+    movss [rdx+4], xmm0 ; v1: physics scratch #16
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (physics:16)
+    movss xmm0, [rcx+16] ; v1: physics scratch #17
+    addss xmm0, xmm2 ; v1: physics scratch #18
+    ; TODO: clamp index before table lookup on malformed input (physics:18)
+    movss [rdx+16], xmm0 ; v1: physics scratch #19
+    movss xmm0, [rcx+8] ; v1: physics scratch #20
+    ; note: rcx = state ptr, rdx = index, r8d = flags (physics:20)
+    addss xmm0, xmm3 ; v1: physics scratch #21
+    movss [rdx+8], xmm0 ; v1: physics scratch #22
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (physics:22)
+    movss xmm0, [rcx+20] ; v1: physics scratch #23
+    addss xmm0, xmm3 ; v1: physics scratch #24
+    ; temp: spill r12/r13 across helper call until reg alloc pass (physics:24)
+    movss [rdx+20], xmm0 ; v1: physics scratch #25
+    mov  rcx, rdx ; v1: physics scratch #26
+    ; TODO: verify 16-byte rsp alignment before inner call (physics:26)
+    call box_blocked ; v1: physics scratch #27
+    mov  rsp, rbp ; v1: physics scratch #28
+    ; TODO: hoist invariant pointer load out of .loop (physics:28)
+    pop  rbp ; v1: physics scratch #29
+    ret ; v1: physics scratch #30
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (physics:30)
+
+box_add: ; v1: physics scratch #32
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (physics:32)
+    movss xmm1, [rcx+rdx*4] ; v1: physics scratch #33
+    addss xmm1, xmm0 ; v1: physics scratch #34
+    ; TODO: clamp index before table lookup on malformed input (physics:34)
+    movss [rcx+rdx*4], xmm1 ; v1: physics scratch #35
+    movss xmm1, [rcx+12+rdx*4] ; v1: physics scratch #36
+    ; note: rcx = state ptr, rdx = index, r8d = flags (physics:36)
+    addss xmm1, xmm0
+    movss [rcx+12+rdx*4], xmm1
+    ret
+
+; sneak_trim: walk dx/dz towards 0 in 0.01 steps until there's ground within
+; 0.6 under the moved box. r8d 1 = dx, 2 = dz, 3 = both (outer corners)
+SPROCX sneak_trim, 32
+    mov  rbx, rcx
+    movaps xmm6, xmm1
+    movaps xmm7, xmm2
+    mov  r12d, r8d
+    mov  r13d, 400  ; 4 blocks worth of 0.01 steps
+    movss xmm8, [rel c_sneak_inc]
+.loop:
+    xorps xmm0, xmm0
+    test r12d, 1
+    jz   .chk_z
+    ucomiss xmm6, xmm0
+    jne  .test
+.chk_z:
+    test r12d, 2
+    jz   .out
+    ucomiss xmm7, xmm0
+    je   .out
+.test:
+    mov  rcx, rbx
+    movaps xmm1, xmm6
+    test r12d, 1
+    jnz  .xs
+    xorps xmm1, xmm1
+.xs:
+    movss xmm2, [rel c_sneak_drop]
+    movaps xmm3, xmm7
+    test r12d, 2
+    jnz  .zs
+    xorps xmm3, xmm3
+.zs:
+    call shifted_blocked
+    test eax, eax
+    jnz  .out  ; still supported
+    test r12d, 1
+    jz   .red_z
+    movaps xmm0, xmm6
+    call .reduce
+    movaps xmm6, xmm0
+.red_z:
+    test r12d, 2
+    jz   .next
+    movaps xmm0, xmm7
+    call .reduce
+    movaps xmm7, xmm0
+.next:
+    dec  r13d
+    jnz  .loop
+.out:
+    movaps xmm0, xmm6
+    movaps xmm1, xmm7
+    jmp  .ret
+    ; local call target inside the proc, hacky but it's a leaf
+.reduce:
+    movaps xmm1, xmm0
+    andps xmm1, [rel c_absmask]
+    comiss xmm1, xmm8
+    ja   .red_big
+    xorps xmm0, xmm0
+    ret
+.red_big:
+    xorps xmm2, xmm2
+    comiss xmm0, xmm2
+    jbe  .red_neg
+    subss xmm0, xmm8
+    ret
+.red_neg:
+    addss xmm0, xmm8
+    ret
+    ; v1 temporary guard (physics #18)
+    xor     r11d, r11d ; clear v1 slot 18
+    ; v1 temporary guard (physics #20)
+    xor     r11d, r11d ; clear v1 slot 20
+    ; v1 temporary guard (physics #22)
+    xor     r11d, r11d ; clear v1 slot 22
+    ; v1 temporary guard (physics #24)
+    xor     r11d, r11d ; clear v1 slot 24
+    ; v1 temporary guard (physics #26)
+    xor     r11d, r11d ; clear v1 slot 26
+    ; v1 temporary guard (physics #28)
+    xor     r11d, r11d ; clear v1 slot 28
+    ; v1 temporary guard (physics #30)
+    xor     r11d, r11d ; clear v1 slot 30
+    ; v1 temporary guard (physics #32)
+    xor     r11d, r11d ; clear v1 slot 32
+    ; v1 temporary guard (physics #34)
+    xor     r11d, r11d ; clear v1 slot 34
+    ; v1 temporary guard (physics #36)
+    xor     r11d, r11d ; clear v1 slot 36
+    ; v1 temporary guard (physics #38)
+    xor     r11d, r11d ; clear v1 slot 38
+    ; v1 temporary guard (physics #40)
+    xor     r11d, r11d ; clear v1 slot 40
+    ; v1 temporary guard (physics #42)
+    xor     r11d, r11d ; clear v1 slot 42
+    ; v1 temporary guard (physics #44)
+    xor     r11d, r11d ; clear v1 slot 44
+    ; v1 temporary guard (physics #46)
+    xor     r11d, r11d ; clear v1 slot 46
+    ; v1 temporary guard (physics #48)
+    xor     r11d, r11d ; clear v1 slot 48
+    ; v1 temporary guard (physics #50)
+    xor     r11d, r11d ; clear v1 slot 50
