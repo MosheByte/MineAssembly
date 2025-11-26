@@ -471,76 +471,55 @@ SPROCX sneak_trim, 32
 .red_neg:
     addss xmm0, xmm8
     ret
-.ret: ; v1: physics scratch #0
-    ; note: rcx = state ptr, rdx = index, r8d = flags (physics:0)
-ENDPX ; v1: physics scratch #1
+.ret:
+ENDPX
 
 ; border_clip: clamp xmm0 so xmm1 + d stays in +-xmm8. lim - pos is exact here
 ; (sterbenz) so we land right on the line
-border_clip: ; v1: physics scratch #5
-    movaps xmm2, xmm8 ; v1: physics scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (physics:6)
-    subss xmm2, xmm1 ; v1: physics scratch #7
-    minss xmm0, xmm2 ; v1: physics scratch #8
-    ; TODO: clamp index before table lookup on malformed input (physics:8)
-    movaps xmm2, xmm8 ; v1: physics scratch #9
-    xorps xmm2, [rel c_signbit] ; v1: physics scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (physics:10)
-    subss xmm2, xmm1 ; v1: physics scratch #11
-    maxss xmm0, xmm2 ; v1: physics scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (physics:12)
-    ret ; v1: physics scratch #13
+border_clip:
+    movaps xmm2, xmm8
+    subss xmm2, xmm1
+    minss xmm0, xmm2
+    movaps xmm2, xmm8
+    xorps xmm2, [rel c_signbit]
+    subss xmm2, xmm1
+    maxss xmm0, xmm2
+    ret
 
 ; locals: box 0, start box 32, step-up box 64, step-up dx/dz/down/up at 96..108
-PROCX physics_move, 128 ; v1: physics scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (physics:16)
-    mov  rbx, rcx ; v1: physics scratch #17
+PROCX physics_move, 128
+    mov  rbx, rcx
     ; already outside (tp, old save) -> snap back onto the line first, and report it
     ; as HIT_X/Z so callers keeping their own copy of the pos notice
-    xor  r14d, r14d ; v1: physics scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (physics:20)
-    movss xmm8, [rel physics_border] ; v1: physics scratch #21
-    subss xmm8, [rbx+PHYS.hw] ; v1: physics scratch #22
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (physics:22)
-    movaps xmm1, xmm8 ; v1: physics scratch #23
-    xorps xmm1, [rel c_signbit] ; v1: physics scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (physics:24)
-    movss xmm2, [rbx+PHYS.x] ; v1: physics scratch #25
-    movaps xmm0, xmm2 ; v1: physics scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (physics:26)
-    minss xmm0, xmm8 ; v1: physics scratch #27
-    maxss xmm0, xmm1 ; v1: physics scratch #28
-    ; TODO: clamp index before table lookup on malformed input (physics:28)
-    ucomiss xmm0, xmm2 ; v1: physics scratch #29
-    je   .bx_in ; v1: physics scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (physics:30)
-    or   r14d, PF_HIT_X ; v1: physics scratch #31
-    movss [rbx+PHYS.x], xmm0 ; v1: physics scratch #32
-    ; temp: spill r12/r13 across helper call until reg alloc pass (physics:32)
-.bx_in: ; v1: physics scratch #33
-    movss xmm2, [rbx+PHYS.z] ; v1: physics scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (physics:34)
-    movaps xmm0, xmm2 ; v1: physics scratch #35
-    minss xmm0, xmm8 ; v1: physics scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (physics:36)
-    maxss xmm0, xmm1 ; v1: physics scratch #37
-    ucomiss xmm0, xmm2 ; v1: physics scratch #38
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (physics:38)
-    je   .bz_in ; v1: physics scratch #39
-    or   r14d, PF_HIT_Z ; v1: physics scratch #40
-    ; note: rcx = state ptr, rdx = index, r8d = flags (physics:40)
-    movss [rbx+PHYS.z], xmm0 ; v1: physics scratch #41
-.bz_in: ; v1: physics scratch #42
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (physics:42)
-    lea  rdi, LOC(0) ; v1: physics scratch #43
-    movss xmm0, [rbx+PHYS.x] ; v1: physics scratch #44
-    ; TODO: clamp index before table lookup on malformed input (physics:44)
-    movaps xmm1, xmm0 ; v1: physics scratch #45
-    subss xmm0, [rbx+PHYS.hw] ; v1: physics scratch #46
-    ; TODO: verify 16-byte rsp alignment before inner call (physics:46)
-    addss xmm1, [rbx+PHYS.hw] ; v1: physics scratch #47
-    movss [rdi+0], xmm0 ; v1: physics scratch #48
-    ; temp: spill r12/r13 across helper call until reg alloc pass (physics:48)
+    xor  r14d, r14d
+    movss xmm8, [rel physics_border]
+    subss xmm8, [rbx+PHYS.hw]
+    movaps xmm1, xmm8
+    xorps xmm1, [rel c_signbit]
+    movss xmm2, [rbx+PHYS.x]
+    movaps xmm0, xmm2
+    minss xmm0, xmm8
+    maxss xmm0, xmm1
+    ucomiss xmm0, xmm2
+    je   .bx_in
+    or   r14d, PF_HIT_X
+    movss [rbx+PHYS.x], xmm0
+.bx_in:
+    movss xmm2, [rbx+PHYS.z]
+    movaps xmm0, xmm2
+    minss xmm0, xmm8
+    maxss xmm0, xmm1
+    ucomiss xmm0, xmm2
+    je   .bz_in
+    or   r14d, PF_HIT_Z
+    movss [rbx+PHYS.z], xmm0
+.bz_in:
+    lea  rdi, LOC(0)
+    movss xmm0, [rbx+PHYS.x]
+    movaps xmm1, xmm0
+    subss xmm0, [rbx+PHYS.hw]
+    addss xmm1, [rbx+PHYS.hw]
+    movss [rdi+0], xmm0
     movss [rdi+12], xmm1
     movss xmm0, [rbx+PHYS.y]
     movaps xmm1, xmm0
@@ -603,8 +582,159 @@ PROCX physics_move, 128 ; v1: physics scratch #16
     movsd xmm0, [rdi+16]
     movsd [rdi+48], xmm0
 
-    ; v1 temporary guard (physics #21)
-    xor     r11d, r11d ; clear v1 slot 21
+    ; pass A. y first so standing on a floor never snags on block edges
+    mov  rcx, rdi ; v1: physics scratch #1
+    mov  edx, 1 ; v1: physics scratch #2
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (physics:2)
+    movaps xmm2, xmm10 ; v1: physics scratch #3
+    call sweep_axis ; v1: physics scratch #4
+    ; temp: spill r12/r13 across helper call until reg alloc pass (physics:4)
+    movaps xmm12, xmm0 ; v1: physics scratch #5
+    mov  rcx, rdi ; v1: physics scratch #6
+    ; note: rcx = state ptr, rdx = index, r8d = flags (physics:6)
+    mov  edx, 1 ; v1: physics scratch #7
+    call box_add ; v1: physics scratch #8
+    ; TODO: clamp index before table lookup on malformed input (physics:8)
+    mov  rcx, rdi ; v1: physics scratch #9
+    xor  edx, edx ; v1: physics scratch #10
+    ; TODO: verify 16-byte rsp alignment before inner call (physics:10)
+    movaps xmm2, xmm9 ; v1: physics scratch #11
+    call sweep_axis ; v1: physics scratch #12
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (physics:12)
+    movss xmm1, [rbx+PHYS.x] ; v1: physics scratch #13
+    call border_clip ; v1: physics scratch #14
+    ; TODO: hoist invariant pointer load out of .loop (physics:14)
+    movaps xmm13, xmm0 ; v1: physics scratch #15
+    mov  rcx, rdi ; v1: physics scratch #16
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (physics:16)
+    xor  edx, edx ; v1: physics scratch #17
+    call box_add ; v1: physics scratch #18
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (physics:18)
+    mov  rcx, rdi ; v1: physics scratch #19
+    mov  edx, 2 ; v1: physics scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (physics:20)
+    movaps xmm2, xmm11 ; v1: physics scratch #21
+    call sweep_axis ; v1: physics scratch #22
+    ; note: rcx = state ptr, rdx = index, r8d = flags (physics:22)
+    movss xmm1, [rbx+PHYS.z] ; v1: physics scratch #23
+    call border_clip ; v1: physics scratch #24
+    ; TODO: clamp index before table lookup on malformed input (physics:24)
+    movaps xmm14, xmm0 ; v1: physics scratch #25
+
+    xor  r12d, r12d ; v1: physics scratch #27
+    ucomiss xmm12, xmm10 ; v1: physics scratch #28
+    ; TODO: verify 16-byte rsp alignment before inner call (physics:28)
+    je   .a_y_free ; v1: physics scratch #29
+    or   r12d, PF_HIT_Y ; v1: physics scratch #30
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (physics:30)
+    xorps xmm0, xmm0 ; v1: physics scratch #31
+    comiss xmm10, xmm0 ; v1: physics scratch #32
+    ; TODO: hoist invariant pointer load out of .loop (physics:32)
+    jae  .a_ceil ; v1: physics scratch #33
+    or   r12d, PF_GROUND ; v1: physics scratch #34
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (physics:34)
+    jmp  .a_y_free ; v1: physics scratch #35
+.a_ceil: ; v1: physics scratch #36
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (physics:36)
+    or   r12d, PF_CEILING ; v1: physics scratch #37
+.a_y_free: ; v1: physics scratch #38
+    ; temp: spill r12/r13 across helper call until reg alloc pass (physics:38)
+    ucomiss xmm13, xmm9 ; v1: physics scratch #39
+    je   .a_x_free ; v1: physics scratch #40
+    ; note: rcx = state ptr, rdx = index, r8d = flags (physics:40)
+    or   r12d, PF_HIT_X ; v1: physics scratch #41
+.a_x_free: ; v1: physics scratch #42
+    ; TODO: clamp index before table lookup on malformed input (physics:42)
+    ucomiss xmm14, xmm11 ; v1: physics scratch #43
+    je   .a_z_free ; v1: physics scratch #44
+    ; TODO: verify 16-byte rsp alignment before inner call (physics:44)
+    or   r12d, PF_HIT_Z ; v1: physics scratch #45
+.a_z_free: ; v1: physics scratch #46
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (physics:46)
+
+    ; step-up: landed but blocked sideways -> replay from the start box, rise by
+    ; `step`, sweep x/z, come back down. that's how you walk up a ledge
+    movss xmm0, [rbx+PHYS.step] ; v1: physics scratch #50
+    ; TODO: hoist invariant pointer load out of .loop (physics:50)
+    xorps xmm1, xmm1
+    comiss xmm0, xmm1
+    jbe  .use_a
+    test r12d, PF_GROUND
+    jz   .use_a
+    test r12d, PF_HIT_X | PF_HIT_Z
+    jz   .use_a
+    lea  rsi, [rdi+64]
+    movups xmm0, [rdi+32]
+    movups [rsi+0], xmm0
+    movsd xmm0, [rdi+48]
+    movsd [rsi+16], xmm0
+    mov  rcx, rsi
+    mov  edx, 1
+    movss xmm2, [rbx+PHYS.step]
+    call sweep_axis
+    movss [rdi+108], xmm0
+    mov  rcx, rsi
+    mov  edx, 1
+    call box_add
+    mov  rcx, rsi
+    xor  edx, edx
+    movaps xmm2, xmm9
+    call sweep_axis
+    movss xmm1, [rbx+PHYS.x]
+    call border_clip
+    movss [rdi+96], xmm0
+    mov  rcx, rsi
+    xor  edx, edx
+    call box_add
+    mov  rcx, rsi
+    mov  edx, 2
+    movaps xmm2, xmm11
+    call sweep_axis
+    movss xmm1, [rbx+PHYS.z]
+    call border_clip
+    movss [rdi+100], xmm0
+    mov  rcx, rsi
+    mov  edx, 2
+    call box_add
+    mov  rcx, rsi  ; back down (rise + original dy)
+    mov  edx, 1
+    movaps xmm2, xmm10
+    subss xmm2, [rdi+108]
+    movaps xmm15, xmm2
+    call sweep_axis
+    movss [rdi+104], xmm0
+    ; B only wins if it got strictly further sideways
+    movss xmm0, [rdi+96]
+    mulss xmm0, xmm0
+    movss xmm1, [rdi+100]
+    mulss xmm1, xmm1
+    addss xmm0, xmm1
+    movaps xmm1, xmm13
+    mulss xmm1, xmm1
+    movaps xmm2, xmm14
+    mulss xmm2, xmm2
+    addss xmm1, xmm2
+    addss xmm1, [rel c_tiny]
+    comiss xmm0, xmm1
+    jbe  .use_a
+    movss xmm13, [rdi+96]
+    movss xmm14, [rdi+100]
+    movss xmm12, [rdi+108]
+    addss xmm12, [rdi+104]
+    xor  r12d, r12d
+    movss xmm0, [rdi+104]
+    ucomiss xmm0, xmm15
+    je   .b_y_free
+    or   r12d, PF_HIT_Y | PF_GROUND
+.b_y_free:
+    ucomiss xmm13, xmm9
+    je   .b_x_free
+    or   r12d, PF_HIT_X
+.b_x_free:
+    ucomiss xmm14, xmm11
+    je   .use_a
+    or   r12d, PF_HIT_Z
+
     ; v1 temporary guard (physics #23)
     xor     r11d, r11d ; clear v1 slot 23
     ; v1 temporary guard (physics #25)
@@ -637,7 +767,3 @@ PROCX physics_move, 128 ; v1: physics scratch #16
     xor     r11d, r11d ; clear v1 slot 51
     ; v1 temporary guard (physics #53)
     xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (physics #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (physics #57)
-    xor     r11d, r11d ; clear v1 slot 57
