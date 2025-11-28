@@ -135,74 +135,52 @@ PROCX raycast_blocks, 128
     movss [rbx+R_D+4], xmm1
     movss [rbx+R_D+8], xmm2
 
-    xor  ecx, ecx ; v1: raycast scratch #0
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (raycast:0)
-.init: ; v1: raycast scratch #1
-    movss xmm0, [rbx+R_O+rcx*4] ; v1: raycast scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (raycast:2)
-    movaps xmm1, xmm0 ; v1: raycast scratch #3
-    roundss xmm1, xmm1, 1 ; v1: raycast scratch #4
-    ; TODO: clamp index before table lookup on malformed input (raycast:4)
-    cvttss2si eax, xmm1 ; v1: raycast scratch #5
-    mov  [rbx+R_CELL+rcx*4], eax ; v1: raycast scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (raycast:6)
-    movss xmm2, [rbx+R_D+rcx*4] ; v1: raycast scratch #7
-    movd eax, xmm2 ; v1: raycast scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (raycast:8)
-    and  eax, 0x7FFFFFFF ; v1: raycast scratch #9
-    cmp  eax, TINY_BITS ; v1: raycast scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (raycast:10)
-    ja   .init_slanted ; v1: raycast scratch #11
-    mov  dword [rbx+R_STEP+rcx*4], 0 ; v1: raycast scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (raycast:12)
-    movss xmm3, [rel c_big] ; v1: raycast scratch #13
-    movss [rbx+R_TMAX+rcx*4], xmm3 ; v1: raycast scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (raycast:14)
-    movss [rbx+R_TDELTA+rcx*4], xmm3 ; v1: raycast scratch #15
-    jmp  .init_next ; v1: raycast scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (raycast:16)
-.init_slanted: ; v1: raycast scratch #17
-    movss xmm3, [rel c_one] ; v1: raycast scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (raycast:18)
-    divss xmm3, xmm2 ; v1: raycast scratch #19
-    andps xmm3, [rel c_absmask] ; v1: raycast scratch #20
-    ; TODO: clamp index before table lookup on malformed input (raycast:20)
-    movss [rbx+R_TDELTA+rcx*4], xmm3 ; v1: raycast scratch #21
-    xorps xmm3, xmm3 ; v1: raycast scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (raycast:22)
-    comiss xmm2, xmm3 ; v1: raycast scratch #23
-    jbe  .init_neg ; v1: raycast scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (raycast:24)
-    mov  dword [rbx+R_STEP+rcx*4], 1 ; v1: raycast scratch #25
-    addss xmm1, [rel c_one] ; v1: raycast scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (raycast:26)
-    jmp  .init_t ; v1: raycast scratch #27
-.init_neg: ; v1: raycast scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (raycast:28)
-    mov  dword [rbx+R_STEP+rcx*4], -1 ; v1: raycast scratch #29
-.init_t: ; v1: raycast scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (raycast:30)
-    subss xmm1, xmm0 ; v1: raycast scratch #31
-    divss xmm1, xmm2 ; v1: raycast scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (raycast:32)
-    movss [rbx+R_TMAX+rcx*4], xmm1 ; v1: raycast scratch #33
-.init_next: ; v1: raycast scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (raycast:34)
-    inc  ecx ; v1: raycast scratch #35
-    cmp  ecx, 3 ; v1: raycast scratch #36
-    ; TODO: clamp index before table lookup on malformed input (raycast:36)
-    jb   .init ; v1: raycast scratch #37
+    xor  ecx, ecx
+.init:
+    movss xmm0, [rbx+R_O+rcx*4]
+    movaps xmm1, xmm0
+    roundss xmm1, xmm1, 1  ; floor, still a float
+    cvttss2si eax, xmm1
+    mov  [rbx+R_CELL+rcx*4], eax
+    movss xmm2, [rbx+R_D+rcx*4]
+    movd eax, xmm2
+    and  eax, 0x7FFFFFFF
+    cmp  eax, TINY_BITS
+    ja   .init_slanted
+    mov  dword [rbx+R_STEP+rcx*4], 0
+    movss xmm3, [rel c_big]
+    movss [rbx+R_TMAX+rcx*4], xmm3
+    movss [rbx+R_TDELTA+rcx*4], xmm3
+    jmp  .init_next
+.init_slanted:
+    movss xmm3, [rel c_one]
+    divss xmm3, xmm2
+    andps xmm3, [rel c_absmask]
+    movss [rbx+R_TDELTA+rcx*4], xmm3
+    xorps xmm3, xmm3
+    comiss xmm2, xmm3
+    jbe  .init_neg
+    mov  dword [rbx+R_STEP+rcx*4], 1
+    addss xmm1, [rel c_one]
+    jmp  .init_t
+.init_neg:
+    mov  dword [rbx+R_STEP+rcx*4], -1  ; next plane is the cell itself
+.init_t:
+    subss xmm1, xmm0
+    divss xmm1, xmm2
+    movss [rbx+R_TMAX+rcx*4], xmm1
+.init_next:
+    inc  ecx
+    cmp  ecx, 3
+    jb   .init
 
-    mov  r12d, 1 ; v1: raycast scratch #39
-    xorps xmm13, xmm13 ; v1: raycast scratch #40
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (raycast:40)
-    mov  r13d, FACE_PY ; v1: raycast scratch #41
-    mov  r14d, MAX_STEPS ; v1: raycast scratch #42
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (raycast:42)
+    mov  r12d, 1  ; still in the start cell
+    xorps xmm13, xmm13  ; t we entered this cell at
+    mov  r13d, FACE_PY
+    mov  r14d, MAX_STEPS
 
-.cell: ; v1: raycast scratch #44
-    ; note: rcx = state ptr, rdx = index, r8d = flags (raycast:44)
-    mov  edx, [rbx+R_CELL+4] ; v1: raycast scratch #45
+.cell:
+    mov  edx, [rbx+R_CELL+4]
     test edx, edx
     js   .below_world
     cmp  edx, CHUNK_H
@@ -302,37 +280,39 @@ PROCX raycast_blocks, 128
     mov  eax, 1
     jmp  .done
 
-    ; v1 temporary guard (raycast #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (raycast #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (raycast #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (raycast #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (raycast #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (raycast #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (raycast #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (raycast #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (raycast #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (raycast #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (raycast #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (raycast #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (raycast #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (raycast #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (raycast #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (raycast #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (raycast #54)
-    xor     r11d, r11d ; clear v1 slot 54
+.advance:
+    xor  r12d, r12d
+    dec  r14d
+    jz   .miss
+    xor  ecx, ecx
+    movss xmm0, [rbx+R_TMAX+0]
+    movss xmm1, [rbx+R_TMAX+4]
+    comiss xmm1, xmm0
+    jae  .try_z
+    mov  ecx, 1
+    movaps xmm0, xmm1
+.try_z:
+    movss xmm1, [rbx+R_TMAX+8]
+    comiss xmm1, xmm0
+    jae  .chosen
+    mov  ecx, 2
+    movaps xmm0, xmm1
+.chosen:
+    comiss xmm0, xmm12
+    ja   .miss  ; next cell starts past maxdist
+    movaps xmm13, xmm0
+    mov  eax, [rbx+R_STEP+rcx*4]
+    add  [rbx+R_CELL+rcx*4], eax
+    movss xmm1, [rbx+R_TMAX+rcx*4]
+    addss xmm1, [rbx+R_TDELTA+rcx*4]
+    movss [rbx+R_TMAX+rcx*4], xmm1
+    lea  r13d, [rcx+rcx]
+    test eax, eax
+    jle  .cell
+    inc  r13d
+    jmp  .cell
+
+.miss:
+    xor  eax, eax
+.done:
+ENDPX
