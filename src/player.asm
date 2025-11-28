@@ -238,65 +238,47 @@ approach:
     addss xmm0, xmm1
     ret
 
-align 16 ; v1: player scratch #1
-dec_timer: ; v1: player scratch #2
-    ; TODO: clamp index before table lookup on malformed input (player:2)
-    movss xmm1, [rcx] ; v1: player scratch #3
-    subss xmm1, xmm0 ; v1: player scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (player:4)
-    maxss xmm1, [rel f_zero] ; v1: player scratch #5
-    movss [rcx], xmm1 ; v1: player scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (player:6)
-    ret ; v1: player scratch #7
+align 16
+dec_timer:
+    movss xmm1, [rcx]
+    subss xmm1, xmm0
+    maxss xmm1, [rel f_zero]
+    movss [rcx], xmm1
+    ret
 
-align 16 ; v1: player scratch #9
-swing_start: ; v1: player scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (player:10)
-    lea  rax, [rel g_player] ; v1: player scratch #11
-    mov  ecx, [rax+PLAYER.swing] ; v1: player scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (player:12)
-    test ecx, ecx ; v1: player scratch #13
-    jnz  .busy ; v1: player scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (player:14)
-    mov  ecx, [rel f_swing_start] ; v1: player scratch #15
-    mov  [rax+PLAYER.swing], ecx ; v1: player scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (player:16)
-.busy: ; v1: player scratch #17
-    ret ; v1: player scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (player:18)
+align 16
+swing_start:
+    lea  rax, [rel g_player]
+    mov  ecx, [rax+PLAYER.swing]
+    test ecx, ecx
+    jnz  .busy
+    mov  ecx, [rel f_swing_start]
+    mov  [rax+PLAYER.swing], ecx
+.busy:
+    ret
 
-align 16 ; v1: player scratch #20
-    ; TODO: clamp index before table lookup on malformed input (player:20)
-is_creative: ; v1: player scratch #21
-    xor  eax, eax ; v1: player scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (player:22)
-    cmp  dword [rel g_gamemode], GM_CREATIVE ; v1: player scratch #23
-    sete al ; v1: player scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (player:24)
-    ret ; v1: player scratch #25
+align 16
+is_creative:
+    xor  eax, eax
+    cmp  dword [rel g_gamemode], GM_CREATIVE
+    sete al
+    ret
 
 ; blk_tier 0xFF = no tool needed
-align 16 ; v1: player scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (player:28)
-can_harvest: ; v1: player scratch #29
-    and  ecx, 0xFF ; v1: player scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (player:30)
-    lea  rax, [rel blk_tier] ; v1: player scratch #31
-    movzx edx, byte [rax+rcx] ; v1: player scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (player:32)
-    cmp  edx, 0xFF ; v1: player scratch #33
-    je   .yes ; v1: player scratch #34
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (player:34)
-    mov  r8d, [rel s_held_id] ; v1: player scratch #35
-    lea  rax, [rel item_tool_kind] ; v1: player scratch #36
-    ; temp: spill r12/r13 across helper call until reg alloc pass (player:36)
-    cmp  byte [rax+r8], TOOL_PICK ; v1: player scratch #37
-    jne  .no ; v1: player scratch #38
-    ; TODO: clamp index before table lookup on malformed input (player:38)
-    lea  rax, [rel item_tool_tier] ; v1: player scratch #39
-    movzx r9d, byte [rax+r8] ; v1: player scratch #40
-    ; note: rcx = state ptr, rdx = index, r8d = flags (player:40)
-    cmp  r9d, 0xFF ; v1: player scratch #41
+align 16
+can_harvest:
+    and  ecx, 0xFF
+    lea  rax, [rel blk_tier]
+    movzx edx, byte [rax+rcx]
+    cmp  edx, 0xFF
+    je   .yes
+    mov  r8d, [rel s_held_id]
+    lea  rax, [rel item_tool_kind]
+    cmp  byte [rax+r8], TOOL_PICK
+    jne  .no
+    lea  rax, [rel item_tool_tier]
+    movzx r9d, byte [rax+r8]
+    cmp  r9d, 0xFF
     je   .no
     cmp  r9d, edx
     jb   .no
@@ -490,6 +472,280 @@ SPROCX splash, 32
     jnz  .spray
 ENDPX
 
+; push = sum of (neighbour level - ours) over the 4 sides, open air counts as +1
+SPROCX water_current, 32 ; v1: player scratch #1
+    lea  rbx, [rel g_player] ; v1: player scratch #2
+    ; TODO: clamp index before table lookup on malformed input (player:2)
+    movss xmm0, [rbx+PLAYER.x] ; v1: player scratch #3
+    IFLOOR r12d, xmm0 ; v1: player scratch #4
+    ; note: rcx = state ptr, rdx = index, r8d = flags (player:4)
+    movss xmm0, [rbx+PLAYER.y] ; v1: player scratch #5
+    addss xmm0, [rel f_feet_probe] ; v1: player scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (player:6)
+    IFLOOR r13d, xmm0 ; v1: player scratch #7
+    movss xmm0, [rbx+PLAYER.z] ; v1: player scratch #8
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (player:8)
+    IFLOOR r14d, xmm0 ; v1: player scratch #9
+    mov  ecx, r12d ; v1: player scratch #10
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (player:10)
+    mov  edx, r13d ; v1: player scratch #11
+    mov  r8d, r14d ; v1: player scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (player:12)
+    call world_get_block ; v1: player scratch #13
+    movzx eax, al ; v1: player scratch #14
+    ; TODO: verify 16-byte rsp alignment before inner call (player:14)
+    cmp  eax, B_WATER_FLOW ; v1: player scratch #15
+    jb   .done ; v1: player scratch #16
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (player:16)
+    cmp  eax, B_WATER_LAST ; v1: player scratch #17
+    ja   .done ; v1: player scratch #18
+    ; TODO: clamp index before table lookup on malformed input (player:18)
+    sub  eax, B_WATER ; v1: player scratch #19
+    mov  r15d, eax ; v1: player scratch #20
+    ; note: rcx = state ptr, rdx = index, r8d = flags (player:20)
+    xorps xmm6, xmm6 ; v1: player scratch #21
+    xorps xmm7, xmm7 ; v1: player scratch #22
+    ; TODO: hoist invariant pointer load out of .loop (player:22)
+    xor  esi, esi ; v1: player scratch #23
+.nb: ; v1: player scratch #24
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (player:24)
+    lea  rax, [rel nbr4] ; v1: player scratch #25
+    mov  edi, [rax+rsi*8] ; v1: player scratch #26
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (player:26)
+    mov  eax, [rax+rsi*8+4] ; v1: player scratch #27
+    mov  LOC(0), eax ; v1: player scratch #28
+    ; temp: spill r12/r13 across helper call until reg alloc pass (player:28)
+    lea  ecx, [r12d+edi] ; v1: player scratch #29
+    mov  edx, r13d ; v1: player scratch #30
+    ; TODO: verify 16-byte rsp alignment before inner call (player:30)
+    lea  r8d, [r14d+eax] ; v1: player scratch #31
+    call world_get_block ; v1: player scratch #32
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (player:32)
+    movzx eax, al
+    cmp  eax, B_WATER
+    jb   .not_water
+    cmp  eax, B_WATER_LAST
+    ja   .not_water
+    sub  eax, B_WATER
+    sub  eax, r15d
+    jmp  .weight
+.not_water:
+    lea  rcx, [rel blk_flags]
+    test word [rcx+rax*2], BF_SOLID
+    jnz  .next
+    mov  eax, 1
+.weight:
+    cvtsi2ss xmm0, eax
+    cvtsi2ss xmm1, edi
+    mulss xmm1, xmm0
+    addss xmm6, xmm1
+    cvtsi2ss xmm1, dword LOC(0)
+    mulss xmm1, xmm0
+    addss xmm7, xmm1
+.next:
+    inc  esi
+    cmp  esi, 4
+    jb   .nb
+    movaps xmm0, xmm6
+    mulss xmm0, xmm6
+    movaps xmm1, xmm7
+    mulss xmm1, xmm7
+    addss xmm0, xmm1
+    comiss xmm0, [rel f_box_eps]
+    jbe  .done
+    sqrtss xmm0, xmm0
+    movss xmm1, [rel f_current]
+    mulss xmm1, [rel s_h]
+    divss xmm1, xmm0
+    mulss xmm6, xmm1
+    mulss xmm7, xmm1
+    addss xmm6, [rbx+PLAYER.vx]
+    movss [rbx+PLAYER.vx], xmm6
+    addss xmm7, [rbx+PLAYER.vz]
+    movss [rbx+PLAYER.vz], xmm7
+.done:
+ENDPX
+
+SPROCX substep, 64
+    lea  rbx, [rel g_player]
+
+    call fill_phys
+    lea  rcx, [rel s_phys]
+    call physics_in_liquid
+    xor  ecx, ecx
+    cmp  eax, 1
+    sete cl
+    mov  [rbx+PLAYER.in_water], ecx
+    xor  ecx, ecx
+    cmp  eax, 2
+    sete cl
+    mov  [rbx+PLAYER.in_lava], ecx
+    cmp  dword [rbx+PLAYER.in_water], 0
+    je   .no_splash
+    cmp  dword [rel s_prev_in_water], 0
+    jne  .no_splash
+    movss xmm0, [rbx+PLAYER.vy]
+    comiss xmm0, [rel f_splash_v]
+    jae  .no_splash
+    call splash
+.no_splash:
+    mov  eax, [rbx+PLAYER.in_water]
+    mov  [rel s_prev_in_water], eax
+
+    cmp  dword [rbx+PLAYER.flying], 0
+    jne  .fly
+    mov  eax, [rbx+PLAYER.in_water]
+    or   eax, [rbx+PLAYER.in_lava]
+    jnz  .swim
+
+    cmp  dword [rbx+PLAYER.on_ground], 0
+    je   .air
+    movss xmm8, [rel f_k_ground]
+    cmp  dword [rel s_below], B_ICE
+    jne  .accel
+    movss xmm8, [rel f_k_ice]
+    jmp  .accel
+.air:
+    movss xmm8, [rel f_k_air]
+    mov  eax, [rel s_tx]
+    or   eax, [rel s_tz]
+    and  eax, 0x7FFFFFFF
+    jnz  .accel
+    movss xmm8, [rel f_k_air_idle]
+.accel:
+    movss xmm0, [rbx+PLAYER.vx]
+    movss xmm1, [rel s_tx]
+    movaps xmm2, xmm8
+    call approach
+    movss [rbx+PLAYER.vx], xmm0
+    movss xmm0, [rbx+PLAYER.vz]
+    movss xmm1, [rel s_tz]
+    movaps xmm2, xmm8
+    call approach
+    movss [rbx+PLAYER.vz], xmm0
+    ; jump: held, or buffered press right before landing (+ coyote)
+    cmp  dword [rel s_jump_held], 0
+    jne  .want_jump
+    movss xmm0, [rel s_jump_buffer]
+    comiss xmm0, [rel f_zero]
+    jbe  .gravity
+.want_jump:
+    cmp  dword [rbx+PLAYER.on_ground], 0
+    jne  .can_jump
+    movss xmm0, [rel s_coyote]
+    comiss xmm0, [rel f_zero]
+    jbe  .gravity
+.can_jump:
+    movss xmm0, [rbx+PLAYER.vy]
+    comiss xmm0, [rel f_jump_gate]
+    ja   .gravity
+    mov  eax, [rel f_jump]
+    mov  [rbx+PLAYER.vy], eax
+    xor  eax, eax
+    mov  [rbx+PLAYER.on_ground], eax
+    mov  [rel s_coyote], eax
+    mov  [rel s_jump_buffer], eax
+    movss xmm0, [rel f_ex_jump]
+    cmp  dword [rbx+PLAYER.sprinting], 0
+    je   .jump_ex
+    movss xmm0, [rel f_ex_sjump]
+    movss xmm1, [rel s_fwdx]  ; sprint-jump kick
+    mulss xmm1, [rel f_sprint_boost]
+    addss xmm1, [rbx+PLAYER.vx]
+    movss [rbx+PLAYER.vx], xmm1
+    movss xmm1, [rel s_fwdz]
+    mulss xmm1, [rel f_sprint_boost]
+    addss xmm1, [rbx+PLAYER.vz]
+    movss [rbx+PLAYER.vz], xmm1
+.jump_ex:
+    addss xmm0, [rbx+PLAYER.exhaustion]
+    movss [rbx+PLAYER.exhaustion], xmm0
+.gravity:
+    ; constant accel: move by the average of start/end v so jump height and fall
+    ; timing don't depend on the frame rate
+    movss xmm15, [rbx+PLAYER.vy]
+    movaps xmm0, xmm15
+    movss xmm1, [rel f_gravity]
+    mulss xmm1, [rel s_h]
+    subss xmm0, xmm1
+    maxss xmm0, [rel f_terminal]
+    movss [rbx+PLAYER.vy], xmm0
+    addss xmm15, xmm0
+    mulss xmm15, [rel f_half]
+    jmp  .move_mid
+
+.fly:
+    movss xmm0, [rbx+PLAYER.vx]
+    movss xmm1, [rel s_tx]
+    movss xmm2, [rel f_k_fly]
+    call approach
+    movss [rbx+PLAYER.vx], xmm0
+    movss xmm0, [rbx+PLAYER.vz]
+    movss xmm1, [rel s_tz]
+    movss xmm2, [rel f_k_fly]
+    call approach
+    movss [rbx+PLAYER.vz], xmm0
+    xorps xmm1, xmm1
+    cmp  dword [rel s_jump_held], 0
+    je   .fly_nodown
+    addss xmm1, [rel f_fly_vert]
+.fly_nodown:
+    cmp  dword [rel s_sneak_key], 0
+    je   .fly_v
+    subss xmm1, [rel f_fly_vert]
+.fly_v:
+    movss xmm0, [rbx+PLAYER.vy]
+    movss xmm2, [rel f_k_fly_v]
+    call approach
+    movss [rbx+PLAYER.vy], xmm0
+    jmp  .move
+
+.swim:
+    movss xmm8, [rel f_water_speed]
+    movss xmm9, [rel f_k_water]
+    movss xmm10, [rel f_swim_up]
+    movss xmm11, [rel f_water_sink]
+    cmp  dword [rbx+PLAYER.in_lava], 0
+    je   .swim_h
+    movss xmm8, [rel f_lava_speed]
+    movss xmm9, [rel f_k_lava]
+    movss xmm10, [rel f_lava_up]
+    movss xmm11, [rel f_lava_sink]
+.swim_h:
+    movss xmm0, [rbx+PLAYER.vx]
+    movss xmm1, [rel s_tx]
+    mulss xmm1, xmm8
+    movaps xmm2, xmm9
+    call approach
+    movss [rbx+PLAYER.vx], xmm0
+    movss xmm0, [rbx+PLAYER.vz]
+    movss xmm1, [rel s_tz]
+    mulss xmm1, xmm8
+    movaps xmm2, xmm9
+    call approach
+    movss [rbx+PLAYER.vz], xmm0
+    movss xmm0, [rbx+PLAYER.vy]
+    cmp  dword [rel s_jump_held], 0
+    je   .sink
+    movaps xmm1, xmm10
+    movss xmm2, [rel f_k_swim_v]
+    call approach
+    cmp  dword [rel s_hit_h], 0  ; against a wall: climb out onto the shore
+    je   .swim_v
+    maxss xmm0, [rel f_climb_out]
+    jmp  .swim_v
+.sink:
+    movaps xmm1, xmm11
+    movss xmm2, [rel f_k_sink]
+    call approach
+.swim_v:
+    movss [rbx+PLAYER.vy], xmm0
+    cmp  dword [rbx+PLAYER.in_water], 0
+    je   .move
+    call water_current
+
+    ; v1 temporary guard (player #16)
+    xor     r11d, r11d ; clear v1 slot 16
     ; v1 temporary guard (player #18)
     xor     r11d, r11d ; clear v1 slot 18
     ; v1 temporary guard (player #20)
@@ -518,11 +774,3 @@ ENDPX
     xor     r11d, r11d ; clear v1 slot 42
     ; v1 temporary guard (player #44)
     xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (player #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (player #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (player #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (player #52)
-    xor     r11d, r11d ; clear v1 slot 52
