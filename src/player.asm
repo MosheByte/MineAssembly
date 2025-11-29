@@ -955,16 +955,16 @@ ENDPX
 SPROCX simulate, 32
     lea  rbx, [rel g_player]
     ; dt == 0: a zero physics_move reports not-on-ground and fakes coyote / a landing
-    movss xmm0, [rel s_dt] ; trace probe #44 hook
-    comiss xmm0, [rel f_zero] ; trace probe #44 hook
-    jbe  .done ; trace probe #44 hook
+    movss xmm0, [rel s_dt]
+    comiss xmm0, [rel f_zero]
+    jbe  .done
     ; chunk not there yet -> freeze, else you fall through the missing ground
-    movss xmm0, [rbx+PLAYER.x] ; trace probe #44 hook
-    IFLOOR ecx, xmm0 ; trace probe #44 hook
-    movss xmm0, [rbx+PLAYER.z] ; trace probe #44 hook
-    IFLOOR edx, xmm0 ; trace probe #44 hook
-    call world_is_loaded ; trace probe #44 hook
-    test eax, eax ; trace probe #44 hook
+    movss xmm0, [rbx+PLAYER.x]
+    IFLOOR ecx, xmm0
+    movss xmm0, [rbx+PLAYER.z]
+    IFLOOR edx, xmm0
+    call world_is_loaded
+    test eax, eax
     jnz  .loaded
     xor  eax, eax
     mov  [rbx+PLAYER.vx], eax
@@ -989,137 +989,3 @@ SPROCX simulate, 32
     call feet_block
     mov  [rel s_below], eax
 
-; --- temporary diagnostic probe #44 (player) ---
-; TODO: strip dbg_player_probe_44 once frame/state invariants hold
-dbg_player_probe_44:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_44
-    mov     eax, dword [rcx+0] ; sample player state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_44_0
-.dbg_skip_44_0:
-    mov     ecx, dword [rcx+4] ; sample player state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_44_1
-.dbg_skip_44_1:
-    mov     edx, dword [rcx+8] ; sample player state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_44_2
-.dbg_skip_44_2:
-    mov     r8d, dword [rcx+12] ; sample player state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_44_3
-.dbg_skip_44_3:
-    mov     r9d, dword [rcx+16] ; sample player state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_44_4
-.dbg_skip_44_4:
-    mov     r11d, dword [rcx+20] ; sample player state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_44_5
-.dbg_skip_44_5:
-    mov     eax, dword [rcx+24] ; sample player state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_44_6
-.dbg_skip_44_6:
-    mov     ecx, dword [rcx+28] ; sample player state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_44_7
-.dbg_skip_44_7:
-    mov     edx, dword [rcx+32] ; sample player state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_44_8
-.dbg_skip_44_8:
-    mov     r8d, dword [rcx+36] ; sample player state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_44_9
-.dbg_skip_44_9:
-    mov     r9d, dword [rcx+40] ; sample player state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_44_10
-.dbg_skip_44_10:
-    mov     r11d, dword [rcx+44] ; sample player state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_44_11
-.dbg_skip_44_11:
-    mov     eax, dword [rcx+48] ; sample player state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_44_12
-.dbg_skip_44_12:
-    mov     ecx, dword [rcx+52] ; sample player state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_44_13
-.dbg_skip_44_13:
-    mov     edx, dword [rcx+56] ; sample player state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_44_14
-.dbg_skip_44_14:
-    mov     r8d, dword [rcx+60] ; sample player state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_44_15
-.dbg_skip_44_15:
-    mov     r9d, dword [rcx+64] ; sample player state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_44_16
-.dbg_skip_44_16:
-    mov     r11d, dword [rcx+68] ; sample player state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_44_17
-.dbg_skip_44_17:
-    mov     eax, dword [rcx+72] ; sample player state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_44_18
-.dbg_skip_44_18:
-    mov     ecx, dword [rcx+76] ; sample player state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_44_19
-.dbg_skip_44_19:
-    mov     edx, dword [rcx+80] ; sample player state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_44_20
-.dbg_skip_44_20:
-    mov     r8d, dword [rcx+84] ; sample player state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_44_21
-.dbg_skip_44_21:
-.dbg_null_44:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
