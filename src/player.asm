@@ -1482,78 +1482,54 @@ SPROCX break_block, 32
 .done:
 ENDPX
 
-SPROCX mine, 32 ; v1: player scratch #1
-    lea  rbx, [rel g_player] ; v1: player scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (player:2)
-    lea  rdi, [rel g_hit] ; v1: player scratch #3
-    movzx esi, byte [rdi+RAYHIT.block] ; v1: player scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (player:4)
-    lea  rax, [rel blk_hardness] ; v1: player scratch #5
-    movss xmm0, [rax+rsi*4] ; v1: player scratch #6
-    ; TODO: clamp index before table lookup on malformed input (player:6)
-    comiss xmm0, [rel f_zero] ; v1: player scratch #7
-    jb   .swing_only ; v1: player scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (player:8)
+SPROCX mine, 32
+    lea  rbx, [rel g_player]
+    lea  rdi, [rel g_hit]
+    movzx esi, byte [rdi+RAYHIT.block]
+    lea  rax, [rel blk_hardness]
+    movss xmm0, [rax+rsi*4]
+    comiss xmm0, [rel f_zero]
+    jb   .swing_only  ; bedrock and friends
 
-    call is_creative ; v1: player scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (player:10)
-    test eax, eax ; v1: player scratch #11
-    jz   .survival ; v1: player scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (player:12)
+    call is_creative
+    test eax, eax
+    jz   .survival
     ; creative: instant, 0.2 s repeat
-    test dword [rel g_mouse_pressed], MB_LEFT ; v1: player scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (player:14)
-    jnz  .c_break ; v1: player scratch #15
-    movss xmm0, [rel s_break_cd] ; v1: player scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (player:16)
-    comiss xmm0, [rel f_zero] ; v1: player scratch #17
-    ja   .done ; v1: player scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (player:18)
-.c_break: ; v1: player scratch #19
-    mov  eax, [rel f_creative_cd] ; v1: player scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (player:20)
-    mov  [rel s_break_cd], eax ; v1: player scratch #21
-    xor  ecx, ecx ; v1: player scratch #22
-    ; TODO: clamp index before table lookup on malformed input (player:22)
-    call break_block ; v1: player scratch #23
-    jmp  .done ; v1: player scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (player:24)
+    test dword [rel g_mouse_pressed], MB_LEFT
+    jnz  .c_break
+    movss xmm0, [rel s_break_cd]
+    comiss xmm0, [rel f_zero]
+    ja   .done
+.c_break:
+    mov  eax, [rel f_creative_cd]
+    mov  [rel s_break_cd], eax
+    xor  ecx, ecx
+    call break_block
+    jmp  .done
 
-.survival: ; v1: player scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (player:26)
-    mov  eax, [rdi+RAYHIT.x] ; v1: player scratch #27
-    cmp  eax, [rbx+PLAYER.break_x] ; v1: player scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (player:28)
-    jne  .retarget ; v1: player scratch #29
-    mov  eax, [rdi+RAYHIT.y] ; v1: player scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (player:30)
-    cmp  eax, [rbx+PLAYER.break_y] ; v1: player scratch #31
-    jne  .retarget ; v1: player scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (player:32)
-    mov  eax, [rdi+RAYHIT.z] ; v1: player scratch #33
-    cmp  eax, [rbx+PLAYER.break_z] ; v1: player scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (player:34)
-    jne  .retarget ; v1: player scratch #35
-    cmp  esi, [rel s_break_id] ; v1: player scratch #36
-    ; note: rcx = state ptr, rdx = index, r8d = flags (player:36)
-    je   .same ; v1: player scratch #37
-.retarget: ; v1: player scratch #38
-    ; TODO: clamp index before table lookup on malformed input (player:38)
-    mov  eax, [rdi+RAYHIT.x] ; v1: player scratch #39
-    mov  [rbx+PLAYER.break_x], eax ; v1: player scratch #40
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (player:40)
-    mov  eax, [rdi+RAYHIT.y] ; v1: player scratch #41
-    mov  [rbx+PLAYER.break_y], eax ; v1: player scratch #42
-    ; TODO: verify 16-byte rsp alignment before inner call (player:42)
-    mov  eax, [rdi+RAYHIT.z] ; v1: player scratch #43
-    mov  [rbx+PLAYER.break_z], eax ; v1: player scratch #44
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (player:44)
-    mov  [rel s_break_id], esi ; v1: player scratch #45
-    xor  eax, eax ; v1: player scratch #46
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (player:46)
-    mov  [rbx+PLAYER.break_progress], eax ; v1: player scratch #47
-    mov  [rel s_hit_fx], eax ; v1: player scratch #48
-    ; TODO: hoist invariant pointer load out of .loop (player:48)
+.survival:
+    mov  eax, [rdi+RAYHIT.x]
+    cmp  eax, [rbx+PLAYER.break_x]
+    jne  .retarget
+    mov  eax, [rdi+RAYHIT.y]
+    cmp  eax, [rbx+PLAYER.break_y]
+    jne  .retarget
+    mov  eax, [rdi+RAYHIT.z]
+    cmp  eax, [rbx+PLAYER.break_z]
+    jne  .retarget
+    cmp  esi, [rel s_break_id]
+    je   .same
+.retarget:
+    mov  eax, [rdi+RAYHIT.x]
+    mov  [rbx+PLAYER.break_x], eax
+    mov  eax, [rdi+RAYHIT.y]
+    mov  [rbx+PLAYER.break_y], eax
+    mov  eax, [rdi+RAYHIT.z]
+    mov  [rbx+PLAYER.break_z], eax
+    mov  [rel s_break_id], esi
+    xor  eax, eax
+    mov  [rbx+PLAYER.break_progress], eax
+    mov  [rel s_hit_fx], eax
 .same:
     movss xmm0, [rel s_break_cd]
     comiss xmm0, [rel f_zero]
@@ -1773,37 +1749,343 @@ SPROCX eat_crumbs, 32
     jnz  .crumb
 .done:
 ENDPX
-    ; v1 temporary guard (player #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (player #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (player #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (player #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (player #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (player #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (player #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (player #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (player #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (player #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (player #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (player #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (player #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (player #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (player #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (player #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (player #56)
-    xor     r11d, r11d ; clear v1 slot 56
+
+SPROCX eat, 32 ; v1: player scratch #1
+    lea  rbx, [rel g_player] ; v1: player scratch #2
+    ; TODO: hoist invariant pointer load out of .loop (player:2)
+    movss xmm0, [rbx+PLAYER.eat_time] ; v1: player scratch #3
+    addss xmm0, [rel s_dt] ; v1: player scratch #4
+    ; note: rcx = state ptr, rdx = index, r8d = flags (player:4)
+    movss [rbx+PLAYER.eat_time], xmm0 ; v1: player scratch #5
+    movss xmm0, [rel s_eat_snd] ; v1: player scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (player:6)
+    subss xmm0, [rel s_dt] ; v1: player scratch #7
+    movss [rel s_eat_snd], xmm0 ; v1: player scratch #8
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (player:8)
+    comiss xmm0, [rel f_zero] ; v1: player scratch #9
+    ja   .no_crunch ; v1: player scratch #10
+    ; TODO: clamp index before table lookup on malformed input (player:10)
+    mov  eax, [rel f_eat_snd] ; v1: player scratch #11
+    mov  [rel s_eat_snd], eax ; v1: player scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (player:12)
+    call rng_float ; v1: player scratch #13
+    mulss xmm0, [rel f_pitch_rand] ; v1: player scratch #14
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (player:14)
+    addss xmm0, [rel f_pitch_base] ; v1: player scratch #15
+    movaps xmm2, xmm0 ; v1: player scratch #16
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (player:16)
+    movss xmm1, [rel f_half] ; v1: player scratch #17
+    mov  ecx, SFX_EAT ; v1: player scratch #18
+    ; TODO: hoist invariant pointer load out of .loop (player:18)
+    call sfx_play ; v1: player scratch #19
+    call eat_crumbs ; v1: player scratch #20
+    ; note: rcx = state ptr, rdx = index, r8d = flags (player:20)
+.no_crunch: ; v1: player scratch #21
+    movss xmm0, [rbx+PLAYER.eat_time] ; v1: player scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (player:22)
+    comiss xmm0, [rel f_eat_time] ; v1: player scratch #23
+    jb   .done ; v1: player scratch #24
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (player:24)
+    ; hunger + saturation (food * modifier * 2)
+    mov  edi, [rel s_held_id] ; v1: player scratch #26
+    ; TODO: clamp index before table lookup on malformed input (player:26)
+    lea  rax, [rel item_food] ; v1: player scratch #27
+    movzx esi, byte [rax+rdi] ; v1: player scratch #28
+    ; temp: spill r12/r13 across helper call until reg alloc pass (player:28)
+    mov  eax, [rbx+PLAYER.hunger] ; v1: player scratch #29
+    add  eax, esi ; v1: player scratch #30
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (player:30)
+    cmp  eax, 20 ; v1: player scratch #31
+    jle  .h_ok ; v1: player scratch #32
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (player:32)
+    mov  eax, 20 ; v1: player scratch #33
+.h_ok: ; v1: player scratch #34
+    ; TODO: hoist invariant pointer load out of .loop (player:34)
+    mov  [rbx+PLAYER.hunger], eax ; v1: player scratch #35
+    movss xmm1, [rel f_half] ; v1: player scratch #36
+    ; note: rcx = state ptr, rdx = index, r8d = flags (player:36)
+    cmp  edi, I_COOKED_MEAT ; v1: player scratch #37
+    jne  .m1 ; v1: player scratch #38
+    ; TODO: verify 16-byte rsp alignment before inner call (player:38)
+    mov  ecx, __float32__(0.8) ; v1: player scratch #39
+    movd xmm1, ecx
+.m1:
+    cmp  edi, I_BREAD
+    jne  .m2
+    mov  ecx, __float32__(0.6)
+    movd xmm1, ecx
+.m2:
+    cmp  edi, I_APPLE
+    je   .m_low
+    cmp  edi, I_RAW_MEAT
+    jne  .m3
+.m_low:
+    mov  ecx, __float32__(0.3)
+    movd xmm1, ecx
+.m3:
+    cmp  edi, I_ROTTEN_FLESH
+    jne  .m4
+    mov  ecx, __float32__(0.1)
+    movd xmm1, ecx
+.m4:
+    cvtsi2ss xmm0, esi
+    mulss xmm0, xmm1
+    addss xmm0, xmm0
+    addss xmm0, [rbx+PLAYER.saturation]
+    cvtsi2ss xmm1, dword [rbx+PLAYER.hunger]
+    minss xmm0, xmm1  ; saturation never exceeds hunger
+    movss [rbx+PLAYER.saturation], xmm0
+    xor  eax, eax
+    mov  [rbx+PLAYER.eat_time], eax
+    mov  ecx, 1
+    call inv_consume_held
+    movss xmm1, [rel f_one]
+    mov  ecx, __float32__(0.6)
+    movd xmm2, ecx
+    mov  ecx, SFX_EAT
+    call sfx_play
+.done:
+ENDPX
+
+SPROC place_target, 0
+    mov  rbx, rcx
+    lea  rdi, [rel g_hit]
+    xor  eax, eax
+    cmp  dword [rdi+RAYHIT.hit], 0
+    je   .done
+    movzx ecx, byte [rdi+RAYHIT.block]
+    lea  rax, [rel blk_flags]
+    test word [rax+rcx*2], BF_REPLACEABLE
+    jz   .adjacent
+    mov  eax, [rdi+RAYHIT.x]
+    mov  [rbx+0], eax
+    mov  eax, [rdi+RAYHIT.y]
+    mov  [rbx+4], eax
+    mov  eax, [rdi+RAYHIT.z]
+    mov  [rbx+8], eax
+    jmp  .check
+.adjacent:
+    mov  eax, [rdi+RAYHIT.ax]
+    mov  [rbx+0], eax
+    mov  eax, [rdi+RAYHIT.ay]
+    mov  [rbx+4], eax
+    mov  eax, [rdi+RAYHIT.az]
+    mov  [rbx+8], eax
+.check:
+    xor  eax, eax
+    mov  edx, [rbx+4]
+    cmp  edx, CHUNK_H
+    jae  .done  ; unsigned, so y < 0 fails too
+    mov  ecx, [rbx+0]
+    mov  r8d, [rbx+8]
+    call world_get_block
+    movzx ecx, al
+    mov  [rbx+12], ecx
+    lea  rax, [rel blk_flags]
+    movzx eax, word [rax+rcx*2]
+    and  eax, BF_REPLACEABLE
+    setnz al
+    movzx eax, al
+.done:
+ENDP
+
+SPROC is_water_at, 0
+    call world_get_block
+    movzx eax, al
+    sub  eax, B_WATER
+    cmp  eax, B_WATER_LAST - B_WATER
+    setbe al
+    movzx eax, al
+ENDP
+
+FLT f_45,           45.0
+FLT f_inv90,        0.011111111
+
+section .rdata
+; base id -> first turned id (see BLOCK_BASE in ids.inc), 0 = never turns
+align 16
+pv_turn:
+%assign i 0
+%rep 256
+  BLOCK_BASE i
+  db BB_TURN
+  %assign i i+1
+%endrep
+section .text
+
+; ecx block about to go down -> eax what actually goes down. turnable blocks
+; get their front pointed back at us (the bed: pillow away from us), leaves
+; become the placed kind that never rots. leaf, rax rcx rdx r8 r9 xmm0
+align 16
+place_variant:
+    movss xmm0, [rel g_player + PLAYER.yaw]
+    addss xmm0, [rel f_45]
+    mulss xmm0, [rel f_inv90]
+    roundss xmm0, xmm0, 1
+    cvttss2si edx, xmm0
+    and  edx, 3                         ; looking n e s w = FACE_S W N E
+    mov  eax, ecx
+    lea  r8, [rel pv_turn]
+    movzx r9d, byte [r8+rcx]
+    test r9d, r9d
+    jz   .leaves
+    cmp  ecx, B_BED
+    jne  .turn
+    add  edx, 2
+    and  edx, 3
+.turn:
+    test edx, edx
+    jz   .ret
+    lea  eax, [r9+rdx-1]
+.ret:
+    ret
+.leaves:
+    cmp  ecx, B_LEAVES
+    jne  .birch
+    mov  eax, B_LEAVES_P
+.birch:
+    cmp  ecx, B_BIRCH_LEAVES
+    jne  .pine
+    mov  eax, B_BIRCH_LEAVES_P
+.pine:
+    cmp  ecx, B_PINE_LEAVES
+    jne  .ret
+    mov  eax, B_PINE_LEAVES_P
+    ret
+
+SPROCX place_block, 96
+    mov  r15d, ecx
+    lea  rcx, LOC(0)  ; LOC(0..11) target, LOC(12) current
+    call place_target
+    test eax, eax
+    jz   .done
+    mov  r12d, LOC(0)
+    mov  r13d, LOC(4)
+    mov  r14d, LOC(8)
+    cmp  r15d, LOC(12)
+    je   .done
+    lea  rax, [rel blk_flags]
+    movzx esi, word [rax+r15*2]
+    mov  ecx, r12d
+    lea  edx, [r13d-1]
+    mov  r8d, r14d
+    call world_get_block
+    movzx edi, al  ; below
+    lea  rax, [rel blk_flags]
+    movzx ebx, word [rax+rdi*2]
+
+    cmp  r15d, B_CACTUS
+    jne  .not_cactus
+    cmp  edi, B_RED_SAND
+    je   .cactus_sides
+    cmp  edi, B_SAND
+    je   .cactus_sides
+    cmp  edi, B_CACTUS
+    jne  .done
+.cactus_sides:  ; needs free sides
+    xor  ebx, ebx
+.cs_loop:
+    lea  rax, [rel nbr4]
+    mov  ecx, [rax+rbx*8]
+    add  ecx, r12d
+    mov  r8d, [rax+rbx*8+4]
+    add  r8d, r14d
+    mov  edx, r13d
+    call world_get_block
+    movzx eax, al
+    lea  rcx, [rel blk_flags]
+    test word [rcx+rax*2], BF_SOLID
+    jnz  .done
+    inc  ebx
+    cmp  ebx, 4
+    jb   .cs_loop
+    jmp  .rules_ok
+.not_cactus:
+    cmp  r15d, B_REEDS
+    jne  .not_reeds
+    cmp  edi, B_REEDS
+    je   .rules_ok
+    cmp  edi, B_GRASS
+    je   .reeds_water
+    cmp  edi, B_DIRT
+    je   .reeds_water
+    cmp  edi, B_RED_SAND
+    je   .reeds_water
+    cmp  edi, B_SAND
+    jne  .done
+.reeds_water:  ; needs water next to the ground block
+    xor  ebx, ebx
+.rw_loop:
+    lea  rax, [rel nbr4]
+    mov  ecx, [rax+rbx*8]
+    add  ecx, r12d
+    mov  r8d, [rax+rbx*8+4]
+    add  r8d, r14d
+    lea  edx, [r13d-1]
+    call is_water_at
+    test eax, eax
+    jnz  .rules_ok
+    inc  ebx
+    cmp  ebx, 4
+    jb   .rw_loop
+    jmp  .done
+.not_reeds:
+    cmp  r15d, B_DEAD_BUSH
+    jne  .not_bush
+    cmp  edi, B_RED_SAND
+    je   .rules_ok
+    lea  eax, [rdi-B_TERRACOTTA]
+    cmp  eax, B_TERRACOTTA_LAST-B_TERRACOTTA
+    jbe  .rules_ok
+    cmp  edi, B_SAND
+    je   .rules_ok
+    jmp  .dirtlike
+.not_bush:
+    cmp  r15d, B_MUSHROOM_RED
+    je   .mushroom
+    ; v1 temporary guard (player #19)
+    xor     r11d, r11d ; clear v1 slot 19
+    ; v1 temporary guard (player #21)
+    xor     r11d, r11d ; clear v1 slot 21
+    ; v1 temporary guard (player #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (player #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (player #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (player #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (player #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (player #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (player #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (player #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (player #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (player #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (player #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (player #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (player #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (player #49)
+    xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (player #51)
+    xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (player #53)
+    xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (player #55)
+    xor     r11d, r11d ; clear v1 slot 55
+    ; v1 temporary guard (player #57)
+    xor     r11d, r11d ; clear v1 slot 57
+    ; v1 temporary guard (player #59)
+    xor     r11d, r11d ; clear v1 slot 59
+    ; v1 temporary guard (player #61)
+    xor     r11d, r11d ; clear v1 slot 61
+    ; v1 temporary guard (player #63)
+    xor     r11d, r11d ; clear v1 slot 63
