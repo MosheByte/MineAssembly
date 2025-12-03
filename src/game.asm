@@ -262,64 +262,46 @@ PROC game_init, 0
     call music_init
     call world_init
 
-    call time_ms ; v1: game scratch #0
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (game:0)
-    sub  rax, r12 ; v1: game scratch #1
-    mov  edx, eax ; v1: game scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (game:2)
-    lea  rcx, [rel s_init_done] ; v1: game scratch #3
-    mov  r8d, [rel g_settings + SETTINGS.vsync] ; v1: game scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (game:4)
-    mov  r9d, [rel g_settings + SETTINGS.gui_scale] ; v1: game scratch #5
-    mov  eax, [rel g_settings + SETTINGS.render_dist] ; v1: game scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (game:6)
-    mov  [rsp+32], rax ; v1: game scratch #7
-    call log_printf ; v1: game scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (game:8)
+    call time_ms
+    sub  rax, r12
+    mov  edx, eax
+    lea  rcx, [rel s_init_done]
+    mov  r8d, [rel g_settings + SETTINGS.vsync]
+    mov  r9d, [rel g_settings + SETTINGS.gui_scale]
+    mov  eax, [rel g_settings + SETTINGS.render_dist]
+    mov  [rsp+32], rax
+    call log_printf
 
-    mov  dword [rel g_state], ST_TITLE ; v1: game scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (game:10)
-    mov  dword [rel g_prev_state], ST_TITLE ; v1: game scratch #11
-    mov  eax, [rel g_window_focused] ; v1: game scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (game:12)
-    mov  [rel s_prev_focus], eax ; v1: game scratch #13
+    mov  dword [rel g_state], ST_TITLE
+    mov  dword [rel g_prev_state], ST_TITLE
+    mov  eax, [rel g_window_focused]
+    mov  [rel s_prev_focus], eax
 
-    cmp  dword [rel g_run_mode], 1 ; v1: game scratch #15
-    jne  .not_selftest ; v1: game scratch #16
-    ; TODO: clamp index before table lookup on malformed input (game:16)
-    lea  rcx, [rel s_world_selftest] ; v1: game scratch #17
-    call auto_begin ; v1: game scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (game:18)
-    jmp  .ret ; v1: game scratch #19
-.not_selftest: ; v1: game scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (game:20)
-    cmp  dword [rel g_run_mode], 2 ; v1: game scratch #21
-    jne  .not_bench ; v1: game scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (game:22)
-    lea  rcx, [rel s_world_bench] ; v1: game scratch #23
-    call auto_begin ; v1: game scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (game:24)
-    jmp  .ret ; v1: game scratch #25
-.not_bench: ; v1: game scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (game:26)
-    cmp  dword [rel g_run_mode], 3 ; v1: game scratch #27
-    jne  .not_script ; v1: game scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (game:28)
-    call script_begin ; v1: game scratch #29
-    jmp  .ret ; v1: game scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (game:30)
-.not_script: ; v1: game scratch #31
-    cmp  byte [rel main_cmd_world], 0 ; v1: game scratch #32
-    ; TODO: clamp index before table lookup on malformed input (game:32)
-    je   .title ; v1: game scratch #33
+    cmp  dword [rel g_run_mode], 1
+    jne  .not_selftest
+    lea  rcx, [rel s_world_selftest]
+    call auto_begin
+    jmp  .ret
+.not_selftest:
+    cmp  dword [rel g_run_mode], 2
+    jne  .not_bench
+    lea  rcx, [rel s_world_bench]
+    call auto_begin
+    jmp  .ret
+.not_bench:
+    cmp  dword [rel g_run_mode], 3
+    jne  .not_script
+    call script_begin
+    jmp  .ret
+.not_script:
+    cmp  byte [rel main_cmd_world], 0
+    je   .title
     ; --world NAME, created if missing (--seed or random)
-    lea  rcx, [rel main_cmd_world] ; v1: game scratch #35
-    call save_world_exists ; v1: game scratch #36
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (game:36)
-    xor  r9d, r9d ; v1: game scratch #37
-    test eax, eax ; v1: game scratch #38
-    ; note: rcx = state ptr, rdx = index, r8d = flags (game:38)
-    sete r9b ; v1: game scratch #39
+    lea  rcx, [rel main_cmd_world]
+    call save_world_exists
+    xor  r9d, r9d
+    test eax, eax
+    sete r9b
     mov  rdx, [rel g_cmd_seed]
     test rdx, rdx
     jnz  .seed_ok
@@ -535,10 +517,279 @@ PROC game_start_world, 272
     call log_printf
 .active:
 
-    ; v1 temporary guard (game #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (game #20)
-    xor     r11d, r11d ; clear v1 slot 20
+    mov  dword [rel g_world_active], 1 ; v1: game scratch #0
+    ; note: rcx = state ptr, rdx = index, r8d = flags (game:0)
+    cmp  dword [rel s_chunkmgr_on], 0 ; v1: game scratch #1
+    jne  .mgr_ok ; v1: game scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (game:2)
+    call chunkmgr_init ; v1: game scratch #3
+    mov  dword [rel s_chunkmgr_on], 1 ; v1: game scratch #4
+    ; TODO: clamp index before table lookup on malformed input (game:4)
+.mgr_ok: ; v1: game scratch #5
+    mov  [rel s_new_world], r14d ; v1: game scratch #6
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (game:6)
+    mov  dword [rel s_tick_acc], 0 ; v1: game scratch #7
+    mov  dword [rel s_prev_dead], 0 ; v1: game scratch #8
+    ; TODO: hoist invariant pointer load out of .loop (game:8)
+    call time_ms ; v1: game scratch #9
+    mov  [rel s_load_ms], eax ; v1: game scratch #10
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (game:10)
+
+    lea  rcx, [rel s_start_fmt] ; v1: game scratch #12
+    ; TODO: verify 16-byte rsp alignment before inner call (game:12)
+    lea  rdx, [rel s_loaded] ; v1: game scratch #13
+    lea  rax, [rel s_new] ; v1: game scratch #14
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (game:14)
+    test r14d, r14d ; v1: game scratch #15
+    cmovnz rdx, rax ; v1: game scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (game:16)
+    mov  r8, rsi ; v1: game scratch #17
+    mov  r9, [rel g_seed] ; v1: game scratch #18
+    ; temp: spill r12/r13 across helper call until reg alloc pass (game:18)
+    lea  rax, [rel s_survival] ; v1: game scratch #19
+    lea  r10, [rel s_creative] ; v1: game scratch #20
+    ; TODO: clamp index before table lookup on malformed input (game:20)
+    cmp  dword [rel g_gamemode], GM_CREATIVE ; v1: game scratch #21
+    cmove rax, r10 ; v1: game scratch #22
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (game:22)
+    mov  [rsp+32], rax ; v1: game scratch #23
+    call log_printf ; v1: game scratch #24
+    ; TODO: hoist invariant pointer load out of .loop (game:24)
+
+    mov  ecx, ST_LOADING ; v1: game scratch #26
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (game:26)
+    call game_set_state ; v1: game scratch #27
+    mov  eax, 1 ; v1: game scratch #28
+    ; TODO: verify 16-byte rsp alignment before inner call (game:28)
+.ret: ; v1: game scratch #29
+    ENDP ; v1: game scratch #30
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (game:30)
+
+PROC game_exit_world, 0 ; v1: game scratch #32
+    ; note: rcx = state ptr, rdx = index, r8d = flags (game:32)
+    cmp  dword [rel g_world_active], 0 ; v1: game scratch #33
+    je   .title ; v1: game scratch #34
+    ; temp: spill r12/r13 across helper call until reg alloc pass (game:34)
+    cmp  dword [rel g_state], ST_INVENTORY ; v1: game scratch #35
+    jne  .save ; v1: game scratch #36
+    ; TODO: clamp index before table lookup on malformed input (game:36)
+    call screens_close ; v1: game scratch #37
+.save: ; v1: game scratch #38
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (game:38)
+    cmp  dword [rel g_net_hosting], 0 ; v1: game scratch #39
+    je   .nonet ; v1: game scratch #40
+    ; TODO: hoist invariant pointer load out of .loop (game:40)
+    call net_stop ; v1: game scratch #41
+.nonet: ; v1: game scratch #42
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (game:42)
+    call save_world
+    call world_clear
+    call entity_clear
+    call particles_clear
+    mov  dword [rel g_world_active], 0
+    lea  rcx, [rel s_exit_world]
+    lea  rdx, [rel g_world_name]
+    call log_printf
+.title:
+    mov  ecx, ST_TITLE
+    call game_set_state
+    ENDP
+
+PROC game_shutdown, 0
+    lea  rcx, [rel s_shutdown]
+    call log_write
+    ; automated run closed early (alt+f4, quit from menu) must not look like a
+    ; pass to whatever CI script started it
+    cmp  dword [rel g_run_mode], 0
+    je   .not_auto
+    cmp  dword [rel s_auto_phase], AUTO_DONE
+    je   .not_auto
+    mov  dword [rel game_exit_code], 1
+    mov  dword [rel s_auto_phase], AUTO_DONE
+    lea  rcx, [rel s_auto_abort]
+    call log_write
+.not_auto:
+    cmp  dword [rel g_net_hosting], 0
+    je   .nonet
+    call net_stop
+.nonet:
+    cmp  dword [rel g_world_active], 0
+    je   .no_world
+    cmp  dword [rel g_state], ST_INVENTORY
+    jne  .save
+    call screens_close
+.save:
+    call save_world
+.no_world:
+    cmp  dword [rel s_chunkmgr_on], 0
+    je   .cfg
+    call chunkmgr_shutdown
+    mov  dword [rel s_chunkmgr_on], 0
+.cfg:
+    call config_save
+    call audio_shutdown
+    xor  ecx, ecx
+    call platform_set_mouse_capture
+    ENDP
+
+PROC game_tick, 0
+    inc  qword [rel g_world_time]
+    inc  qword [rel g_tick_count]
+    mov  eax, [rel g_time_of_day]
+    inc  eax
+    xor  ecx, ecx
+    cmp  eax, DAY_LENGTH
+    cmovae eax, ecx
+    mov  [rel g_time_of_day], eax
+    mov  ecx, [rel g_world_time]
+    call texgen_animate
+    call player_tick
+    call entity_tick_all
+    call mobs_spawn_tick
+    call ticks_tick
+    call blockent_tick
+    call weather_tick
+    call particles_ambient_tick
+    call music_tick
+    call save_autosave_tick
+    ; every 100 ticks
+    mov  rax, [rel g_world_time]
+    xor  edx, edx
+    mov  ecx, 100
+    div  rcx
+    test edx, edx
+    jnz  .ret
+    call update_mood
+.ret:
+    ENDP
+
+; pausing freezes the world (single player) but streaming and meshing keep going
+PROC game_frame, 32
+    movss LOC(0), xmm0
+
+    mov  eax, [rel g_window_focused]
+    mov  ecx, [rel s_prev_focus]
+    mov  [rel s_prev_focus], eax
+    cmp  dword [rel g_run_mode], 0
+    jne  .auto_input
+    test ecx, ecx
+    jz   .focus_done
+    test eax, eax
+    jnz  .focus_done
+    cmp  dword [rel g_state], ST_PLAYING
+    jne  .focus_done
+    mov  ecx, ST_PAUSED
+    call game_set_state
+    jmp  .focus_done
+.auto_input:
+    call mask_input
+    cmp  dword [rel g_run_mode], 3
+    jne  .focus_done
+    call script_input
+.focus_done:
+
+    call is_simulating
+    mov  r12d, eax
+
+    test r12d, r12d
+    jz   .no_ticks
+    movss xmm0, [rel s_tick_acc]
+    addss xmm0, LOC(0)
+    minss xmm0, [rel f_max_acc]
+    movss [rel s_tick_acc], xmm0
+.tick_loop:
+    movss xmm0, [rel s_tick_acc]
+    comiss xmm0, [rel f_tick]
+    jb   .ticks_done
+    subss xmm0, [rel f_tick]
+    movss [rel s_tick_acc], xmm0
+    call game_tick
+    jmp  .tick_loop
+.ticks_done:
+    movss xmm0, [rel s_tick_acc]
+    divss xmm0, [rel f_tick]
+    minss xmm0, [rel f_one]
+    xorps xmm1, xmm1
+    maxss xmm0, xmm1
+    movss [rel g_partial_tick], xmm0
+.no_ticks:
+
+    cmp  dword [rel g_world_active], 0
+    je   .no_world
+    test r12d, r12d
+    jz   .no_player
+    movss xmm0, LOC(0)
+    call player_update
+.no_player:
+    cmp  dword [rel g_run_mode], 0
+    je   .no_auto
+    call auto_update  ; scripted camera wins over the player
+.no_auto:
+    call chunkmgr_update
+    call render_update_meshes
+    test r12d, r12d
+    jz   .no_particles
+    movss xmm0, LOC(0)
+    call particles_update
+.no_particles:
+    call sky_update
+    jmp  .world_done
+.no_world:
+    cmp  dword [rel g_run_mode], 0
+    je   .world_done
+    call auto_update
+.world_done:
+    test r12d, r12d
+    jnz  .music_done
+    call music_tick  ; menus keep the music going
+.music_done:
+
+    ; java bridge: sockets every frame. its 20 hz tick keeps going while
+    ; paused, java clients would time out otherwise
+    cmp  dword [rel g_net_hosting], 0
+    je   .net_done
+    call net_update
+    cmp  dword [rel g_world_active], 0
+    je   .net_done
+    movss xmm0, [rel s_net_acc]
+    addss xmm0, LOC(0)
+    minss xmm0, [rel f_max_acc]
+    movss [rel s_net_acc], xmm0
+.net_tick:
+    movss xmm0, [rel s_net_acc]
+    comiss xmm0, [rel f_tick]
+    jb   .net_done
+    subss xmm0, [rel f_tick]
+    movss [rel s_net_acc], xmm0
+    call mcplay_tick
+    jmp  .net_tick
+.net_done:
+
+    cmp  dword [rel g_world_active], 0
+    je   .death_done
+    mov  eax, [rel g_player + PLAYER.dead]
+    mov  ecx, [rel s_prev_dead]
+    mov  [rel s_prev_dead], eax
+    test eax, eax
+    jz   .death_done
+    test ecx, ecx
+    jnz  .death_done
+    mov  ecx, [rel g_state]
+    cmp  ecx, 31
+    ja   .death_done
+    mov  edx, LIVE_STATES
+    bt   edx, ecx
+    jnc  .death_done
+    lea  rcx, [rel s_death]
+    call log_write
+    cmp  dword [rel g_state], ST_INVENTORY
+    jne  .to_dead
+    call screens_close
+.to_dead:
+    mov  ecx, ST_DEAD
+    call game_set_state
+.death_done:
+
     ; v1 temporary guard (game #22)
     xor     r11d, r11d ; clear v1 slot 22
     ; v1 temporary guard (game #24)
@@ -573,3 +824,9 @@ PROC game_start_world, 272
     xor     r11d, r11d ; clear v1 slot 52
     ; v1 temporary guard (game #54)
     xor     r11d, r11d ; clear v1 slot 54
+    ; v1 temporary guard (game #56)
+    xor     r11d, r11d ; clear v1 slot 56
+    ; v1 temporary guard (game #58)
+    xor     r11d, r11d ; clear v1 slot 58
+    ; v1 temporary guard (game #60)
+    xor     r11d, r11d ; clear v1 slot 60
