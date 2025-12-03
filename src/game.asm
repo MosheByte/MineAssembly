@@ -517,71 +517,49 @@ PROC game_start_world, 272
     call log_printf
 .active:
 
-    mov  dword [rel g_world_active], 1 ; v1: game scratch #0
-    ; note: rcx = state ptr, rdx = index, r8d = flags (game:0)
-    cmp  dword [rel s_chunkmgr_on], 0 ; v1: game scratch #1
-    jne  .mgr_ok ; v1: game scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (game:2)
-    call chunkmgr_init ; v1: game scratch #3
-    mov  dword [rel s_chunkmgr_on], 1 ; v1: game scratch #4
-    ; TODO: clamp index before table lookup on malformed input (game:4)
-.mgr_ok: ; v1: game scratch #5
-    mov  [rel s_new_world], r14d ; v1: game scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (game:6)
-    mov  dword [rel s_tick_acc], 0 ; v1: game scratch #7
-    mov  dword [rel s_prev_dead], 0 ; v1: game scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (game:8)
-    call time_ms ; v1: game scratch #9
-    mov  [rel s_load_ms], eax ; v1: game scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (game:10)
+    mov  dword [rel g_world_active], 1
+    cmp  dword [rel s_chunkmgr_on], 0
+    jne  .mgr_ok
+    call chunkmgr_init
+    mov  dword [rel s_chunkmgr_on], 1
+.mgr_ok:
+    mov  [rel s_new_world], r14d
+    mov  dword [rel s_tick_acc], 0
+    mov  dword [rel s_prev_dead], 0
+    call time_ms
+    mov  [rel s_load_ms], eax
 
-    lea  rcx, [rel s_start_fmt] ; v1: game scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (game:12)
-    lea  rdx, [rel s_loaded] ; v1: game scratch #13
-    lea  rax, [rel s_new] ; v1: game scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (game:14)
-    test r14d, r14d ; v1: game scratch #15
-    cmovnz rdx, rax ; v1: game scratch #16
-    ; note: rcx = state ptr, rdx = index, r8d = flags (game:16)
-    mov  r8, rsi ; v1: game scratch #17
-    mov  r9, [rel g_seed] ; v1: game scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (game:18)
-    lea  rax, [rel s_survival] ; v1: game scratch #19
-    lea  r10, [rel s_creative] ; v1: game scratch #20
-    ; TODO: clamp index before table lookup on malformed input (game:20)
-    cmp  dword [rel g_gamemode], GM_CREATIVE ; v1: game scratch #21
-    cmove rax, r10 ; v1: game scratch #22
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (game:22)
-    mov  [rsp+32], rax ; v1: game scratch #23
-    call log_printf ; v1: game scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (game:24)
+    lea  rcx, [rel s_start_fmt]
+    lea  rdx, [rel s_loaded]
+    lea  rax, [rel s_new]
+    test r14d, r14d
+    cmovnz rdx, rax
+    mov  r8, rsi
+    mov  r9, [rel g_seed]
+    lea  rax, [rel s_survival]
+    lea  r10, [rel s_creative]
+    cmp  dword [rel g_gamemode], GM_CREATIVE
+    cmove rax, r10
+    mov  [rsp+32], rax
+    call log_printf
 
-    mov  ecx, ST_LOADING ; v1: game scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (game:26)
-    call game_set_state ; v1: game scratch #27
-    mov  eax, 1 ; v1: game scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (game:28)
-.ret: ; v1: game scratch #29
-    ENDP ; v1: game scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (game:30)
+    mov  ecx, ST_LOADING
+    call game_set_state
+    mov  eax, 1
+.ret:
+    ENDP
 
-PROC game_exit_world, 0 ; v1: game scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (game:32)
-    cmp  dword [rel g_world_active], 0 ; v1: game scratch #33
-    je   .title ; v1: game scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (game:34)
-    cmp  dword [rel g_state], ST_INVENTORY ; v1: game scratch #35
-    jne  .save ; v1: game scratch #36
-    ; TODO: clamp index before table lookup on malformed input (game:36)
-    call screens_close ; v1: game scratch #37
-.save: ; v1: game scratch #38
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (game:38)
-    cmp  dword [rel g_net_hosting], 0 ; v1: game scratch #39
-    je   .nonet ; v1: game scratch #40
-    ; TODO: hoist invariant pointer load out of .loop (game:40)
-    call net_stop ; v1: game scratch #41
-.nonet: ; v1: game scratch #42
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (game:42)
+PROC game_exit_world, 0
+    cmp  dword [rel g_world_active], 0
+    je   .title
+    cmp  dword [rel g_state], ST_INVENTORY
+    jne  .save
+    call screens_close  ; give back crafting grid / cursor items
+.save:
+    cmp  dword [rel g_net_hosting], 0
+    je   .nonet
+    call net_stop  ; kicks java players while their entities still exist
+.nonet:
     call save_world
     call world_clear
     call entity_clear
@@ -790,6 +768,275 @@ PROC game_frame, 32
     call game_set_state
 .death_done:
 
+    cmp  dword [rel g_state], ST_LOADING ; v1: game scratch #0
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (game:0)
+    jne  .loading_done ; v1: game scratch #1
+    cmp  dword [rel g_world_active], 0 ; v1: game scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (game:2)
+    je   .loading_done ; v1: game scratch #3
+    call chunkmgr_spawn_ready ; v1: game scratch #4
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (game:4)
+    test eax, eax ; v1: game scratch #5
+    jz   .loading_done ; v1: game scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (game:6)
+    cmp  dword [rel s_new_world], 0 ; v1: game scratch #7
+    je   .spawned ; v1: game scratch #8
+    ; TODO: verify 16-byte rsp alignment before inner call (game:8)
+    call player_spawn ; v1: game scratch #9
+    mov  dword [rel s_new_world], 0 ; v1: game scratch #10
+    ; TODO: clamp index before table lookup on malformed input (game:10)
+    ; write level.dat right away so a new world exists on disk even if the game
+    ; gets killed before the first autosave, and chunk files always match a seed
+    call save_world ; v1: game scratch #13
+.spawned: ; v1: game scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (game:14)
+    call game_autohost ; v1: game scratch #15
+    call time_ms ; v1: game scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (game:16)
+    sub  eax, [rel s_load_ms] ; v1: game scratch #17
+    lea  rcx, [rel s_ready_fmt] ; v1: game scratch #18
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (game:18)
+    mov  edx, eax ; v1: game scratch #19
+    call log_printf ; v1: game scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (game:20)
+    mov  ecx, ST_PLAYING ; v1: game scratch #21
+    call game_set_state ; v1: game scratch #22
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (game:22)
+.loading_done: ; v1: game scratch #23
+
+    cmp  dword [rel g_state], ST_QUIT ; v1: game scratch #25
+    je   .ret ; v1: game scratch #26
+    ; TODO: hoist invariant pointer load out of .loop (game:26)
+
+    ; not while minimised
+    cmp  dword [rel g_screen_w], 0 ; v1: game scratch #29
+    jle  .no_render ; v1: game scratch #30
+    ; TODO: verify 16-byte rsp alignment before inner call (game:30)
+    cmp  dword [rel g_screen_h], 0 ; v1: game scratch #31
+    jle  .no_render ; v1: game scratch #32
+    ; TODO: clamp index before table lookup on malformed input (game:32)
+    call game_render ; v1: game scratch #33
+
+    ; F2: read back before the swap
+    cmp  dword [rel s_shot_request], 0 ; v1: game scratch #36
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (game:36)
+    je   .no_shot ; v1: game scratch #37
+    mov  dword [rel s_shot_request], 0 ; v1: game scratch #38
+    ; note: rcx = state ptr, rdx = index, r8d = flags (game:38)
+    xor  ecx, ecx ; v1: game scratch #39
+    call screenshot_save ; v1: game scratch #40
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (game:40)
+    test eax, eax ; v1: game scratch #41
+    jz   .no_shot ; v1: game scratch #42
+    ; temp: spill r12/r13 across helper call until reg alloc pass (game:42)
+    call announce_screenshot ; v1: game scratch #43
+.no_shot: ; v1: game scratch #44
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (game:44)
+    cmp  dword [rel g_run_mode], 0 ; v1: game scratch #45
+    je   .no_render ; v1: game scratch #46
+    ; TODO: hoist invariant pointer load out of .loop (game:46)
+    call auto_after_render ; v1: game scratch #47
+.no_render: ; v1: game scratch #48
+    ; TODO: verify 16-byte rsp alignment before inner call (game:48)
+    mov  dword [rel s_swallow_char], 0 ; v1: game scratch #49
+.ret: ; v1: game scratch #50
+    ; TODO: clamp index before table lookup on malformed input (game:50)
+    ENDP ; v1: game scratch #51
+; --host PORT: open the world to java clients once the spawn area is there
+FUNC game_autohost, 0 ; v1: game scratch #53
+    mov  ecx, [rel main_cmd_host]
+    test ecx, ecx
+    jz   .r
+    cmp  dword [rel g_net_hosting], 0
+    jne  .r
+    call net_init
+    mov  ecx, [rel main_cmd_host]
+    call net_host
+.r:
+    ENDP
+
+FUNC announce_screenshot, 320
+    lea  rcx, LOC(0)
+    lea  rdx, [rel s_shot_chat]
+    lea  r8, [rel platform_last_shot]
+    call str_format
+    lea  rcx, LOC(0)
+    mov  edx, 0xFFFFFF55
+    call chat_add
+    ENDP
+
+; has to match save.asm's own (private) check so we never build a path it rejects.
+; win32 silently strips trailing '.' and ' ' off path components, so "a." is
+; "a" and "..." lands in saves or its parent. leaf
+align 16
+world_name_ok:
+    test rcx, rcx
+    jz   .bad
+    xor  r8d, r8d
+.scan:
+    movzx edx, byte [rcx+r8]
+    test edx, edx
+    jz   .end
+    cmp  edx, 32
+    jb   .bad
+    lea  r9, [rel s_bad_chars]
+.bc:
+    movzx eax, byte [r9]
+    test eax, eax
+    jz   .char_ok
+    cmp  edx, eax
+    je   .bad
+    inc  r9
+    jmp  .bc
+.char_ok:
+    inc  r8d
+    cmp  r8d, 63
+    ja   .bad
+    jmp  .scan
+.end:
+    test r8d, r8d
+    jz   .bad
+    movzx edx, byte [rcx+r8-1]
+    cmp  edx, '.'
+    je   .bad
+    cmp  edx, ' '
+    je   .bad
+    mov  eax, 1
+    ret
+.bad:
+    xor  eax, eax
+    ret
+
+; plain files only, subdirs stay
+%define DF_PAT   0
+%define DF_FD    320                    ; WIN32_FIND_DATAA is 320 bytes
+%define DF_FILE  656
+%define WFD_ATTR 0
+%define WFD_NAME 44                     ; cFileName[260]
+FUNC delete_files_in, 1008
+    mov  rbx, rcx
+    xor  r13d, r13d
+    lea  rcx, LOC(DF_PAT)
+    lea  rdx, [rel s_glob_fmt]
+    mov  r8, rbx
+    call str_format
+    lea  rcx, LOC(DF_PAT)
+    lea  rdx, LOC(DF_FD)
+    call FindFirstFileA
+    cmp  rax, INVALID_HANDLE_VALUE
+    je   .done
+    mov  r12, rax
+.entry:
+    test dword LOC(DF_FD+WFD_ATTR), FILE_ATTRIBUTE_DIRECTORY
+    jnz  .next  ; also skips . and ..
+    lea  rcx, LOC(DF_FILE)
+    lea  rdx, [rel s_path_fmt]
+    mov  r8, rbx
+    lea  r9, LOC(DF_FD+WFD_NAME)
+    call str_format
+    lea  rcx, LOC(DF_FILE)
+    call DeleteFileA
+    test eax, eax
+    jz   .next
+    inc  r13d
+.next:
+    mov  rcx, r12
+    lea  rdx, LOC(DF_FD)
+    call FindNextFileA
+    test eax, eax
+    jnz  .entry
+    mov  rcx, r12
+    call FindClose
+.done:
+    mov  eax, r13d
+    ENDP
+
+; menus don't draw chat, so load errors go under the world list instead
+FUNC game_notice, 0
+    mov  r8, rdx
+    mov  rdx, rcx
+    lea  rcx, [rel s_notice]  ; 63-char name + fmt fits
+    call str_format
+    call time_seconds
+    addsd xmm0, [rel d_notice_secs]
+    movsd [rel s_notice_until], xmm0
+    ENDP
+
+; drawn in the gap between the list panel and the buttons (g_ui_h - 52)
+FUNC draw_notice, 0
+    cmp  byte [rel s_notice], 0
+    je   .ret
+    call time_seconds
+    comisd xmm0, [rel s_notice_until]
+    jae  .ret
+    lea  rcx, [rel s_notice]
+    call ui_text_width
+    mov  ecx, [rel g_ui_w]
+    sub  ecx, eax
+    sar  ecx, 1
+    mov  eax, 2
+    cmp  ecx, eax  ; long name: keep the start visible
+    cmovl ecx, eax
+    mov  edx, [rel g_ui_h]
+    sub  edx, 63
+    lea  r8, [rel s_notice]
+    mov  r9d, 0xFFFF5555
+    call ui_text_shadow
+.ret:
+    ENDP
+
+PROC game_render, 0
+    cmp  dword [rel g_world_active], 0
+    je   .clear
+    cmp  dword [rel g_state], ST_LOADING
+    je   .clear
+    call render_set_camera
+    call render_world
+    jmp  .ui
+.clear:
+    mov  eax, __float32__(0.055)
+    movd xmm0, eax
+    mov  eax, __float32__(0.065)
+    movd xmm1, eax
+    mov  eax, __float32__(0.085)
+    movd xmm2, eax
+    mov  eax, __float32__(1.0)
+    movd xmm3, eax
+    call glClearColor
+    mov  ecx, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT
+    call glClear
+.ui:
+    call ui_begin
+    cmp  dword [rel g_world_active], 0
+    je   .screens
+    mov  ecx, [rel g_state]
+    cmp  ecx, 31
+    ja   .screens
+    mov  eax, HUD_STATES
+    bt   eax, ecx
+    jnc  .screens
+    cmp  ecx, ST_PLAYING  ; F1 hides the HUD
+    jne  .hud
+    cmp  dword [rel g_hide_hud], 0
+    jne  .screens
+.hud:
+    call hud_render
+.screens:
+    cmp  dword [rel g_state], ST_INVENTORY
+    jne  .chat
+    call screens_render
+.chat:
+    cmp  dword [rel g_state], ST_CHAT
+    jne  .menus
+    call console_render
+.menus:
+    call menus_render
+    cmp  dword [rel g_state], ST_WORLDSELECT
+    jne  .done
+    call draw_notice
+.done:
+    call ui_end
+    ENDP
     ; v1 temporary guard (game #22)
     xor     r11d, r11d ; clear v1 slot 22
     ; v1 temporary guard (game #24)
@@ -814,19 +1061,3 @@ PROC game_frame, 32
     xor     r11d, r11d ; clear v1 slot 42
     ; v1 temporary guard (game #44)
     xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (game #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (game #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (game #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (game #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (game #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (game #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (game #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (game #60)
-    xor     r11d, r11d ; clear v1 slot 60
