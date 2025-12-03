@@ -2770,53 +2770,39 @@ PROC player_tick, 32
 .no_lava:
 
     ; suffocation: head inside an opaque solid block
-    movss xmm0, [rbx+PLAYER.x] ; v1: player scratch #1
-    IFLOOR ecx, xmm0 ; v1: player scratch #2
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (player:2)
-    movss xmm0, [rbx+PLAYER.y] ; v1: player scratch #3
-    addss xmm0, [rbx+PLAYER.eye_height] ; v1: player scratch #4
-    ; TODO: clamp index before table lookup on malformed input (player:4)
-    IFLOOR edx, xmm0 ; v1: player scratch #5
-    movss xmm0, [rbx+PLAYER.z] ; v1: player scratch #6
-    ; note: rcx = state ptr, rdx = index, r8d = flags (player:6)
-    IFLOOR r8d, xmm0 ; v1: player scratch #7
-    test edx, edx ; v1: player scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (player:8)
-    js   .void ; v1: player scratch #9
-    call world_get_block ; v1: player scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (player:10)
-    movzx eax, al ; v1: player scratch #11
-    lea  rcx, [rel blk_flags] ; v1: player scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (player:12)
-    movzx eax, word [rcx+rax*2] ; v1: player scratch #13
-    and  eax, BF_SOLID | BF_OPAQUE ; v1: player scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (player:14)
-    cmp  eax, BF_SOLID | BF_OPAQUE ; v1: player scratch #15
-    jne  .void ; v1: player scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (player:16)
-    mov  ecx, 1 ; v1: player scratch #17
-    mov  edx, DMG_GENERIC ; v1: player scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (player:18)
-    call player_damage ; v1: player scratch #19
+    movss xmm0, [rbx+PLAYER.x]
+    IFLOOR ecx, xmm0
+    movss xmm0, [rbx+PLAYER.y]
+    addss xmm0, [rbx+PLAYER.eye_height]
+    IFLOOR edx, xmm0
+    movss xmm0, [rbx+PLAYER.z]
+    IFLOOR r8d, xmm0
+    test edx, edx
+    js   .void  ; below the world: no phantom bedrock
+    call world_get_block
+    movzx eax, al
+    lea  rcx, [rel blk_flags]
+    movzx eax, word [rcx+rax*2]
+    and  eax, BF_SOLID | BF_OPAQUE
+    cmp  eax, BF_SOLID | BF_OPAQUE
+    jne  .void
+    mov  ecx, 1
+    mov  edx, DMG_GENERIC
+    call player_damage
 
-.void: ; v1: player scratch #21
-    movss xmm0, [rbx+PLAYER.y] ; v1: player scratch #22
-    ; TODO: clamp index before table lookup on malformed input (player:22)
-    comiss xmm0, [rel f_void_y] ; v1: player scratch #23
-    jae  .done ; v1: player scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (player:24)
-    mov  ecx, 4 ; v1: player scratch #25
-    mov  edx, DMG_VOID ; v1: player scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (player:26)
-    call player_damage ; v1: player scratch #27
-.done: ; v1: player scratch #28
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (player:28)
-ENDP ; v1: player scratch #29
+.void:
+    movss xmm0, [rbx+PLAYER.y]
+    comiss xmm0, [rel f_void_y]
+    jae  .done
+    mov  ecx, 4
+    mov  edx, DMG_VOID
+    call player_damage
+.done:
+ENDP
 
-PROC player_damage, 32 ; v1: player scratch #31
-    lea  rbx, [rel g_player] ; v1: player scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (player:32)
-    mov  r12d, ecx ; v1: player scratch #33
+PROC player_damage, 32
+    lea  rbx, [rel g_player]
+    mov  r12d, ecx
     mov  r13d, edx
     xor  esi, esi
     cmp  dword [rbx+PLAYER.dead], 0
@@ -3058,43 +3044,146 @@ PROC player_spawn, 32
     ja   .place
     movss xmm0, [rel f_spawn_fallback]
 .place:
-    ; v1 temporary guard (player #14)
-    xor     r11d, r11d ; clear v1 slot 14
-    ; v1 temporary guard (player #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (player #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (player #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (player #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (player #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (player #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (player #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (player #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (player #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (player #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (player #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (player #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (player #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (player #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (player #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (player #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (player #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (player #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (player #52)
-    xor     r11d, r11d ; clear v1 slot 52
+    movss [rbx+PLAYER.y], xmm0
+    movss [rbx+PLAYER.spawn_y], xmm0
+    movss [rbx+PLAYER.fall_start], xmm0
+    cvtsi2ss xmm0, r12d
+    addss xmm0, [rel f_half]
+    movss [rbx+PLAYER.x], xmm0
+    cvtsi2ss xmm0, r14d
+    addss xmm0, [rel f_half]
+    movss [rbx+PLAYER.z], xmm0
+    xor  eax, eax
+    mov  [rbx+PLAYER.vx], eax
+    mov  [rbx+PLAYER.vy], eax
+    mov  [rbx+PLAYER.vz], eax
+    mov  [rbx+PLAYER.on_ground], eax
+    mov  [rbx+PLAYER.break_progress], eax
+    mov  dword [rel g_hit + RAYHIT.hit], 0
+    call reset_private
+ENDP
+
+PROC player_respawn, 0
+    lea  rbx, [rel g_player]
+    xor  eax, eax
+    mov  [rbx+PLAYER.dead], eax
+    mov  [rbx+PLAYER.hurt_time], eax
+    mov  [rbx+PLAYER.invuln], eax
+    mov  [rbx+PLAYER.flying], eax
+    mov  [rbx+PLAYER.sprinting], eax
+    mov  [rbx+PLAYER.sneaking], eax
+    mov  [rbx+PLAYER.exhaustion], eax
+    mov  [rbx+PLAYER.regen_timer], eax
+    mov  [rbx+PLAYER.starve_timer], eax
+    mov  [rbx+PLAYER.eat_time], eax
+    mov  [rbx+PLAYER.break_progress], eax
+    mov  [rbx+PLAYER.swing], eax
+    mov  [rbx+PLAYER.in_water], eax
+    mov  [rbx+PLAYER.in_lava], eax
+    mov  [rbx+PLAYER.eye_in_water], eax
+    mov  dword [rbx+PLAYER.health], 20
+    mov  dword [rbx+PLAYER.hunger], 20
+    mov  eax, [rel f_sat_start]
+    mov  [rbx+PLAYER.saturation], eax
+    mov  dword [rbx+PLAYER.air], 300
+    mov  eax, [rel f_eye_stand]
+    mov  [rbx+PLAYER.eye_height], eax
+    call player_spawn
+ENDP
+
+LEAF player_get_eye
+    lea  rax, [rel g_player]
+    mov  edx, [rax+PLAYER.x]
+    mov  [rcx+0], edx
+    mov  edx, [rax+PLAYER.z]
+    mov  [rcx+8], edx
+    movss xmm0, [rax+PLAYER.eye_height]
+    comiss xmm0, [rel f_half]
+    ja   .eye
+    movss xmm0, [rel f_eye_stand]
+.eye:
+    addss xmm0, [rax+PLAYER.y]
+    movss [rcx+4], xmm0
+    ret
+
+PROC player_get_look, 32
+    mov  rbx, rcx
+    lea  rsi, [rel g_player]
+    movss xmm0, [rsi+PLAYER.yaw]
+    mulss xmm0, [rel f_deg2rad]
+    call math_sincos
+    movss LOC(0), xmm0
+    movss LOC(4), xmm1
+    movss xmm0, [rsi+PLAYER.pitch]
+    mulss xmm0, [rel f_deg2rad]
+    call math_sincos
+    movss xmm2, LOC(0)
+    mulss xmm2, xmm1
+    movss [rbx+0], xmm2  ; sin(yaw) cos(pitch)
+    movss [rbx+4], xmm0  ; sin(pitch)
+    movss xmm2, LOC(4)
+    mulss xmm2, xmm1
+    xorps xmm2, [rel c_signmask]
+    movss [rbx+8], xmm2  ; -cos(yaw) cos(pitch)
+ENDP
+
+PROCX player_drop_held, 64
+    mov  r12d, ecx
+    call inv_held
+    test rax, rax
+    jz   .done
+    mov  rbx, rax
+    movzx esi, byte [rbx+STACK.id]
+    movzx edi, byte [rbx+STACK.count]
+    test esi, esi
+    jz   .done
+    test edi, edi
+    jz   .done
+    mov  r13d, 1  ; how many to throw
+    test r12d, r12d
+    jz   .count
+    mov  r13d, edi
+.count:
+    lea  rcx, LOC(0)
+    call player_get_eye
+    lea  rcx, LOC(16)
+    call player_get_look
+    mov  ecx, esi
+    mov  edx, r13d
+    movss xmm2, LOC(0)
+    movss xmm3, LOC(4)
+    subss xmm3, [rel f_drop_eye]
+    mov  eax, LOC(8)
+    mov  [rsp+32], rax
+    call entity_spawn_item
+    test rax, rax
+    jz   .done  ; pool full: keep the items
+    mov  r14, rax
+    movzx eax, word [rbx+STACK.damage]
+    mov  [r14+ENTITY.item+STACK.damage], ax
+    mov  dword [r14+ENTITY.timer], 40  ; pickup delay so you don't grab it right back
+    call rng_float_signed
+    mulss xmm0, [rel f_throw_rand]
+    movss xmm1, LOC(16)
+    mulss xmm1, [rel f_throw]
+    addss xmm0, xmm1
+    movss [r14+ENTITY.vx], xmm0
+    movss xmm0, LOC(20)
+    mulss xmm0, [rel f_throw]
+    addss xmm0, [rel f_throw_up]
+    movss [r14+ENTITY.vy], xmm0
+    call rng_float_signed
+    mulss xmm0, [rel f_throw_rand]
+    movss xmm1, LOC(24)
+    mulss xmm1, [rel f_throw]
+    addss xmm0, xmm1
+    movss [r14+ENTITY.vz], xmm0
+    sub  edi, r13d
+    mov  [rbx+STACK.count], dil
+    test edi, edi
+    jnz  .swing
+    mov  dword [rbx], 0
+.swing:
+    call swing_start
+.done:
+ENDPX
