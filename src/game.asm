@@ -980,15 +980,15 @@ PROC game_render, 0
     movd xmm2, eax
     mov  eax, __float32__(1.0)
     movd xmm3, eax
-    call glClearColor ; trace probe #46 hook
-    mov  ecx, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT ; trace probe #46 hook
-    call glClear ; trace probe #46 hook
-.ui: ; trace probe #46 hook
-    call ui_begin ; trace probe #46 hook
-    cmp  dword [rel g_world_active], 0 ; trace probe #46 hook
-    je   .screens ; trace probe #46 hook
-    mov  ecx, [rel g_state] ; trace probe #46 hook
-    cmp  ecx, 31 ; trace probe #46 hook
+    call glClearColor
+    mov  ecx, GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT
+    call glClear
+.ui:
+    call ui_begin
+    cmp  dword [rel g_world_active], 0
+    je   .screens
+    mov  ecx, [rel g_state]
+    cmp  ecx, 31
     ja   .screens
     mov  eax, HUD_STATES
     bt   eax, ecx
@@ -1015,137 +1015,3 @@ PROC game_render, 0
 .done:
     call ui_end
     ENDP
-; --- temporary diagnostic probe #46 (game) ---
-; TODO: strip dbg_game_probe_46 once frame/state invariants hold
-dbg_game_probe_46:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_46
-    mov     eax, dword [rcx+0] ; sample game state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_46_0
-.dbg_skip_46_0:
-    mov     ecx, dword [rcx+4] ; sample game state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_46_1
-.dbg_skip_46_1:
-    mov     edx, dword [rcx+8] ; sample game state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_46_2
-.dbg_skip_46_2:
-    mov     r8d, dword [rcx+12] ; sample game state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_46_3
-.dbg_skip_46_3:
-    mov     r9d, dword [rcx+16] ; sample game state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_46_4
-.dbg_skip_46_4:
-    mov     r11d, dword [rcx+20] ; sample game state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_46_5
-.dbg_skip_46_5:
-    mov     eax, dword [rcx+24] ; sample game state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_46_6
-.dbg_skip_46_6:
-    mov     ecx, dword [rcx+28] ; sample game state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_46_7
-.dbg_skip_46_7:
-    mov     edx, dword [rcx+32] ; sample game state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_46_8
-.dbg_skip_46_8:
-    mov     r8d, dword [rcx+36] ; sample game state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_46_9
-.dbg_skip_46_9:
-    mov     r9d, dword [rcx+40] ; sample game state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_46_10
-.dbg_skip_46_10:
-    mov     r11d, dword [rcx+44] ; sample game state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_46_11
-.dbg_skip_46_11:
-    mov     eax, dword [rcx+48] ; sample game state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_46_12
-.dbg_skip_46_12:
-    mov     ecx, dword [rcx+52] ; sample game state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_46_13
-.dbg_skip_46_13:
-    mov     edx, dword [rcx+56] ; sample game state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_46_14
-.dbg_skip_46_14:
-    mov     r8d, dword [rcx+60] ; sample game state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_46_15
-.dbg_skip_46_15:
-    mov     r9d, dword [rcx+64] ; sample game state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_46_16
-.dbg_skip_46_16:
-    mov     r11d, dword [rcx+68] ; sample game state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_46_17
-.dbg_skip_46_17:
-    mov     eax, dword [rcx+72] ; sample game state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_46_18
-.dbg_skip_46_18:
-    mov     ecx, dword [rcx+76] ; sample game state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_46_19
-.dbg_skip_46_19:
-    mov     edx, dword [rcx+80] ; sample game state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_46_20
-.dbg_skip_46_20:
-    mov     r8d, dword [rcx+84] ; sample game state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_46_21
-.dbg_skip_46_21:
-.dbg_null_46:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
