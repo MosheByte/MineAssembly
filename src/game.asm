@@ -2832,54 +2832,38 @@ FUNC scr_release_edges, 0
     inc  ebx
     cmp  ebx, 3
     jb   .btn
-    ENDP ; v1: game scratch #0
-    ; temp: spill r12/r13 across helper call until reg alloc pass (game:0)
+    ENDP
 
-FUNC scr_update_turn, 0 ; v1: game scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (game:2)
-    cmp  dword [rel s_turn_on], 0 ; v1: game scratch #3
-    je   .ret ; v1: game scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (game:4)
-    movss xmm0, [rel f_one] ; v1: game scratch #5
-    movss xmm1, [rel s_turn_dur] ; v1: game scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (game:6)
-    xorps xmm2, xmm2 ; v1: game scratch #7
-    comiss xmm1, xmm2 ; v1: game scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (game:8)
-    jbe  .frac ; v1: game scratch #9
-    movss xmm0, [rel s_scr_t] ; v1: game scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (game:10)
-    subss xmm0, [rel s_turn_t0] ; v1: game scratch #11
-    divss xmm0, xmm1 ; v1: game scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (game:12)
-    minss xmm0, [rel f_one] ; v1: game scratch #13
-    maxss xmm0, xmm2 ; v1: game scratch #14
-    ; TODO: clamp index before table lookup on malformed input (game:14)
-.frac: ; v1: game scratch #15
-    movss xmm3, xmm0 ; v1: game scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (game:16)
-    subss xmm3, [rel s_turn_done] ; v1: game scratch #17
-    movss [rel s_turn_done], xmm0 ; v1: game scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (game:18)
-    movss xmm1, [rel s_turn_dyaw] ; v1: game scratch #19
-    mulss xmm1, xmm3 ; v1: game scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (game:20)
-    addss xmm1, [rel g_player + PLAYER.yaw] ; v1: game scratch #21
-    movss [rel g_player + PLAYER.yaw], xmm1 ; v1: game scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (game:22)
-    movss xmm1, [rel s_turn_dpitch] ; v1: game scratch #23
-    mulss xmm1, xmm3 ; v1: game scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (game:24)
-    addss xmm1, [rel g_player + PLAYER.pitch] ; v1: game scratch #25
-    maxss xmm1, [rel f_pitch_lo] ; v1: game scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (game:26)
-    minss xmm1, [rel f_pitch_hi] ; v1: game scratch #27
-    movss [rel g_player + PLAYER.pitch], xmm1 ; v1: game scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (game:28)
-    comiss xmm0, [rel f_one] ; v1: game scratch #29
-    jb   .ret ; v1: game scratch #30
-    ; TODO: clamp index before table lookup on malformed input (game:30)
-    mov  dword [rel s_turn_on], 0 ; v1: game scratch #31
+FUNC scr_update_turn, 0
+    cmp  dword [rel s_turn_on], 0
+    je   .ret
+    movss xmm0, [rel f_one]
+    movss xmm1, [rel s_turn_dur]
+    xorps xmm2, xmm2
+    comiss xmm1, xmm2
+    jbe  .frac
+    movss xmm0, [rel s_scr_t]
+    subss xmm0, [rel s_turn_t0]
+    divss xmm0, xmm1
+    minss xmm0, [rel f_one]
+    maxss xmm0, xmm2
+.frac:
+    movss xmm3, xmm0
+    subss xmm3, [rel s_turn_done]
+    movss [rel s_turn_done], xmm0
+    movss xmm1, [rel s_turn_dyaw]
+    mulss xmm1, xmm3
+    addss xmm1, [rel g_player + PLAYER.yaw]
+    movss [rel g_player + PLAYER.yaw], xmm1
+    movss xmm1, [rel s_turn_dpitch]
+    mulss xmm1, xmm3
+    addss xmm1, [rel g_player + PLAYER.pitch]
+    maxss xmm1, [rel f_pitch_lo]
+    minss xmm1, [rel f_pitch_hi]
+    movss [rel g_player + PLAYER.pitch], xmm1
+    comiss xmm0, [rel f_one]
+    jb   .ret
+    mov  dword [rel s_turn_on], 0
 .ret:
     ENDP
 
@@ -3123,49 +3107,164 @@ FUNC scr_run_due, 0
     jmp  .run
 .not_btn:
     cmp  eax, OP_TYPE
-    ; v1 temporary guard (game #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (game #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (game #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (game #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (game #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (game #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (game #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (game #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (game #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (game #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (game #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (game #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (game #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (game #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (game #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (game #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (game #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (game #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (game #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (game #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (game #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (game #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (game #60)
-    xor     r11d, r11d ; clear v1 slot 60
+    jne  .run
+    cmp  qword [rel s_type_ptr], 0
+    jne  .ret
+    cmp  dword [rel s_swallow_char], 0  ; chat/inventory opened this frame drops
+    jne  .ret  ; typed chars on its first frame
+.run:
+    inc  dword [rel s_scr_next]
+    lea  rcx, [rel s_scr_exec]
+    mov  edx, [rbx+ACT_T]
+    mov  r8, [rbx+ACT_TEXT]
+    call log_printf
+    mov  rcx, rbx
+    call scr_exec
+    cmp  dword [rbx+ACT_OP], OP_SHOT
+    jne  .loop  ; shot ends the batch
+.ret:
+    ENDP
+
+FUNC script_input, 32
+    lea  rcx, [rel g_keys]
+    lea  rdx, [rel s_scr_keys]
+    mov  r8d, 256
+    call mem_copy
+    mov  eax, [rel s_scr_btn]
+    mov  [rel g_mouse_buttons], eax
+    mov  eax, [rel s_scr_mx]
+    mov  [rel g_mouse_x], eax
+    mov  eax, [rel s_scr_my]
+    mov  [rel g_mouse_y], eax
+    mov  eax, [rel s_auto_phase]
+    cmp  eax, AUTO_LOADING
+    je   .live
+    cmp  eax, AUTO_RUNNING
+    jne  .ret
+.live:
+    call time_seconds
+    movsd LOC(0), xmm0
+    subsd xmm0, [rel s_scr_start]
+    comisd xmm0, [rel d_script_timeout]
+    jb   .in_time
+    lea  rcx, [rel s_scr_timeout]
+    call log_write
+    mov  ecx, 4
+    call script_finish
+    jmp  .ret
+.in_time:
+    cmp  dword [rel s_auto_phase], AUTO_RUNNING
+    je   .running
+    cmp  dword [rel g_state], ST_PLAYING
+    je   .ready
+    movsd xmm0, LOC(0)
+    subsd xmm0, [rel s_auto_t0]
+    comisd xmm0, [rel d_load_timeout]
+    jb   .ret
+    lea  rcx, [rel s_scr_load_to]
+    call log_write
+    mov  ecx, 2
+    call script_finish
+    jmp  .ret
+.ready:
+    movsd xmm0, LOC(0)
+    subsd xmm0, [rel s_auto_t0]
+    cvtsd2ss xmm0, xmm0
+    movd edx, xmm0
+    mov  r8d, [rel g_player + PLAYER.x]
+    mov  r9d, [rel g_player + PLAYER.y]
+    mov  eax, [rel g_player + PLAYER.z]
+    mov  [rsp+32], rax
+    lea  rcx, [rel s_scr_ready]
+    call log_printf
+    movsd xmm0, LOC(0)
+    movsd [rel s_auto_t0], xmm0
+    mov  dword [rel s_auto_phase], AUTO_RUNNING
+.running:
+    ; game time, not wall time. dt is capped at 0.1 s in main.asm so a stalled
+    ; frame just delays the script instead of making a pile of lines due at once
+    xorps xmm0, xmm0
+    cmp  dword [rel s_scr_t_on], 0
+    je   .t_set
+    movss xmm0, [rel s_scr_t]
+    addss xmm0, [rel g_frame_dt]
+.t_set:
+    movss [rel s_scr_t], xmm0
+    mov  dword [rel s_scr_t_on], 1
+    mov  dword [rel s_typed_frame], 0
+    mov  dword [rel s_tap_pending], 0
+    mov  dword [rel s_injecting], 1
+    call scr_release_edges
+    call scr_key_repeat
+    call scr_update_turn
+    call scr_feed_text
+    call scr_run_due
+    mov  dword [rel s_injecting], 0
+    cmp  dword [rel s_auto_phase], AUTO_RUNNING
+    jne  .ret
+    mov  eax, [rel s_scr_next]
+    cmp  eax, [rel s_scr_count]
+    jb   .ret
+    movss xmm0, [rel s_scr_t]
+    comiss xmm0, [rel s_scr_end_t]
+    jb   .ret
+    lea  rcx, [rel s_scr_end]
+    call log_write
+    xor  ecx, ecx
+    call script_finish
+.ret:
+    ENDP
+
+FUNC script_after_render, 288
+    mov  rbx, [rel s_shot_path]
+    test rbx, rbx
+    jz   .frames
+    mov  qword [rel s_shot_path], 0
+    mov  rcx, rbx
+    call screenshot_save
+    inc  dword [rel s_scr_shots]
+    lea  r8, [rel s_shot_ok]
+    test eax, eax
+    jnz  .logged
+    inc  dword [rel s_scr_shot_fail]
+    lea  r8, [rel s_shot_bad]
+.logged:
+    lea  rcx, [rel s_scr_shot]
+    mov  rdx, rbx
+    call log_printf
+.frames:
+    cmp  dword [rel s_frames_left], 0
+    je   .ret
+    mov  eax, [rel s_frames_ctr]
+    inc  dword [rel s_frames_ctr]
+    xor  edx, edx
+    div  dword [rel s_frames_every]
+    test edx, edx
+    jnz  .ret
+    inc  dword [rel s_frames_idx]
+    dec  dword [rel s_frames_left]
+    lea  rcx, LOC(0)
+    lea  rdx, [rel s_scr_frames_fmt]
+    mov  r8, [rel s_frames_prefix]
+    mov  r9d, [rel s_frames_idx]
+    call str_format
+    lea  rcx, LOC(0)
+    call screenshot_save
+    inc  dword [rel s_scr_shots]
+    test eax, eax
+    jnz  .f_ok
+    inc  dword [rel s_scr_shot_fail]
+    lea  rcx, [rel s_scr_shot]
+    lea  rdx, LOC(0)
+    lea  r8, [rel s_shot_bad]
+    call log_printf
+.f_ok:
+    cmp  dword [rel s_frames_left], 0
+    jne  .ret
+    lea  rcx, [rel s_scr_frames_done]
+    mov  rdx, [rel s_frames_prefix]
+    mov  r8, rdx
+    mov  r9d, [rel s_frames_idx]
+    call log_printf
+.ret:
+    ENDP
