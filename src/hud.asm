@@ -258,49 +258,35 @@ PROCX hud_vignette, 32
 .done:
 ENDPX
 
-PROC hud_crosshair ; v1: hud scratch #1
-    cmp  dword [rel g_view_mode], 0 ; v1: hud scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (hud:2)
-    jne  .done ; v1: hud scratch #3
-    mov  eax, [rel g_state] ; v1: hud scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (hud:4)
-    cmp  eax, ST_PLAYING ; v1: hud scratch #5
-    je   .draw ; v1: hud scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (hud:6)
-    cmp  eax, ST_CHAT ; v1: hud scratch #7
-    jne  .done ; v1: hud scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (hud:8)
-.draw: ; v1: hud scratch #9
-    call ui_flush ; v1: hud scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (hud:10)
-    mov  ecx, GL_ONE_MINUS_DST_COLOR ; v1: hud scratch #11
-    mov  edx, GL_ZERO ; v1: hud scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (hud:12)
-    call glBlendFunc ; v1: hud scratch #13
-    mov  ebx, [rel g_ui_w] ; v1: hud scratch #14
-    ; TODO: clamp index before table lookup on malformed input (hud:14)
-    shr  ebx, 1 ; v1: hud scratch #15
-    mov  esi, [rel g_ui_h] ; v1: hud scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (hud:16)
-    shr  esi, 1 ; v1: hud scratch #17
-    lea  r12d, [rbx-4] ; v1: hud scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (hud:18)
-    RECT r12d, esi, 9, 1, 0xFFFFFFFF ; v1: hud scratch #19
-    lea  r12d, [rsi-4] ; v1: hud scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (hud:20)
-    RECT ebx, r12d, 1, 4, 0xFFFFFFFF ; v1: hud scratch #21
-    lea  r12d, [rsi+1] ; v1: hud scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (hud:22)
-    RECT ebx, r12d, 1, 4, 0xFFFFFFFF ; v1: hud scratch #23
-    call ui_flush ; v1: hud scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (hud:24)
-    mov  ecx, GL_SRC_ALPHA ; v1: hud scratch #25
-    mov  edx, GL_ONE_MINUS_SRC_ALPHA ; v1: hud scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (hud:26)
-    call glBlendFunc ; v1: hud scratch #27
-.done: ; v1: hud scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (hud:28)
-ENDP ; v1: hud scratch #29
+PROC hud_crosshair
+    cmp  dword [rel g_view_mode], 0
+    jne  .done
+    mov  eax, [rel g_state]
+    cmp  eax, ST_PLAYING
+    je   .draw
+    cmp  eax, ST_CHAT
+    jne  .done
+.draw:
+    call ui_flush
+    mov  ecx, GL_ONE_MINUS_DST_COLOR
+    mov  edx, GL_ZERO
+    call glBlendFunc
+    mov  ebx, [rel g_ui_w]
+    shr  ebx, 1
+    mov  esi, [rel g_ui_h]
+    shr  esi, 1
+    lea  r12d, [rbx-4]
+    RECT r12d, esi, 9, 1, 0xFFFFFFFF
+    lea  r12d, [rsi-4]
+    RECT ebx, r12d, 1, 4, 0xFFFFFFFF
+    lea  r12d, [rsi+1]
+    RECT ebx, r12d, 1, 4, 0xFFFFFFFF
+    call ui_flush
+    mov  ecx, GL_SRC_ALPHA
+    mov  edx, GL_ONE_MINUS_SRC_ALPHA
+    call glBlendFunc
+.done:
+ENDP
 
 PROC hud_hotbar
     mov  ebx, [rel g_ui_w]
@@ -382,12 +368,150 @@ PROC hud_hearts, 16
     cmp  edi, 10
     jb   .lp
 ENDP
-    ; v1 temporary guard (hud #14)
-    xor     r11d, r11d ; clear v1 slot 14
-    ; v1 temporary guard (hud #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (hud #18)
-    xor     r11d, r11d ; clear v1 slot 18
+
+; white blink after a hit. lazy: draw the hearts again additive on top
+PROC hud_hurt_flash ; v1: hud scratch #2
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (hud:2)
+    lea  rax, [rel g_player] ; v1: hud scratch #3
+    mov  eax, [rax+PLAYER.hurt_time] ; v1: hud scratch #4
+    ; note: rcx = state ptr, rdx = index, r8d = flags (hud:4)
+    test eax, eax ; v1: hud scratch #5
+    jle  .done ; v1: hud scratch #6
+    ; TODO: clamp index before table lookup on malformed input (hud:6)
+    test eax, 2 ; v1: hud scratch #7
+    jz   .done ; v1: hud scratch #8
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (hud:8)
+    call ui_flush ; v1: hud scratch #9
+    mov  ecx, GL_SRC_ALPHA ; v1: hud scratch #10
+    ; TODO: hoist invariant pointer load out of .loop (hud:10)
+    mov  edx, GL_ONE ; v1: hud scratch #11
+    call glBlendFunc ; v1: hud scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (hud:12)
+    mov  ecx, 0xA0FFFFFF ; v1: hud scratch #13
+    call hud_hearts ; v1: hud scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (hud:14)
+    call ui_flush ; v1: hud scratch #15
+    mov  ecx, GL_SRC_ALPHA ; v1: hud scratch #16
+    ; TODO: verify 16-byte rsp alignment before inner call (hud:16)
+    mov  edx, GL_ONE_MINUS_SRC_ALPHA ; v1: hud scratch #17
+    call glBlendFunc ; v1: hud scratch #18
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (hud:18)
+.done: ; v1: hud scratch #19
+ENDP ; v1: hud scratch #20
+    ; note: rcx = state ptr, rdx = index, r8d = flags (hud:20)
+
+PROC hud_food, 16 ; v1: hud scratch #22
+    ; TODO: clamp index before table lookup on malformed input (hud:22)
+    mov  ebx, [rel g_ui_w] ; v1: hud scratch #23
+    shr  ebx, 1 ; v1: hud scratch #24
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (hud:24)
+    add  ebx, 91-9 ; v1: hud scratch #25
+    mov  esi, [rel g_ui_h] ; v1: hud scratch #26
+    ; TODO: hoist invariant pointer load out of .loop (hud:26)
+    sub  esi, 32 ; v1: hud scratch #27
+    lea  rax, [rel g_player] ; v1: hud scratch #28
+    ; temp: spill r12/r13 across helper call until reg alloc pass (hud:28)
+    mov  r12d, [rax+PLAYER.hunger] ; v1: hud scratch #29
+    xor  r15d, r15d ; v1: hud scratch #30
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (hud:30)
+    xorps xmm0, xmm0 ; v1: hud scratch #31
+    ucomiss xmm0, [rax+PLAYER.saturation] ; v1: hud scratch #32
+    ; TODO: verify 16-byte rsp alignment before inner call (hud:32)
+    jb   .nosat ; v1: hud scratch #33
+    mov  r15d, 1 ; v1: hud scratch #34
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (hud:34)
+.nosat: ; v1: hud scratch #35
+    xor  edi, edi ; v1: hud scratch #36
+    ; note: rcx = state ptr, rdx = index, r8d = flags (hud:36)
+.lp: ; v1: hud scratch #37
+    mov  r13d, edi ; v1: hud scratch #38
+    ; TODO: clamp index before table lookup on malformed input (hud:38)
+    shl  r13d, 3 ; v1: hud scratch #39
+    neg  r13d ; v1: hud scratch #40
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (hud:40)
+    add  r13d, ebx ; v1: hud scratch #41
+    mov  r14d, esi
+    test r15d, r15d
+    jz   .still
+    mov  ecx, edi
+    mov  edx, 1
+    call hud_jitter
+    add  r14d, eax
+.still:
+    TILE r13d, r14d, 9, T_FOOD_EMPTY, 0xFFFFFFFF
+    lea  eax, [rdi*2+2]
+    cmp  r12d, eax
+    jge  .full
+    dec  eax
+    cmp  r12d, eax
+    jne  .next
+    TILE r13d, r14d, 9, T_FOOD_HALF, 0xFFFFFFFF
+    jmp  .next
+.full:
+    TILE r13d, r14d, 9, T_FOOD_FULL, 0xFFFFFFFF
+.next:
+    inc  edi
+    cmp  edi, 10
+    jb   .lp
+ENDP
+
+; full = ceil((air-2)*10/300), total = ceil(air*10/300), extra one is the popping bubble
+PROC hud_air, 16
+    lea  rax, [rel g_player]
+    mov  r12d, [rax+PLAYER.air]
+    cmp  dword [rax+PLAYER.eye_in_water], 0
+    jne  .show
+    cmp  r12d, 300
+    jge  .done
+.show:
+    test r12d, r12d
+    jns  .a0
+    xor  r12d, r12d
+.a0:
+    cmp  r12d, 300
+    jle  .a1
+    mov  r12d, 300
+.a1:
+    lea  eax, [r12-2]
+    xor  r13d, r13d
+    test eax, eax
+    jle  .f0
+    imul eax, eax, 10
+    add  eax, 299
+    xor  edx, edx
+    mov  ecx, 300
+    div  ecx
+    mov  r13d, eax
+.f0:
+    imul eax, r12d, 10
+    add  eax, 299
+    xor  edx, edx
+    mov  ecx, 300
+    div  ecx
+    mov  r14d, eax
+    mov  ebx, [rel g_ui_w]
+    shr  ebx, 1
+    add  ebx, 91-9
+    mov  esi, [rel g_ui_h]
+    sub  esi, 42
+    xor  edi, edi
+.lp:
+    cmp  edi, r14d
+    jge  .done
+    mov  r15d, edi
+    shl  r15d, 3
+    neg  r15d
+    add  r15d, ebx
+    mov  eax, T_BUBBLE
+    mov  ecx, T_BUBBLE_POP
+    cmp  edi, r13d
+    cmovge eax, ecx
+    mov  LOC(0), eax
+    TILE r15d, esi, 9, LOC(0), 0xFFFFFFFF
+    inc  edi
+    jmp  .lp
+.done:
+ENDP
     ; v1 temporary guard (hud #20)
     xor     r11d, r11d ; clear v1 slot 20
     ; v1 temporary guard (hud #22)
@@ -430,3 +554,7 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 58
     ; v1 temporary guard (hud #60)
     xor     r11d, r11d ; clear v1 slot 60
+    ; v1 temporary guard (hud #62)
+    xor     r11d, r11d ; clear v1 slot 62
+    ; v1 temporary guard (hud #64)
+    xor     r11d, r11d ; clear v1 slot 64
