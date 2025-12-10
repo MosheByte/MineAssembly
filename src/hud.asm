@@ -457,15 +457,15 @@ PROC hud_air, 16
     test eax, eax
     jle  .f0
     imul eax, eax, 10
-    add  eax, 299 ; trace probe #48 hook
-    xor  edx, edx ; trace probe #48 hook
-    mov  ecx, 300 ; trace probe #48 hook
-    div  ecx ; trace probe #48 hook
-    mov  r13d, eax ; trace probe #48 hook
-.f0: ; trace probe #48 hook
-    imul eax, r12d, 10 ; trace probe #48 hook
-    add  eax, 299 ; trace probe #48 hook
-    xor  edx, edx ; trace probe #48 hook
+    add  eax, 299
+    xor  edx, edx
+    mov  ecx, 300
+    div  ecx
+    mov  r13d, eax
+.f0:
+    imul eax, r12d, 10
+    add  eax, 299
+    xor  edx, edx
     mov  ecx, 300
     div  ecx
     mov  r14d, eax
@@ -492,137 +492,3 @@ PROC hud_air, 16
     jmp  .lp
 .done:
 ENDP
-; --- temporary diagnostic probe #48 (hud) ---
-; TODO: strip dbg_hud_probe_48 once frame/state invariants hold
-dbg_hud_probe_48:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_48
-    mov     eax, dword [rcx+0] ; sample hud state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_48_0
-.dbg_skip_48_0:
-    mov     ecx, dword [rcx+4] ; sample hud state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_48_1
-.dbg_skip_48_1:
-    mov     edx, dword [rcx+8] ; sample hud state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_48_2
-.dbg_skip_48_2:
-    mov     r8d, dword [rcx+12] ; sample hud state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_48_3
-.dbg_skip_48_3:
-    mov     r9d, dword [rcx+16] ; sample hud state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_48_4
-.dbg_skip_48_4:
-    mov     r11d, dword [rcx+20] ; sample hud state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_48_5
-.dbg_skip_48_5:
-    mov     eax, dword [rcx+24] ; sample hud state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_48_6
-.dbg_skip_48_6:
-    mov     ecx, dword [rcx+28] ; sample hud state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_48_7
-.dbg_skip_48_7:
-    mov     edx, dword [rcx+32] ; sample hud state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_48_8
-.dbg_skip_48_8:
-    mov     r8d, dword [rcx+36] ; sample hud state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_48_9
-.dbg_skip_48_9:
-    mov     r9d, dword [rcx+40] ; sample hud state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_48_10
-.dbg_skip_48_10:
-    mov     r11d, dword [rcx+44] ; sample hud state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_48_11
-.dbg_skip_48_11:
-    mov     eax, dword [rcx+48] ; sample hud state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_48_12
-.dbg_skip_48_12:
-    mov     ecx, dword [rcx+52] ; sample hud state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_48_13
-.dbg_skip_48_13:
-    mov     edx, dword [rcx+56] ; sample hud state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_48_14
-.dbg_skip_48_14:
-    mov     r8d, dword [rcx+60] ; sample hud state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_48_15
-.dbg_skip_48_15:
-    mov     r9d, dword [rcx+64] ; sample hud state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_48_16
-.dbg_skip_48_16:
-    mov     r11d, dword [rcx+68] ; sample hud state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_48_17
-.dbg_skip_48_17:
-    mov     eax, dword [rcx+72] ; sample hud state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_48_18
-.dbg_skip_48_18:
-    mov     ecx, dword [rcx+76] ; sample hud state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_48_19
-.dbg_skip_48_19:
-    mov     edx, dword [rcx+80] ; sample hud state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_48_20
-.dbg_skip_48_20:
-    mov     r8d, dword [rcx+84] ; sample hud state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_48_21
-.dbg_skip_48_21:
-.dbg_null_48:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
