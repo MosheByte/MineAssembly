@@ -792,56 +792,39 @@ PROC hud_dbg, 16
 ENDP
 
 ; pass 0 for unused args
-%macro DBG 6 ; v1: hud scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (hud:2)
-    mov  r10, %6 ; v1: hud scratch #3
-    mov  [rsp+40], r10 ; v1: hud scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (hud:4)
-    mov  r10, %5 ; v1: hud scratch #5
-    mov  [rsp+32], r10 ; v1: hud scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (hud:6)
-    mov  r9, %4 ; v1: hud scratch #7
-    mov  r8, %3 ; v1: hud scratch #8
-    ; TODO: clamp index before table lookup on malformed input (hud:8)
-    mov  edx, %2 ; v1: hud scratch #9
-    lea  rcx, [rel %1] ; v1: hud scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (hud:10)
-    call hud_dbg ; v1: hud scratch #11
-%endmacro ; v1: hud scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (hud:12)
+%macro DBG 6
+    mov  r10, %6
+    mov  [rsp+40], r10
+    mov  r10, %5
+    mov  [rsp+32], r10
+    mov  r9, %4
+    mov  r8, %3
+    mov  edx, %2
+    lea  rcx, [rel %1]
+    call hud_dbg
+%endmacro
 
-PROCX hud_debug, 64 ; v1: hud scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (hud:14)
-    mov  dword [rel hud_dbg_yl], 2 ; v1: hud scratch #15
-    mov  dword [rel hud_dbg_yr], 2 ; v1: hud scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (hud:16)
-    lea  rdi, [rel hud_dbg_lx] ; v1: hud scratch #17
-    xor  eax, eax ; v1: hud scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (hud:18)
-    mov  ecx, DBG_ROWS ; v1: hud scratch #19
-    rep  stosd ; v1: hud scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (hud:20)
+PROCX hud_debug, 64
+    mov  dword [rel hud_dbg_yl], 2
+    mov  dword [rel hud_dbg_yr], 2
+    lea  rdi, [rel hud_dbg_lx]
+    xor  eax, eax
+    mov  ecx, DBG_ROWS
+    rep  stosd
 ; never changes, only ask once
-    cmp  dword [rel hud_gl_cached], 0 ; v1: hud scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (hud:22)
-    jne  .cached ; v1: hud scratch #23
-    mov  dword [rel hud_gl_cached], 1 ; v1: hud scratch #24
-    ; TODO: clamp index before table lookup on malformed input (hud:24)
-    mov  ecx, GL_VENDOR ; v1: hud scratch #25
-    call glGetString ; v1: hud scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (hud:26)
-    lea  rdx, [rel s_unknown] ; v1: hud scratch #27
-    test rax, rax ; v1: hud scratch #28
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (hud:28)
-    cmovz rax, rdx ; v1: hud scratch #29
-    mov  [rel hud_gl_vendor], rax ; v1: hud scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (hud:30)
-    mov  ecx, GL_RENDERER ; v1: hud scratch #31
-    call glGetString ; v1: hud scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (hud:32)
-    lea  rdx, [rel s_unknown] ; v1: hud scratch #33
-    test rax, rax ; v1: hud scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (hud:34)
+    cmp  dword [rel hud_gl_cached], 0
+    jne  .cached
+    mov  dword [rel hud_gl_cached], 1
+    mov  ecx, GL_VENDOR
+    call glGetString
+    lea  rdx, [rel s_unknown]
+    test rax, rax
+    cmovz rax, rdx
+    mov  [rel hud_gl_vendor], rax
+    mov  ecx, GL_RENDERER
+    call glGetString
+    lea  rdx, [rel s_unknown]
+    test rax, rax
     cmovz rax, rdx
     mov  [rel hud_gl_renderer], rax
     mov  ecx, GL_VERSION
@@ -957,53 +940,118 @@ PROCX hud_debug, 64 ; v1: hud scratch #14
     mov  r15d, edx
     xor  edx, edx
     mov  ecx, 24
-    ; v1 temporary guard (hud #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (hud #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (hud #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (hud #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (hud #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (hud #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (hud #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (hud #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (hud #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (hud #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (hud #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (hud #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (hud #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (hud #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (hud #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (hud #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (hud #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (hud #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (hud #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (hud #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (hud #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (hud #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (hud #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (hud #63)
-    xor     r11d, r11d ; clear v1 slot 63
-    ; v1 temporary guard (hud #65)
-    xor     r11d, r11d ; clear v1 slot 65
+    div  ecx
+    mov  r9d, edx
+    imul eax, r15d, 60
+    xor  edx, edx
+    mov  ecx, 1000
+    div  ecx
+    mov  r15d, eax
+    mov  rax, [rel g_world_time]
+    xor  edx, edx
+    mov  ecx, DAY_LENGTH
+    div  rcx
+    inc  rax
+    mov  r8, rax
+    mov  eax, [rel g_time_of_day]
+    mov  [rsp+40], rax
+    mov  [rsp+32], r15
+    xor  edx, edx
+    lea  rcx, [rel fmt_time]
+    call hud_dbg
+    mov  eax, [rel g_chunk_count]
+    mov  ecx, [rel g_stat_chunks_generated]
+    DBG  fmt_chunks, 0, rax, rcx, 0, 0
+    mov  eax, [rel g_stat_sections_drawn]
+    mov  ecx, [rel g_stat_vertices]
+    lea  rdx, [rel g_settings]
+    mov  edx, [rdx+SETTINGS.render_dist]
+    mov  r15, rdx
+    DBG  fmt_render, 0, rax, rcx, r15, 0
+    mov  eax, [rel g_entity_count]
+    mov  ecx, [rel g_particle_count]
+    DBG  fmt_ents, 0, rax, rcx, 0, 0
+    mov  rax, [rel g_seed]
+    DBG  fmt_seed, 0, rax, 0, 0, 0
+    mov  eax, [rel g_weather]
+    cmp  eax, 2
+    jbe  .wok
+    xor  eax, eax
+.wok:
+    lea  rcx, [rel weather_names]
+    mov  r8, [rcx+rax*8]
+    mov  eax, [rel g_rain]
+    mov  r9, rax
+    mov  eax, [rel g_thunder]
+    mov  r15, rax
+    DBG  fmt_weather, 0, r8, r9, r15, 0
+    lea  r8, [rel s_survival]
+    lea  rax, [rel s_creative]
+    cmp  dword [rel g_gamemode], GM_CREATIVE
+    cmove r8, rax
+    lea  r9, [rel s_empty]
+    lea  rax, [rel s_flying]
+    cmp  dword [rbx+PLAYER.flying], 0
+    cmovne r9, rax
+    mov  eax, [rel g_view_mode]
+    mov  r15, rax
+    DBG  fmt_mode, 0, r8, r9, r15, 0
+    mov  eax, [rbx+PLAYER.health]
+    mov  ecx, [rbx+PLAYER.hunger]
+    mov  edx, [rbx+PLAYER.saturation]
+    mov  r15, rdx
+    mov  edx, [rbx+PLAYER.air]
+    mov  rsi, rdx
+    DBG  fmt_stats, 0, rax, rcx, r15, rsi
+
+    mov  eax, [rel hud_cpus]
+    DBG  fmt_cpu, 1, rax, 0, 0, 0
+    lea  rcx, [rel hud_memst]
+    mov  dword [rcx], 64  ; dwLength
+    call GlobalMemoryStatusEx
+    lea  rcx, [rel hud_memst]
+    mov  eax, [rcx+4]
+    mov  rcx, [rcx+8]  ; ullTotalPhys, [rcx+4] is the load %
+    shr  rcx, 20
+    DBG  fmt_mem, 1, rax, rcx, 0, 0
+    mov  eax, [rel g_screen_w]
+    mov  ecx, [rel g_screen_h]
+    mov  edx, [rel g_ui_scale]
+    mov  r15, rdx
+    DBG  fmt_disp, 1, rax, rcx, r15, 0
+    mov  rax, [rel hud_gl_vendor]
+    DBG  fmt_str, 1, rax, 0, 0, 0
+    mov  rax, [rel hud_gl_renderer]
+    DBG  fmt_str, 1, rax, 0, 0, 0
+    mov  rax, [rel hud_gl_version]
+    DBG  fmt_gl, 1, rax, 0, 0, 0
+    lea  rax, [rel g_hit]
+    cmp  dword [rax+RAYHIT.hit], 0
+    je   .done
+    DBG  s_empty, 1, 0, 0, 0, 0
+    lea  rsi, [rel g_hit]
+    movsxd rax, dword [rsi+RAYHIT.x]
+    movsxd rcx, dword [rsi+RAYHIT.y]
+    movsxd r15, dword [rsi+RAYHIT.z]
+    DBG  fmt_tgt, 1, rax, rcx, r15, 0
+    mov  eax, [rsi+RAYHIT.block]
+    and  eax, 0xFF
+    mov  r15, rax
+    lea  rcx, [rel blk_name]
+    mov  r8, [rcx+rax*8]
+    lea  rcx, [rel s_unknown]
+    test r8, r8
+    cmovz r8, rcx
+    DBG  fmt_tname, 1, r8, r15, 0, 0
+    mov  eax, [rsi+RAYHIT.face]
+    cmp  eax, 5
+    jbe  .fok
+    xor  eax, eax
+.fok:
+    lea  rcx, [rel face_names]
+    mov  r8, [rcx+rax*8]
+    mov  eax, [rsi+RAYHIT.dist]
+    mov  r9, rax
+    DBG  fmt_tface, 1, r8, r9, 0, 0
+.done:
+ENDPX
