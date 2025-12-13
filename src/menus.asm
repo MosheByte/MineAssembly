@@ -1134,56 +1134,40 @@ PROC menu_title, 32
     TEXT edi, esi, s_mojang, 0xFF8C8C8C
 ENDP
 
-PROC menu_refresh_worlds ; v1: menus scratch #1
-    lea  rcx, [rel menu_worlds] ; v1: menus scratch #2
-    ; TODO: hoist invariant pointer load out of .loop (menus:2)
-    mov  edx, MAX_WORLDS ; v1: menus scratch #3
-    call save_list_worlds ; v1: menus scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:4)
-    mov  r12, rdx ; v1: menus scratch #5
-    test eax, eax ; v1: menus scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:6)
-    jns  .p ; v1: menus scratch #7
-    xor  eax, eax ; v1: menus scratch #8
-    ; TODO: clamp index before table lookup on malformed input (menus:8)
-.p: ; v1: menus scratch #9
-    cmp  eax, MAX_WORLDS ; v1: menus scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:10)
-    jle  .q ; v1: menus scratch #11
-    mov  eax, MAX_WORLDS ; v1: menus scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:12)
-.q: ; v1: menus scratch #13
-    mov  [rel menu_world_count], eax ; v1: menus scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:14)
-    mov  ebx, eax ; v1: menus scratch #15
+PROC menu_refresh_worlds
+    lea  rcx, [rel menu_worlds]
+    mov  edx, MAX_WORLDS
+    call save_list_worlds
+    mov  r12, rdx                       ; header info, see save_list_worlds
+    test eax, eax
+    jns  .p
+    xor  eax, eax
+.p:
+    cmp  eax, MAX_WORLDS
+    jle  .q
+    mov  eax, MAX_WORLDS
+.q:
+    mov  [rel menu_world_count], eax
+    mov  ebx, eax
     ; cache the info + its text now, the list is redrawn every frame
-    lea  rdi, [rel menu_winfo] ; v1: menus scratch #17
-    xor  eax, eax ; v1: menus scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (menus:18)
-    mov  ecx, WI_SIZE*MAX_WORLDS ; v1: menus scratch #19
-    rep  stosb ; v1: menus scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (menus:20)
-    lea  rdi, [rel menu_wl_info] ; v1: menus scratch #21
-    mov  ecx, WL_INFO_LEN*MAX_WORLDS ; v1: menus scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:22)
-    rep  stosb ; v1: menus scratch #23
-    lea  rdi, [rel menu_wl_date] ; v1: menus scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:24)
-    mov  ecx, WL_DATE_LEN*MAX_WORLDS ; v1: menus scratch #25
-    rep  stosb ; v1: menus scratch #26
-    ; TODO: clamp index before table lookup on malformed input (menus:26)
-    test ebx, ebx ; v1: menus scratch #27
-    jz   .cached ; v1: menus scratch #28
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:28)
-    test r12, r12 ; v1: menus scratch #29
-    jz   .cached ; v1: menus scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:30)
-    mov  rsi, r12 ; v1: menus scratch #31
-    lea  rdi, [rel menu_winfo] ; v1: menus scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:32)
-    imul ecx, ebx, WI_SIZE ; v1: menus scratch #33
-    rep  movsb ; v1: menus scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (menus:34)
+    lea  rdi, [rel menu_winfo]
+    xor  eax, eax
+    mov  ecx, WI_SIZE*MAX_WORLDS
+    rep  stosb
+    lea  rdi, [rel menu_wl_info]
+    mov  ecx, WL_INFO_LEN*MAX_WORLDS
+    rep  stosb
+    lea  rdi, [rel menu_wl_date]
+    mov  ecx, WL_DATE_LEN*MAX_WORLDS
+    rep  stosb
+    test ebx, ebx
+    jz   .cached
+    test r12, r12
+    jz   .cached
+    mov  rsi, r12
+    lea  rdi, [rel menu_winfo]
+    imul ecx, ebx, WI_SIZE
+    rep  movsb
     xor  esi, esi
 .text:
     mov  ecx, esi
@@ -1329,6 +1313,202 @@ PROCX menu_worldselect, 64
     mov  eax, [rel menu_world_count]
     sub  eax, r15d
     jns  .c0
+    xor  eax, eax ; v1: menus scratch #0
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:0)
+.c0: ; v1: menus scratch #1
+    cmp  [rel menu_scroll], eax ; v1: menus scratch #2
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:2)
+    jle  .c1 ; v1: menus scratch #3
+    mov  [rel menu_scroll], eax ; v1: menus scratch #4
+    ; TODO: verify 16-byte rsp alignment before inner call (menus:4)
+.c1: ; v1: menus scratch #5
+    cmp  dword [rel menu_scroll], 0 ; v1: menus scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (menus:6)
+    jge  .c2 ; v1: menus scratch #7
+    mov  dword [rel menu_scroll], 0 ; v1: menus scratch #8
+    ; TODO: clamp index before table lookup on malformed input (menus:8)
+.c2: ; v1: menus scratch #9
+    mov  dword LOC(4), 0 ; v1: menus scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:10)
+    xor  esi, esi ; v1: menus scratch #11
+.entry: ; v1: menus scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:12)
+    cmp  esi, r15d ; v1: menus scratch #13
+    jge  .entries_done ; v1: menus scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:14)
+    mov  edi, [rel menu_scroll] ; v1: menus scratch #15
+    add  edi, esi ; v1: menus scratch #16
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:16)
+    cmp  edi, [rel menu_world_count] ; v1: menus scratch #17
+    jge  .entries_done ; v1: menus scratch #18
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:18)
+    imul eax, esi, ROW_H ; v1: menus scratch #19
+    lea  eax, [r13+rax+2] ; v1: menus scratch #20
+    ; TODO: verify 16-byte rsp alignment before inner call (menus:20)
+    mov  LOC(8), eax ; v1: menus scratch #21
+    lea  ecx, [r12+2] ; v1: menus scratch #22
+    ; TODO: hoist invariant pointer load out of .loop (menus:22)
+    mov  edx, eax ; v1: menus scratch #23
+    mov  r8d, LOC(28) ; v1: menus scratch #24
+    ; TODO: clamp index before table lookup on malformed input (menus:24)
+    sub  r8d, 4 ; v1: menus scratch #25
+    mov  r9d, ROW_H ; v1: menus scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:26)
+    call ui_mouse_in ; v1: menus scratch #27
+    mov  LOC(12), eax ; v1: menus scratch #28
+    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:28)
+    lea  eax, [r12+2] ; v1: menus scratch #29
+    mov  LOC(16), eax ; v1: menus scratch #30
+    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:30)
+    mov  eax, LOC(28) ; v1: menus scratch #31
+    sub  eax, 4
+    mov  LOC(0), eax
+    cmp  edi, [rel menu_sel]
+    jne  .nosel
+    RECT LOC(16), LOC(8), LOC(0), ROW_H, 0xFFA0A0A8
+    lea  eax, [r12+3]
+    mov  LOC(20), eax
+    mov  eax, LOC(8)
+    inc  eax
+    mov  LOC(24), eax
+    sub  dword LOC(0), 2
+    RECT LOC(20), LOC(24), LOC(0), ROW_H-2, 0xFF101014
+    jmp  .drawn
+.nosel:
+    cmp  dword LOC(12), 0
+    je   .drawn
+    RECT LOC(16), LOC(8), LOC(0), ROW_H, 0x30FFFFFF
+.drawn:
+    lea  ecx, [r12+6]
+    mov  edx, LOC(8)
+    add  edx, 6
+    mov  r8d, B_GRASS
+    call ui_item_icon
+    ; the typed name from level.dat, the folder if there's none
+    mov  eax, edi
+    shl  eax, 5
+    lea  rcx, [rel menu_worlds]
+    add  rcx, rax
+    imul eax, edi, WI_SIZE
+    lea  rdx, [rel menu_winfo+WI_NAME]
+    add  rdx, rax
+    cmp  byte [rdx], 0
+    cmovne rcx, rdx
+    mov  LOC(40), rcx
+    imul eax, edi, WL_INFO_LEN
+    lea  rcx, [rel menu_wl_info]
+    add  rcx, rax
+    mov  LOC(48), rcx
+    imul eax, edi, WL_DATE_LEN
+    lea  rcx, [rel menu_wl_date]
+    add  rcx, rax
+    mov  LOC(56), rcx
+    mov  eax, LOC(8)
+    add  eax, 4
+    mov  LOC(20), eax
+    add  eax, 11
+    mov  LOC(24), eax
+    lea  eax, [r12+28]
+    TEXTP eax, LOC(20), LOC(40), 0xFFFFFFFF
+    ; last played, right aligned on the name line
+    mov  rcx, LOC(56)
+    cmp  byte [rcx], 0
+    je   .nodate
+    call ui_text_width
+    mov  ecx, r12d
+    add  ecx, LOC(28)
+    sub  ecx, 6
+    sub  ecx, eax
+    TEXTP ecx, LOC(20), LOC(56), 0xFF909090
+.nodate:
+    imul eax, edi, WI_SIZE
+    lea  rcx, [rel menu_winfo]
+    mov  r9d, 0xFFA0A0A0
+    mov  r8d, 0xFFD87070
+    cmp  dword [rcx+rax+WI_OK], 0
+    cmove r9d, r8d
+    lea  eax, [r12+28]
+    TEXTP eax, LOC(24), LOC(48), r9d
+    mov  eax, edi
+    shl  eax, 5
+    lea  rcx, [rel menu_worlds]
+    add  rcx, rax
+    mov  rdx, LOC(40)
+    mov  r8, LOC(48)
+    mov  r9d, r12d
+    mov  eax, LOC(28)
+    mov  [rsp+32], rax
+    mov  eax, LOC(24)
+    mov  [rsp+40], rax
+    call menu_folder_hint
+    cmp  dword LOC(12), 0
+    je   .nextentry
+    test dword [rel g_mouse_pressed], MB_LEFT
+    jz   .nextentry
+    cmp  edi, [rel menu_sel]
+    jne  .select
+    movss xmm0, [rel ui_time]
+    subss xmm0, [rel menu_last_click]
+    ucomiss xmm0, [rel f_dbl]
+    jae  .select
+    mov  dword LOC(4), 1
+.select:
+    mov  [rel menu_sel], edi
+    mov  eax, [rel ui_time]
+    mov  [rel menu_last_click], eax
+    mov  dword [rel menu_confirm], 0
+.nextentry:
+    inc  esi
+    jmp  .entry
+.entries_done:
+    cmp  dword [rel menu_world_count], 0
+    jne  .haveworlds
+    mov  eax, r14d
+    shr  eax, 1
+    add  eax, r13d
+    sub  eax, 4
+    mov  LOC(0), eax
+    CTEXT ebx, LOC(0), s_noworlds, 0xFFA0A0A0
+.haveworlds:
+    ; r15d = selection valid (enables Play/Delete)
+    xor  r15d, r15d
+    mov  eax, [rel menu_sel]
+    test eax, eax
+    js   .v
+    cmp  eax, [rel menu_world_count]
+    jge  .v
+    mov  r15d, 1
+.v:
+    mov  esi, [rel g_ui_h]
+    sub  esi, 52
+    lea  edi, [rbx-154]
+    BTN  edi, esi, 150, 20, s_play, r15d
+    or   eax, LOC(4)
+    mov  ecx, [rel menu_enter_key]
+    and  ecx, r15d
+    or   eax, ecx
+    and  eax, r15d
+    jz   .b2
+    mov  eax, [rel menu_sel]
+    shl  eax, 5
+    lea  rcx, [rel menu_worlds]
+    add  rcx, rax
+    xor  edx, edx
+    mov  r8d, GM_SURVIVAL
+    xor  r9d, r9d
+    call game_start_world
+    jmp  .done
+.b2:
+    lea  edi, [rbx+4]
+    BTN  edi, esi, 150, 20, s_create_new, 1
+    test eax, eax
+    jz   .b3
+    mov  ecx, ST_CREATEWORLD
+    call game_set_state
+    jmp  .done
+.b3:
+    add  esi, 24
+    lea  edi, [rbx-154]
     ; v1 temporary guard (menus #16)
     xor     r11d, r11d ; clear v1 slot 16
     ; v1 temporary guard (menus #18)
@@ -1363,3 +1543,9 @@ PROCX menu_worldselect, 64
     xor     r11d, r11d ; clear v1 slot 46
     ; v1 temporary guard (menus #48)
     xor     r11d, r11d ; clear v1 slot 48
+    ; v1 temporary guard (menus #50)
+    xor     r11d, r11d ; clear v1 slot 50
+    ; v1 temporary guard (menus #52)
+    xor     r11d, r11d ; clear v1 slot 52
+    ; v1 temporary guard (menus #54)
+    xor     r11d, r11d ; clear v1 slot 54
