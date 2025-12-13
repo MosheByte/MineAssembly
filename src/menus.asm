@@ -1493,80 +1493,57 @@ PROCX menu_worldselect, 64
 .b3:
     add  esi, 24
     lea  edi, [rbx-154]
-    lea  rax, [rel s_delete] ; v1: menus scratch #0
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:0)
-    lea  rcx, [rel s_really] ; v1: menus scratch #1
-    cmp  dword [rel menu_confirm], 0 ; v1: menus scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:2)
-    cmovne rax, rcx ; v1: menus scratch #3
-    mov  LOC(32), rax ; v1: menus scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:4)
-    BTNP edi, esi, 150, 20, LOC(32), r15d ; v1: menus scratch #5
-    test eax, eax ; v1: menus scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (menus:6)
-    jz   .b4 ; v1: menus scratch #7
-    cmp  dword [rel menu_confirm], 0 ; v1: menus scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:8)
-    jne  .really ; v1: menus scratch #9
-    mov  dword [rel menu_confirm], 1 ; v1: menus scratch #10
-    ; TODO: clamp index before table lookup on malformed input (menus:10)
-    jmp  .b4 ; v1: menus scratch #11
-.really: ; v1: menus scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:12)
-    mov  eax, [rel menu_sel] ; v1: menus scratch #13
-    shl  eax, 5 ; v1: menus scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (menus:14)
-    lea  rcx, [rel menu_worlds] ; v1: menus scratch #15
-    add  rcx, rax ; v1: menus scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:16)
-    call save_delete_world ; v1: menus scratch #17
-    call menu_refresh_worlds ; v1: menus scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:18)
-.b4: ; v1: menus scratch #19
-    lea  edi, [rbx+4] ; v1: menus scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:20)
-    BTN  edi, esi, 150, 20, s_back, 1 ; v1: menus scratch #21
-    test eax, eax ; v1: menus scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (menus:22)
-    jz   .done ; v1: menus scratch #23
-    mov  ecx, ST_TITLE ; v1: menus scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:24)
-    call game_set_state ; v1: menus scratch #25
-.done: ; v1: menus scratch #26
-    ; TODO: clamp index before table lookup on malformed input (menus:26)
-ENDPX ; v1: menus scratch #27
+    lea  rax, [rel s_delete]
+    lea  rcx, [rel s_really]
+    cmp  dword [rel menu_confirm], 0
+    cmovne rax, rcx
+    mov  LOC(32), rax
+    BTNP edi, esi, 150, 20, LOC(32), r15d
+    test eax, eax
+    jz   .b4
+    cmp  dword [rel menu_confirm], 0
+    jne  .really
+    mov  dword [rel menu_confirm], 1
+    jmp  .b4
+.really:
+    mov  eax, [rel menu_sel]
+    shl  eax, 5
+    lea  rcx, [rel menu_worlds]
+    add  rcx, rax
+    call save_delete_world
+    call menu_refresh_worlds
+.b4:
+    lea  edi, [rbx+4]
+    BTN  edi, esi, 150, 20, s_back, 1
+    test eax, eax
+    jz   .done
+    mov  ecx, ST_TITLE
+    call game_set_state
+.done:
+ENDPX
 
 ; (rcx folder, rdx name the row shows, r8 info line, r9d list x, ARG5 list w,
 ; ARG6 info line y). the folder, right aligned on the info line, when it isn't
 ; what the row already shows and there's room. two worlds both typed in as
 ; "Base" still look different that way
-PROC menu_folder_hint, 16 ; v1: menus scratch #33
-    mov  rbx, rcx ; v1: menus scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:34)
-    mov  rdi, r8 ; v1: menus scratch #35
-    mov  r12d, r9d ; v1: menus scratch #36
-    ; TODO: verify 16-byte rsp alignment before inner call (menus:36)
-    cmp  rdx, rbx ; v1: menus scratch #37
-    je   .done ; v1: menus scratch #38
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:38)
-    mov  rcx, rdx ; v1: menus scratch #39
-    mov  rdx, rbx ; v1: menus scratch #40
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:40)
-    call str_cmp ; v1: menus scratch #41
-    test eax, eax ; v1: menus scratch #42
-    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:42)
-    jz   .done ; v1: menus scratch #43
-    mov  rcx, rdi ; v1: menus scratch #44
-    ; TODO: hoist invariant pointer load out of .loop (menus:44)
-    call ui_text_width ; v1: menus scratch #45
-    lea  r13d, [r12+28+8] ; v1: menus scratch #46
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:46)
-    add  r13d, eax ; v1: menus scratch #47
-    mov  rcx, rbx ; v1: menus scratch #48
-    ; TODO: clamp index before table lookup on malformed input (menus:48)
-    call ui_text_width ; v1: menus scratch #49
-    mov  ecx, r12d ; v1: menus scratch #50
-    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:50)
+PROC menu_folder_hint, 16
+    mov  rbx, rcx
+    mov  rdi, r8
+    mov  r12d, r9d
+    cmp  rdx, rbx
+    je   .done
+    mov  rcx, rdx
+    mov  rdx, rbx
+    call str_cmp
+    test eax, eax
+    jz   .done
+    mov  rcx, rdi
+    call ui_text_width
+    lea  r13d, [r12+28+8]
+    add  r13d, eax
+    mov  rcx, rbx
+    call ui_text_width
+    mov  ecx, r12d
     add  ecx, ARG5
     sub  ecx, 6
     sub  ecx, eax
@@ -1696,6 +1673,201 @@ PROC menu_update_folder
     mov  [rdi+rbx], al
     inc  ebx
     jmp  .copy
+.copied: ; v1: menus scratch #0
+    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:0)
+    ; windows silently strips trailing spaces/dots from folder names, so do it
+    ; ourselves or the name we save under won't match what's on disk
+.trim: ; v1: menus scratch #3
+    test ebx, ebx ; v1: menus scratch #4
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:4)
+    jz   .trimmed ; v1: menus scratch #5
+    movzx eax, byte [rdi+rbx-1] ; v1: menus scratch #6
+    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:6)
+    cmp  eax, ' ' ; v1: menus scratch #7
+    je   .cut ; v1: menus scratch #8
+    ; TODO: clamp index before table lookup on malformed input (menus:8)
+    cmp  eax, '.' ; v1: menus scratch #9
+    jne  .trimmed ; v1: menus scratch #10
+    ; TODO: verify 16-byte rsp alignment before inner call (menus:10)
+.cut: ; v1: menus scratch #11
+    dec  ebx ; v1: menus scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (menus:12)
+    jmp  .trim ; v1: menus scratch #13
+.trimmed: ; v1: menus scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:14)
+    mov  byte [rdi+rbx], 0 ; v1: menus scratch #15
+    test ebx, ebx ; v1: menus scratch #16
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:16)
+    jnz  .named ; v1: menus scratch #17
+    lea  rsi, [rel s_world_def] ; v1: menus scratch #18
+    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:18)
+    mov  ecx, 6 ; v1: menus scratch #19
+    rep  movsb ; v1: menus scratch #20
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:20)
+    mov  ebx, 5 ; v1: menus scratch #21
+.named: ; v1: menus scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:22)
+    ; reserved names get a '_' after the stem (con -> con_, lpt1.txt ->
+    ; lpt1_.txt), appending at the end doesn't help
+    lea  rcx, [rel menu_folder_base] ; v1: menus scratch #25
+    call menu_is_reserved ; v1: menus scratch #26
+    ; TODO: clamp index before table lookup on malformed input (menus:26)
+    test eax, eax ; v1: menus scratch #27
+    jz   .not_reserved ; v1: menus scratch #28
+    ; TODO: verify 16-byte rsp alignment before inner call (menus:28)
+    lea  rdi, [rel menu_folder_base] ; v1: menus scratch #29
+    mov  ecx, ebx ; v1: menus scratch #30
+    ; TODO: hoist invariant pointer load out of .loop (menus:30)
+.ins: ; v1: menus scratch #31
+    mov  al, [rdi+rcx] ; v1: menus scratch #32
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:32)
+    mov  [rdi+rcx+1], al ; v1: menus scratch #33
+    cmp  ecx, edx ; v1: menus scratch #34
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:34)
+    je   .ins_done ; v1: menus scratch #35
+    dec  ecx ; v1: menus scratch #36
+    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:36)
+    jmp  .ins ; v1: menus scratch #37
+.ins_done: ; v1: menus scratch #38
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:38)
+    mov  byte [rdi+rdx], '_' ; v1: menus scratch #39
+.not_reserved: ; v1: menus scratch #40
+    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:40)
+    lea  rsi, [rel menu_folder_base] ; v1: menus scratch #41
+    lea  rdi, [rel menu_folder] ; v1: menus scratch #42
+    ; TODO: clamp index before table lookup on malformed input (menus:42)
+    mov  ecx, 32 ; v1: menus scratch #43
+    rep  movsb ; v1: menus scratch #44
+    ; TODO: verify 16-byte rsp alignment before inner call (menus:44)
+    mov  r12d, 2
+.unique:
+    lea  rcx, [rel menu_folder]
+    call save_world_exists
+    test eax, eax
+    jz   .done
+    cmp  r12d, 999
+    jg   .done
+    lea  rcx, [rel menu_folder]
+    lea  rdx, [rel fmt_unique]
+    lea  r8, [rel menu_folder_base]
+    mov  r9d, r12d
+    call str_format
+    inc  r12d
+    jmp  .unique
+.done:
+ENDP
+
+; "Will be saved in: saves\<folder>", max 200px. too long -> cut from the
+; middle so the " (2)" suffix stays visible. drops one char per try, brute
+; force but whatever
+%define SAVED_TAIL 5
+PROC menu_saved_in_label
+    lea  rsi, [rel menu_folder]
+    xor  r12d, r12d
+.len:
+    cmp  byte [rsi+r12], 0
+    je   .lend
+    inc  r12d
+    jmp  .len
+.lend:
+    mov  r13d, r12d
+    xor  r14d, r14d
+.build:
+    lea  rdi, [rel menu_fname]
+    lea  rsi, [rel menu_folder]
+    mov  ecx, r13d
+    rep  movsb
+    test r14d, r14d
+    jz   .term
+    mov  dword [rdi], '...'             ; '...' + NUL, tail overwrites the NUL. hacky but works
+    add  rdi, 3
+    lea  rsi, [rel menu_folder]
+    lea  eax, [r12-SAVED_TAIL]
+    add  rsi, rax
+    mov  ecx, SAVED_TAIL
+    rep  movsb
+.term:
+    mov  byte [rdi], 0
+    lea  rcx, [rel menu_lbl]
+    lea  rdx, [rel fmt_saved_in]
+    lea  r8, [rel menu_fname]
+    call str_format
+    lea  rcx, [rel menu_lbl]
+    call ui_text_dims
+    cmp  eax, 200
+    jle  .done
+    test r14d, r14d
+    jnz  .shorter
+    cmp  r12d, SAVED_TAIL+3             ; too short, cutting would make it longer
+    jle  .done
+    mov  r14d, 1
+    lea  r13d, [r12-SAVED_TAIL]
+.shorter:
+    cmp  r13d, 1
+    jle  .done
+    dec  r13d
+    jmp  .build
+.done:
+ENDP
+
+PROC menu_compute_seed
+    lea  rsi, [rel menu_seed]
+.sp:
+    cmp  byte [rsi], ' '
+    jne  .s0
+    inc  rsi
+    jmp  .sp
+.s0:
+    cmp  byte [rsi], 0
+    jne  .text
+    call menu_random
+    jmp  .done
+.text:
+    ; number = [-]digits{1,19} + trailing spaces. 20+ digits get hashed
+    mov  rdi, rsi
+    xor  r12d, r12d
+    cmp  byte [rdi], '-'
+    jne  .d0
+    mov  r12d, 1
+    inc  rdi
+.d0:
+    xor  eax, eax
+    xor  ebx, ebx
+.dl:
+    movzx ecx, byte [rdi]
+    sub  ecx, '0'
+    cmp  ecx, 9
+    ja   .dend
+    imul rax, rax, 10
+    add  rax, rcx
+    inc  ebx
+    inc  rdi
+    cmp  ebx, 19
+    jg   .hash
+    jmp  .dl
+.dend:
+    test ebx, ebx
+    jz   .hash
+.tail:
+    movzx ecx, byte [rdi]
+    test ecx, ecx
+    jz   .num
+    cmp  ecx, ' '
+    jne  .hash
+    inc  rdi
+    jmp  .tail
+.num:
+    test r12d, r12d
+    jz   .done
+    neg  rax
+    jmp  .done
+.hash:
+    mov  rcx, rsi
+    call str_hash
+.done:
+ENDP
+    ; v1 temporary guard (menus #21)
+    xor     r11d, r11d ; clear v1 slot 21
     ; v1 temporary guard (menus #23)
     xor     r11d, r11d ; clear v1 slot 23
     ; v1 temporary guard (menus #25)
@@ -1724,3 +1896,15 @@ PROC menu_update_folder
     xor     r11d, r11d ; clear v1 slot 47
     ; v1 temporary guard (menus #49)
     xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (menus #51)
+    xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (menus #53)
+    xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (menus #55)
+    xor     r11d, r11d ; clear v1 slot 55
+    ; v1 temporary guard (menus #57)
+    xor     r11d, r11d ; clear v1 slot 57
+    ; v1 temporary guard (menus #59)
+    xor     r11d, r11d ; clear v1 slot 59
+    ; v1 temporary guard (menus #61)
+    xor     r11d, r11d ; clear v1 slot 61
