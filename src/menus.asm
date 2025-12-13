@@ -628,48 +628,34 @@ PROC menu_random
 ENDP
 
 ; mostly stone, ores rare. diamond is 1/256
-LEAF menu_pick_tile ; v1: menus scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:2)
-    imul eax, ecx, 0x27D4EB2F ; v1: menus scratch #3
-    imul edx, edx, 0x165667B1 ; v1: menus scratch #4
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:4)
-    xor  eax, edx ; v1: menus scratch #5
-    mov  edx, eax ; v1: menus scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (menus:6)
-    shr  edx, 15 ; v1: menus scratch #7
-    xor  eax, edx ; v1: menus scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:8)
-    imul eax, eax, 0x85EBCA77 ; v1: menus scratch #9
-    mov  edx, eax ; v1: menus scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (menus:10)
-    shr  edx, 13 ; v1: menus scratch #11
-    xor  eax, edx ; v1: menus scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:12)
-    and  eax, 255 ; v1: menus scratch #13
-    cmp  eax, 6 ; v1: menus scratch #14
-    ; TODO: clamp index before table lookup on malformed input (menus:14)
-    jb   .coal ; v1: menus scratch #15
-    cmp  eax, 9 ; v1: menus scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:16)
-    jb   .iron ; v1: menus scratch #17
-    cmp  eax, 10 ; v1: menus scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:18)
-    jb   .gold ; v1: menus scratch #19
-    cmp  eax, 11 ; v1: menus scratch #20
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:20)
-    jb   .diamond ; v1: menus scratch #21
-    cmp  eax, 34 ; v1: menus scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (menus:22)
-    jb   .cobble ; v1: menus scratch #23
-    cmp  eax, 48 ; v1: menus scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:24)
-    jb   .gravel ; v1: menus scratch #25
-    cmp  eax, 62 ; v1: menus scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (menus:26)
-    jb   .dirt ; v1: menus scratch #27
-    cmp  eax, 66 ; v1: menus scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:28)
-    jb   .mossy ; v1: menus scratch #29
+LEAF menu_pick_tile
+    imul eax, ecx, 0x27D4EB2F
+    imul edx, edx, 0x165667B1
+    xor  eax, edx
+    mov  edx, eax
+    shr  edx, 15
+    xor  eax, edx
+    imul eax, eax, 0x85EBCA77
+    mov  edx, eax
+    shr  edx, 13
+    xor  eax, edx
+    and  eax, 255
+    cmp  eax, 6
+    jb   .coal
+    cmp  eax, 9
+    jb   .iron
+    cmp  eax, 10
+    jb   .gold
+    cmp  eax, 11
+    jb   .diamond
+    cmp  eax, 34
+    jb   .cobble
+    cmp  eax, 48
+    jb   .gravel
+    cmp  eax, 62
+    jb   .dirt
+    cmp  eax, 66
+    jb   .mossy
     mov  eax, T_STONE
     ret
 .coal:   mov eax, T_COAL_ORE
@@ -820,8 +806,202 @@ PROCX menu_logo, 64
     mov  eax, 1
 .d0:
     mov  r15d, eax                      ; extrusion depth
-    ; v1 temporary guard (menus #14)
-    xor     r11d, r11d ; clear v1 slot 14
+    ; sweep centre in cells along the diagonal, wraps every f_sweep_p
+    movss xmm6, [rel ui_time] ; v1: menus scratch #1
+    mulss xmm6, [rel f_sweep_v] ; v1: menus scratch #2
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:2)
+    movss xmm0, xmm6 ; v1: menus scratch #3
+    divss xmm0, [rel f_sweep_p] ; v1: menus scratch #4
+    ; TODO: clamp index before table lookup on malformed input (menus:4)
+    roundss xmm0, xmm0, 1 ; v1: menus scratch #5
+    mulss xmm0, [rel f_sweep_p] ; v1: menus scratch #6
+    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:6)
+    subss xmm6, xmm0 ; v1: menus scratch #7
+    subss xmm6, [rel f_sweep_o] ; v1: menus scratch #8
+    ; TODO: verify 16-byte rsp alignment before inner call (menus:8)
+
+    mov  dword LOC(0), 0 ; v1: menus scratch #10
+    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:10)
+.pass: ; v1: menus scratch #11
+    lea  rbx, [rel logo_letters] ; v1: menus scratch #12
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:12)
+    mov  dword LOC(4), 0 ; v1: menus scratch #13
+    mov  dword LOC(8), 0 ; v1: menus scratch #14
+    ; TODO: hoist invariant pointer load out of .loop (menus:14)
+.letter: ; v1: menus scratch #15
+    mov  dword LOC(12), 0 ; v1: menus scratch #16
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:16)
+.row: ; v1: menus scratch #17
+    mov  dword LOC(16), 0 ; v1: menus scratch #18
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:18)
+.col: ; v1: menus scratch #19
+    mov  ecx, LOC(16) ; v1: menus scratch #20
+    ; TODO: clamp index before table lookup on malformed input (menus:20)
+    mov  edx, LOC(12) ; v1: menus scratch #21
+    call menu_logo_bit ; v1: menus scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:22)
+    test eax, eax ; v1: menus scratch #23
+    jz   .next ; v1: menus scratch #24
+    ; TODO: verify 16-byte rsp alignment before inner call (menus:24)
+    mov  eax, LOC(8) ; v1: menus scratch #25
+    add  eax, LOC(16) ; v1: menus scratch #26
+    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:26)
+    mov  LOC(36), eax ; v1: menus scratch #27
+    imul eax, r12d ; v1: menus scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:28)
+    add  eax, r13d ; v1: menus scratch #29
+    mov  LOC(20), eax ; v1: menus scratch #30
+    ; TODO: hoist invariant pointer load out of .loop (menus:30)
+    mov  eax, LOC(12) ; v1: menus scratch #31
+    imul eax, r12d ; v1: menus scratch #32
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:32)
+    add  eax, r14d
+    mov  LOC(24), eax
+    mov  eax, LOC(0)
+    cmp  eax, 1
+    jb   .p_extrude
+    je   .p_face
+    cmp  eax, 2
+    je   .p_bevel
+    jmp  .p_shine
+.p_extrude:
+    mov  esi, r15d
+.ex:
+    ; closer layers lighter. +8 on blue so it isn't dead grey
+    lea  eax, [rsi-1]
+    imul eax, eax, 0x1C
+    xor  edx, edx
+    div  r15d
+    mov  ecx, 0x34
+    sub  ecx, eax
+    mov  eax, ecx
+    shl  eax, 8
+    or   eax, ecx
+    shl  eax, 8
+    lea  ecx, [rcx+8]
+    or   eax, ecx
+    or   eax, 0xFF000000
+    mov  LOC(28), eax
+    mov  edi, LOC(20)
+    add  edi, esi
+    mov  eax, LOC(24)
+    add  eax, esi
+    mov  LOC(32), eax
+    RECT edi, LOC(32), r12d, r12d, LOC(28)
+    dec  esi
+    jnz  .ex
+    jmp  .next
+    ; 4x4 texel window picked by (gx&3, row&3) so the stone flows across
+    ; the whole word. f_tiny keeps the uvs off the neighbouring atlas tile
+.p_face:
+    mov  ecx, [rel g_tex_atlas]
+    call ui_bind_tex
+    mov  ecx, LOC(20)
+    mov  edx, LOC(24)
+    mov  r8d, r12d
+    mov  r9d, r12d
+    call ui_set_xywh
+    lea  rdi, [rel ui_qp]
+    mov  eax, LOC(36)
+    and  eax, 3
+    cvtsi2ss xmm0, eax
+    mulss xmm0, [rel f_inv64]
+    mov  eax, T_STONE & 15
+    cvtsi2ss xmm1, eax
+    mulss xmm1, [rel f_inv16]
+    addss xmm0, xmm1
+    addss xmm0, [rel f_tiny]
+    movss [rdi+QU0], xmm0
+    addss xmm0, [rel f_inv64]
+    subss xmm0, [rel f_tiny]
+    subss xmm0, [rel f_tiny]
+    movss [rdi+QU1], xmm0
+    mov  eax, LOC(12)
+    and  eax, 3
+    cvtsi2ss xmm0, eax
+    mulss xmm0, [rel f_inv64]
+    mov  eax, T_STONE >> 4
+    cvtsi2ss xmm1, eax
+    mulss xmm1, [rel f_inv16]
+    addss xmm0, xmm1
+    addss xmm0, [rel f_tiny]
+    movss [rdi+QV0], xmm0
+    addss xmm0, [rel f_inv64]
+    subss xmm0, [rel f_tiny]
+    subss xmm0, [rel f_tiny]
+    movss [rdi+QV1], xmm0
+    ; ASSEMBLY gets a cold blue tint, bottom edge a bit darker
+    mov  ecx, 0xFFFFFFFF
+    mov  edx, 0xFFB8CCFF
+    cmp  byte [rbx+6], 0
+    cmovne ecx, edx
+    mov  LOC(28), ecx
+    call ui_argb_gl
+    mov  [rdi+QC0], eax
+    mov  [rdi+QC1], eax
+    mov  ecx, LOC(28)
+    mov  edx, 0xD0
+    call ui_col_scale
+    mov  ecx, eax
+    call ui_argb_gl
+    mov  [rdi+QC2], eax
+    mov  [rdi+QC3], eax
+    call ui_emit_q
+    jmp  .next
+.p_bevel:
+    mov  ecx, LOC(16)
+    mov  edx, LOC(12)
+    dec  edx
+    call menu_logo_bit
+    test eax, eax
+    jnz  .b1
+    RECT LOC(20), LOC(24), r12d, 1, 0x80FFFFFF
+.b1:
+    mov  ecx, LOC(16)
+    dec  ecx
+    mov  edx, LOC(12)
+    call menu_logo_bit
+    test eax, eax
+    jnz  .b2
+    RECT LOC(20), LOC(24), 1, r12d, 0x50FFFFFF
+.b2:
+    mov  ecx, LOC(16)
+    mov  edx, LOC(12)
+    inc  edx
+    call menu_logo_bit
+    test eax, eax
+    jnz  .b3
+    mov  eax, LOC(24)
+    add  eax, r12d
+    dec  eax
+    mov  LOC(32), eax
+    RECT LOC(20), LOC(32), r12d, 1, 0x70000000
+.b3:
+    mov  ecx, LOC(16)
+    inc  ecx
+    mov  edx, LOC(12)
+    call menu_logo_bit
+    test eax, eax
+    jnz  .next
+    mov  eax, LOC(20)
+    add  eax, r12d
+    dec  eax
+    mov  LOC(32), eax
+    RECT LOC(32), LOC(24), 1, r12d, 0x50000000
+    jmp  .next
+    ; alpha = (4 - |gx-row - centre|) * 22.5
+.p_shine:
+    mov  eax, LOC(36)
+    sub  eax, LOC(12)
+    cvtsi2ss xmm0, eax
+    subss xmm0, xmm6
+    andps xmm0, [rel f_abs_mask]
+    movss xmm1, [rel f_four]
+    subss xmm1, xmm0
+    xorps xmm2, xmm2
+    ucomiss xmm1, xmm2
+    jbe  .next
+    mulss xmm1, [rel f_sweep_a]
     ; v1 temporary guard (menus #16)
     xor     r11d, r11d ; clear v1 slot 16
     ; v1 temporary guard (menus #18)
@@ -860,17 +1040,3 @@ PROCX menu_logo, 64
     xor     r11d, r11d ; clear v1 slot 50
     ; v1 temporary guard (menus #52)
     xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (menus #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (menus #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (menus #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (menus #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (menus #62)
-    xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (menus #64)
-    xor     r11d, r11d ; clear v1 slot 64
-    ; v1 temporary guard (menus #66)
-    xor     r11d, r11d ; clear v1 slot 66
