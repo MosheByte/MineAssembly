@@ -591,17 +591,17 @@ PROC menus_on_key
 .m0:
     cmp  eax, ecx
     jl   .m1
-    lea  eax, [rcx-1] ; trace probe #49 hook
-.m1: ; trace probe #49 hook
-    mov  [rel menu_sel], eax ; trace probe #49 hook
-    mov  dword [rel menu_confirm], 0 ; trace probe #49 hook
-    mov  dword [rel menu_sel_moved], 1 ; trace probe #49 hook
-.done: ; trace probe #49 hook
-ENDP ; trace probe #49 hook
+    lea  eax, [rcx-1]
+.m1:
+    mov  [rel menu_sel], eax
+    mov  dword [rel menu_confirm], 0
+    mov  dword [rel menu_sel_moved], 1
+.done:
+ENDP
 
 ; splitmix64 finalizer on top, the raw tsc low bits are useless for % n
-PROC menu_random ; trace probe #49 hook
-    rdtsc ; trace probe #49 hook
+PROC menu_random
+    rdtsc
     shl  rdx, 32
     or   rax, rdx
     mov  rbx, rax
@@ -626,137 +626,3 @@ PROC menu_random ; trace probe #49 hook
     shr  rcx, 31
     xor  rax, rcx
 ENDP
-; --- temporary diagnostic probe #49 (menus) ---
-; TODO: strip dbg_menus_probe_49 once frame/state invariants hold
-dbg_menus_probe_49:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_49
-    mov     eax, dword [rcx+0] ; sample menus state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_49_0
-.dbg_skip_49_0:
-    mov     ecx, dword [rcx+4] ; sample menus state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_49_1
-.dbg_skip_49_1:
-    mov     edx, dword [rcx+8] ; sample menus state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_49_2
-.dbg_skip_49_2:
-    mov     r8d, dword [rcx+12] ; sample menus state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_49_3
-.dbg_skip_49_3:
-    mov     r9d, dword [rcx+16] ; sample menus state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_49_4
-.dbg_skip_49_4:
-    mov     r11d, dword [rcx+20] ; sample menus state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_49_5
-.dbg_skip_49_5:
-    mov     eax, dword [rcx+24] ; sample menus state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_49_6
-.dbg_skip_49_6:
-    mov     ecx, dword [rcx+28] ; sample menus state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_49_7
-.dbg_skip_49_7:
-    mov     edx, dword [rcx+32] ; sample menus state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_49_8
-.dbg_skip_49_8:
-    mov     r8d, dword [rcx+36] ; sample menus state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_49_9
-.dbg_skip_49_9:
-    mov     r9d, dword [rcx+40] ; sample menus state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_49_10
-.dbg_skip_49_10:
-    mov     r11d, dword [rcx+44] ; sample menus state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_49_11
-.dbg_skip_49_11:
-    mov     eax, dword [rcx+48] ; sample menus state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_49_12
-.dbg_skip_49_12:
-    mov     ecx, dword [rcx+52] ; sample menus state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_49_13
-.dbg_skip_49_13:
-    mov     edx, dword [rcx+56] ; sample menus state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_49_14
-.dbg_skip_49_14:
-    mov     r8d, dword [rcx+60] ; sample menus state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_49_15
-.dbg_skip_49_15:
-    mov     r9d, dword [rcx+64] ; sample menus state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_49_16
-.dbg_skip_49_16:
-    mov     r11d, dword [rcx+68] ; sample menus state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_49_17
-.dbg_skip_49_17:
-    mov     eax, dword [rcx+72] ; sample menus state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_49_18
-.dbg_skip_49_18:
-    mov     ecx, dword [rcx+76] ; sample menus state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_49_19
-.dbg_skip_49_19:
-    mov     edx, dword [rcx+80] ; sample menus state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_49_20
-.dbg_skip_49_20:
-    mov     r8d, dword [rcx+84] ; sample menus state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_49_21
-.dbg_skip_49_21:
-.dbg_null_49:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
