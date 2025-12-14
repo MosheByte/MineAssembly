@@ -2024,71 +2024,51 @@ PROCX menu_loading, 64
     CTEXTP ebx, LOC(0), r8, 0xFFFFFFFF
 ENDPX
 
-section .rdata ; v1: menus scratch #1
-hop_blocks: db B_GRASS, B_STONE, B_LOG, 0 ; v1: menus scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:2)
-section .text ; v1: menus scratch #3
+section .rdata
+hop_blocks: db B_GRASS, B_STONE, B_LOG, 0
+section .text
 
-PROC menu_pause, 32 ; v1: menus scratch #5
-    xor  ecx, ecx ; v1: menus scratch #6
-    ; TODO: clamp index before table lookup on malformed input (menus:6)
-    call menu_background ; v1: menus scratch #7
-    mov  ebx, [rel g_ui_w] ; v1: menus scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:8)
-    shr  ebx, 1 ; v1: menus scratch #9
-    mov  esi, [rel g_ui_h] ; v1: menus scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:10)
-    shr  esi, 2 ; v1: menus scratch #11
-    lea  eax, [rsi-12] ; v1: menus scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:12)
-    mov  LOC(0), eax ; v1: menus scratch #13
-    CTEXT ebx, LOC(0), s_game_menu, 0xFFFFFFFF ; v1: menus scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (menus:14)
-    add  esi, 12 ; v1: menus scratch #15
-    lea  edi, [rbx-100] ; v1: menus scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (menus:16)
-    BTN  edi, esi, 200, 20, s_back_game, 1 ; v1: menus scratch #17
-    or   eax, [rel menu_enter_key] ; v1: menus scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:18)
-    jz   .b2 ; v1: menus scratch #19
-    mov  ecx, ST_PLAYING ; v1: menus scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:20)
-    call game_set_state ; v1: menus scratch #21
-    jmp  .host ; v1: menus scratch #22
-    ; TODO: clamp index before table lookup on malformed input (menus:22)
-.b2: ; v1: menus scratch #23
-    add  esi, 24 ; v1: menus scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:24)
-    BTN  edi, esi, 200, 20, s_settings_btn, 1 ; v1: menus scratch #25
-    test eax, eax ; v1: menus scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:26)
-    jz   .b3 ; v1: menus scratch #27
-    mov  dword [rel menu_settings_ret], ST_PAUSED ; v1: menus scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:28)
-    mov  ecx, ST_SETTINGS ; v1: menus scratch #29
-    call game_set_state ; v1: menus scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (menus:30)
-    jmp  .host ; v1: menus scratch #31
-.b3: ; v1: menus scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (menus:32)
-    add  esi, 24 ; v1: menus scratch #33
-    BTN  edi, esi, 200, 20, s_save_quit, 1 ; v1: menus scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:34)
-    test eax, eax ; v1: menus scratch #35
-    jz   .host ; v1: menus scratch #36
-    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:36)
-    call game_exit_world ; v1: menus scratch #37
-    jmp  .done ; v1: menus scratch #38
-    ; TODO: clamp index before table lookup on malformed input (menus:38)
-.host: ; v1: menus scratch #39
+PROC menu_pause, 32
+    xor  ecx, ecx
+    call menu_background
+    mov  ebx, [rel g_ui_w]
+    shr  ebx, 1
+    mov  esi, [rel g_ui_h]
+    shr  esi, 2
+    lea  eax, [rsi-12]
+    mov  LOC(0), eax
+    CTEXT ebx, LOC(0), s_game_menu, 0xFFFFFFFF
+    add  esi, 12
+    lea  edi, [rbx-100]
+    BTN  edi, esi, 200, 20, s_back_game, 1
+    or   eax, [rel menu_enter_key]
+    jz   .b2
+    mov  ecx, ST_PLAYING
+    call game_set_state
+    jmp  .host
+.b2:
+    add  esi, 24
+    BTN  edi, esi, 200, 20, s_settings_btn, 1
+    test eax, eax
+    jz   .b3
+    mov  dword [rel menu_settings_ret], ST_PAUSED
+    mov  ecx, ST_SETTINGS
+    call game_set_state
+    jmp  .host
+.b3:
+    add  esi, 24
+    BTN  edi, esi, 200, 20, s_save_quit, 1
+    test eax, eax
+    jz   .host
+    call game_exit_world
+    jmp  .done
+.host:
     ; java edition hosting. it sits under Save and Quit so the rows above
     ; keep their places
-    mov  esi, [rel g_ui_h] ; v1: menus scratch #42
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:42)
-    shr  esi, 2 ; v1: menus scratch #43
-    add  esi, 12+3*24+6 ; v1: menus scratch #44
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:44)
-    mov  r8d, [rel g_net_port] ; v1: menus scratch #45
+    mov  esi, [rel g_ui_h]
+    shr  esi, 2
+    add  esi, 12+3*24+6
+    mov  r8d, [rel g_net_port]
     lea  rdx, [rel fmt_host_stop]
     cmp  dword [rel g_net_hosting], 0
     jne  .label
@@ -2185,6 +2165,166 @@ PROC menu_cycle, 16
     mov  eax, 1
 .done:
 ENDP
+
+; remesh everything. needed when smooth lighting or fancy leaves flips
+PROC menu_dirty_all ; v1: menus scratch #2
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:2)
+    xor  ebx, ebx ; v1: menus scratch #3
+    lea  rsi, [rel g_chunk_list] ; v1: menus scratch #4
+    ; TODO: verify 16-byte rsp alignment before inner call (menus:4)
+.lp: ; v1: menus scratch #5
+    cmp  ebx, [rel g_chunk_count] ; v1: menus scratch #6
+    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:6)
+    jge  .done ; v1: menus scratch #7
+    cmp  ebx, MAX_CHUNKS ; v1: menus scratch #8
+    ; TODO: hoist invariant pointer load out of .loop (menus:8)
+    jge  .done ; v1: menus scratch #9
+    mov  rax, [rsi+rbx*8] ; v1: menus scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:10)
+    test rax, rax ; v1: menus scratch #11
+    jz   .n ; v1: menus scratch #12
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:12)
+    mov  dword [rax+CHUNK.dirty], 0xFF ; v1: menus scratch #13
+.n: ; v1: menus scratch #14
+    ; TODO: clamp index before table lookup on malformed input (menus:14)
+    inc  ebx ; v1: menus scratch #15
+    jmp  .lp ; v1: menus scratch #16
+    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:16)
+.done: ; v1: menus scratch #17
+ENDP ; v1: menus scratch #18
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:18)
+
+PROC menu_settings, 32 ; v1: menus scratch #20
+    ; TODO: verify 16-byte rsp alignment before inner call (menus:20)
+    xor  ecx, ecx ; v1: menus scratch #21
+    call menu_background ; v1: menus scratch #22
+    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:22)
+    lea  rbx, [rel g_settings] ; v1: menus scratch #23
+    mov  r12d, [rel g_ui_h] ; v1: menus scratch #24
+    ; TODO: hoist invariant pointer load out of .loop (menus:24)
+    sub  r12d, 226 ; v1: menus scratch #25
+    sar  r12d, 1 ; v1: menus scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:26)
+    cmp  r12d, 4 ; v1: menus scratch #27
+    jge  .top ; v1: menus scratch #28
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:28)
+    mov  r12d, 4 ; v1: menus scratch #29
+.top: ; v1: menus scratch #30
+    ; TODO: clamp index before table lookup on malformed input (menus:30)
+    mov  eax, [rel g_ui_w] ; v1: menus scratch #31
+    shr  eax, 1 ; v1: menus scratch #32
+    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:32)
+    mov  LOC(0), eax ; v1: menus scratch #33
+    lea  r14d, [rax-155] ; v1: menus scratch #34
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:34)
+    lea  r15d, [rax+5] ; v1: menus scratch #35
+    lea  edx, [r12+4] ; v1: menus scratch #36
+    ; TODO: verify 16-byte rsp alignment before inner call (menus:36)
+    mov  LOC(4), edx ; v1: menus scratch #37
+    mov  ecx, LOC(0) ; v1: menus scratch #38
+    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:38)
+    CTEXT ecx, LOC(4), s_settings, 0xFFFFFFFF ; v1: menus scratch #39
+    lea  r13d, [r12+24] ; v1: menus scratch #40
+    ; TODO: hoist invariant pointer load out of .loop (menus:40)
+
+    ; sliders edit floats in menu_tmp, rounded back into the real setting
+    cvtsi2ss xmm0, dword [rbx+SETTINGS.render_dist] ; v1: menus scratch #43
+    movss [rel menu_tmp+0], xmm0
+    SLIDER r14d, r13d, 150, menu_tmp+0, 2.0, 16.0, fmt_rd
+    test eax, eax
+    jz   .s1
+    cvtss2si eax, [rel menu_tmp+0]
+    cmp  eax, 2
+    jge  .rd0
+    mov  eax, 2
+.rd0:
+    cmp  eax, MAX_RENDER_DIST
+    jle  .rd1
+    mov  eax, MAX_RENDER_DIST
+.rd1:
+    mov  [rbx+SETTINGS.render_dist], eax
+.s1:
+    add  r13d, 22
+    mov  eax, [rbx+SETTINGS.fov]
+    mov  [rel menu_tmp+4], eax
+    SLIDER r14d, r13d, 150, menu_tmp+4, 50.0, 110.0, fmt_fov
+    test eax, eax
+    jz   .s2
+    cvtss2si eax, [rel menu_tmp+4]
+    cvtsi2ss xmm0, eax
+    movss [rbx+SETTINGS.fov], xmm0
+.s2:
+    add  r13d, 22
+    movss xmm0, [rbx+SETTINGS.sensitivity]
+    divss xmm0, [rel f_sens_k]
+    cvtss2si eax, xmm0
+    cvtsi2ss xmm0, eax
+    movss [rel menu_tmp+8], xmm0
+    SLIDER r14d, r13d, 150, menu_tmp+8, 20.0, 300.0, fmt_sens
+    test eax, eax
+    jz   .s3
+    cvtss2si eax, [rel menu_tmp+8]
+    cvtsi2ss xmm0, eax
+    mulss xmm0, [rel f_sens_k]
+    movss [rbx+SETTINGS.sensitivity], xmm0
+.s3:
+    add  r13d, 22
+    movss xmm0, [rbx+SETTINGS.music_vol]
+    mulss xmm0, [rel f_hundred]
+    cvtss2si eax, xmm0
+    cvtsi2ss xmm0, eax
+    movss [rel menu_tmp+12], xmm0
+    SLIDER r14d, r13d, 150, menu_tmp+12, 0.0, 100.0, fmt_music
+    test eax, eax
+    jz   .s4
+    cvtss2si eax, [rel menu_tmp+12]
+    cvtsi2ss xmm0, eax
+    mulss xmm0, [rel f_cent]
+    movss [rbx+SETTINGS.music_vol], xmm0
+.s4:
+    add  r13d, 22
+    movss xmm0, [rbx+SETTINGS.sfx_vol]
+    mulss xmm0, [rel f_hundred]
+    cvtss2si eax, xmm0
+    cvtsi2ss xmm0, eax
+    movss [rel menu_tmp+16], xmm0
+    SLIDER r14d, r13d, 150, menu_tmp+16, 0.0, 100.0, fmt_sound
+    test eax, eax
+    jz   .s5
+    cvtss2si eax, [rel menu_tmp+16]
+    cvtsi2ss xmm0, eax
+    mulss xmm0, [rel f_cent]
+    movss [rbx+SETTINGS.sfx_vol], xmm0
+.s5:
+    ; only offer scales that fit, ui_begin clamps anyway. a saved value
+    ; above max shows as Auto, which is also how it behaves
+    add  r13d, 22
+    mov  r10d, [rel ui_max_scale]
+    inc  r10d
+    CYCLE r14d, r13d, s_gui_scale, SETTINGS.gui_scale, r10, names_gui
+    ; platform toggles it, flip the flag ourselves if it didn't
+    add  r13d, 22
+    mov  eax, [rbx+SETTINGS.fullscreen]
+    and  eax, 1
+    lea  rcx, [rel names_onoff]
+    mov  r9, [rcx+rax*8]
+    lea  r8, [rel s_fullscreen]
+    lea  rcx, [rel menu_lbl]
+    lea  rdx, [rel fmt_cycle]
+    call str_format
+    lea  rax, [rel menu_lbl]
+    BTNP r14d, r13d, 150, 20, rax, 1
+    test eax, eax
+    jz   .s7
+    mov  esi, [rbx+SETTINGS.fullscreen]
+    call platform_toggle_fullscreen
+    cmp  [rbx+SETTINGS.fullscreen], esi
+    jne  .s7
+    xor  dword [rbx+SETTINGS.fullscreen], 1
+.s7:
+    add  r13d, 22
+    CYCLE r14d, r13d, s_invert, SETTINGS.invert_mouse, 2, names_onoff
+
     ; v1 temporary guard (menus #20)
     xor     r11d, r11d ; clear v1 slot 20
     ; v1 temporary guard (menus #22)
@@ -2209,5 +2349,3 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 40
     ; v1 temporary guard (menus #42)
     xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (menus #44)
-    xor     r11d, r11d ; clear v1 slot 44
