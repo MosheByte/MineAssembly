@@ -1846,63 +1846,45 @@ PROC menu_compute_seed
 .done:
 ENDP
 
-PROC menu_create, 32 ; v1: menus scratch #1
-    xor  ecx, ecx ; v1: menus scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:2)
-    call menu_background ; v1: menus scratch #3
-    mov  ebx, [rel g_ui_w] ; v1: menus scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:4)
-    shr  ebx, 1 ; v1: menus scratch #5
-    lea  r12d, [rbx-100] ; v1: menus scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:6)
-    CTEXT ebx, 12, s_cw_title, 0xFFFFFFFF ; v1: menus scratch #7
-    TEXT r12d, 34, s_lbl_name, 0xFFA0A0A0 ; v1: menus scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:8)
-    mov  dword [rsp+40], 1 ; v1: menus scratch #9
+PROC menu_create, 32
+    xor  ecx, ecx
+    call menu_background
+    mov  ebx, [rel g_ui_w]
+    shr  ebx, 1
+    lea  r12d, [rbx-100]
+    CTEXT ebx, 12, s_cw_title, 0xFFFFFFFF
+    TEXT r12d, 34, s_lbl_name, 0xFFA0A0A0
+    mov  dword [rsp+40], 1
     ; name is also the folder name, which gets cut at FOLDER_MAX. cap the
     ; input there or the list shows a different (shortened) name
-    mov  dword [rsp+32], FOLDER_MAX+1 ; v1: menus scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (menus:12)
-    lea  r9, [rel menu_name] ; v1: menus scratch #13
-    mov  r8d, 200 ; v1: menus scratch #14
-    ; TODO: clamp index before table lookup on malformed input (menus:14)
-    mov  edx, 44 ; v1: menus scratch #15
-    mov  ecx, r12d ; v1: menus scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (menus:16)
-    call ui_textbox ; v1: menus scratch #17
-    call menu_update_folder ; v1: menus scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:18)
-    call menu_saved_in_label ; v1: menus scratch #19
-    lea  r8, [rel menu_lbl] ; v1: menus scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:20)
-    TEXTP r12d, 67, r8, 0xFF8C8C8C ; v1: menus scratch #21
-    TEXT r12d, 82, s_lbl_seed, 0xFFA0A0A0 ; v1: menus scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:22)
-    mov  dword [rsp+40], 2 ; v1: menus scratch #23
-    mov  dword [rsp+32], 32 ; v1: menus scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:24)
-    lea  r9, [rel menu_seed] ; v1: menus scratch #25
-    mov  r8d, 200 ; v1: menus scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:26)
-    mov  edx, 92 ; v1: menus scratch #27
-    mov  ecx, r12d ; v1: menus scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (menus:28)
-    call ui_textbox ; v1: menus scratch #29
-    TEXT r12d, 115, s_seed_hint, 0xFF8C8C8C ; v1: menus scratch #30
-    ; TODO: clamp index before table lookup on malformed input (menus:30)
-    mov  eax, [rel menu_mode] ; v1: menus scratch #31
-    and  eax, 1 ; v1: menus scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (menus:32)
-    lea  rcx, [rel names_mode] ; v1: menus scratch #33
-    mov  r8, [rcx+rax*8] ; v1: menus scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:34)
-    lea  rcx, [rel menu_lbl] ; v1: menus scratch #35
-    lea  rdx, [rel fmt_gamemode] ; v1: menus scratch #36
-    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:36)
-    call str_format ; v1: menus scratch #37
-    lea  rax, [rel menu_lbl] ; v1: menus scratch #38
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:38)
-    BTNP r12d, 130, 200, 20, rax, 1 ; v1: menus scratch #39
+    mov  dword [rsp+32], FOLDER_MAX+1
+    lea  r9, [rel menu_name]
+    mov  r8d, 200
+    mov  edx, 44
+    mov  ecx, r12d
+    call ui_textbox
+    call menu_update_folder
+    call menu_saved_in_label
+    lea  r8, [rel menu_lbl]
+    TEXTP r12d, 67, r8, 0xFF8C8C8C
+    TEXT r12d, 82, s_lbl_seed, 0xFFA0A0A0
+    mov  dword [rsp+40], 2
+    mov  dword [rsp+32], 32
+    lea  r9, [rel menu_seed]
+    mov  r8d, 200
+    mov  edx, 92
+    mov  ecx, r12d
+    call ui_textbox
+    TEXT r12d, 115, s_seed_hint, 0xFF8C8C8C
+    mov  eax, [rel menu_mode]
+    and  eax, 1
+    lea  rcx, [rel names_mode]
+    mov  r8, [rcx+rax*8]
+    lea  rcx, [rel menu_lbl]
+    lea  rdx, [rel fmt_gamemode]
+    call str_format
+    lea  rax, [rel menu_lbl]
+    BTNP r12d, 130, 200, 20, rax, 1
     test eax, eax
     jz   .desc
     xor  dword [rel menu_mode], 1
@@ -2041,8 +2023,168 @@ PROCX menu_loading, 64
     mov  LOC(0), eax
     CTEXTP ebx, LOC(0), r8, 0xFFFFFFFF
 ENDPX
-    ; v1 temporary guard (menus #18)
-    xor     r11d, r11d ; clear v1 slot 18
+
+section .rdata ; v1: menus scratch #1
+hop_blocks: db B_GRASS, B_STONE, B_LOG, 0 ; v1: menus scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:2)
+section .text ; v1: menus scratch #3
+
+PROC menu_pause, 32 ; v1: menus scratch #5
+    xor  ecx, ecx ; v1: menus scratch #6
+    ; TODO: clamp index before table lookup on malformed input (menus:6)
+    call menu_background ; v1: menus scratch #7
+    mov  ebx, [rel g_ui_w] ; v1: menus scratch #8
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:8)
+    shr  ebx, 1 ; v1: menus scratch #9
+    mov  esi, [rel g_ui_h] ; v1: menus scratch #10
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:10)
+    shr  esi, 2 ; v1: menus scratch #11
+    lea  eax, [rsi-12] ; v1: menus scratch #12
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:12)
+    mov  LOC(0), eax ; v1: menus scratch #13
+    CTEXT ebx, LOC(0), s_game_menu, 0xFFFFFFFF ; v1: menus scratch #14
+    ; TODO: hoist invariant pointer load out of .loop (menus:14)
+    add  esi, 12 ; v1: menus scratch #15
+    lea  edi, [rbx-100] ; v1: menus scratch #16
+    ; TODO: verify 16-byte rsp alignment before inner call (menus:16)
+    BTN  edi, esi, 200, 20, s_back_game, 1 ; v1: menus scratch #17
+    or   eax, [rel menu_enter_key] ; v1: menus scratch #18
+    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:18)
+    jz   .b2 ; v1: menus scratch #19
+    mov  ecx, ST_PLAYING ; v1: menus scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:20)
+    call game_set_state ; v1: menus scratch #21
+    jmp  .host ; v1: menus scratch #22
+    ; TODO: clamp index before table lookup on malformed input (menus:22)
+.b2: ; v1: menus scratch #23
+    add  esi, 24 ; v1: menus scratch #24
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:24)
+    BTN  edi, esi, 200, 20, s_settings_btn, 1 ; v1: menus scratch #25
+    test eax, eax ; v1: menus scratch #26
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:26)
+    jz   .b3 ; v1: menus scratch #27
+    mov  dword [rel menu_settings_ret], ST_PAUSED ; v1: menus scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:28)
+    mov  ecx, ST_SETTINGS ; v1: menus scratch #29
+    call game_set_state ; v1: menus scratch #30
+    ; TODO: hoist invariant pointer load out of .loop (menus:30)
+    jmp  .host ; v1: menus scratch #31
+.b3: ; v1: menus scratch #32
+    ; TODO: verify 16-byte rsp alignment before inner call (menus:32)
+    add  esi, 24 ; v1: menus scratch #33
+    BTN  edi, esi, 200, 20, s_save_quit, 1 ; v1: menus scratch #34
+    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:34)
+    test eax, eax ; v1: menus scratch #35
+    jz   .host ; v1: menus scratch #36
+    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:36)
+    call game_exit_world ; v1: menus scratch #37
+    jmp  .done ; v1: menus scratch #38
+    ; TODO: clamp index before table lookup on malformed input (menus:38)
+.host: ; v1: menus scratch #39
+    ; java edition hosting. it sits under Save and Quit so the rows above
+    ; keep their places
+    mov  esi, [rel g_ui_h] ; v1: menus scratch #42
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:42)
+    shr  esi, 2 ; v1: menus scratch #43
+    add  esi, 12+3*24+6 ; v1: menus scratch #44
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:44)
+    mov  r8d, [rel g_net_port] ; v1: menus scratch #45
+    lea  rdx, [rel fmt_host_stop]
+    cmp  dword [rel g_net_hosting], 0
+    jne  .label
+    lea  rdx, [rel fmt_host_open]
+    test r8d, r8d                       ; last port that worked, else the default
+    jnz  .label
+    mov  r8d, NET_DEFAULT_PORT
+.label:
+    mov  LOC(8), r8d
+    lea  rcx, [rel menu_lbl]
+    call str_format
+    lea  rax, [rel menu_lbl]
+    BTNP edi, esi, 200, 20, rax, 1
+    test eax, eax
+    jz   .status
+    mov  dword [rel menu_host_failed], 0
+    cmp  dword [rel g_net_hosting], 0
+    je   .open
+    call con_unhost
+    jmp  .status
+.open:
+    mov  ecx, LOC(8)
+    call con_host_port
+    xor  eax, 1
+    mov  [rel menu_host_failed], eax
+.status:
+    add  esi, 24
+    cmp  dword [rel g_net_hosting], 0
+    je   .closed
+    call mcplay_count
+    mov  r8d, eax
+    mov  r9d, MAX_NET_CONNS
+    lea  rcx, [rel menu_buf]
+    lea  rdx, [rel fmt_host_count]
+    call str_format
+    lea  r8, [rel menu_buf]
+    mov  r9d, 0xFFA0A0A0
+    jmp  .say
+.closed:
+    lea  r8, [rel s_host_hint]
+    mov  r9d, 0xFFA0A0A0
+    cmp  dword [rel menu_host_failed], 0
+    je   .say
+    lea  r8, [rel con_host_err]         ; says which port to try instead
+    mov  r9d, C_HOST_ERR
+.say:
+    CTEXTP ebx, esi, r8, r9d
+    mov  rax, [rel g_world_time]
+    xor  edx, edx
+    mov  ecx, DAY_LENGTH
+    div  rcx
+    inc  rax
+    mov  r9, rax
+    mov  rax, [rel g_seed]
+    mov  [rsp+32], rax
+    lea  rcx, [rel menu_buf]
+    lea  rdx, [rel fmt_pauseinfo]
+    lea  r8, [rel g_world_name]
+    call str_format
+    add  esi, 16
+    lea  r8, [rel menu_buf]
+    CTEXTP ebx, esi, r8, 0xFFFFFFFF
+.done:
+ENDP
+
+; ARG5 = option count, ARG6 = names table. eax=1 if clicked, value is
+; already bumped (wraps). out of range values show as option 0
+PROC menu_cycle, 16
+    mov  ebx, ecx
+    mov  esi, edx
+    mov  rdi, r8
+    mov  r12, r9
+    mov  r13d, ARG5
+    mov  r14, ARG6
+    mov  eax, [r12]
+    cmp  eax, r13d
+    jb   .ok
+    xor  eax, eax
+.ok:
+    mov  r15d, eax
+    mov  r9, [r14+rax*8]
+    mov  r8, rdi
+    lea  rcx, [rel menu_lbl]
+    lea  rdx, [rel fmt_cycle]
+    call str_format
+    lea  rax, [rel menu_lbl]
+    BTNP ebx, esi, 150, 20, rax, 1
+    test eax, eax
+    jz   .done
+    lea  eax, [r15+1]
+    xor  edx, edx
+    div  r13d
+    mov  [r12], edx
+    mov  eax, 1
+.done:
+ENDP
     ; v1 temporary guard (menus #20)
     xor     r11d, r11d ; clear v1 slot 20
     ; v1 temporary guard (menus #22)
@@ -2069,21 +2211,3 @@ ENDPX
     xor     r11d, r11d ; clear v1 slot 42
     ; v1 temporary guard (menus #44)
     xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (menus #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (menus #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (menus #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (menus #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (menus #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (menus #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (menus #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (menus #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (menus #62)
-    xor     r11d, r11d ; clear v1 slot 62
