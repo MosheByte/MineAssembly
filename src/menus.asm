@@ -2167,68 +2167,48 @@ PROC menu_cycle, 16
 ENDP
 
 ; remesh everything. needed when smooth lighting or fancy leaves flips
-PROC menu_dirty_all ; v1: menus scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:2)
-    xor  ebx, ebx ; v1: menus scratch #3
-    lea  rsi, [rel g_chunk_list] ; v1: menus scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (menus:4)
-.lp: ; v1: menus scratch #5
-    cmp  ebx, [rel g_chunk_count] ; v1: menus scratch #6
-    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:6)
-    jge  .done ; v1: menus scratch #7
-    cmp  ebx, MAX_CHUNKS ; v1: menus scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (menus:8)
-    jge  .done ; v1: menus scratch #9
-    mov  rax, [rsi+rbx*8] ; v1: menus scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:10)
-    test rax, rax ; v1: menus scratch #11
-    jz   .n ; v1: menus scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:12)
-    mov  dword [rax+CHUNK.dirty], 0xFF ; v1: menus scratch #13
-.n: ; v1: menus scratch #14
-    ; TODO: clamp index before table lookup on malformed input (menus:14)
-    inc  ebx ; v1: menus scratch #15
-    jmp  .lp ; v1: menus scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:16)
-.done: ; v1: menus scratch #17
-ENDP ; v1: menus scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:18)
+PROC menu_dirty_all
+    xor  ebx, ebx
+    lea  rsi, [rel g_chunk_list]
+.lp:
+    cmp  ebx, [rel g_chunk_count]
+    jge  .done
+    cmp  ebx, MAX_CHUNKS
+    jge  .done
+    mov  rax, [rsi+rbx*8]
+    test rax, rax
+    jz   .n
+    mov  dword [rax+CHUNK.dirty], 0xFF
+.n:
+    inc  ebx
+    jmp  .lp
+.done:
+ENDP
 
-PROC menu_settings, 32 ; v1: menus scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (menus:20)
-    xor  ecx, ecx ; v1: menus scratch #21
-    call menu_background ; v1: menus scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:22)
-    lea  rbx, [rel g_settings] ; v1: menus scratch #23
-    mov  r12d, [rel g_ui_h] ; v1: menus scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (menus:24)
-    sub  r12d, 226 ; v1: menus scratch #25
-    sar  r12d, 1 ; v1: menus scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (menus:26)
-    cmp  r12d, 4 ; v1: menus scratch #27
-    jge  .top ; v1: menus scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (menus:28)
-    mov  r12d, 4 ; v1: menus scratch #29
-.top: ; v1: menus scratch #30
-    ; TODO: clamp index before table lookup on malformed input (menus:30)
-    mov  eax, [rel g_ui_w] ; v1: menus scratch #31
-    shr  eax, 1 ; v1: menus scratch #32
-    ; temp: spill r12/r13 across helper call until reg alloc pass (menus:32)
-    mov  LOC(0), eax ; v1: menus scratch #33
-    lea  r14d, [rax-155] ; v1: menus scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (menus:34)
-    lea  r15d, [rax+5] ; v1: menus scratch #35
-    lea  edx, [r12+4] ; v1: menus scratch #36
-    ; TODO: verify 16-byte rsp alignment before inner call (menus:36)
-    mov  LOC(4), edx ; v1: menus scratch #37
-    mov  ecx, LOC(0) ; v1: menus scratch #38
-    ; note: rcx = state ptr, rdx = index, r8d = flags (menus:38)
-    CTEXT ecx, LOC(4), s_settings, 0xFFFFFFFF ; v1: menus scratch #39
-    lea  r13d, [r12+24] ; v1: menus scratch #40
-    ; TODO: hoist invariant pointer load out of .loop (menus:40)
+PROC menu_settings, 32
+    xor  ecx, ecx
+    call menu_background
+    lea  rbx, [rel g_settings]
+    mov  r12d, [rel g_ui_h]
+    sub  r12d, 226
+    sar  r12d, 1
+    cmp  r12d, 4
+    jge  .top
+    mov  r12d, 4
+.top:
+    mov  eax, [rel g_ui_w]
+    shr  eax, 1
+    mov  LOC(0), eax
+    lea  r14d, [rax-155]
+    lea  r15d, [rax+5]
+    lea  edx, [r12+4]
+    mov  LOC(4), edx
+    mov  ecx, LOC(0)
+    CTEXT ecx, LOC(4), s_settings, 0xFFFFFFFF
+    lea  r13d, [r12+24]
 
     ; sliders edit floats in menu_tmp, rounded back into the real setting
-    cvtsi2ss xmm0, dword [rbx+SETTINGS.render_dist] ; v1: menus scratch #43
+    cvtsi2ss xmm0, dword [rbx+SETTINGS.render_dist]
     movss [rel menu_tmp+0], xmm0
     SLIDER r14d, r13d, 150, menu_tmp+0, 2.0, 16.0, fmt_rd
     test eax, eax
@@ -2325,27 +2305,96 @@ PROC menu_settings, 32 ; v1: menus scratch #20
     add  r13d, 22
     CYCLE r14d, r13d, s_invert, SETTINGS.invert_mouse, 2, names_onoff
 
-    ; v1 temporary guard (menus #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (menus #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (menus #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (menus #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (menus #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (menus #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (menus #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (menus #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (menus #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (menus #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (menus #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (menus #42)
-    xor     r11d, r11d ; clear v1 slot 42
+    lea  r13d, [r12+24]
+    CYCLE r15d, r13d, s_smooth, SETTINGS.smooth_light, 2, names_onoff
+    test eax, eax
+    jz   .r1
+    call menu_dirty_all
+.r1:
+    add  r13d, 22
+    CYCLE r15d, r13d, s_clouds, SETTINGS.clouds, 3, names_clouds
+    add  r13d, 22
+    CYCLE r15d, r13d, s_leaves, SETTINGS.fancy_leaves, 2, names_onoff
+    test eax, eax
+    jz   .r3
+    call menu_dirty_all
+.r3:
+    add  r13d, 22
+    CYCLE r15d, r13d, s_bob, SETTINGS.view_bob, 2, names_onoff
+    add  r13d, 22
+    CYCLE r15d, r13d, s_particles, SETTINGS.particles, 3, names_particles
+    add  r13d, 22
+    CYCLE r15d, r13d, s_vsync, SETTINGS.vsync, 2, names_onoff
+    test eax, eax
+    jz   .r6
+    mov  ecx, [rbx+SETTINGS.vsync]
+    call platform_set_vsync
+.r6:
+    add  r13d, 22
+    CYCLE r15d, r13d, s_showfps, SETTINGS.show_fps, 2, names_onoff
+
+    lea  esi, [r12+24+8*22+6]
+    mov  edi, LOC(0)
+    sub  edi, 100
+    BTN  edi, esi, 200, 20, s_done, 1
+    or   eax, [rel menu_enter_key]
+    jz   .done
+    call config_save
+    mov  ecx, [rel menu_settings_ret]
+    call game_set_state
+.done:
+ENDP
+
+PROC menu_dead, 32
+    mov  ebx, [rel g_ui_w]
+    mov  esi, [rel g_ui_h]
+    RECTG 0, 0, ebx, esi, 0x60500000, 0xA0A01010
+    shr  ebx, 1
+    shr  esi, 2
+    lea  eax, [rsi-16]
+    mov  LOC(0), eax
+    mov  qword [rsp+32], 2
+    mov  r9d, 0xFFFFFFFF
+    lea  r8, [rel s_died]
+    mov  edx, LOC(0)
+    mov  ecx, ebx
+    call ui_text_centered_ex
+    lea  rax, [rel g_player]
+    mov  eax, [rax+PLAYER.last_damage_src]
+    cmp  eax, DMG_COMMAND
+    jbe  .c
+    xor  eax, eax
+.c:
+    lea  rcx, [rel death_tab]
+    mov  r8, [rcx+rax*8]
+    lea  eax, [rsi+6]
+    mov  LOC(0), eax
+    CTEXTP ebx, LOC(0), r8, 0xFFE0C0C0
+    ; no score line, nothing gives points yet. buttons stay off for 1s so
+    ; you don't respawn by accident while still mashing the mouse
+    xor  r12d, r12d
+    movss xmm0, [rel ui_time]
+    subss xmm0, [rel menu_enter_t]
+    ucomiss xmm0, [rel f_one]
+    jb   .en
+    mov  r12d, 1
+.en:
+    lea  edi, [rbx-100]
+    add  esi, 48
+    BTN  edi, esi, 200, 20, s_respawn, r12d
+    mov  ecx, [rel menu_enter_key]
+    and  ecx, r12d
+    or   eax, ecx
+    jz   .b2
+    call player_respawn
+    mov  ecx, ST_PLAYING
+    call game_set_state
+    jmp  .done
+.b2:
+    add  esi, 24
+    BTN  edi, esi, 200, 20, s_title_screen, r12d
+    test eax, eax
+    jz   .done
+    call game_exit_world
+.done:
+ENDP
