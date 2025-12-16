@@ -111,50 +111,35 @@ PROC inv_put_core, 0
 ENDP
 
 ; shift-click mover. src gets cleared if it all fit, eax = what's left
-    global inv_move_range ; v1: inventory scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (inventory:2)
-    align 16 ; v1: inventory scratch #3
-inv_move_range: ; v1: inventory scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (inventory:4)
-    push rbp ; v1: inventory scratch #5
-    mov  rbp, rsp ; v1: inventory scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (inventory:6)
-    push rbx ; v1: inventory scratch #7
-    sub  rsp, FRAME_OUT + 8 ; v1: inventory scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (inventory:8)
-    mov   rbx, rcx ; v1: inventory scratch #9
-    movzx eax, byte [rbx+STACK.id] ; v1: inventory scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (inventory:10)
-    test  eax, eax ; v1: inventory scratch #11
-    jz    .zero ; v1: inventory scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (inventory:12)
-    mov   r10d, 1 ; v1: inventory scratch #13
-    cmp   dword ARG5, 0 ; v1: inventory scratch #14
-    ; TODO: clamp index before table lookup on malformed input (inventory:14)
-    je    .fwd ; v1: inventory scratch #15
-    lea   r8d, [r8+r9-1] ; v1: inventory scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (inventory:16)
-    mov   r10d, -1 ; v1: inventory scratch #17
-.fwd: ; v1: inventory scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (inventory:18)
-    mov   [rsp+32], eax ; v1: inventory scratch #19
-    movzx eax, byte [rbx+STACK.count] ; v1: inventory scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (inventory:20)
-    mov   [rsp+40], eax ; v1: inventory scratch #21
-    movzx eax, word [rbx+STACK.damage] ; v1: inventory scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (inventory:22)
-    mov   [rsp+48], eax ; v1: inventory scratch #23
-    mov   rcx, rdx ; v1: inventory scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (inventory:24)
-    mov   edx, r8d ; v1: inventory scratch #25
-    mov   r8d, r9d ; v1: inventory scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (inventory:26)
-    mov   r9d, r10d ; v1: inventory scratch #27
-    call  inv_put_core ; v1: inventory scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (inventory:28)
-    mov   [rbx+STACK.count], al ; v1: inventory scratch #29
-    test  eax, eax ; v1: inventory scratch #30
-    ; TODO: clamp index before table lookup on malformed input (inventory:30)
+    global inv_move_range
+    align 16
+inv_move_range:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    sub  rsp, FRAME_OUT + 8
+    mov   rbx, rcx
+    movzx eax, byte [rbx+STACK.id]
+    test  eax, eax
+    jz    .zero
+    mov   r10d, 1
+    cmp   dword ARG5, 0
+    je    .fwd
+    lea   r8d, [r8+r9-1]
+    mov   r10d, -1
+.fwd:
+    mov   [rsp+32], eax
+    movzx eax, byte [rbx+STACK.count]
+    mov   [rsp+40], eax
+    movzx eax, word [rbx+STACK.damage]
+    mov   [rsp+48], eax
+    mov   rcx, rdx
+    mov   edx, r8d
+    mov   r8d, r9d
+    mov   r9d, r10d
+    call  inv_put_core
+    mov   [rbx+STACK.count], al
+    test  eax, eax
     jnz   .done
     mov   dword [rbx], 0
 .zero:
@@ -248,49 +233,166 @@ inv_give_player:
     mov  rsp, rbp
     pop  rbp
     ret
-    ; v1 temporary guard (inventory #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (inventory #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (inventory #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (inventory #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (inventory #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (inventory #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (inventory #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (inventory #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (inventory #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (inventory #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (inventory #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (inventory #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (inventory #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (inventory #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (inventory #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (inventory #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (inventory #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (inventory #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (inventory #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (inventory #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (inventory #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (inventory #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (inventory #59)
-    xor     r11d, r11d ; clear v1 slot 59
+
+LEAF inv_count
+    xor   eax, eax
+    and   r8d, 0xFF
+    test  edx, edx
+    jle   .ret
+.loop:
+    movzx r9d, byte [rcx+STACK.id]
+    cmp   r9d, r8d
+    jne   .next
+    movzx r9d, byte [rcx+STACK.count]
+    add   eax, r9d
+.next:
+    add   rcx, 4
+    dec   edx
+    jnz   .loop
+.ret:
+    ret
+
+LEAF inv_held
+    lea   rax, [rel g_player]
+    mov   ecx, [rax+PLAYER.selected]
+    cmp   ecx, HOTBAR_SLOTS-1
+    jbe   .ok
+    xor   ecx, ecx                  ; shouldn't happen
+.ok:
+    lea   rax, [rax+PLAYER.inv+rcx*4]
+    ret
+
+LEAF inv_consume_held
+    cmp   dword [rel g_gamemode], GM_CREATIVE
+    je    .ret
+    lea   rax, [rel g_player]
+    mov   edx, [rax+PLAYER.selected]
+    cmp   edx, HOTBAR_SLOTS-1
+    jbe   .ok
+    xor   edx, edx
+.ok:
+    lea   rax, [rax+PLAYER.inv+rdx*4]
+    cmp   byte [rax+STACK.id], 0
+    je    .ret
+    movzx edx, byte [rax+STACK.count]
+    sub   edx, ecx
+    jle   .empty
+    mov   [rax+STACK.count], dl
+    ret
+.empty:
+    mov   dword [rax], 0
+.ret:
+    ret
+
+; breaking reuses the glass sound pitched up. close enough
+    global inv_damage_held
+    align 16
+inv_damage_held:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    sub  rsp, FRAME_OUT
+    cmp   dword [rel g_gamemode], GM_CREATIVE
+    je    .done
+    mov   esi, ecx
+    call  inv_held
+    mov   rbx, rax
+    movzx ecx, byte [rbx+STACK.id]
+    test  ecx, ecx
+    jz    .done
+    lea   rax, [rel item_durability]
+    movzx edx, word [rax+rcx*2]
+    test  edx, edx
+    jz    .done                     ; not a tool
+    movzx eax, word [rbx+STACK.damage]
+    add   eax, esi
+    cmp   eax, edx
+    jae   .broken
+    mov   [rbx+STACK.damage], ax
+    jmp   .done
+.broken:
+    mov   dword [rbx], 0
+    mov   ecx, SFX_GLASS_BREAK
+    movss xmm1, [rel f_brk_vol]
+    movss xmm2, [rel f_brk_pitch]
+    call  sfx_play
+.done:
+    lea  rsp, [rbp-16]
+    pop  rsi
+    pop  rbx
+    pop  rbp
+    ret
+
+LEAF inv_clear_player
+    lea   rcx, [rel g_player + PLAYER.inv]
+    mov   edx, (PLAYER.craft_out + 4 - PLAYER.inv) / 4
+.loop:
+    mov   dword [rcx], 0
+    add   rcx, 4
+    dec   edx
+    jnz   .loop
+    ret
+
+; on death: everything becomes item entities with a random toss
+    global inv_drop_all
+    align 16
+inv_drop_all:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    push r12
+    push r13
+    sub  rsp, (((16)+15) & ~15) + FRAME_OUT
+    lea   rbx, [rel g_player + PLAYER.inv]
+    mov   r12d, PLAYER_ITEM_STACKS
+    lea   r13, [rel g_player]
+.loop:
+    cmp   byte [rbx+STACK.id], 0
+    je    .next
+    cmp   byte [rbx+STACK.count], 0
+    je    .clear
+    call  rng_float_signed
+    mulss xmm0, [rel f_spread]
+    addss xmm0, [r13+PLAYER.x]
+    movss LOC(0), xmm0
+    call  rng_float_signed
+    mulss xmm0, [rel f_spread]
+    addss xmm0, [r13+PLAYER.z]
+    movss [rsp+32], xmm0
+    movss xmm2, LOC(0)
+    movss xmm3, [r13+PLAYER.y]
+    addss xmm3, [rel f_one]         ; chest height-ish
+    movzx ecx, byte [rbx+STACK.id]
+    movzx edx, byte [rbx+STACK.count]
+    call  entity_spawn_item
+    test  rax, rax
+    jz    .clear
+    mov   rsi, rax
+    movzx eax, word [rbx+STACK.damage]
+    mov   [rsi+ENTITY.item+STACK.damage], ax   ; keep tool wear
+    call  rng_float_signed
+    mulss xmm0, [rel f_toss_h]
+    movss [rsi+ENTITY.vx], xmm0
+    call  rng_float_signed
+    mulss xmm0, [rel f_toss_h]
+    movss [rsi+ENTITY.vz], xmm0
+    call  rng_float
+    mulss xmm0, [rel f_toss_vr]
+    addss xmm0, [rel f_toss_v]
+    movss [rsi+ENTITY.vy], xmm0
+.clear:
+    mov   dword [rbx], 0
+.next:
+    add   rbx, 4
+    dec   r12d
+    jnz   .loop
+    mov   dword [r13+PLAYER.craft_out], 0
+    lea  rsp, [rbp-32]
+    pop  r13
+    pop  r12
+    pop  rsi
+    pop  rbx
+    pop  rbp
+    ret
