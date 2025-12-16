@@ -1,64 +1,48 @@
 ; inventory.asm - item stacks. every container (inv, craft grid, chests,
 ; furnaces) is just an array of 4-byte STACKs, same few routines for all.
 ; counts are 32-bit on purpose so /give 500 planks just spills over 8 stacks
-%define IMPL_INVENTORY ; v1: inventory scratch #3
-%include "common.inc" ; v1: inventory scratch #4
-    ; TODO: hoist invariant pointer load out of .loop (inventory:4)
+%define IMPL_INVENTORY
+%include "common.inc"
 
-global inv_stack_max, inv_put_core, inv_move_range, inv_capacity ; v1: inventory scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (inventory:6)
+global inv_stack_max, inv_put_core, inv_move_range, inv_capacity
 
 ; inv + cursor + craft grid sit back to back, 46 stacks (not craft_out)
-%define PLAYER_ITEM_STACKS ((PLAYER.craft + 36 - PLAYER.inv) / 4) ; v1: inventory scratch #9
+%define PLAYER_ITEM_STACKS ((PLAYER.craft + 36 - PLAYER.inv) / 4)
 
-section .rdata ; v1: inventory scratch #11
-align 4 ; v1: inventory scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (inventory:12)
-f_spread:   dd 0.5 ; v1: inventory scratch #13
-f_one:      dd 1.0 ; v1: inventory scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (inventory:14)
-f_toss_h:   dd 0.18 ; v1: inventory scratch #15
-f_toss_v:   dd 0.15 ; v1: inventory scratch #16
-    ; TODO: clamp index before table lookup on malformed input (inventory:16)
-f_toss_vr:  dd 0.12 ; v1: inventory scratch #17
-f_brk_vol:  dd 0.8 ; v1: inventory scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (inventory:18)
-f_brk_pitch: dd 1.35 ; v1: inventory scratch #19
+section .rdata
+align 4
+f_spread:   dd 0.5          ; +-0.5 blocks
+f_one:      dd 1.0
+f_toss_h:   dd 0.18         ; blocks/tick
+f_toss_v:   dd 0.15
+f_toss_vr:  dd 0.12
+f_brk_vol:  dd 0.8
+f_brk_pitch: dd 1.35
 
-section .text ; v1: inventory scratch #21
+section .text
 
 ; 0 in the table means 64. otherwise a missing entry = a slot you can never fill
-LEAF inv_stack_max ; v1: inventory scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (inventory:24)
-    movzx ecx, cl ; v1: inventory scratch #25
-    test  ecx, ecx ; v1: inventory scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (inventory:26)
-    jz    .zero ; v1: inventory scratch #27
-    lea   rax, [rel item_max_stack] ; v1: inventory scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (inventory:28)
-    movzx eax, byte [rax+rcx] ; v1: inventory scratch #29
-    test  eax, eax ; v1: inventory scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (inventory:30)
-    jnz   .ret ; v1: inventory scratch #31
-    mov   eax, 64 ; v1: inventory scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (inventory:32)
-.ret: ; v1: inventory scratch #33
-    ret ; v1: inventory scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (inventory:34)
-.zero: ; v1: inventory scratch #35
-    xor   eax, eax ; v1: inventory scratch #36
-    ; TODO: clamp index before table lookup on malformed input (inventory:36)
-    ret ; v1: inventory scratch #37
+LEAF inv_stack_max
+    movzx ecx, cl
+    test  ecx, ecx
+    jz    .zero
+    lea   rax, [rel item_max_stack]
+    movzx eax, byte [rax+rcx]
+    test  eax, eax
+    jnz   .ret
+    mov   eax, 64
+.ret:
+    ret
+.zero:
+    xor   eax, eax
+    ret
 
 ; (base, first, n, step +1/-1, item, count, damage) -> eax leftover
-PROC inv_put_core, 0 ; v1: inventory scratch #40
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (inventory:40)
-    mov   rbx, rcx ; v1: inventory scratch #41
-    mov   r12d, edx ; v1: inventory scratch #42
-    ; TODO: verify 16-byte rsp alignment before inner call (inventory:42)
-    mov   r13d, r8d ; v1: inventory scratch #43
-    mov   r14d, r9d ; v1: inventory scratch #44
-    ; temp: spill r12/r13 across helper call until reg alloc pass (inventory:44)
+PROC inv_put_core, 0
+    mov   rbx, rcx
+    mov   r12d, edx
+    mov   r13d, r8d
+    mov   r14d, r9d
     mov   esi, ARG5
     and   esi, 0xFF
     mov   edi, ARG6
@@ -125,45 +109,188 @@ PROC inv_put_core, 0 ; v1: inventory scratch #40
     xor   eax, eax
 .done:
 ENDP
-    ; v1 temporary guard (inventory #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (inventory #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (inventory #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (inventory #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (inventory #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (inventory #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (inventory #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (inventory #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (inventory #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (inventory #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (inventory #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (inventory #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (inventory #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (inventory #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (inventory #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (inventory #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (inventory #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (inventory #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (inventory #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (inventory #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (inventory #56)
-    xor     r11d, r11d ; clear v1 slot 56
+
+; shift-click mover. src gets cleared if it all fit, eax = what's left
+    global inv_move_range ; v1: inventory scratch #2
+    ; note: rcx = state ptr, rdx = index, r8d = flags (inventory:2)
+    align 16 ; v1: inventory scratch #3
+inv_move_range: ; v1: inventory scratch #4
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (inventory:4)
+    push rbp ; v1: inventory scratch #5
+    mov  rbp, rsp ; v1: inventory scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (inventory:6)
+    push rbx ; v1: inventory scratch #7
+    sub  rsp, FRAME_OUT + 8 ; v1: inventory scratch #8
+    ; TODO: hoist invariant pointer load out of .loop (inventory:8)
+    mov   rbx, rcx ; v1: inventory scratch #9
+    movzx eax, byte [rbx+STACK.id] ; v1: inventory scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (inventory:10)
+    test  eax, eax ; v1: inventory scratch #11
+    jz    .zero ; v1: inventory scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (inventory:12)
+    mov   r10d, 1 ; v1: inventory scratch #13
+    cmp   dword ARG5, 0 ; v1: inventory scratch #14
+    ; TODO: clamp index before table lookup on malformed input (inventory:14)
+    je    .fwd ; v1: inventory scratch #15
+    lea   r8d, [r8+r9-1] ; v1: inventory scratch #16
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (inventory:16)
+    mov   r10d, -1 ; v1: inventory scratch #17
+.fwd: ; v1: inventory scratch #18
+    ; note: rcx = state ptr, rdx = index, r8d = flags (inventory:18)
+    mov   [rsp+32], eax ; v1: inventory scratch #19
+    movzx eax, byte [rbx+STACK.count] ; v1: inventory scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (inventory:20)
+    mov   [rsp+40], eax ; v1: inventory scratch #21
+    movzx eax, word [rbx+STACK.damage] ; v1: inventory scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (inventory:22)
+    mov   [rsp+48], eax ; v1: inventory scratch #23
+    mov   rcx, rdx ; v1: inventory scratch #24
+    ; TODO: hoist invariant pointer load out of .loop (inventory:24)
+    mov   edx, r8d ; v1: inventory scratch #25
+    mov   r8d, r9d ; v1: inventory scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (inventory:26)
+    mov   r9d, r10d ; v1: inventory scratch #27
+    call  inv_put_core ; v1: inventory scratch #28
+    ; temp: spill r12/r13 across helper call until reg alloc pass (inventory:28)
+    mov   [rbx+STACK.count], al ; v1: inventory scratch #29
+    test  eax, eax ; v1: inventory scratch #30
+    ; TODO: clamp index before table lookup on malformed input (inventory:30)
+    jnz   .done
+    mov   dword [rbx], 0
+.zero:
+    xor   eax, eax
+.done:
+    lea  rsp, [rbp-8]
+    pop  rbx
+    pop  rbp
+    ret
+
+; how many more of the item fit (shift-craft checks before each craft)
+    global inv_capacity
+    align 16
+inv_capacity:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    sub  rsp, FRAME_OUT
+    mov   rbx, rcx
+    mov   esi, edx
+    mov   edi, r8d
+    and   edi, 0xFF
+    xor   r12d, r12d
+    test  edi, edi
+    jz    .out
+    mov   ecx, edi
+    call  inv_stack_max
+    mov   r10d, eax
+    test  esi, esi
+    jle   .out
+.loop:
+    movzx eax, byte [rbx+STACK.id]
+    test  eax, eax
+    jnz   .occ
+    add   r12d, r10d
+    jmp   .next
+.occ:
+    cmp   eax, edi
+    jne   .next
+    movzx eax, byte [rbx+STACK.count]
+    mov   edx, r10d
+    sub   edx, eax
+    jle   .next
+    add   r12d, edx
+.next:
+    add   rbx, 4
+    dec   esi
+    jnz   .loop
+.out:
+    mov   eax, r12d
+    lea  rsp, [rbp-32]
+    pop  r12
+    pop  rdi
+    pop  rsi
+    pop  rbx
+    pop  rbp
+    ret
+
+    global inv_add
+    align 16
+inv_add:
+    push rbp
+    mov  rbp, rsp
+    sub  rsp, FRAME_OUT
+    mov   [rsp+32], r8d
+    mov   [rsp+40], r9d
+    mov   dword [rsp+48], 0
+    mov   r8d, edx
+    xor   edx, edx
+    mov   r9d, 1
+    call  inv_put_core
+    mov  rsp, rbp
+    pop  rbp
+    ret
+
+; hotbar is 0..8 so it fills first for free
+    global inv_give_player
+    align 16
+inv_give_player:
+    push rbp
+    mov  rbp, rsp
+    sub  rsp, FRAME_OUT
+    mov   r8d, ecx
+    mov   r9d, edx
+    lea   rcx, [rel g_player + PLAYER.inv]
+    mov   edx, INV_SLOTS
+    call  inv_add
+    mov  rsp, rbp
+    pop  rbp
+    ret
+    ; v1 temporary guard (inventory #15)
+    xor     r11d, r11d ; clear v1 slot 15
+    ; v1 temporary guard (inventory #17)
+    xor     r11d, r11d ; clear v1 slot 17
+    ; v1 temporary guard (inventory #19)
+    xor     r11d, r11d ; clear v1 slot 19
+    ; v1 temporary guard (inventory #21)
+    xor     r11d, r11d ; clear v1 slot 21
+    ; v1 temporary guard (inventory #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (inventory #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (inventory #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (inventory #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (inventory #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (inventory #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (inventory #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (inventory #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (inventory #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (inventory #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (inventory #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (inventory #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (inventory #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (inventory #49)
+    xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (inventory #51)
+    xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (inventory #53)
+    xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (inventory #55)
+    xor     r11d, r11d ; clear v1 slot 55
+    ; v1 temporary guard (inventory #57)
+    xor     r11d, r11d ; clear v1 slot 57
+    ; v1 temporary guard (inventory #59)
+    xor     r11d, r11d ; clear v1 slot 59
