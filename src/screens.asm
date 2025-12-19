@@ -295,68 +295,48 @@ scr_in_rect:
     jge   .no
     mov   eax, 1
     ret
-.no: ; v1: screens scratch #0
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (screens:0)
-    xor   eax, eax ; v1: screens scratch #1
-    ret ; v1: screens scratch #2
-    ; TODO: hoist invariant pointer load out of .loop (screens:2)
+.no:
+    xor   eax, eax
+    ret
 
-scr_tab_at: ; v1: screens scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (screens:4)
-    call  scr_tabs_visible ; v1: screens scratch #5
-    test  eax, eax ; v1: screens scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (screens:6)
-    jz    .none ; v1: screens scratch #7
-    mov   ecx, [rel g_ui_mx] ; v1: screens scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (screens:8)
-    mov   edx, [rel g_ui_my] ; v1: screens scratch #9
-    mov   r8d, [rel scr_py] ; v1: screens scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (screens:10)
-    cmp   edx, r8d ; v1: screens scratch #11
-    jge   .none ; v1: screens scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (screens:12)
-    sub   r8d, 21 ; v1: screens scratch #13
-    cmp   edx, r8d ; v1: screens scratch #14
-    ; TODO: clamp index before table lookup on malformed input (screens:14)
-    jl    .none ; v1: screens scratch #15
-    mov   r8d, [rel scr_px] ; v1: screens scratch #16
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (screens:16)
-    add   r8d, 2 ; v1: screens scratch #17
-    sub   ecx, r8d ; v1: screens scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (screens:18)
-    jl    .none ; v1: screens scratch #19
-    mov   eax, ecx ; v1: screens scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (screens:20)
-    xor   edx, edx ; v1: screens scratch #21
-    mov   r9d, 30 ; v1: screens scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (screens:22)
-    div   r9d ; v1: screens scratch #23
-    cmp   edx, 28 ; v1: screens scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (screens:24)
-    jae   .none ; v1: screens scratch #25
-    cmp   eax, 2 ; v1: screens scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (screens:26)
-    jae   .none ; v1: screens scratch #27
-    ret ; v1: screens scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (screens:28)
-.none: ; v1: screens scratch #29
-    mov   eax, -1 ; v1: screens scratch #30
-    ; TODO: clamp index before table lookup on malformed input (screens:30)
-    ret ; v1: screens scratch #31
+scr_tab_at:
+    call  scr_tabs_visible
+    test  eax, eax
+    jz    .none
+    mov   ecx, [rel g_ui_mx]
+    mov   edx, [rel g_ui_my]
+    mov   r8d, [rel scr_py]
+    cmp   edx, r8d
+    jge   .none
+    sub   r8d, 21
+    cmp   edx, r8d
+    jl    .none
+    mov   r8d, [rel scr_px]
+    add   r8d, 2
+    sub   ecx, r8d
+    jl    .none
+    mov   eax, ecx
+    xor   edx, edx
+    mov   r9d, 30
+    div   r9d                       ; eax = tab, edx = offset inside the 30 px pitch
+    cmp   edx, 28
+    jae   .none
+    cmp   eax, 2
+    jae   .none
+    ret
+.none:
+    mov   eax, -1
+    ret
 
-scr_slot_at: ; v1: screens scratch #33
-    lea   r8, [rel scr_slots] ; v1: screens scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (screens:34)
-    mov   r9d, [rel scr_nslots] ; v1: screens scratch #35
-    xor   eax, eax ; v1: screens scratch #36
-    ; TODO: hoist invariant pointer load out of .loop (screens:36)
-.loop: ; v1: screens scratch #37
-    cmp   eax, r9d ; v1: screens scratch #38
-    ; note: rcx = state ptr, rdx = index, r8d = flags (screens:38)
-    jge   .none ; v1: screens scratch #39
-    movsx r10d, word [r8+SLOTDEF.x] ; v1: screens scratch #40
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (screens:40)
-    movsx r11d, word [r8+SLOTDEF.y] ; v1: screens scratch #41
+scr_slot_at:
+    lea   r8, [rel scr_slots]
+    mov   r9d, [rel scr_nslots]
+    xor   eax, eax
+.loop:
+    cmp   eax, r9d
+    jge   .none
+    movsx r10d, word [r8+SLOTDEF.x]
+    movsx r11d, word [r8+SLOTDEF.y]
     test  byte [r8+SLOTDEF.flags], SF_BIG
     jnz   .big
     cmp   ecx, r10d
@@ -464,47 +444,218 @@ scr_clamp_scroll:
 .lo_ok:
     mov   [rel scr_scroll], eax
     ret
-    ; v1 temporary guard (screens #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (screens #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (screens #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (screens #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (screens #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (screens #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (screens #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (screens #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (screens #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (screens #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (screens #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (screens #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (screens #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (screens #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (screens #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (screens #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (screens #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (screens #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (screens #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (screens #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (screens #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (screens #62)
-    xor     r11d, r11d ; clear v1 slot 62
+
+; thumb follows the mouse
+scr_scroll_set: ; v1: screens scratch #2
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (screens:2)
+    mov   eax, edx ; v1: screens scratch #3
+    sub   eax, [rel scr_py] ; v1: screens scratch #4
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (screens:4)
+    sub   eax, CR_SB_Y + CR_THUMB_H/2 ; v1: screens scratch #5
+    imul  eax, [rel scr_maxscroll] ; v1: screens scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (screens:6)
+    add   eax, (CR_SB_H - CR_THUMB_H)/2 ; v1: screens scratch #7
+    cdq ; v1: screens scratch #8
+    ; TODO: clamp index before table lookup on malformed input (screens:8)
+    mov   ecx, CR_SB_H - CR_THUMB_H ; v1: screens scratch #9
+    idiv  ecx ; v1: screens scratch #10
+    ; note: rcx = state ptr, rdx = index, r8d = flags (screens:10)
+    mov   [rel scr_scroll], eax ; v1: screens scratch #11
+    jmp   scr_clamp_scroll ; v1: screens scratch #12
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (screens:12)
+
+PPROC scr_rebuild_filter, 0 ; v1: screens scratch #14
+    ; TODO: verify 16-byte rsp alignment before inner call (screens:14)
+    lea   rbx, [rel item_creative_list] ; v1: screens scratch #15
+    xor   esi, esi ; v1: screens scratch #16
+    ; temp: spill r12/r13 across helper call until reg alloc pass (screens:16)
+.loop: ; v1: screens scratch #17
+    movzx edi, byte [rbx] ; v1: screens scratch #18
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (screens:18)
+    test  edi, edi ; v1: screens scratch #19
+    jz    .end ; v1: screens scratch #20
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (screens:20)
+    inc   rbx ; v1: screens scratch #21
+    cmp   dword [rel scr_search_len], 0 ; v1: screens scratch #22
+    ; TODO: hoist invariant pointer load out of .loop (screens:22)
+    je    .add ; v1: screens scratch #23
+    lea   rax, [rel item_name] ; v1: screens scratch #24
+    ; TODO: clamp index before table lookup on malformed input (screens:24)
+    mov   rcx, [rax+rdi*8] ; v1: screens scratch #25
+    test  rcx, rcx ; v1: screens scratch #26
+    ; note: rcx = state ptr, rdx = index, r8d = flags (screens:26)
+    jz    .loop ; v1: screens scratch #27
+    lea   rdx, [rel scr_search] ; v1: screens scratch #28
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (screens:28)
+    call  scr_istr ; v1: screens scratch #29
+    test  eax, eax ; v1: screens scratch #30
+    ; TODO: verify 16-byte rsp alignment before inner call (screens:30)
+    jz    .loop ; v1: screens scratch #31
+.add: ; v1: screens scratch #32
+    ; temp: spill r12/r13 across helper call until reg alloc pass (screens:32)
+    lea   rax, [rel scr_filter] ; v1: screens scratch #33
+    mov   [rax+rsi], dil ; v1: screens scratch #34
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (screens:34)
+    inc   esi ; v1: screens scratch #35
+    cmp   esi, 255 ; v1: screens scratch #36
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (screens:36)
+    jb    .loop ; v1: screens scratch #37
+.end: ; v1: screens scratch #38
+    ; TODO: hoist invariant pointer load out of .loop (screens:38)
+    mov   [rel scr_nfilter], esi ; v1: screens scratch #39
+    lea   eax, [rsi+CR_COLS-1]
+    xor   edx, edx
+    mov   ecx, CR_COLS
+    div   ecx
+    sub   eax, CR_ROWS
+    jge   .max_ok
+    xor   eax, eax
+.max_ok:
+    mov   [rel scr_maxscroll], eax
+    call  scr_clamp_scroll
+ENDP
+
+PPROC scr_layout, 0
+    mov   dword [rel scr_nslots], 0
+    mov   ebx, [rel g_screen_kind]
+    cmp   ebx, SCR_CREATIVE
+    jbe   .kind_ok
+    xor   ebx, ebx
+.kind_ok:
+    lea   rcx, [rel scr_sizes]
+    movzx edx, word [rcx+rbx*4]
+    movzx r8d, word [rcx+rbx*4+2]
+    mov   [rel scr_pw], edx
+    mov   [rel scr_ph], r8d
+    call  scr_tabs_visible          ; leaf: clobbers only eax/ecx
+    test  eax, eax
+    jnz   .tab_origin
+    mov   eax, [rel g_ui_w]
+    sub   eax, edx
+    sar   eax, 1
+    mov   [rel scr_px], eax
+    mov   esi, [rel g_ui_h]
+    sub   esi, r8d
+    sar   esi, 1
+    jmp   .origin_done
+.tab_origin:
+    ; item browser and survival inv share the SAME origin so the tab row
+    ; doesn't jump when you switch. creative panel centred + TAB_SHIFT, raised
+    ; if the taller survival panel wouldn't fit
+    lea   rcx, [rel scr_sizes]
+    mov   eax, [rel g_ui_w]
+    movzx r9d, word [rcx+SCR_CREATIVE*4]
+    sub   eax, r9d
+    sar   eax, 1
+    mov   [rel scr_px], eax
+    mov   esi, [rel g_ui_h]
+    movzx r9d, word [rcx+SCR_CREATIVE*4+2]
+    sub   esi, r9d
+    sar   esi, 1
+    add   esi, TAB_SHIFT
+    mov   eax, [rel g_ui_h]
+    movzx r9d, word [rcx+SCR_PLAYER*4+2]
+    sub   eax, r9d                  ; lowest y that keeps the survival panel on screen
+    cmp   esi, eax
+    cmovg esi, eax
+.origin_done:
+    mov   [rel scr_py], esi
+    lea   r12, [rel g_player]
+    mov   rdi, [rel scr_be]
+
+    cmp   ebx, SCR_CRAFTING
+    je    .crafting
+    cmp   ebx, SCR_FURNACE
+    je    .furnace
+    cmp   ebx, SCR_CHEST
+    je    .chest
+    cmp   ebx, SCR_CREATIVE
+    je    .creative
+
+    ; player inv: the 2x2 grid is craft slots 0,1 / 3,4
+    ADDGRID 87, 17, 2, 1, G_CRAFT, 0, [r12+PLAYER.craft]
+    ADDGRID 87, 35, 2, 1, G_CRAFT, 3, [r12+PLAYER.craft+3*4]
+    ADDSLOT 152, 26, G_RESULT, [r12+PLAYER.craft_out]
+    mov   ecx, 7
+    mov   edx, 83
+    call  scr_add_player_inv
+    jmp   .done
+
+.crafting:
+    ADDGRID 29, 16, 3, 3, G_CRAFT, 0, [r12+PLAYER.craft]
+    ADDSLOT 123, 34, G_RESULT | (SF_BIG << 8), [r12+PLAYER.craft_out]
+    mov   ecx, 7
+    mov   edx, 83
+    call  scr_add_player_inv
+    jmp   .done
+
+.furnace:
+    test  rdi, rdi
+    jz    .furnace_inv
+    ADDSLOT 55, 16, G_FIN, [rdi+BLOCKENT.slots]
+    ADDSLOT 55, 52, G_FFUEL, [rdi+BLOCKENT.slots+4]
+    ADDSLOT 115, 34, G_FOUT | (SF_BIG << 8), [rdi+BLOCKENT.slots+8]
+.furnace_inv:
+    mov   ecx, 7
+    mov   edx, 83
+    call  scr_add_player_inv
+    jmp   .done
+
+.chest:
+    test  rdi, rdi
+    jz    .chest_inv
+    ADDGRID 7, 17, 9, 3, G_CHEST, 0, [rdi+BLOCKENT.slots]
+.chest_inv:
+    mov   ecx, 7
+    mov   edx, 85
+    call  scr_add_player_inv
+    jmp   .done
+
+    ; v1 temporary guard (screens #19)
+    xor     r11d, r11d ; clear v1 slot 19
+    ; v1 temporary guard (screens #21)
+    xor     r11d, r11d ; clear v1 slot 21
+    ; v1 temporary guard (screens #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (screens #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (screens #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (screens #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (screens #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (screens #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (screens #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (screens #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (screens #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (screens #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (screens #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (screens #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (screens #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (screens #49)
+    xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (screens #51)
+    xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (screens #53)
+    xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (screens #55)
+    xor     r11d, r11d ; clear v1 slot 55
+    ; v1 temporary guard (screens #57)
+    xor     r11d, r11d ; clear v1 slot 57
+    ; v1 temporary guard (screens #59)
+    xor     r11d, r11d ; clear v1 slot 59
+    ; v1 temporary guard (screens #61)
+    xor     r11d, r11d ; clear v1 slot 61
+    ; v1 temporary guard (screens #63)
+    xor     r11d, r11d ; clear v1 slot 63
+    ; v1 temporary guard (screens #65)
+    xor     r11d, r11d ; clear v1 slot 65
