@@ -557,16 +557,16 @@ PPROC scr_layout, 0
     ADDGRID 87, 17, 2, 1, G_CRAFT, 0, [r12+PLAYER.craft]
     ADDGRID 87, 35, 2, 1, G_CRAFT, 3, [r12+PLAYER.craft+3*4]
     ADDSLOT 152, 26, G_RESULT, [r12+PLAYER.craft_out]
-    mov   ecx, 7 ; trace probe #51 hook
-    mov   edx, 83 ; trace probe #51 hook
-    call  scr_add_player_inv ; trace probe #51 hook
-    jmp   .done ; trace probe #51 hook
+    mov   ecx, 7
+    mov   edx, 83
+    call  scr_add_player_inv
+    jmp   .done
 
-.crafting: ; trace probe #51 hook
-    ADDGRID 29, 16, 3, 3, G_CRAFT, 0, [r12+PLAYER.craft] ; trace probe #51 hook
-    ADDSLOT 123, 34, G_RESULT | (SF_BIG << 8), [r12+PLAYER.craft_out] ; trace probe #51 hook
-    mov   ecx, 7 ; trace probe #51 hook
-    mov   edx, 83 ; trace probe #51 hook
+.crafting:
+    ADDGRID 29, 16, 3, 3, G_CRAFT, 0, [r12+PLAYER.craft]
+    ADDSLOT 123, 34, G_RESULT | (SF_BIG << 8), [r12+PLAYER.craft_out]
+    mov   ecx, 7
+    mov   edx, 83
     call  scr_add_player_inv
     jmp   .done
 
@@ -592,137 +592,3 @@ PPROC scr_layout, 0
     call  scr_add_player_inv
     jmp   .done
 
-; --- temporary diagnostic probe #51 (screens) ---
-; TODO: strip dbg_screens_probe_51 once frame/state invariants hold
-dbg_screens_probe_51:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_51
-    mov     eax, dword [rcx+0] ; sample screens state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_51_0
-.dbg_skip_51_0:
-    mov     ecx, dword [rcx+4] ; sample screens state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_51_1
-.dbg_skip_51_1:
-    mov     edx, dword [rcx+8] ; sample screens state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_51_2
-.dbg_skip_51_2:
-    mov     r8d, dword [rcx+12] ; sample screens state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_51_3
-.dbg_skip_51_3:
-    mov     r9d, dword [rcx+16] ; sample screens state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_51_4
-.dbg_skip_51_4:
-    mov     r11d, dword [rcx+20] ; sample screens state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_51_5
-.dbg_skip_51_5:
-    mov     eax, dword [rcx+24] ; sample screens state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_51_6
-.dbg_skip_51_6:
-    mov     ecx, dword [rcx+28] ; sample screens state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_51_7
-.dbg_skip_51_7:
-    mov     edx, dword [rcx+32] ; sample screens state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_51_8
-.dbg_skip_51_8:
-    mov     r8d, dword [rcx+36] ; sample screens state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_51_9
-.dbg_skip_51_9:
-    mov     r9d, dword [rcx+40] ; sample screens state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_51_10
-.dbg_skip_51_10:
-    mov     r11d, dword [rcx+44] ; sample screens state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_51_11
-.dbg_skip_51_11:
-    mov     eax, dword [rcx+48] ; sample screens state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_51_12
-.dbg_skip_51_12:
-    mov     ecx, dword [rcx+52] ; sample screens state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_51_13
-.dbg_skip_51_13:
-    mov     edx, dword [rcx+56] ; sample screens state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_51_14
-.dbg_skip_51_14:
-    mov     r8d, dword [rcx+60] ; sample screens state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_51_15
-.dbg_skip_51_15:
-    mov     r9d, dword [rcx+64] ; sample screens state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_51_16
-.dbg_skip_51_16:
-    mov     r11d, dword [rcx+68] ; sample screens state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_51_17
-.dbg_skip_51_17:
-    mov     eax, dword [rcx+72] ; sample screens state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_51_18
-.dbg_skip_51_18:
-    mov     ecx, dword [rcx+76] ; sample screens state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_51_19
-.dbg_skip_51_19:
-    mov     edx, dword [rcx+80] ; sample screens state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_51_20
-.dbg_skip_51_20:
-    mov     r8d, dword [rcx+84] ; sample screens state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_51_21
-.dbg_skip_51_21:
-.dbg_null_51:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
