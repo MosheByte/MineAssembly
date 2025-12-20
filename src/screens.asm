@@ -1675,51 +1675,36 @@ PPROC scr_scroll_drag_update, 0
 ENDP
 
 ; r8d = filled columns 0..22
-PPROC scr_draw_arrow, 0 ; v1: screens scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (screens:2)
-    mov   ebx, ecx ; v1: screens scratch #3
-    mov   esi, edx ; v1: screens scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (screens:4)
-    mov   edi, r8d ; v1: screens scratch #5
-    xor   r12d, r12d ; v1: screens scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (screens:6)
-.loop: ; v1: screens scratch #7
-    cmp   r12d, 22 ; v1: screens scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (screens:8)
-    jge   .done ; v1: screens scratch #9
-    mov   r10d, 0xFF8B8B8B ; v1: screens scratch #10
-    ; TODO: clamp index before table lookup on malformed input (screens:10)
-    cmp   r12d, edi ; v1: screens scratch #11
-    jge   .col ; v1: screens scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (screens:12)
-    mov   r10d, 0xFFFFFFFF ; v1: screens scratch #13
-.col: ; v1: screens scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (screens:14)
-    mov   [rsp+32], r10d ; v1: screens scratch #15
-    cmp   r12d, 15 ; v1: screens scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (screens:16)
-    jge   .head ; v1: screens scratch #17
-    lea   edx, [rsi+5] ; v1: screens scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (screens:18)
-    mov   r9d, 5 ; v1: screens scratch #19
-    jmp   .draw ; v1: screens scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (screens:20)
-.head: ; v1: screens scratch #21
-    mov   eax, r12d ; v1: screens scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (screens:22)
-    sub   eax, 15 ; v1: screens scratch #23
-    lea   edx, [rsi+rax] ; v1: screens scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (screens:24)
-    mov   r9d, 15 ; v1: screens scratch #25
-    sub   r9d, eax ; v1: screens scratch #26
-    ; TODO: clamp index before table lookup on malformed input (screens:26)
-    sub   r9d, eax ; v1: screens scratch #27
-.draw: ; v1: screens scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (screens:28)
-    lea   ecx, [rbx+r12] ; v1: screens scratch #29
-    mov   r8d, 1 ; v1: screens scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (screens:30)
-    call  ui_rect ; v1: screens scratch #31
+PPROC scr_draw_arrow, 0
+    mov   ebx, ecx
+    mov   esi, edx
+    mov   edi, r8d
+    xor   r12d, r12d
+.loop:
+    cmp   r12d, 22
+    jge   .done
+    mov   r10d, 0xFF8B8B8B
+    cmp   r12d, edi
+    jge   .col
+    mov   r10d, 0xFFFFFFFF
+.col:
+    mov   [rsp+32], r10d
+    cmp   r12d, 15
+    jge   .head
+    lea   edx, [rsi+5]
+    mov   r9d, 5
+    jmp   .draw
+.head:
+    mov   eax, r12d                 ; head, 15 -> 3 px
+    sub   eax, 15
+    lea   edx, [rsi+rax]
+    mov   r9d, 15
+    sub   r9d, eax
+    sub   r9d, eax
+.draw:
+    lea   ecx, [rbx+r12]
+    mov   r8d, 1
+    call  ui_rect
     inc   r12d
     jmp   .loop
 .done:
@@ -1837,12 +1822,207 @@ PPROC scr_draw_player, 0
     lea   ecx, [r12+r14-7]
     call  ui_tile
 ENDP
-    ; v1 temporary guard (screens #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (screens #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (screens #19)
-    xor     r11d, r11d ; clear v1 slot 19
+
+PPROC scr_draw_trash, 0 ; v1: screens scratch #1
+    mov   r12d, ecx ; v1: screens scratch #2
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (screens:2)
+    mov   r13d, edx ; v1: screens scratch #3
+    PRECT 7, 3, 4, 1, 0xFFB04848 ; v1: screens scratch #4
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (screens:4)
+    PRECT 4, 4, 10, 2, 0xFFB04848 ; v1: screens scratch #5
+    PRECT 5, 6, 8, 9, 0xFF8E3434 ; v1: screens scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (screens:6)
+    PRECT 7, 8, 1, 5, 0xFF5A1C1C ; v1: screens scratch #7
+    PRECT 10, 8, 1, 5, 0xFF5A1C1C ; v1: screens scratch #8
+    ; temp: spill r12/r13 across helper call until reg alloc pass (screens:8)
+ENDP ; v1: screens scratch #9
+
+; tabs sit under the panel edge, so they get drawn first
+PPROC scr_draw_tabs, 0 ; v1: screens scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (screens:12)
+    call  scr_tabs_visible ; v1: screens scratch #13
+    test  eax, eax ; v1: screens scratch #14
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (screens:14)
+    jz    .done ; v1: screens scratch #15
+    call  scr_tab_at ; v1: screens scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (screens:16)
+    mov   r15d, eax ; v1: screens scratch #17
+    xor   ebx, ebx ; v1: screens scratch #18
+    ; TODO: clamp index before table lookup on malformed input (screens:18)
+.loop: ; v1: screens scratch #19
+    cmp   ebx, 2 ; v1: screens scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (screens:20)
+    jge   .done ; v1: screens scratch #21
+    imul  esi, ebx, 30 ; v1: screens scratch #22
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (screens:22)
+    add   esi, [rel scr_px] ; v1: screens scratch #23
+    add   esi, 2 ; v1: screens scratch #24
+    ; TODO: verify 16-byte rsp alignment before inner call (screens:24)
+    mov   edi, [rel scr_py] ; v1: screens scratch #25
+    sub   edi, 21 ; v1: screens scratch #26
+    ; temp: spill r12/r13 across helper call until reg alloc pass (screens:26)
+    mov   ecx, esi ; v1: screens scratch #27
+    mov   edx, edi ; v1: screens scratch #28
+    ; TODO: hoist invariant pointer load out of .loop (screens:28)
+    mov   r8d, 28 ; v1: screens scratch #29
+    mov   r9d, 24 ; v1: screens scratch #30
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (screens:30)
+    call  ui_frame ; v1: screens scratch #31
+    mov   r8d, B_GRASS ; v1: screens scratch #32
+    ; note: rcx = state ptr, rdx = index, r8d = flags (screens:32)
+    test  ebx, ebx ; v1: screens scratch #33
+    jz    .icon ; v1: screens scratch #34
+    ; TODO: clamp index before table lookup on malformed input (screens:34)
+    mov   r8d, B_CHEST ; v1: screens scratch #35
+.icon: ; v1: screens scratch #36
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (screens:36)
+    lea   ecx, [rsi+6] ; v1: screens scratch #37
+    lea   edx, [rdi+3] ; v1: screens scratch #38
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (screens:38)
+    call  ui_item_icon ; v1: screens scratch #39
+    ; active tab = whichever matches the current screen
+    mov   eax, SCR_CREATIVE ; v1: screens scratch #41
+    test  ebx, ebx ; v1: screens scratch #42
+    ; TODO: verify 16-byte rsp alignment before inner call (screens:42)
+    jz    .cmp ; v1: screens scratch #43
+    mov   eax, SCR_PLAYER ; v1: screens scratch #44
+    ; temp: spill r12/r13 across helper call until reg alloc pass (screens:44)
+.cmp: ; v1: screens scratch #45
+    cmp   eax, [rel g_screen_kind] ; v1: screens scratch #46
+    ; TODO: hoist invariant pointer load out of .loop (screens:46)
+    je    .hover ; v1: screens scratch #47
+    mov   dword [rsp+32], 0x70000000
+    mov   r9d, 19
+    mov   r8d, 24
+    lea   edx, [rdi+2]
+    lea   ecx, [rsi+2]
+    call  ui_rect
+.hover:
+    cmp   ebx, r15d
+    jne   .next
+    mov   dword [rsp+32], 0x30FFFFFF
+    mov   r9d, 19
+    mov   r8d, 24
+    lea   edx, [rdi+2]
+    lea   ecx, [rsi+2]
+    call  ui_rect
+.next:
+    inc   ebx
+    jmp   .loop
+.done:
+ENDP
+
+PPROC scr_draw_decor, 0
+    mov   r12d, [rel scr_px]
+    mov   r13d, [rel scr_py]
+    mov   eax, [rel g_screen_kind]
+    cmp   eax, SCR_CRAFTING
+    je    .crafting
+    cmp   eax, SCR_FURNACE
+    je    .furnace
+    cmp   eax, SCR_CHEST
+    je    .chest
+    cmp   eax, SCR_CREATIVE
+    je    .creative
+    PTEXT 87, 6, s_crafting, COL_TITLE
+    lea   ecx, [r12+25]
+    lea   edx, [r13+7]
+    call  scr_draw_player
+    lea   ecx, [r12+127]
+    lea   edx, [r13+28]
+    xor   r8d, r8d
+    call  scr_draw_arrow
+    jmp   .done
+.crafting:
+    PTEXT 28, 6, s_crafting, COL_TITLE
+    PTEXT 7, 72, s_inventory, COL_TITLE
+    lea   ecx, [r12+89]
+    lea   edx, [r13+36]
+    xor   r8d, r8d
+    call  scr_draw_arrow
+    jmp   .done
+.furnace:
+    ; not ui_text_centered, that adds a drop shadow and no other title has one
+    lea   rcx, [rel s_furnace]
+    call  ui_text_width
+    shr   eax, 1
+    lea   ecx, [r12+88]
+    sub   ecx, eax
+    lea   edx, [r13+6]
+    lea   r8, [rel s_furnace]
+    mov   r9d, COL_TITLE
+    call  ui_text
+    PTEXT 7, 72, s_inventory, COL_TITLE
+    xor   esi, esi                  ; flame level
+    xor   edi, edi                  ; arrow columns
+    mov   rbx, [rel scr_be]
+    test  rbx, rbx
+    jz    .f_draw
+    mov   ecx, [rbx+BLOCKENT.burn_max]
+    test  ecx, ecx
+    jle   .f_cook
+    mov   eax, [rbx+BLOCKENT.burn]
+    imul  eax, eax, 14
+    add   eax, ecx
+    dec   eax
+    cdq
+    idiv  ecx                       ; ceil(burn*14/burn_max)
+    cmp   eax, 14
+    jbe   .f_lvl
+    mov   eax, 14
+.f_lvl:
+    mov   esi, eax
+.f_cook:
+    mov   eax, [rbx+BLOCKENT.cook]
+    imul  eax, eax, 22
+    cdq
+    mov   ecx, 200
+    idiv  ecx
+    mov   edi, eax
+.f_draw:
+    lea   ecx, [r12+57]
+    lea   edx, [r13+36]
+    mov   r8d, esi
+    call  scr_draw_flame
+    lea   ecx, [r12+80]
+    lea   edx, [r13+36]
+    mov   r8d, edi
+    call  scr_draw_arrow
+    jmp   .done
+.chest:
+    PTEXT 7, 6, s_chest, COL_TITLE
+    PTEXT 7, 74, s_inventory, COL_TITLE
+    jmp   .done
+.creative:
+    PTEXT 8, 6, s_creative, COL_TITLE
+    mov   eax, 0xFFA0A0A0
+    cmp   dword [rel scr_search_focus], 0
+    je    .sb_col
+    mov   eax, 0xFFFFFFFF
+.sb_col:
+    PRECT CR_SEARCH_X, CR_SEARCH_Y, CR_SEARCH_W, CR_SEARCH_H, eax
+    PRECT CR_SEARCH_X+1, CR_SEARCH_Y+1, CR_SEARCH_W-2, CR_SEARCH_H-2, 0xFF000000
+    cmp   dword [rel scr_search_len], 0
+    jne   .sb_text
+    cmp   dword [rel scr_search_focus], 0
+    jne   .sb_text
+    PTEXT CR_SEARCH_X+3, CR_SEARCH_Y+2, s_search_hint, 0xFF808080
+    jmp   .scrollbar
+.sb_text:
+    PTEXT CR_SEARCH_X+3, CR_SEARCH_Y+2, scr_search, 0xFFFFFFFF
+    mov   ebx, eax
+    cmp   dword [rel scr_search_focus], 0
+    je    .scrollbar
+    movsd xmm0, [rel g_time_total]
+    mulsd xmm0, [rel d_blink]
+    cvttsd2si eax, xmm0
+    test  eax, 1
+    jnz   .scrollbar
+    lea   eax, [rbx+CR_SEARCH_X+3]
+    PTEXT rax, CR_SEARCH_Y+2, s_caret, 0xFFFFFFFF
+.scrollbar:
+    PRECT CR_SB_X, CR_SB_Y, CR_SB_W, CR_SB_H, 0xFF373737
+    PRECT CR_SB_X+1, CR_SB_Y+1, CR_SB_W-2, CR_SB_H-2, 0xFF6E6E6E
     ; v1 temporary guard (screens #21)
     xor     r11d, r11d ; clear v1 slot 21
     ; v1 temporary guard (screens #23)
