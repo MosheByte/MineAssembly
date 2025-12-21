@@ -2002,53 +2002,37 @@ PPROC scr_draw_decor, 0
 .scrollbar:
     PRECT CR_SB_X, CR_SB_Y, CR_SB_W, CR_SB_H, 0xFF373737
     PRECT CR_SB_X+1, CR_SB_Y+1, CR_SB_W-2, CR_SB_H-2, 0xFF6E6E6E
-    mov   ecx, [rel scr_maxscroll] ; v1: screens scratch #0
-    ; TODO: clamp index before table lookup on malformed input (screens:0)
-    test  ecx, ecx ; v1: screens scratch #1
-    jz    .thumb_off ; v1: screens scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (screens:2)
-    mov   eax, [rel scr_scroll] ; v1: screens scratch #3
-    imul  eax, eax, CR_SB_H - CR_THUMB_H ; v1: screens scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (screens:4)
-    cdq ; v1: screens scratch #5
-    idiv  ecx ; v1: screens scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (screens:6)
-    lea   edx, [r13+rax+CR_SB_Y] ; v1: screens scratch #7
-    lea   ecx, [r12+CR_SB_X] ; v1: screens scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (screens:8)
-    mov   r8d, CR_SB_W ; v1: screens scratch #9
-    mov   r9d, CR_THUMB_H ; v1: screens scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (screens:10)
-    call  ui_frame ; v1: screens scratch #11
-    jmp   .done ; v1: screens scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (screens:12)
-.thumb_off: ; v1: screens scratch #13
-    PRECT CR_SB_X+1, CR_SB_Y+1, CR_SB_W-2, CR_THUMB_H, 0xFF505050 ; v1: screens scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (screens:14)
-.done: ; v1: screens scratch #15
-ENDP ; v1: screens scratch #16
-    ; TODO: clamp index before table lookup on malformed input (screens:16)
+    mov   ecx, [rel scr_maxscroll]
+    test  ecx, ecx
+    jz    .thumb_off
+    mov   eax, [rel scr_scroll]
+    imul  eax, eax, CR_SB_H - CR_THUMB_H
+    cdq
+    idiv  ecx
+    lea   edx, [r13+rax+CR_SB_Y]
+    lea   ecx, [r12+CR_SB_X]
+    mov   r8d, CR_SB_W
+    mov   r9d, CR_THUMB_H
+    call  ui_frame
+    jmp   .done
+.thumb_off:
+    PRECT CR_SB_X+1, CR_SB_Y+1, CR_SB_W-2, CR_THUMB_H, 0xFF505050
+.done:
+ENDP
 
-PPROC scr_draw_slots, 0 ; v1: screens scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (screens:18)
-    xor   ebx, ebx ; v1: screens scratch #19
-.loop: ; v1: screens scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (screens:20)
-    cmp   ebx, [rel scr_nslots] ; v1: screens scratch #21
-    jge   .done ; v1: screens scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (screens:22)
-    mov   ecx, ebx ; v1: screens scratch #23
-    call  scr_sd ; v1: screens scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (screens:24)
-    mov   rsi, rax ; v1: screens scratch #25
-    movsx r12d, word [rsi+SLOTDEF.x] ; v1: screens scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (screens:26)
-    movsx r13d, word [rsi+SLOTDEF.y] ; v1: screens scratch #27
-    test  byte [rsi+SLOTDEF.flags], SF_BIG ; v1: screens scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (screens:28)
-    jz    .small ; v1: screens scratch #29
-    lea   ecx, [r12-4] ; v1: screens scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (screens:30)
+PPROC scr_draw_slots, 0
+    xor   ebx, ebx
+.loop:
+    cmp   ebx, [rel scr_nslots]
+    jge   .done
+    mov   ecx, ebx
+    call  scr_sd
+    mov   rsi, rax
+    movsx r12d, word [rsi+SLOTDEF.x]
+    movsx r13d, word [rsi+SLOTDEF.y]
+    test  byte [rsi+SLOTDEF.flags], SF_BIG
+    jz    .small
+    lea   ecx, [r12-4]
     lea   edx, [r13-4]
     mov   r8d, 26
     jmp   .tile
@@ -2161,8 +2145,204 @@ PPROC scr_tooltip, 0
     call  ui_tooltip
     jmp   .done
 
-    ; v1 temporary guard (screens #16)
-    xor     r11d, r11d ; clear v1 slot 16
+.regions: ; v1: screens scratch #0
+    ; TODO: hoist invariant pointer load out of .loop (screens:0)
+    call  scr_tab_at ; v1: screens scratch #1
+    test  eax, eax ; v1: screens scratch #2
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (screens:2)
+    js    .furnace ; v1: screens scratch #3
+    lea   rcx, [rel s_tab_items] ; v1: screens scratch #4
+    ; note: rcx = state ptr, rdx = index, r8d = flags (screens:4)
+    test  eax, eax ; v1: screens scratch #5
+    jz    .tab_tip ; v1: screens scratch #6
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (screens:6)
+    lea   rcx, [rel s_tab_inv] ; v1: screens scratch #7
+.tab_tip: ; v1: screens scratch #8
+    ; TODO: clamp index before table lookup on malformed input (screens:8)
+    call  ui_tooltip ; v1: screens scratch #9
+    jmp   .done ; v1: screens scratch #10
+    ; TODO: verify 16-byte rsp alignment before inner call (screens:10)
+.furnace: ; v1: screens scratch #11
+    cmp   dword [rel g_screen_kind], SCR_FURNACE ; v1: screens scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (screens:12)
+    jne   .done ; v1: screens scratch #13
+    mov   rbx, [rel scr_be] ; v1: screens scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (screens:14)
+    test  rbx, rbx ; v1: screens scratch #15
+    jz    .done ; v1: screens scratch #16
+    ; TODO: hoist invariant pointer load out of .loop (screens:16)
+    mov   r12d, [rel scr_px] ; v1: screens scratch #17
+    mov   r13d, [rel scr_py] ; v1: screens scratch #18
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (screens:18)
+    lea   ecx, [r12+57] ; v1: screens scratch #19
+    lea   edx, [r13+36] ; v1: screens scratch #20
+    ; note: rcx = state ptr, rdx = index, r8d = flags (screens:20)
+    mov   r8d, 14 ; v1: screens scratch #21
+    mov   r9d, 14 ; v1: screens scratch #22
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (screens:22)
+    call  scr_in_rect ; v1: screens scratch #23
+    test  eax, eax ; v1: screens scratch #24
+    ; TODO: clamp index before table lookup on malformed input (screens:24)
+    jz    .arrow ; v1: screens scratch #25
+    mov   eax, [rbx+BLOCKENT.burn] ; v1: screens scratch #26
+    ; TODO: verify 16-byte rsp alignment before inner call (screens:26)
+    add   eax, 19 ; v1: screens scratch #27
+    cdq ; v1: screens scratch #28
+    ; temp: spill r12/r13 across helper call until reg alloc pass (screens:28)
+    mov   ecx, TICKS_PER_SEC ; v1: screens scratch #29
+    idiv  ecx ; v1: screens scratch #30
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (screens:30)
+    mov   r8d, eax ; v1: screens scratch #31
+    lea   rdx, [rel fmt_burn] ; v1: screens scratch #32
+    ; TODO: hoist invariant pointer load out of .loop (screens:32)
+    jmp   .fmt ; v1: screens scratch #33
+.arrow: ; v1: screens scratch #34
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (screens:34)
+    lea   ecx, [r12+80] ; v1: screens scratch #35
+    lea   edx, [r13+36]
+    mov   r8d, 22
+    mov   r9d, 15
+    call  scr_in_rect
+    test  eax, eax
+    jz    .done
+    mov   r8d, [rbx+BLOCKENT.cook]
+    shr   r8d, 1                    ; cook/200 * 100
+    lea   rdx, [rel fmt_cook]
+.fmt:
+    lea   rcx, [rel scr_tip]
+    call  str_format
+    lea   rcx, [rel scr_tip]
+    call  ui_tooltip
+.done:
+ENDP
+
+PROC screens_open, 0
+    mov   ebx, ecx
+    mov   esi, edx
+    mov   edi, r8d
+    mov   r12d, r9d
+    cmp   ebx, SCR_PLAYER
+    jne   .kind
+    cmp   dword [rel g_gamemode], GM_CREATIVE
+    jne   .kind
+    mov   ebx, SCR_CREATIVE         ; creative players get the item browser
+.kind:
+    cmp   ebx, SCR_CREATIVE
+    ja    .done
+    cmp   dword [rel scr_open], 0
+    je    .fresh
+    call  scr_return_grid           ; already open, put the old grid back first
+.fresh:
+    xor   r13d, r13d
+    cmp   ebx, SCR_FURNACE
+    jne   .not_furnace
+    mov   r9d, BE_FURNACE
+    jmp   .get_be
+.not_furnace:
+    cmp   ebx, SCR_CHEST
+    jne   .store
+    mov   r9d, BE_CHEST
+.get_be:
+    mov   ecx, esi
+    mov   edx, edi
+    mov   r8d, r12d
+    call  blockent_get
+    test  rax, rax
+    jz    .done                     ; pool full, can't open
+    mov   r13, rax
+.store:
+    mov   [rel scr_be], r13
+    mov   [rel scr_bx], esi
+    mov   [rel scr_by], edi
+    mov   [rel scr_bz], r12d
+    mov   [rel g_screen_kind], ebx
+    mov   dword [rel scr_open], 1
+    xor   eax, eax
+    mov   [rel scr_drag_mode], eax
+    mov   [rel scr_drag_n], eax
+    mov   [rel scr_scroll_drag], eax
+    mov   [rel scr_search_focus], eax
+    mov   [rel scr_last_pickup], eax
+    mov   dword [rel scr_last_slot], -1
+    ; open creak comes from player.asm, the close one is ours
+    call  scr_craft_update
+    mov   ecx, ST_INVENTORY
+    call  game_set_state
+.done:
+ENDP
+
+PROC screens_close, 0
+    call  scr_return_grid
+    lea   rcx, [rel g_player+PLAYER.cursor]
+    call  scr_give_or_drop
+    mov   eax, [rel scr_open]
+    mov   dword [rel scr_open], 0
+    xor   ecx, ecx
+    mov   [rel scr_drag_mode], ecx
+    mov   [rel scr_drag_n], ecx
+    mov   [rel scr_scroll_drag], ecx
+    mov   [rel scr_search_focus], ecx
+    mov   [rel scr_be], rcx         ; no dangling BLOCKENT* once closed
+    test  eax, eax
+    jz    .state
+    cmp   dword [rel g_screen_kind], SCR_CHEST
+    jne   .state
+    call  scr_chest_sound
+.state:
+    cmp   dword [rel g_state], ST_INVENTORY
+    jne   .done
+    mov   ecx, ST_PLAYING
+    call  game_set_state
+.done:
+ENDP
+
+PROC screens_render, 0
+    cmp   dword [rel scr_open], 0
+    je    .done
+    call  scr_validate
+    test  eax, eax
+    jz    .done
+    call  scr_search_input
+    call  scr_craft_update
+    call  scr_layout
+    call  scr_scroll_drag_update
+    mov   ecx, [rel g_ui_mx]
+    mov   edx, [rel g_ui_my]
+    call  scr_slot_at
+    mov   esi, eax
+    mov   ecx, esi
+    call  scr_drag_update
+    call  scr_craft_update          ; a finished drag may have touched the grid
+    mov   r12d, [rel scr_px]
+    mov   r13d, [rel scr_py]
+    mov   dword [rsp+40], 0xD0080808
+    mov   dword [rsp+32], 0xA0101018
+    mov   r9d, [rel g_ui_h]
+    mov   r8d, [rel g_ui_w]
+    xor   edx, edx
+    xor   ecx, ecx
+    call  ui_rect_grad
+    call  scr_draw_tabs
+    mov   ecx, r12d
+    mov   edx, r13d
+    mov   r8d, [rel scr_pw]
+    mov   r9d, [rel scr_ph]
+    call  ui_frame
+    call  scr_draw_decor
+    call  scr_draw_slots
+    test  esi, esi
+    js    .no_hover
+    mov   ecx, esi
+    call  scr_sd
+    movsx ecx, word [rax+SLOTDEF.x]
+    movsx edx, word [rax+SLOTDEF.y]
+    inc   ecx
+    inc   edx
+    mov   r8d, 16
+    mov   r9d, 16
+    mov   dword [rsp+32], 0x80FFFFFF
+    call  ui_rect
+.no_hover:
     ; v1 temporary guard (screens #18)
     xor     r11d, r11d ; clear v1 slot 18
     ; v1 temporary guard (screens #20)
@@ -2189,5 +2369,3 @@ PPROC scr_tooltip, 0
     xor     r11d, r11d ; clear v1 slot 40
     ; v1 temporary guard (screens #42)
     xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (screens #44)
-    xor     r11d, r11d ; clear v1 slot 44
