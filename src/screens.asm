@@ -2325,70 +2325,49 @@ PROC screens_render, 0
     mov   dword [rsp+32], 0x80FFFFFF
     call  ui_rect
 .no_hover:
-    mov   ecx, esi ; v1: screens scratch #0
-    ; note: rcx = state ptr, rdx = index, r8d = flags (screens:0)
-    call  scr_tooltip ; v1: screens scratch #1
-    lea   r8, [rel g_player+PLAYER.cursor] ; v1: screens scratch #2
-    ; TODO: clamp index before table lookup on malformed input (screens:2)
-    cmp   byte [r8+STACK.id], 0 ; v1: screens scratch #3
-    je    .done ; v1: screens scratch #4
-    ; TODO: hoist invariant pointer load out of .loop (screens:4)
-    mov   ecx, [rel g_ui_mx] ; v1: screens scratch #5
-    sub   ecx, 8 ; v1: screens scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (screens:6)
-    mov   edx, [rel g_ui_my] ; v1: screens scratch #7
-    sub   edx, 8 ; v1: screens scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (screens:8)
-    call  ui_item_stack ; v1: screens scratch #9
-.done: ; v1: screens scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (screens:10)
-ENDP ; v1: screens scratch #11
+    mov   ecx, esi
+    call  scr_tooltip
+    lea   r8, [rel g_player+PLAYER.cursor]
+    cmp   byte [r8+STACK.id], 0
+    je    .done
+    mov   ecx, [rel g_ui_mx]
+    sub   ecx, 8
+    mov   edx, [rel g_ui_my]
+    sub   edx, 8
+    call  ui_item_stack
+.done:
+ENDP
 
-PROC screens_on_mouse, 0 ; v1: screens scratch #13
-    mov   r12d, ecx ; v1: screens scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (screens:14)
-    mov   r13d, edx ; v1: screens scratch #15
-    cmp   dword [rel scr_open], 0 ; v1: screens scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (screens:16)
-    je    .done ; v1: screens scratch #17
-    call  scr_refresh_mouse ; v1: screens scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (screens:18)
-    call  scr_validate ; v1: screens scratch #19
-    test  eax, eax ; v1: screens scratch #20
-    ; TODO: clamp index before table lookup on malformed input (screens:20)
-    jz    .done ; v1: screens scratch #21
-    call  scr_layout ; v1: screens scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (screens:22)
-    mov   r14d, [rel g_ui_mx] ; v1: screens scratch #23
-    mov   r15d, [rel g_ui_my] ; v1: screens scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (screens:24)
-    test  r13d, r13d ; v1: screens scratch #25
-    jnz   .down ; v1: screens scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (screens:26)
+PROC screens_on_mouse, 0
+    mov   r12d, ecx
+    mov   r13d, edx
+    cmp   dword [rel scr_open], 0
+    je    .done
+    call  scr_refresh_mouse
+    call  scr_validate
+    test  eax, eax
+    jz    .done
+    call  scr_layout
+    mov   r14d, [rel g_ui_mx]
+    mov   r15d, [rel g_ui_my]
+    test  r13d, r13d
+    jnz   .down
 
-    cmp   r12d, MB_LEFT ; v1: screens scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (screens:28)
-    jne   .rel_drag ; v1: screens scratch #29
-    mov   dword [rel scr_scroll_drag], 0 ; v1: screens scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (screens:30)
-.rel_drag: ; v1: screens scratch #31
-    mov   eax, [rel scr_drag_mode] ; v1: screens scratch #32
-    ; temp: spill r12/r13 across helper call until reg alloc pass (screens:32)
-    test  eax, eax ; v1: screens scratch #33
-    jz    .done ; v1: screens scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (screens:34)
-    cmp   eax, 1 ; v1: screens scratch #35
-    jne   .rel_right ; v1: screens scratch #36
-    ; TODO: clamp index before table lookup on malformed input (screens:36)
-    cmp   r12d, MB_LEFT ; v1: screens scratch #37
-    jne   .done ; v1: screens scratch #38
-    ; TODO: hoist invariant pointer load out of .loop (screens:38)
-    call  scr_drag_finish ; v1: screens scratch #39
-    jmp   .after ; v1: screens scratch #40
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (screens:40)
-.rel_right: ; v1: screens scratch #41
-    cmp   r12d, MB_RIGHT ; v1: screens scratch #42
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (screens:42)
+    cmp   r12d, MB_LEFT
+    jne   .rel_drag
+    mov   dword [rel scr_scroll_drag], 0
+.rel_drag:
+    mov   eax, [rel scr_drag_mode]
+    test  eax, eax
+    jz    .done
+    cmp   eax, 1
+    jne   .rel_right
+    cmp   r12d, MB_LEFT
+    jne   .done
+    call  scr_drag_finish
+    jmp   .after
+.rel_right:
+    cmp   r12d, MB_RIGHT
     jne   .done
     mov   dword [rel scr_drag_mode], 0
     mov   dword [rel scr_drag_n], 0
@@ -2507,47 +2486,163 @@ PROC screens_on_mouse, 0 ; v1: screens scratch #13
     mov   dword [rel scr_last_pickup], 1
     jmp   .after
 
-    ; v1 temporary guard (screens #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (screens #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (screens #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (screens #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (screens #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (screens #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (screens #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (screens #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (screens #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (screens #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (screens #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (screens #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (screens #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (screens #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (screens #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (screens #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (screens #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (screens #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (screens #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (screens #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (screens #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (screens #63)
-    xor     r11d, r11d ; clear v1 slot 63
+    ; right: click now, paint while dragging
+.right:
+    cmp   r12d, MB_RIGHT
+    jne   .after
+    mov   dword [rel scr_last_pickup], 0
+    xor   r13d, r13d
+    cmp   byte [rsi+STACK.id], 0
+    je    .r_click
+    mov   rcx, rbx
+    call  scr_drag_ok
+    mov   r13d, eax
+.r_click:
+    mov   rcx, rbx
+    mov   edx, MB_RIGHT
+    call  scr_click
+    test  r13d, r13d
+    jz    .after
+    mov   dword [rel scr_drag_mode], 2
+    mov   dword [rel scr_drag_n], 1
+    lea   rax, [rel scr_drag_list]
+    mov   [rax], dil
+    jmp   .after
+
+.middle:
+    cmp   dword [rel g_gamemode], GM_CREATIVE
+    jne   .after
+    lea   rsi, [rel g_player+PLAYER.cursor]
+    cmp   byte [rsi+STACK.id], 0
+    jne   .after
+    cmp   byte [rbx+SLOTDEF.group], G_CGRID
+    jne   .m_ptr
+    movzx edi, word [rbx+SLOTDEF.idx]
+    jmp   .m_set
+.m_ptr:
+    mov   rax, [rbx+SLOTDEF.ptr]
+    test  rax, rax
+    jz    .after
+    movzx edi, byte [rax+STACK.id]
+.m_set:
+    test  edi, edi
+    jz    .after
+    mov   ecx, edi
+    call  inv_stack_max
+    mov   [rsi+STACK.id], dil
+    mov   [rsi+STACK.count], al
+    mov   word [rsi+STACK.damage], 0
+    jmp   .after
+
+    ; outside the panel = throw the cursor stack
+.no_slot:
+    lea   rsi, [rel g_player+PLAYER.cursor]
+    cmp   byte [rsi+STACK.id], 0
+    je    .done
+    mov   ecx, [rel scr_px]
+    mov   edx, [rel scr_py]
+    mov   r8d, [rel scr_pw]
+    mov   r9d, [rel scr_ph]
+    call  scr_in_rect
+    test  eax, eax
+    jnz   .done
+    movzx ecx, byte [rsi+STACK.id]
+    movzx edx, byte [rsi+STACK.count]
+    movzx r8d, word [rsi+STACK.damage]
+    cmp   r12d, MB_RIGHT
+    jne   .throw
+    mov   edx, 1
+.throw:
+    mov   edi, edx
+    call  scr_throw
+    sub   [rsi+STACK.count], dil
+    jnz   .after
+    mov   dword [rsi], 0
+.after:
+    call  scr_craft_update
+.done:
+ENDP
+
+; auto-repeat lands here too. Q should repeat, but E/Esc/1-9 only act on the
+; first press, otherwise holding E a bit long closes the screen it just opened
+; and a held digit swaps the slot back and forth
+PROC screens_on_key, 0
+    movzx ebx, cl
+    cmp   dword [rel scr_open], 0
+    je    .done
+    lea   rax, [rel g_keys_pressed]
+    movzx r12d, byte [rax+rbx]      ; 1 = first press, 0 = auto-repeat
+    cmp   dword [rel g_screen_kind], SCR_CREATIVE
+    jne   .normal
+    cmp   dword [rel scr_search_focus], 0
+    je    .normal
+    ; typing into the search box: only Esc / Enter leave it
+    cmp   ebx, VK_ESCAPE
+    je    .unfocus
+    cmp   ebx, VK_RETURN
+    jne   .done
+.unfocus:
+    mov   dword [rel scr_search_focus], 0
+    jmp   .done
+.normal:
+    cmp   ebx, VK_ESCAPE
+    je    .close
+    cmp   ebx, 'E'
+    jne   .keys
+.close:
+    test  r12d, r12d
+    jz    .done                     ; auto-repeat of the key that opened us
+    call  screens_close
+    jmp   .done
+.keys:
+    cmp   ebx, 'Q'
+    je    .repeat_ok
+    test  r12d, r12d
+    jz    .done
+.repeat_ok:
+    call  scr_refresh_mouse
+    call  scr_validate
+    test  eax, eax
+    jz    .done
+    call  scr_layout
+    mov   ecx, [rel g_ui_mx]
+    mov   edx, [rel g_ui_my]
+    call  scr_slot_at
+    test  eax, eax
+    js    .done
+    mov   ecx, eax
+    call  scr_sd
+    mov   rsi, rax
+    cmp   ebx, '1'
+    jb    .q
+    cmp   ebx, '9'
+    ja    .q
+    lea   edx, [rbx-'1']
+    mov   rcx, rsi
+    call  scr_hotbar_swap
+    jmp   .after
+.q:
+    cmp   ebx, 'Q'
+    jne   .done
+    call  scr_ctrl
+    mov   edx, eax
+    mov   rcx, rsi
+    call  scr_drop_slot
+.after:
+    call  scr_craft_update
+.done:
+ENDP
+
+PROC screens_on_wheel, 0
+    mov   ebx, ecx
+    cmp   dword [rel scr_open], 0
+    je    .done
+    cmp   dword [rel g_screen_kind], SCR_CREATIVE
+    jne   .done
+    call  scr_layout
+    mov   eax, [rel scr_scroll]
+    sub   eax, ebx
+    mov   [rel scr_scroll], eax
+    call  scr_clamp_scroll
+.done:
+ENDP
