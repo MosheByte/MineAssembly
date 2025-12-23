@@ -113,51 +113,37 @@ PROC mn_u01d
     mulsd   xmm0, [rel c_2m53]
 ENDP
 
-PROC mn_uniform_d, 16 ; v1: mn_helpers scratch #1
-    movsd   LOC(0), xmm0 ; v1: mn_helpers scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mn_helpers:2)
-    subsd   xmm1, xmm0 ; v1: mn_helpers scratch #3
-    movsd   LOC(8), xmm1 ; v1: mn_helpers scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (mn_helpers:4)
-    call    mn_u01d ; v1: mn_helpers scratch #5
-    mulsd   xmm0, LOC(8) ; v1: mn_helpers scratch #6
-    ; TODO: clamp index before table lookup on malformed input (mn_helpers:6)
-    addsd   xmm0, LOC(0) ; v1: mn_helpers scratch #7
-ENDP ; v1: mn_helpers scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mn_helpers:8)
+PROC mn_uniform_d, 16
+    movsd   LOC(0), xmm0
+    subsd   xmm1, xmm0
+    movsd   LOC(8), xmm1
+    call    mn_u01d
+    mulsd   xmm0, LOC(8)
+    addsd   xmm0, LOC(0)
+ENDP
 
-PROC mn_uniform ; v1: mn_helpers scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mn_helpers:10)
-    cvtss2sd xmm0, xmm0 ; v1: mn_helpers scratch #11
-    cvtss2sd xmm1, xmm1 ; v1: mn_helpers scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mn_helpers:12)
-    call    mn_uniform_d ; v1: mn_helpers scratch #13
-    cvtsd2ss xmm0, xmm0 ; v1: mn_helpers scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (mn_helpers:14)
-ENDP ; v1: mn_helpers scratch #15
+PROC mn_uniform
+    cvtss2sd xmm0, xmm0
+    cvtss2sd xmm1, xmm1
+    call    mn_uniform_d
+    cvtsd2ss xmm0, xmm0
+ENDP
 
 ; +-10^U(lo,hi)
-PROC mn_logspread, 16 ; v1: mn_helpers scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mn_helpers:18)
-    cvtss2sd xmm0, xmm0 ; v1: mn_helpers scratch #19
-    cvtss2sd xmm1, xmm1 ; v1: mn_helpers scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mn_helpers:20)
-    call    mn_uniform_d ; v1: mn_helpers scratch #21
-    call    ref_pow10 ; v1: mn_helpers scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (mn_helpers:22)
-    movsd   LOC(0), xmm0 ; v1: mn_helpers scratch #23
-    call    mn_u01d ; v1: mn_helpers scratch #24
-    ; TODO: clamp index before table lookup on malformed input (mn_helpers:24)
-    movsd   xmm1, LOC(0) ; v1: mn_helpers scratch #25
-    comisd  xmm0, [rel c_half] ; v1: mn_helpers scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mn_helpers:26)
-    jb      .pos ; v1: mn_helpers scratch #27
-    xorpd   xmm2, xmm2 ; v1: mn_helpers scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mn_helpers:28)
-    subsd   xmm2, xmm1 ; v1: mn_helpers scratch #29
-    movapd  xmm1, xmm2 ; v1: mn_helpers scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mn_helpers:30)
-.pos: ; v1: mn_helpers scratch #31
+PROC mn_logspread, 16
+    cvtss2sd xmm0, xmm0
+    cvtss2sd xmm1, xmm1
+    call    mn_uniform_d
+    call    ref_pow10
+    movsd   LOC(0), xmm0
+    call    mn_u01d
+    movsd   xmm1, LOC(0)
+    comisd  xmm0, [rel c_half]
+    jb      .pos
+    xorpd   xmm2, xmm2
+    subsd   xmm2, xmm1
+    movapd  xmm1, xmm2
+.pos:
     cvtsd2ss xmm0, xmm1
 ENDP
 
@@ -276,14 +262,155 @@ PROC ref_sincos, 32
 .out:
     movsd   xmm0, LOC(0)
     movsd   xmm1, LOC(8)
-    ; v1 temporary guard (mn_helpers #14)
-    xor     r11d, r11d ; clear v1 slot 14
-    ; v1 temporary guard (mn_helpers #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (mn_helpers #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (mn_helpers #20)
-    xor     r11d, r11d ; clear v1 slot 20
+    X87_END 24 ; v1: mn_helpers scratch #0
+    ; TODO: verify 16-byte rsp alignment before inner call (mn_helpers:0)
+ENDP ; v1: mn_helpers scratch #1
+
+PROC ref_sincos_d, 32 ; v1: mn_helpers scratch #3
+    X87_BEGIN 24 ; v1: mn_helpers scratch #4
+    ; TODO: clamp index before table lookup on malformed input (mn_helpers:4)
+    movsd   LOC(0), xmm0 ; v1: mn_helpers scratch #5
+    fld     qword LOC(0) ; v1: mn_helpers scratch #6
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mn_helpers:6)
+    fsincos ; v1: mn_helpers scratch #7
+    fstp    qword LOC(8) ; v1: mn_helpers scratch #8
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mn_helpers:8)
+    fstp    qword LOC(0) ; v1: mn_helpers scratch #9
+    movsd   xmm0, LOC(0) ; v1: mn_helpers scratch #10
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mn_helpers:10)
+    movsd   xmm1, LOC(8) ; v1: mn_helpers scratch #11
+    X87_END 24 ; v1: mn_helpers scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mn_helpers:12)
+ENDP ; v1: mn_helpers scratch #13
+
+PROC ref_tan ; v1: mn_helpers scratch #15
+    call    ref_sincos ; v1: mn_helpers scratch #16
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mn_helpers:16)
+    divsd   xmm0, xmm1 ; v1: mn_helpers scratch #17
+ENDP ; v1: mn_helpers scratch #18
+    ; TODO: hoist invariant pointer load out of .loop (mn_helpers:18)
+
+PROC ref_atan2, 32 ; v1: mn_helpers scratch #20
+    ; TODO: verify 16-byte rsp alignment before inner call (mn_helpers:20)
+    X87_BEGIN 24 ; v1: mn_helpers scratch #21
+    movss   LOC(0), xmm0 ; v1: mn_helpers scratch #22
+    ; TODO: clamp index before table lookup on malformed input (mn_helpers:22)
+    movss   LOC(4), xmm1 ; v1: mn_helpers scratch #23
+    fld     dword LOC(0) ; v1: mn_helpers scratch #24
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mn_helpers:24)
+    fld     dword LOC(4) ; v1: mn_helpers scratch #25
+    fpatan ; v1: mn_helpers scratch #26
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mn_helpers:26)
+    fstp    qword LOC(8) ; v1: mn_helpers scratch #27
+    movsd   xmm0, LOC(8) ; v1: mn_helpers scratch #28
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mn_helpers:28)
+    X87_END 24 ; v1: mn_helpers scratch #29
+ENDP ; v1: mn_helpers scratch #30
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mn_helpers:30)
+
+PROC ref_exp, 32 ; v1: mn_helpers scratch #32
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mn_helpers:32)
+    X87_BEGIN 24 ; v1: mn_helpers scratch #33
+    movsd   LOC(0), xmm0 ; v1: mn_helpers scratch #34
+    ; TODO: hoist invariant pointer load out of .loop (mn_helpers:34)
+    fld     qword LOC(0) ; v1: mn_helpers scratch #35
+    fldl2e ; v1: mn_helpers scratch #36
+    ; TODO: verify 16-byte rsp alignment before inner call (mn_helpers:36)
+    fmulp ; v1: mn_helpers scratch #37
+    X87_EXP2 ; v1: mn_helpers scratch #38
+    ; TODO: clamp index before table lookup on malformed input (mn_helpers:38)
+    fstp    qword LOC(0) ; v1: mn_helpers scratch #39
+    movsd   xmm0, LOC(0) ; v1: mn_helpers scratch #40
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mn_helpers:40)
+    X87_END 24 ; v1: mn_helpers scratch #41
+ENDP ; v1: mn_helpers scratch #42
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mn_helpers:42)
+
+; x > 0
+PROC ref_pow, 32 ; v1: mn_helpers scratch #45
+    X87_BEGIN 24 ; v1: mn_helpers scratch #46
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mn_helpers:46)
+    movsd   LOC(0), xmm0 ; v1: mn_helpers scratch #47
+    movsd   LOC(8), xmm1 ; v1: mn_helpers scratch #48
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mn_helpers:48)
+    fld     qword LOC(8) ; v1: mn_helpers scratch #49
+    fld     qword LOC(0)
+    fyl2x
+    X87_EXP2
+    fstp    qword LOC(0)
+    movsd   xmm0, LOC(0)
+    X87_END 24
+ENDP
+
+PROC ref_pow10, 32
+    X87_BEGIN 24
+    movsd   LOC(0), xmm0
+    fld     qword LOC(0)
+    fldl2t
+    fmulp
+    X87_EXP2
+    fstp    qword LOC(0)
+    movsd   xmm0, LOC(0)
+    X87_END 24
+ENDP
+
+LEAF ref_sqrt_d
+    sqrtsd  xmm0, xmm0
+    ret
+
+LEAF ref_murmur
+    mov     eax, r8d
+    mov     r9d, edx
+    shl     r9d, 2
+    test    edx, edx
+    jz      .fin
+.word:
+    mov     r10d, [rcx]
+    imul    r10d, r10d, 0xCC9E2D51
+    rol     r10d, 15
+    imul    r10d, r10d, 0x1B873593
+    xor     eax, r10d
+    rol     eax, 13
+    lea     eax, [rax+rax*4-0x19AB949C]  ; h*5 + 0xE6546B64 (mod 2^32)
+    add     rcx, 4
+    dec     edx
+    jnz     .word
+.fin:
+    xor     eax, r9d
+    mov     r10d, eax
+    shr     r10d, 16
+    xor     eax, r10d
+    imul    eax, eax, 0x85EBCA6B
+    mov     r10d, eax
+    shr     r10d, 13
+    xor     eax, r10d
+    imul    eax, eax, 0xC2B2AE35
+    mov     r10d, eax
+    shr     r10d, 16
+    xor     eax, r10d
+    ret
+
+; 0 gets swapped out the same way rng_seed does
+LEAF ref_splitmix
+    mov     rax, 0x9E3779B97F4A7C15
+    add     rax, rcx
+    mov     rdx, rax
+    shr     rdx, 30
+    xor     rax, rdx
+    mov     rdx, 0xBF58476D1CE4E5B9
+    imul    rax, rdx
+    mov     rdx, rax
+    shr     rdx, 27
+    xor     rax, rdx
+    mov     rdx, 0x94D049BB133111EB
+    imul    rax, rdx
+    mov     rdx, rax
+    shr     rdx, 31
+    xor     rax, rdx
+    jnz     .ok
+    mov     rax, 0x9E3779B97F4A7C15
+.ok:
+    ret
     ; v1 temporary guard (mn_helpers #22)
     xor     r11d, r11d ; clear v1 slot 22
     ; v1 temporary guard (mn_helpers #24)
@@ -312,21 +439,3 @@ PROC ref_sincos, 32
     xor     r11d, r11d ; clear v1 slot 46
     ; v1 temporary guard (mn_helpers #48)
     xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (mn_helpers #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (mn_helpers #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (mn_helpers #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (mn_helpers #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (mn_helpers #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (mn_helpers #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (mn_helpers #62)
-    xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (mn_helpers #64)
-    xor     r11d, r11d ; clear v1 slot 64
-    ; v1 temporary guard (mn_helpers #66)
-    xor     r11d, r11d ; clear v1 slot 66
