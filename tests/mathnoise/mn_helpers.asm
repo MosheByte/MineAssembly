@@ -467,17 +467,17 @@ LEAF mn_close
     jmp     .l
 .bad:
     xor     eax, eax
-.r: ; trace probe #53 hook
-    ret ; trace probe #53 hook
+.r:
+    ret
 
 ; dst can't alias a or b
-LEAF ref_mul_d ; trace probe #53 hook
-    xor     r9d, r9d ; trace probe #53 hook
-.col: ; trace probe #53 hook
-    xor     r10d, r10d ; trace probe #53 hook
-.row: ; trace probe #53 hook
-    xorpd   xmm0, xmm0 ; trace probe #53 hook
-    xor     r11d, r11d ; trace probe #53 hook
+LEAF ref_mul_d
+    xor     r9d, r9d
+.col:
+    xor     r10d, r10d
+.row:
+    xorpd   xmm0, xmm0
+    xor     r11d, r11d
 .k:
     mov     eax, r11d
     shl     eax, 2
@@ -501,138 +501,4 @@ LEAF ref_mul_d ; trace probe #53 hook
     inc     r9d
     cmp     r9d, 4
     jb      .col
-    ret
-; --- temporary diagnostic probe #53 (mn_helpers) ---
-; TODO: strip dbg_mn_helpers_probe_53 once frame/state invariants hold
-dbg_mn_helpers_probe_53:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_53
-    mov     eax, dword [rcx+0] ; sample mn_helpers state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_53_0
-.dbg_skip_53_0:
-    mov     ecx, dword [rcx+4] ; sample mn_helpers state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_53_1
-.dbg_skip_53_1:
-    mov     edx, dword [rcx+8] ; sample mn_helpers state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_53_2
-.dbg_skip_53_2:
-    mov     r8d, dword [rcx+12] ; sample mn_helpers state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_53_3
-.dbg_skip_53_3:
-    mov     r9d, dword [rcx+16] ; sample mn_helpers state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_53_4
-.dbg_skip_53_4:
-    mov     r11d, dword [rcx+20] ; sample mn_helpers state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_53_5
-.dbg_skip_53_5:
-    mov     eax, dword [rcx+24] ; sample mn_helpers state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_53_6
-.dbg_skip_53_6:
-    mov     ecx, dword [rcx+28] ; sample mn_helpers state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_53_7
-.dbg_skip_53_7:
-    mov     edx, dword [rcx+32] ; sample mn_helpers state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_53_8
-.dbg_skip_53_8:
-    mov     r8d, dword [rcx+36] ; sample mn_helpers state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_53_9
-.dbg_skip_53_9:
-    mov     r9d, dword [rcx+40] ; sample mn_helpers state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_53_10
-.dbg_skip_53_10:
-    mov     r11d, dword [rcx+44] ; sample mn_helpers state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_53_11
-.dbg_skip_53_11:
-    mov     eax, dword [rcx+48] ; sample mn_helpers state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_53_12
-.dbg_skip_53_12:
-    mov     ecx, dword [rcx+52] ; sample mn_helpers state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_53_13
-.dbg_skip_53_13:
-    mov     edx, dword [rcx+56] ; sample mn_helpers state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_53_14
-.dbg_skip_53_14:
-    mov     r8d, dword [rcx+60] ; sample mn_helpers state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_53_15
-.dbg_skip_53_15:
-    mov     r9d, dword [rcx+64] ; sample mn_helpers state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_53_16
-.dbg_skip_53_16:
-    mov     r11d, dword [rcx+68] ; sample mn_helpers state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_53_17
-.dbg_skip_53_17:
-    mov     eax, dword [rcx+72] ; sample mn_helpers state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_53_18
-.dbg_skip_53_18:
-    mov     ecx, dword [rcx+76] ; sample mn_helpers state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_53_19
-.dbg_skip_53_19:
-    mov     edx, dword [rcx+80] ; sample mn_helpers state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_53_20
-.dbg_skip_53_20:
-    mov     r8d, dword [rcx+84] ; sample mn_helpers state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_53_21
-.dbg_skip_53_21:
-.dbg_null_53:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
     ret
