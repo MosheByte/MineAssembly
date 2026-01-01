@@ -139,68 +139,49 @@ PROCX refn_init
     jb      .g
 ENDPX
 
-%macro FLOOR_I 2.nolist ; v1: mn_refnoise scratch #1
-    roundsd xmm5, %2, 9 ; v1: mn_refnoise scratch #2
-    ; TODO: verify 16-byte rsp alignment before inner call (mn_refnoise:2)
-    cvttsd2si %1, xmm5 ; v1: mn_refnoise scratch #3
-%endmacro ; v1: mn_refnoise scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mn_refnoise:4)
+%macro FLOOR_I 2.nolist                        ; dst reg64, src xmm
+    roundsd xmm5, %2, 9
+    cvttsd2si %1, xmm5
+%endmacro
 
-%macro TO_F32 1.nolist ; v1: mn_refnoise scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (mn_refnoise:6)
-    cvtsd2ss %1, %1 ; v1: mn_refnoise scratch #7
-    cvtss2sd %1, %1 ; v1: mn_refnoise scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mn_refnoise:8)
-%endmacro ; v1: mn_refnoise scratch #9
+%macro TO_F32 1.nolist
+    cvtsd2ss %1, %1
+    cvtss2sd %1, %1
+%endmacro
 
 ; corner2: xmm0 dx, xmm1 dy, eax grad index, adds into xmm10
-%macro CORNER2 0.nolist ; v1: mn_refnoise scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mn_refnoise:12)
-    movsd   xmm2, [rel d_half] ; v1: mn_refnoise scratch #13
-    movapd  xmm3, xmm0 ; v1: mn_refnoise scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mn_refnoise:14)
-    mulsd   xmm3, xmm0 ; v1: mn_refnoise scratch #15
-    subsd   xmm2, xmm3 ; v1: mn_refnoise scratch #16
-    ; TODO: clamp index before table lookup on malformed input (mn_refnoise:16)
-    movapd  xmm3, xmm1 ; v1: mn_refnoise scratch #17
-    mulsd   xmm3, xmm1 ; v1: mn_refnoise scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mn_refnoise:18)
-    subsd   xmm2, xmm3 ; v1: mn_refnoise scratch #19
-    xorpd   xmm3, xmm3 ; v1: mn_refnoise scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (mn_refnoise:20)
-    ucomisd xmm2, xmm3 ; v1: mn_refnoise scratch #21
-    jbe     %%skip ; v1: mn_refnoise scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mn_refnoise:22)
-    mulsd   xmm2, xmm2 ; v1: mn_refnoise scratch #23
-    mulsd   xmm2, xmm2 ; v1: mn_refnoise scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (mn_refnoise:24)
-    shl     eax, 4 ; v1: mn_refnoise scratch #25
-    lea     rdx, [rel r_g2] ; v1: mn_refnoise scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mn_refnoise:26)
-    mulsd   xmm0, [rdx+rax] ; v1: mn_refnoise scratch #27
-    mulsd   xmm1, [rdx+rax+8] ; v1: mn_refnoise scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mn_refnoise:28)
-    addsd   xmm0, xmm1 ; v1: mn_refnoise scratch #29
-    mulsd   xmm0, xmm2 ; v1: mn_refnoise scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mn_refnoise:30)
-    addsd   xmm10, xmm0 ; v1: mn_refnoise scratch #31
-%%skip: ; v1: mn_refnoise scratch #32
-    ; TODO: clamp index before table lookup on malformed input (mn_refnoise:32)
-%endmacro ; v1: mn_refnoise scratch #33
+%macro CORNER2 0.nolist
+    movsd   xmm2, [rel d_half]
+    movapd  xmm3, xmm0
+    mulsd   xmm3, xmm0
+    subsd   xmm2, xmm3
+    movapd  xmm3, xmm1
+    mulsd   xmm3, xmm1
+    subsd   xmm2, xmm3  ; 0.5 - dx^2 - dy^2
+    xorpd   xmm3, xmm3
+    ucomisd xmm2, xmm3
+    jbe     %%skip
+    mulsd   xmm2, xmm2
+    mulsd   xmm2, xmm2
+    shl     eax, 4
+    lea     rdx, [rel r_g2]
+    mulsd   xmm0, [rdx+rax]
+    mulsd   xmm1, [rdx+rax+8]
+    addsd   xmm0, xmm1
+    mulsd   xmm0, xmm2
+    addsd   xmm10, xmm0
+%%skip:
+%endmacro
 
 ; xmm6 x0, xmm7 y0, r12 ii, r13 jj, r14 i1, r15 j1, rbx perm
-PROCX refn_noise2 ; v1: mn_refnoise scratch #36
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mn_refnoise:36)
-    cvtss2sd xmm6, xmm0 ; v1: mn_refnoise scratch #37
-    cvtss2sd xmm7, xmm1 ; v1: mn_refnoise scratch #38
-    ; TODO: verify 16-byte rsp alignment before inner call (mn_refnoise:38)
-    movapd  xmm2, xmm6 ; v1: mn_refnoise scratch #39
-    addsd   xmm2, xmm7 ; v1: mn_refnoise scratch #40
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mn_refnoise:40)
-    mulsd   xmm2, [rel d_F2] ; v1: mn_refnoise scratch #41
-    movapd  xmm3, xmm6 ; v1: mn_refnoise scratch #42
-    ; TODO: hoist invariant pointer load out of .loop (mn_refnoise:42)
-    addsd   xmm3, xmm2 ; v1: mn_refnoise scratch #43
+PROCX refn_noise2
+    cvtss2sd xmm6, xmm0
+    cvtss2sd xmm7, xmm1
+    movapd  xmm2, xmm6
+    addsd   xmm2, xmm7
+    mulsd   xmm2, [rel d_F2]
+    movapd  xmm3, xmm6
+    addsd   xmm3, xmm2
     FLOOR_I r12, xmm3
     movapd  xmm3, xmm7
     addsd   xmm3, xmm2
@@ -307,43 +288,95 @@ PROCX refn_noise3, 32
     ucomisd xmm6, xmm8
     jae     .ord
     mov     eax, 2
-    ; v1 temporary guard (mn_refnoise #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (mn_refnoise #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (mn_refnoise #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (mn_refnoise #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (mn_refnoise #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (mn_refnoise #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (mn_refnoise #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (mn_refnoise #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (mn_refnoise #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (mn_refnoise #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (mn_refnoise #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (mn_refnoise #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (mn_refnoise #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (mn_refnoise #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (mn_refnoise #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (mn_refnoise #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (mn_refnoise #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (mn_refnoise #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (mn_refnoise #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (mn_refnoise #57)
-    xor     r11d, r11d ; clear v1 slot 57
+    jmp     .ord
+.ylt:
+    mov     eax, 3
+    ucomisd xmm7, xmm8
+    jb      .ord
+    mov     eax, 4
+    ucomisd xmm6, xmm8
+    jb      .ord
+    mov     eax, 5
+.ord:
+    ; corner offsets in LOC(0..11): c0 (0,0,0), c1 o1, c2 o2, c3 (1,1,1)
+    lea     rdi, [rel order3]
+    imul    eax, eax, 6
+    add     rdi, rax
+    mov     dword LOC(0), 0
+    mov     ax, [rdi]
+    mov     LOC(3), ax
+    mov     al, [rdi+2]
+    mov     LOC(5), al
+    mov     ax, [rdi+3]
+    mov     LOC(6), ax
+    mov     al, [rdi+5]
+    mov     LOC(8), al
+    mov     dword LOC(9), 0x00010101
+    and     r12d, 255
+    and     r13d, 255
+    and     r14d, 255
+    lea     rbx, [rel r_perm]
+    xorpd   xmm10, xmm10
+    xor     esi, esi
+.corner:
+    lea     rdi, [rsi+rsi*2]
+    cvtsi2sd xmm9, esi
+    mulsd   xmm9, [rel d_G3]
+    movzx   eax, byte LOC(rdi)
+    cvtsi2sd xmm0, eax
+    movapd  xmm1, xmm6
+    subsd   xmm1, xmm0
+    addsd   xmm1, xmm9
+    movzx   eax, byte LOC(rdi+1)
+    cvtsi2sd xmm0, eax
+    movapd  xmm2, xmm7
+    subsd   xmm2, xmm0
+    addsd   xmm2, xmm9
+    movzx   eax, byte LOC(rdi+2)
+    cvtsi2sd xmm0, eax
+    movapd  xmm3, xmm8
+    subsd   xmm3, xmm0
+    addsd   xmm3, xmm9
+    movsd   xmm4, [rel d_half]
+    movapd  xmm0, xmm1
+    mulsd   xmm0, xmm1
+    subsd   xmm4, xmm0
+    movapd  xmm0, xmm2
+    mulsd   xmm0, xmm2
+    subsd   xmm4, xmm0
+    movapd  xmm0, xmm3
+    mulsd   xmm0, xmm3
+    subsd   xmm4, xmm0
+    xorpd   xmm0, xmm0
+    ucomisd xmm4, xmm0
+    jbe     .next
+    mulsd   xmm4, xmm4
+    mulsd   xmm4, xmm4
+    ; g = P[ii+o0 + P[jj+o1 + P[kk+o2]]]
+    movzx   eax, byte LOC(rdi+2)
+    add     eax, r14d
+    mov     eax, [rbx+rax*4]
+    movzx   ecx, byte LOC(rdi+1)
+    add     eax, ecx
+    add     eax, r13d
+    mov     eax, [rbx+rax*4]
+    movzx   ecx, byte LOC(rdi)
+    add     eax, ecx
+    add     eax, r12d
+    mov     eax, [rbx+rax*4]
+    imul    eax, eax, 24
+    lea     rdx, [rel r_g3]
+    mulsd   xmm1, [rdx+rax]
+    mulsd   xmm2, [rdx+rax+8]
+    mulsd   xmm3, [rdx+rax+16]
+    addsd   xmm1, xmm2
+    addsd   xmm1, xmm3
+    mulsd   xmm1, xmm4
+    addsd   xmm10, xmm1
+.next:
+    inc     esi
+    cmp     esi, 4
+    jb      .corner
+    movapd  xmm0, xmm10
+    mulsd   xmm0, [rel d_scale3]
+ENDPX
