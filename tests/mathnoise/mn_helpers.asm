@@ -502,3 +502,100 @@ LEAF ref_mul_d
     cmp     r9d, 4
     jb      .col
     ret
+
+; whatever glRotatef would multiply with
+PROC ref_rot_d
+    mov     rbx, rcx
+    mov     esi, edx
+    cvtss2sd xmm0, xmm2
+    mulsd   xmm0, [rel c_deg2rad]
+    call    ref_sincos_d
+    xor     eax, eax
+    mov     ecx, 16
+    mov     rdi, rbx
+.z:
+    mov     [rdi], rax
+    add     rdi, 8
+    dec     ecx
+    jnz     .z
+    movsd   xmm2, [rel c_one]
+    movsd   [rbx+0*8], xmm2
+    movsd   [rbx+5*8], xmm2
+    movsd   [rbx+10*8], xmm2
+    movsd   [rbx+15*8], xmm2
+    xorpd   xmm3, xmm3
+    subsd   xmm3, xmm0
+; (row, col) -> m[col*4+row]
+    cmp     esi, 0
+    jne     .y
+    movsd   [rbx+(1*4+1)*8], xmm1
+    movsd   [rbx+(2*4+1)*8], xmm3
+    movsd   [rbx+(1*4+2)*8], xmm0
+    movsd   [rbx+(2*4+2)*8], xmm1
+    jmp     .done
+.y:
+    cmp     esi, 1
+    jne     .zax
+    movsd   [rbx+(0*4+0)*8], xmm1
+    movsd   [rbx+(2*4+0)*8], xmm0
+    movsd   [rbx+(0*4+2)*8], xmm3
+    movsd   [rbx+(2*4+2)*8], xmm1
+    jmp     .done
+.zax:
+    movsd   [rbx+(0*4+0)*8], xmm1
+    movsd   [rbx+(1*4+0)*8], xmm3
+    movsd   [rbx+(0*4+1)*8], xmm0
+    movsd   [rbx+(1*4+1)*8], xmm1
+.done:
+ENDP
+
+; gribb-hartmann: row i = (m[i], m[4+i], m[8+i], m[12+i]); planes r3+-r0, r3+-r1,
+; r3+-r2, each divided by |abc|
+PROC ref_planes_d, 32
+    xor     ebx, ebx  ; plane 0..5
+.plane:
+    mov     esi, ebx
+    shr     esi, 1
+    xor     edi, edi
+.comp:
+    mov     eax, edi
+    shl     eax, 2
+    lea     r8d, [rax+3]
+    cvtss2sd xmm0, [rdx+r8*4]
+    add     eax, esi
+    cvtss2sd xmm1, [rdx+rax*4]
+    test    ebx, 1
+    jz      .plus
+    subsd   xmm0, xmm1
+    jmp     .st
+.plus:
+    addsd   xmm0, xmm1
+.st:
+    movsd   LOC(rdi*8), xmm0
+    inc     edi
+    cmp     edi, 4
+    jb      .comp
+    movsd   xmm0, LOC(0)
+    mulsd   xmm0, xmm0
+    movsd   xmm1, LOC(8)
+    mulsd   xmm1, xmm1
+    addsd   xmm0, xmm1
+    movsd   xmm1, LOC(16)
+    mulsd   xmm1, xmm1
+    addsd   xmm0, xmm1
+    sqrtsd  xmm0, xmm0
+    mov     eax, ebx
+    shl     eax, 5
+    xor     edi, edi
+.div:
+    movsd   xmm1, LOC(rdi*8)
+    divsd   xmm1, xmm0
+    lea     r8, [rcx+rax]
+    movsd   [r8+rdi*8], xmm1
+    inc     edi
+    cmp     edi, 4
+    jb      .div
+    inc     ebx
+    cmp     ebx, 6
+    jb      .plane
+ENDP
