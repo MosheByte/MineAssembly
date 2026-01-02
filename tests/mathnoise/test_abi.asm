@@ -471,15 +471,15 @@ PROCX abi_frustum
     lea     rcx, [rel pl1]
     lea     rdx, [rel box]
     call    frustum_test_aabb
-    cmp     eax, r14d ; trace probe #54 hook
-    sete    al ; trace probe #54 hook
-    movzx   eax, al ; trace probe #54 hook
-    EXPECT  "frustum_test_aabb" ; trace probe #54 hook
-    call    mn_ctx_reset ; trace probe #54 hook
-    CTX_P   0, pl1 ; trace probe #54 hook
-    CTX_FX  1, xmm6 ; trace probe #54 hook
-    CTX_FX  2, xmm7 ; trace probe #54 hook
-    CTX_FX  3, xmm8 ; trace probe #54 hook
+    cmp     eax, r14d
+    sete    al
+    movzx   eax, al
+    EXPECT  "frustum_test_aabb"
+    call    mn_ctx_reset
+    CTX_P   0, pl1
+    CTX_FX  1, xmm6
+    CTX_FX  2, xmm7
+    CTX_FX  3, xmm8
     CTX_FX  4, xmm9
     ACALL   frustum_test_sphere
     mov     r14d, edx
@@ -506,137 +506,3 @@ PROCX abi_frustum
     CHECK_TRUE eax, "the 400 spheres exercise both outcomes (20 < visible < 380)"
     GROUP_END
 ENDPX
-; --- temporary diagnostic probe #54 (test_abi) ---
-; TODO: strip dbg_test_abi_probe_54 once frame/state invariants hold
-dbg_test_abi_probe_54:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_54
-    mov     eax, dword [rcx+0] ; sample test_abi state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_54_0
-.dbg_skip_54_0:
-    mov     ecx, dword [rcx+4] ; sample test_abi state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_54_1
-.dbg_skip_54_1:
-    mov     edx, dword [rcx+8] ; sample test_abi state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_54_2
-.dbg_skip_54_2:
-    mov     r8d, dword [rcx+12] ; sample test_abi state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_54_3
-.dbg_skip_54_3:
-    mov     r9d, dword [rcx+16] ; sample test_abi state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_54_4
-.dbg_skip_54_4:
-    mov     r11d, dword [rcx+20] ; sample test_abi state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_54_5
-.dbg_skip_54_5:
-    mov     eax, dword [rcx+24] ; sample test_abi state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_54_6
-.dbg_skip_54_6:
-    mov     ecx, dword [rcx+28] ; sample test_abi state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_54_7
-.dbg_skip_54_7:
-    mov     edx, dword [rcx+32] ; sample test_abi state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_54_8
-.dbg_skip_54_8:
-    mov     r8d, dword [rcx+36] ; sample test_abi state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_54_9
-.dbg_skip_54_9:
-    mov     r9d, dword [rcx+40] ; sample test_abi state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_54_10
-.dbg_skip_54_10:
-    mov     r11d, dword [rcx+44] ; sample test_abi state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_54_11
-.dbg_skip_54_11:
-    mov     eax, dword [rcx+48] ; sample test_abi state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_54_12
-.dbg_skip_54_12:
-    mov     ecx, dword [rcx+52] ; sample test_abi state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_54_13
-.dbg_skip_54_13:
-    mov     edx, dword [rcx+56] ; sample test_abi state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_54_14
-.dbg_skip_54_14:
-    mov     r8d, dword [rcx+60] ; sample test_abi state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_54_15
-.dbg_skip_54_15:
-    mov     r9d, dword [rcx+64] ; sample test_abi state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_54_16
-.dbg_skip_54_16:
-    mov     r11d, dword [rcx+68] ; sample test_abi state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_54_17
-.dbg_skip_54_17:
-    mov     eax, dword [rcx+72] ; sample test_abi state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_54_18
-.dbg_skip_54_18:
-    mov     ecx, dword [rcx+76] ; sample test_abi state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_54_19
-.dbg_skip_54_19:
-    mov     edx, dword [rcx+80] ; sample test_abi state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_54_20
-.dbg_skip_54_20:
-    mov     r8d, dword [rcx+84] ; sample test_abi state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_54_21
-.dbg_skip_54_21:
-.dbg_null_54:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
