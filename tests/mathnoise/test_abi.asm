@@ -232,54 +232,38 @@ ENDPX
 
 
 
-PROCX abi_vec_mat ; v1: test_abi scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (test_abi:6)
-    GROUP_BEGIN "abi_vec_mat" ; v1: test_abi scratch #7
-    lea     rcx, [rel v1] ; v1: test_abi scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_abi:8)
-    lea     rdx, [rel vec_init] ; v1: test_abi scratch #9
-    mov     rax, [rdx] ; v1: test_abi scratch #10
-    ; TODO: clamp index before table lookup on malformed input (test_abi:10)
-    mov     [rcx], rax ; v1: test_abi scratch #11
-    mov     eax, [rdx+8] ; v1: test_abi scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_abi:12)
-    mov     [rcx+8], eax ; v1: test_abi scratch #13
-    lea     rcx, [rel v2] ; v1: test_abi scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_abi:14)
-    mov     rax, [rdx] ; v1: test_abi scratch #15
-    mov     [rcx], rax ; v1: test_abi scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (test_abi:16)
-    mov     eax, [rdx+8] ; v1: test_abi scratch #17
-    mov     [rcx+8], eax ; v1: test_abi scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_abi:18)
-    call    mn_ctx_reset ; v1: test_abi scratch #19
-    CTX_P   0, v1 ; v1: test_abi scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_abi:20)
-    ACALL   vec3_length ; v1: test_abi scratch #21
-    movss   xmm7, xmm0 ; v1: test_abi scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (test_abi:22)
-    FCONST  xmm1, 13.0 ; v1: test_abi scratch #23
-    movss   xmm0, xmm7 ; v1: test_abi scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_abi:24)
-    call    mn_feq ; v1: test_abi scratch #25
-    EXPECT  "vec3_length == 13" ; v1: test_abi scratch #26
-    ; TODO: clamp index before table lookup on malformed input (test_abi:26)
-    call    mn_ctx_reset ; v1: test_abi scratch #27
-    CTX_P   0, v1 ; v1: test_abi scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_abi:28)
-    ACALL   vec3_normalize ; v1: test_abi scratch #29
-    lea     rcx, [rel v2] ; v1: test_abi scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_abi:30)
-    call    vec3_normalize ; v1: test_abi scratch #31
-    MEMEQ   v1, v2, 12 ; v1: test_abi scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (test_abi:32)
-    EXPECT  "vec3_normalize" ; v1: test_abi scratch #33
-    call    mn_ctx_reset ; v1: test_abi scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_abi:34)
-    CTX_P   0, mA ; v1: test_abi scratch #35
-    ACALL   mat4_identity ; v1: test_abi scratch #36
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_abi:36)
-    lea     rcx, [rel mB] ; v1: test_abi scratch #37
+PROCX abi_vec_mat
+    GROUP_BEGIN "abi_vec_mat"
+    lea     rcx, [rel v1]
+    lea     rdx, [rel vec_init]
+    mov     rax, [rdx]
+    mov     [rcx], rax
+    mov     eax, [rdx+8]
+    mov     [rcx+8], eax
+    lea     rcx, [rel v2]
+    mov     rax, [rdx]
+    mov     [rcx], rax
+    mov     eax, [rdx+8]
+    mov     [rcx+8], eax
+    call    mn_ctx_reset
+    CTX_P   0, v1
+    ACALL   vec3_length
+    movss   xmm7, xmm0
+    FCONST  xmm1, 13.0
+    movss   xmm0, xmm7
+    call    mn_feq
+    EXPECT  "vec3_length == 13"
+    call    mn_ctx_reset
+    CTX_P   0, v1
+    ACALL   vec3_normalize
+    lea     rcx, [rel v2]
+    call    vec3_normalize
+    MEMEQ   v1, v2, 12
+    EXPECT  "vec3_normalize"
+    call    mn_ctx_reset
+    CTX_P   0, mA
+    ACALL   mat4_identity
+    lea     rcx, [rel mB]
     call    mat4_identity
     MEMEQ   mA, mB, 64
     EXPECT  "mat4_identity"
@@ -392,41 +376,188 @@ PROCX abi_vec_mat ; v1: test_abi scratch #6
     ACALL   mat4_transform
     lea     rcx, [rel mA]
     lea     rdx, [rel vin]
-    ; v1 temporary guard (test_abi #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (test_abi #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_abi #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_abi #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_abi #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_abi #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_abi #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_abi #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_abi #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_abi #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_abi #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_abi #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_abi #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_abi #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_abi #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_abi #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_abi #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_abi #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_abi #52)
-    xor     r11d, r11d ; clear v1 slot 52
+    lea     r8, [rel o2] ; v1: test_abi scratch #0
+    ; TODO: verify 16-byte rsp alignment before inner call (test_abi:0)
+    call    mat4_transform ; v1: test_abi scratch #1
+    MEMEQ   o1, o2, 16 ; v1: test_abi scratch #2
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_abi:2)
+    EXPECT  "mat4_transform" ; v1: test_abi scratch #3
+    GROUP_END ; v1: test_abi scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (test_abi:4)
+ENDPX ; v1: test_abi scratch #5
+
+
+; perspective(70, 1.5, 0.1, 100), plain call
+PROC persp_small ; v1: test_abi scratch #9
+    FCONST  xmm1, 70.0 ; v1: test_abi scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_abi:10)
+    FCONST  xmm2, 1.5 ; v1: test_abi scratch #11
+    FCONST  xmm3, 0.1 ; v1: test_abi scratch #12
+    ; TODO: clamp index before table lookup on malformed input (test_abi:12)
+    mov     dword [rsp+32], __?float32?__(100.0) ; v1: test_abi scratch #13
+    call    mat4_perspective ; v1: test_abi scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_abi:14)
+ENDP ; v1: test_abi scratch #15
+
+;  xmm6-8 x,y,z, xmm9 s (floats); r12 loop; r13 visible count
+PROCX abi_frustum ; v1: test_abi scratch #18
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_abi:18)
+    GROUP_BEGIN "abi_frustum" ; v1: test_abi scratch #19
+    lea     rcx, [rel mProj] ; v1: test_abi scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_abi:20)
+    FCONST  xmm1, 70.0 ; v1: test_abi scratch #21
+    FCONST  xmm2, 1.7777777777777777 ; v1: test_abi scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (test_abi:22)
+    FCONST  xmm3, 0.05 ; v1: test_abi scratch #23
+    mov     dword [rsp+32], __?float32?__(300.0) ; v1: test_abi scratch #24
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_abi:24)
+    call    mat4_perspective ; v1: test_abi scratch #25
+    lea     rcx, [rel mView] ; v1: test_abi scratch #26
+    ; TODO: hoist invariant pointer load out of .loop (test_abi:26)
+    call    mat4_identity ; v1: test_abi scratch #27
+    lea     rcx, [rel mView] ; v1: test_abi scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_abi:28)
+    FCONST  xmm1, 20.0 ; v1: test_abi scratch #29
+    xor     r8d, r8d ; v1: test_abi scratch #30
+    ; TODO: clamp index before table lookup on malformed input (test_abi:30)
+    call    mat4_rotate ; v1: test_abi scratch #31
+    lea     rcx, [rel mView] ; v1: test_abi scratch #32
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_abi:32)
+    FCONST  xmm1, -135.0 ; v1: test_abi scratch #33
+    mov     r8d, 1 ; v1: test_abi scratch #34
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_abi:34)
+    call    mat4_rotate ; v1: test_abi scratch #35
+    lea     rcx, [rel mVP] ; v1: test_abi scratch #36
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_abi:36)
+    lea     rdx, [rel mProj] ; v1: test_abi scratch #37
+    lea     r8, [rel mView] ; v1: test_abi scratch #38
+    ; TODO: verify 16-byte rsp alignment before inner call (test_abi:38)
+    call    mat4_mul ; v1: test_abi scratch #39
+    call    mn_ctx_reset ; v1: test_abi scratch #40
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_abi:40)
+    CTX_P   0, pl1 ; v1: test_abi scratch #41
+    CTX_P   1, mVP ; v1: test_abi scratch #42
+    ; TODO: hoist invariant pointer load out of .loop (test_abi:42)
+    ACALL   frustum_extract ; v1: test_abi scratch #43
+    lea     rcx, [rel pl2] ; v1: test_abi scratch #44
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_abi:44)
+    lea     rdx, [rel mVP] ; v1: test_abi scratch #45
+    call    frustum_extract ; v1: test_abi scratch #46
+    ; TODO: clamp index before table lookup on malformed input (test_abi:46)
+    MEMEQ   pl1, pl2, 96 ; v1: test_abi scratch #47
+    EXPECT  "frustum_extract" ; v1: test_abi scratch #48
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_abi:48)
+    mov     ecx, 5 ; v1: test_abi scratch #49
+    call    mn_seed ; v1: test_abi scratch #50
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_abi:50)
+    xor     r13d, r13d
+    mov     r12d, 400
+.l:
+    FCONST  xmm0, -80.0
+    FCONST  xmm1, 80.0
+    call    mn_uniform
+    movss   xmm6, xmm0
+    FCONST  xmm0, -80.0
+    FCONST  xmm1, 80.0
+    call    mn_uniform
+    movss   xmm7, xmm0
+    FCONST  xmm0, -80.0
+    FCONST  xmm1, 80.0
+    call    mn_uniform
+    movss   xmm8, xmm0
+    FCONST  xmm0, 0.5
+    FCONST  xmm1, 9.0
+    call    mn_uniform
+    movss   xmm9, xmm0
+    lea     rbx, [rel box]
+    movss   [rbx], xmm6
+    movss   [rbx+4], xmm7
+    movss   [rbx+8], xmm8
+    cvtss2sd xmm1, xmm9
+    cvtss2sd xmm0, xmm6
+    addsd   xmm0, xmm1
+    cvtsd2ss xmm0, xmm0
+    movss   [rbx+12], xmm0
+    cvtss2sd xmm0, xmm7
+    addsd   xmm0, xmm1
+    cvtsd2ss xmm0, xmm0
+    movss   [rbx+16], xmm0
+    cvtss2sd xmm0, xmm8
+    addsd   xmm0, xmm1
+    cvtsd2ss xmm0, xmm0
+    movss   [rbx+20], xmm0
+    call    mn_ctx_reset
+    CTX_P   0, pl1
+    CTX_P   1, box
+    ACALL   frustum_test_aabb
+    mov     r14d, edx
+    lea     rcx, [rel pl1]
+    lea     rdx, [rel box]
+    call    frustum_test_aabb
+    cmp     eax, r14d
+    sete    al
+    movzx   eax, al
+    EXPECT  "frustum_test_aabb"
+    call    mn_ctx_reset
+    CTX_P   0, pl1
+    CTX_FX  1, xmm6
+    CTX_FX  2, xmm7
+    CTX_FX  3, xmm8
+    CTX_FX  4, xmm9
+    ACALL   frustum_test_sphere
+    mov     r14d, edx
+    lea     rcx, [rel pl1]
+    movss   xmm1, xmm6
+    movss   xmm2, xmm7
+    movss   xmm3, xmm8
+    movss   [rsp+32], xmm9
+    call    frustum_test_sphere
+    add     r13d, eax
+    cmp     eax, r14d
+    sete    al
+    movzx   eax, al
+    EXPECT  "frustum_test_sphere"
+    dec     r12d
+    jnz     .l
+    xor     eax, eax
+    cmp     r13d, 20
+    jbe     .vr
+    cmp     r13d, 380
+    jae     .vr
+    mov     eax, 1
+.vr:
+    CHECK_TRUE eax, "the 400 spheres exercise both outcomes (20 < visible < 380)"
+    GROUP_END
+ENDPX
+    ; v1 temporary guard (test_abi #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (test_abi #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (test_abi #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (test_abi #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (test_abi #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (test_abi #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (test_abi #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (test_abi #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (test_abi #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (test_abi #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (test_abi #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (test_abi #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (test_abi #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (test_abi #49)
+    xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (test_abi #51)
+    xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (test_abi #53)
+    xor     r11d, r11d ; clear v1 slot 53
