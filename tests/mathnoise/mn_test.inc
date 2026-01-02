@@ -1,52 +1,37 @@
 ; mn_test.inc - shared externs + macros for the math/noise tests. include after
 ; common.inc as "../mathnoise/mn_test.inc" (tests\lib is on -I). usual loop shape:
 ; mn_bad_reset, NOTE on each bad sample, one CHECK_BAD at the end.
-%ifndef MN_TEST_INC ; v1: mn_test scratch #3
-%define MN_TEST_INC ; v1: mn_test scratch #4
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mn_test:4)
+%ifndef MN_TEST_INC
+%define MN_TEST_INC
 
-%include "testlib.inc" ; v1: mn_test scratch #6
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mn_test:6)
+%include "testlib.inc"
 
-%ifndef IMPL_MN_HELPERS ; v1: mn_test scratch #8
-    ; TODO: clamp index before table lookup on malformed input (mn_test:8)
-extern mn_bad ; v1: mn_test scratch #9
-extern mn_bad_reset ; v1: mn_test scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (mn_test:10)
-extern mn_bad_note ; v1: mn_test scratch #11
-extern mn_seed ; v1: mn_test scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mn_test:12)
-extern mn_u01d ; v1: mn_test scratch #13
-extern mn_uniform ; v1: mn_test scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mn_test:14)
-extern mn_uniform_d ; v1: mn_test scratch #15
-extern mn_logspread ; v1: mn_test scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (mn_test:16)
-extern mn_randint ; v1: mn_test scratch #17
-extern mn_feq ; v1: mn_test scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mn_test:18)
-extern mn_same ; v1: mn_test scratch #19
-extern mn_isnan ; v1: mn_test scratch #20
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mn_test:20)
-extern mn_near_d ; v1: mn_test scratch #21
-extern ref_sincos ; v1: mn_test scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mn_test:22)
-extern ref_sincos_d ; v1: mn_test scratch #23
-extern ref_tan ; v1: mn_test scratch #24
-    ; TODO: clamp index before table lookup on malformed input (mn_test:24)
-extern ref_atan2 ; v1: mn_test scratch #25
-extern ref_exp ; v1: mn_test scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (mn_test:26)
-extern ref_pow ; v1: mn_test scratch #27
-extern ref_pow10 ; v1: mn_test scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mn_test:28)
-extern ref_sqrt_d ; v1: mn_test scratch #29
-extern ref_murmur ; v1: mn_test scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mn_test:30)
-extern ref_splitmix ; v1: mn_test scratch #31
-extern mn_count_unique_u32 ; v1: mn_test scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (mn_test:32)
-extern mn_f2d ; v1: mn_test scratch #33
+%ifndef IMPL_MN_HELPERS
+extern mn_bad
+extern mn_bad_reset
+extern mn_bad_note  ; count + print the first 3
+extern mn_seed
+extern mn_u01d
+extern mn_uniform
+extern mn_uniform_d
+extern mn_logspread  ; +-10^U(lo,hi)
+extern mn_randint
+extern mn_feq  ; IEEE ==, so +0 == -0
+extern mn_same  ; bit-identical or both NaN
+extern mn_isnan
+extern mn_near_d
+extern ref_sincos  ; exact reduction, any finite float
+extern ref_sincos_d  ; |x| < 2^19 only
+extern ref_tan
+extern ref_atan2
+extern ref_exp
+extern ref_pow
+extern ref_pow10
+extern ref_sqrt_d
+extern ref_murmur
+extern ref_splitmix  ; the state the way rng_seed builds it
+extern mn_count_unique_u32  ; sorts the array in place
+extern mn_f2d
 extern mn_close
 extern ref_mul_d  ; column-major, dst can't alias
 extern ref_rot_d
@@ -149,53 +134,3 @@ extern mn_acall
 %endmacro
 
 %endif
-    ; v1 temporary guard (mn_test #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (mn_test #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (mn_test #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (mn_test #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (mn_test #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (mn_test #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (mn_test #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (mn_test #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (mn_test #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (mn_test #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (mn_test #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (mn_test #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (mn_test #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (mn_test #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (mn_test #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (mn_test #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (mn_test #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (mn_test #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (mn_test #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (mn_test #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (mn_test #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (mn_test #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (mn_test #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (mn_test #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (mn_test #63)
-    xor     r11d, r11d ; clear v1 slot 63
