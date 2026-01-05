@@ -508,51 +508,36 @@ PROCX abi_frustum
 ENDPX
 
 
-PROCX abi_rng_hash ; v1: test_abi scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_abi:2)
-    GROUP_BEGIN "abi_rng_hash" ; v1: test_abi scratch #3
-    call    mn_ctx_reset ; v1: test_abi scratch #4
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_abi:4)
-    mov     rax, 0xFFFFFFFF00000001 ; v1: test_abi scratch #5
-    CTX_Q   0, rax ; v1: test_abi scratch #6
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_abi:6)
-    ACALL   rng_seed ; v1: test_abi scratch #7
-    lea     rbx, [rel seqA] ; v1: test_abi scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (test_abi:8)
-    xor     r12d, r12d ; v1: test_abi scratch #9
-.n: ; v1: test_abi scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (test_abi:10)
-    call    mn_ctx_reset ; v1: test_abi scratch #11
-    ACALL   rng_next ; v1: test_abi scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_abi:12)
-    mov     [rbx+r12*8], rdx ; v1: test_abi scratch #13
-    inc     r12d ; v1: test_abi scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_abi:14)
-    cmp     r12d, 4 ; v1: test_abi scratch #15
-    jb      .n ; v1: test_abi scratch #16
-    ; TODO: clamp index before table lookup on malformed input (test_abi:16)
-.i: ; v1: test_abi scratch #17
-    call    mn_ctx_reset ; v1: test_abi scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_abi:18)
-    CTX_I   0, 1000 ; v1: test_abi scratch #19
-    ACALL   rng_int ; v1: test_abi scratch #20
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_abi:20)
-    mov     edx, edx ; v1: test_abi scratch #21
-    mov     [rbx+r12*8], rdx ; v1: test_abi scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_abi:22)
-    inc     r12d ; v1: test_abi scratch #23
-    cmp     r12d, 8 ; v1: test_abi scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (test_abi:24)
-    jb      .i ; v1: test_abi scratch #25
-.f: ; v1: test_abi scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (test_abi:26)
-    call    mn_ctx_reset ; v1: test_abi scratch #27
-    ACALL   rng_float ; v1: test_abi scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_abi:28)
-    movd    eax, xmm0 ; v1: test_abi scratch #29
-    mov     [rbx+r12*8], rax ; v1: test_abi scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_abi:30)
-    inc     r12d ; v1: test_abi scratch #31
+PROCX abi_rng_hash
+    GROUP_BEGIN "abi_rng_hash"
+    call    mn_ctx_reset
+    mov     rax, 0xFFFFFFFF00000001
+    CTX_Q   0, rax
+    ACALL   rng_seed
+    lea     rbx, [rel seqA]
+    xor     r12d, r12d
+.n:
+    call    mn_ctx_reset
+    ACALL   rng_next
+    mov     [rbx+r12*8], rdx
+    inc     r12d
+    cmp     r12d, 4
+    jb      .n
+.i:
+    call    mn_ctx_reset
+    CTX_I   0, 1000
+    ACALL   rng_int
+    mov     edx, edx
+    mov     [rbx+r12*8], rdx
+    inc     r12d
+    cmp     r12d, 8
+    jb      .i
+.f:
+    call    mn_ctx_reset
+    ACALL   rng_float
+    movd    eax, xmm0
+    mov     [rbx+r12*8], rax
+    inc     r12d
     cmp     r12d, 10
     jb      .f
 .s:
@@ -662,37 +647,136 @@ PROCX abi_rng_hash ; v1: test_abi scratch #2
     jb      .h
     GROUP_END
 ENDPX
-    ; v1 temporary guard (test_abi #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (test_abi #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (test_abi #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (test_abi #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (test_abi #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (test_abi #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (test_abi #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (test_abi #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (test_abi #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (test_abi #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (test_abi #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (test_abi #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (test_abi #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (test_abi #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (test_abi #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (test_abi #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (test_abi #47)
-    xor     r11d, r11d ; clear v1 slot 47
+
+
+;  r12 point, r13 octave index, r14 fn index; xmm6-8 point (doubles)
+PROCX abi_noise
+    GROUP_BEGIN "abi_noise"
+    call    mn_ctx_reset
+    mov     rax, 0x0123456789ABCDEF
+    CTX_Q   0, rax
+    ACALL   noise_set_seed
+    FCONST  xmm0, 13.37
+    FCONST  xmm1, -4.2
+    call    noise2
+    movss   xmm6, xmm0
+    mov     rcx, 0x0123456789ABCDEF
+    call    noise_set_seed
+    FCONST  xmm0, 13.37
+    FCONST  xmm1, -4.2
+    call    noise2
+    FSAME   xmm0, xmm6
+    EXPECT  "noise_set_seed through abi_call == direct"
+    xor     r12d, r12d
+.p:
+    imul    eax, r12d, 24
+    lea     rbx, [rel noise_pts]
+    add     rbx, rax
+    movsd   xmm6, [rbx]
+    movsd   xmm7, [rbx+8]
+    movsd   xmm8, [rbx+16]
+    ; noise2 / noise3 at f32(point)
+    call    mn_ctx_reset
+    cvtsd2ss xmm1, xmm6
+    mov     ecx, 0
+    call    mn_ctx_f
+    cvtsd2ss xmm1, xmm7
+    mov     ecx, 1
+    call    mn_ctx_f
+    ACALL   noise2
+    movss   xmm9, xmm0
+    cvtsd2ss xmm0, xmm6
+    cvtsd2ss xmm1, xmm7
+    call    noise2
+    FSAME   xmm0, xmm9
+    EXPECT  "noise2"
+    call    mn_ctx_reset
+    cvtsd2ss xmm1, xmm6
+    mov     ecx, 0
+    call    mn_ctx_f
+    cvtsd2ss xmm1, xmm7
+    mov     ecx, 1
+    call    mn_ctx_f
+    cvtsd2ss xmm1, xmm8
+    mov     ecx, 2
+    call    mn_ctx_f
+    ACALL   noise3
+    movss   xmm9, xmm0
+    cvtsd2ss xmm0, xmm6
+    cvtsd2ss xmm1, xmm7
+    cvtsd2ss xmm2, xmm8
+    call    noise3
+    FSAME   xmm0, xmm9
+    EXPECT  "noise3"
+    ; fbm2 / ridged2 / warp2 at f32(x*0.01), f32(y*0.01), octaves 1 5 40 -3
+    DCONST  xmm0, 0.01
+    movapd  xmm10, xmm6
+    mulsd   xmm10, xmm0
+    cvtsd2ss xmm10, xmm10
+    movapd  xmm11, xmm7
+    mulsd   xmm11, xmm0
+    cvtsd2ss xmm11, xmm11
+    xor     r14d, r14d
+.fn:
+    xor     r13d, r13d
+.oc:
+    lea     rax, [rel octs3]
+    mov     r15d, [rax+r13*4]
+    call    mn_ctx_reset
+    CTX_FX  0, xmm10
+    CTX_FX  1, xmm11
+    CTX_I   2, r15d
+    lea     rax, [rel oct_fns]
+    mov     rcx, [rax+r14*8]
+    call    mn_acall
+    movss   xmm9, xmm0
+    movss   xmm0, xmm10
+    movss   xmm1, xmm11
+    mov     r8d, r15d
+    lea     rax, [rel oct_fns]
+    call    [rax+r14*8]
+    FSAME   xmm0, xmm9
+    EXPECT  "fbm2 / ridged2 / warp2 with octaves 1 5 40 -3"
+    inc     r13d
+    cmp     r13d, 4
+    jb      .oc
+    inc     r14d
+    cmp     r14d, 3
+    jb      .fn
+    ; fbm3 at f32(p*0.02), octaves 1 4 0 (octaves in r9 with garbage)
+    DCONST  xmm0, 0.02
+    movapd  xmm10, xmm6
+    mulsd   xmm10, xmm0
+    cvtsd2ss xmm10, xmm10
+    movapd  xmm11, xmm7
+    mulsd   xmm11, xmm0
+    cvtsd2ss xmm11, xmm11
+    movapd  xmm12, xmm8
+    mulsd   xmm12, xmm0
+    cvtsd2ss xmm12, xmm12
+    xor     r13d, r13d
+.o3:
+    lea     rax, [rel octs_fbm3]
+    mov     r15d, [rax+r13*4]
+    call    mn_ctx_reset
+    CTX_FX  0, xmm10
+    CTX_FX  1, xmm11
+    CTX_FX  2, xmm12
+    CTX_I   3, r15d
+    ACALL   fbm3
+    movss   xmm9, xmm0
+    movss   xmm0, xmm10
+    movss   xmm1, xmm11
+    movss   xmm2, xmm12
+    mov     r9d, r15d
+    call    fbm3
+    FSAME   xmm0, xmm9
+    EXPECT  "fbm3 with octaves 1 4 0"
+    inc     r13d
+    cmp     r13d, 3
+    jb      .o3
+    inc     r12d
+    cmp     r12d, 3
+    jb      .p
+    GROUP_END
+ENDPX
