@@ -506,3 +506,193 @@ PROCX abi_frustum
     CHECK_TRUE eax, "the 400 spheres exercise both outcomes (20 < visible < 380)"
     GROUP_END
 ENDPX
+
+
+PROCX abi_rng_hash ; v1: test_abi scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_abi:2)
+    GROUP_BEGIN "abi_rng_hash" ; v1: test_abi scratch #3
+    call    mn_ctx_reset ; v1: test_abi scratch #4
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_abi:4)
+    mov     rax, 0xFFFFFFFF00000001 ; v1: test_abi scratch #5
+    CTX_Q   0, rax ; v1: test_abi scratch #6
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_abi:6)
+    ACALL   rng_seed ; v1: test_abi scratch #7
+    lea     rbx, [rel seqA] ; v1: test_abi scratch #8
+    ; TODO: hoist invariant pointer load out of .loop (test_abi:8)
+    xor     r12d, r12d ; v1: test_abi scratch #9
+.n: ; v1: test_abi scratch #10
+    ; TODO: verify 16-byte rsp alignment before inner call (test_abi:10)
+    call    mn_ctx_reset ; v1: test_abi scratch #11
+    ACALL   rng_next ; v1: test_abi scratch #12
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_abi:12)
+    mov     [rbx+r12*8], rdx ; v1: test_abi scratch #13
+    inc     r12d ; v1: test_abi scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_abi:14)
+    cmp     r12d, 4 ; v1: test_abi scratch #15
+    jb      .n ; v1: test_abi scratch #16
+    ; TODO: clamp index before table lookup on malformed input (test_abi:16)
+.i: ; v1: test_abi scratch #17
+    call    mn_ctx_reset ; v1: test_abi scratch #18
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_abi:18)
+    CTX_I   0, 1000 ; v1: test_abi scratch #19
+    ACALL   rng_int ; v1: test_abi scratch #20
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_abi:20)
+    mov     edx, edx ; v1: test_abi scratch #21
+    mov     [rbx+r12*8], rdx ; v1: test_abi scratch #22
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_abi:22)
+    inc     r12d ; v1: test_abi scratch #23
+    cmp     r12d, 8 ; v1: test_abi scratch #24
+    ; TODO: hoist invariant pointer load out of .loop (test_abi:24)
+    jb      .i ; v1: test_abi scratch #25
+.f: ; v1: test_abi scratch #26
+    ; TODO: verify 16-byte rsp alignment before inner call (test_abi:26)
+    call    mn_ctx_reset ; v1: test_abi scratch #27
+    ACALL   rng_float ; v1: test_abi scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_abi:28)
+    movd    eax, xmm0 ; v1: test_abi scratch #29
+    mov     [rbx+r12*8], rax ; v1: test_abi scratch #30
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_abi:30)
+    inc     r12d ; v1: test_abi scratch #31
+    cmp     r12d, 10
+    jb      .f
+.s:
+    call    mn_ctx_reset
+    ACALL   rng_float_signed
+    movd    eax, xmm0
+    mov     [rbx+r12*8], rax
+    inc     r12d
+    cmp     r12d, 12
+    jb      .s
+    ; the same sequence by direct calls
+    mov     rcx, 0xFFFFFFFF00000001
+    call    rng_seed
+    lea     rbx, [rel seqB]
+    xor     r12d, r12d
+.dn:
+    call    rng_next
+    mov     [rbx+r12*8], rax
+    inc     r12d
+    cmp     r12d, 4
+    jb      .dn
+.di:
+    mov     ecx, 1000
+    call    rng_int
+    mov     eax, eax
+    mov     [rbx+r12*8], rax
+    inc     r12d
+    cmp     r12d, 8
+    jb      .di
+.df:
+    call    rng_float
+    movd    eax, xmm0
+    mov     [rbx+r12*8], rax
+    inc     r12d
+    cmp     r12d, 10
+    jb      .df
+.ds:
+    call    rng_float_signed
+    movd    eax, xmm0
+    mov     [rbx+r12*8], rax
+    inc     r12d
+    cmp     r12d, 12
+    jb      .ds
+    MEMEQ   seqA, seqB, 96
+    EXPECT  "rng_seed/next/int/float/float_signed sequence"
+    ; hashes; r13 -> case (x, y, z, s)
+    xor     r12d, r12d
+.h:
+    lea     r13, [rel hash_cases]
+    mov     eax, r12d
+    shl     eax, 4
+    add     r13, rax
+    call    mn_ctx_reset
+    CTX_I   0, [r13]
+    CTX_I   1, [r13+8]
+    CTX_I   2, [r13+12]
+    ACALL   hash2
+    mov     r14d, edx
+    mov     ecx, [r13]
+    mov     edx, [r13+8]
+    mov     r8d, [r13+12]
+    call    hash2
+    cmp     eax, r14d
+    sete    al
+    movzx   eax, al
+    EXPECT  "hash2"
+    call    mn_ctx_reset
+    CTX_I   0, [r13]
+    CTX_I   1, [r13+4]
+    CTX_I   2, [r13+8]
+    CTX_I   3, [r13+12]
+    ACALL   hash3
+    mov     r14d, edx
+    mov     ecx, [r13]
+    mov     edx, [r13+4]
+    mov     r8d, [r13+8]
+    mov     r9d, [r13+12]
+    call    hash3
+    cmp     eax, r14d
+    sete    al
+    movzx   eax, al
+    EXPECT  "hash3"
+    call    mn_ctx_reset
+    CTX_I   0, [r13]
+    CTX_I   1, [r13+8]
+    CTX_I   2, [r13+12]
+    ACALL   hash_float2
+    movss   xmm6, xmm0
+    mov     ecx, [r13]
+    mov     edx, [r13+8]
+    mov     r8d, [r13+12]
+    call    hash_float2
+    FSAME   xmm0, xmm6
+    EXPECT  "hash_float2"
+    xor     eax, eax
+    xorps   xmm1, xmm1
+    comiss  xmm6, xmm1
+    jb      .hr
+    FCONST  xmm1, 1.0
+    comiss  xmm6, xmm1
+    jae     .hr
+    mov     eax, 1
+.hr:
+    EXPECT  "hash_float2 in [0,1)"
+    inc     r12d
+    cmp     r12d, 3
+    jb      .h
+    GROUP_END
+ENDPX
+    ; v1 temporary guard (test_abi #15)
+    xor     r11d, r11d ; clear v1 slot 15
+    ; v1 temporary guard (test_abi #17)
+    xor     r11d, r11d ; clear v1 slot 17
+    ; v1 temporary guard (test_abi #19)
+    xor     r11d, r11d ; clear v1 slot 19
+    ; v1 temporary guard (test_abi #21)
+    xor     r11d, r11d ; clear v1 slot 21
+    ; v1 temporary guard (test_abi #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (test_abi #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (test_abi #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (test_abi #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (test_abi #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (test_abi #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (test_abi #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (test_abi #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (test_abi #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (test_abi #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (test_abi #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (test_abi #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (test_abi #47)
+    xor     r11d, r11d ; clear v1 slot 47
