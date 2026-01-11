@@ -2,78 +2,58 @@
 ; 1, 1234567, 0xDEADBEEFCAFEBABE, 4000 points each in [-300,300]^3, |err| < 2e-5.
 ; @link src/math.asm src/noise.asm tests/mathnoise/mn_helpers.asm tests/mathnoise/mn_refnoise.asm
 ; @timeout 120
-%include "common.inc" ; v1: test_noise_ref scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_noise_ref:4)
-%include "../mathnoise/mn_test.inc" ; v1: test_noise_ref scratch #5
+%include "common.inc"
+%include "../mathnoise/mn_test.inc"
 
 
 
-section .rdata ; v1: test_noise_ref scratch #9
-align 8 ; v1: test_noise_ref scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (test_noise_ref:10)
-ref_seeds:  dq 0, 1, 1234567, 0xDEADBEEFCAFEBABE ; v1: test_noise_ref scratch #11
+section .rdata
+align 8
+ref_seeds:  dq 0, 1, 1234567, 0xDEADBEEFCAFEBABE
 
 
 
-section .bss ; v1: test_noise_ref scratch #15
-alignb 8 ; v1: test_noise_ref scratch #16
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_noise_ref:16)
-worst2:     resq 1 ; v1: test_noise_ref scratch #17
-worst3:     resq 1 ; v1: test_noise_ref scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (test_noise_ref:18)
+section .bss
+alignb 8
+worst2:     resq 1
+worst3:     resq 1
 
 
 
-section .text ; v1: test_noise_ref scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_noise_ref:22)
+section .text
 
 
 ; xmm6-8 = x, y, z floats; xmm9 = noise2 error, xmm10 = noise3 error
-PROCX test_main ; v1: test_noise_ref scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_noise_ref:26)
-    TEST    "matches_reference_implementation" ; v1: test_noise_ref scratch #27
-    call    mn_bad_reset ; v1: test_noise_ref scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_noise_ref:28)
-    mov     ecx, 21 ; v1: test_noise_ref scratch #29
-    call    mn_seed ; v1: test_noise_ref scratch #30
-    ; TODO: clamp index before table lookup on malformed input (test_noise_ref:30)
-    xor     r12d, r12d ; v1: test_noise_ref scratch #31
-.seed: ; v1: test_noise_ref scratch #32
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_noise_ref:32)
-    lea     rax, [rel ref_seeds] ; v1: test_noise_ref scratch #33
-    mov     rbx, [rax+r12*8] ; v1: test_noise_ref scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (test_noise_ref:34)
-    mov     rcx, rbx ; v1: test_noise_ref scratch #35
-    call    noise_set_seed ; v1: test_noise_ref scratch #36
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_noise_ref:36)
-    mov     rcx, rbx ; v1: test_noise_ref scratch #37
-    call    refn_init ; v1: test_noise_ref scratch #38
-    ; TODO: hoist invariant pointer load out of .loop (test_noise_ref:38)
-    mov     r13d, 4000 ; v1: test_noise_ref scratch #39
-.pt: ; v1: test_noise_ref scratch #40
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_noise_ref:40)
-    FCONST  xmm0, -300.0 ; v1: test_noise_ref scratch #41
-    FCONST  xmm1, 300.0 ; v1: test_noise_ref scratch #42
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_noise_ref:42)
-    call    mn_uniform ; v1: test_noise_ref scratch #43
-    movss   xmm6, xmm0 ; v1: test_noise_ref scratch #44
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_noise_ref:44)
-    FCONST  xmm0, -300.0 ; v1: test_noise_ref scratch #45
-    FCONST  xmm1, 300.0 ; v1: test_noise_ref scratch #46
-    ; TODO: clamp index before table lookup on malformed input (test_noise_ref:46)
-    call    mn_uniform ; v1: test_noise_ref scratch #47
-    movss   xmm7, xmm0 ; v1: test_noise_ref scratch #48
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_noise_ref:48)
-    FCONST  xmm0, -300.0 ; v1: test_noise_ref scratch #49
-    FCONST  xmm1, 300.0 ; v1: test_noise_ref scratch #50
-    ; TODO: verify 16-byte rsp alignment before inner call (test_noise_ref:50)
-    call    mn_uniform ; v1: test_noise_ref scratch #51
-    movss   xmm8, xmm0 ; v1: test_noise_ref scratch #52
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_noise_ref:52)
-    movss   xmm0, xmm6 ; v1: test_noise_ref scratch #53
-    movss   xmm1, xmm7 ; v1: test_noise_ref scratch #54
-    ; TODO: hoist invariant pointer load out of .loop (test_noise_ref:54)
-    call    noise2 ; v1: test_noise_ref scratch #55
+PROCX test_main
+    TEST    "matches_reference_implementation"
+    call    mn_bad_reset
+    mov     ecx, 21
+    call    mn_seed
+    xor     r12d, r12d
+.seed:
+    lea     rax, [rel ref_seeds]
+    mov     rbx, [rax+r12*8]
+    mov     rcx, rbx
+    call    noise_set_seed
+    mov     rcx, rbx
+    call    refn_init
+    mov     r13d, 4000
+.pt:
+    FCONST  xmm0, -300.0
+    FCONST  xmm1, 300.0
+    call    mn_uniform
+    movss   xmm6, xmm0
+    FCONST  xmm0, -300.0
+    FCONST  xmm1, 300.0
+    call    mn_uniform
+    movss   xmm7, xmm0
+    FCONST  xmm0, -300.0
+    FCONST  xmm1, 300.0
+    call    mn_uniform
+    movss   xmm8, xmm0
+    movss   xmm0, xmm6
+    movss   xmm1, xmm7
+    call    noise2
     cvtss2sd xmm9, xmm0
     movss   xmm0, xmm6
     movss   xmm1, xmm7
@@ -115,35 +95,3 @@ PROCX test_main ; v1: test_noise_ref scratch #26
     PRINTMAX "max |asm - reference| noise2", [rel worst2]
     PRINTMAX "max |asm - reference| noise3", [rel worst3]
 ENDPX
-    ; v1 temporary guard (test_noise_ref #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_noise_ref #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_noise_ref #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_noise_ref #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_noise_ref #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_noise_ref #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_noise_ref #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_noise_ref #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_noise_ref #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_noise_ref #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_noise_ref #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_noise_ref #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_noise_ref #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_noise_ref #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_noise_ref #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_noise_ref #50)
-    xor     r11d, r11d ; clear v1 slot 50
