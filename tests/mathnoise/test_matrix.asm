@@ -520,66 +520,47 @@ ENDPX
 
 
 ; a*x+b*y+c*z+d against dP
-LEAF plane_dot ; v1: test_matrix scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_matrix:2)
-    shl     ecx, 5 ; v1: test_matrix scratch #3
-    lea     rax, [rel dP] ; v1: test_matrix scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (test_matrix:4)
-    add     rax, rcx ; v1: test_matrix scratch #5
-    mulsd   xmm0, [rax] ; v1: test_matrix scratch #6
-    ; TODO: clamp index before table lookup on malformed input (test_matrix:6)
-    mulsd   xmm1, [rax+8] ; v1: test_matrix scratch #7
-    addsd   xmm0, xmm1 ; v1: test_matrix scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_matrix:8)
-    mulsd   xmm2, [rax+16] ; v1: test_matrix scratch #9
-    addsd   xmm0, xmm2 ; v1: test_matrix scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_matrix:10)
-    addsd   xmm0, [rax+24] ; v1: test_matrix scratch #11
-    ret ; v1: test_matrix scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (test_matrix:12)
+LEAF plane_dot
+    shl     ecx, 5
+    lea     rax, [rel dP]
+    add     rax, rcx
+    mulsd   xmm0, [rax]
+    mulsd   xmm1, [rax+8]
+    addsd   xmm0, xmm1
+    mulsd   xmm2, [rax+16]
+    addsd   xmm0, xmm2
+    addsd   xmm0, [rax+24]
+    ret
 
 
 
 ; 40 cameras x 250 boxes: aabb p-vertex ref, centres inside the clip volume must never
 ; get culled, sphere ref. xmm6-8 centre, xmm9 h (floats)
-PROCX mx_frustum_cull, 32 ; v1: test_matrix scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_matrix:18)
-    TEST    "frustum_aabb_and_sphere" ; v1: test_matrix scratch #19
-    call    mn_bad_reset ; v1: test_matrix scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_matrix:20)
-    mov     ecx, 13 ; v1: test_matrix scratch #21
-    call    mn_seed ; v1: test_matrix scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_matrix:22)
-    mov     r12d, 40 ; v1: test_matrix scratch #23
-.cam: ; v1: test_matrix scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (test_matrix:24)
-    FCONST  xmm0, -180.0 ; v1: test_matrix scratch #25
-    FCONST  xmm1, 180.0 ; v1: test_matrix scratch #26
-    ; TODO: clamp index before table lookup on malformed input (test_matrix:26)
-    call    mn_uniform ; v1: test_matrix scratch #27
-    movss   xmm6, xmm0 ; v1: test_matrix scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_matrix:28)
-    FCONST  xmm0, -60.0 ; v1: test_matrix scratch #29
-    FCONST  xmm1, 60.0 ; v1: test_matrix scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_matrix:30)
-    call    mn_uniform ; v1: test_matrix scratch #31
-    movss   xmm1, xmm0 ; v1: test_matrix scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (test_matrix:32)
-    movss   xmm0, xmm6 ; v1: test_matrix scratch #33
-    call    camera ; v1: test_matrix scratch #34
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_matrix:34)
-    lea     rcx, [rel fPl] ; v1: test_matrix scratch #35
-    lea     rdx, [rel fVP] ; v1: test_matrix scratch #36
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_matrix:36)
-    call    frustum_extract ; v1: test_matrix scratch #37
-    lea     rcx, [rel dP] ; v1: test_matrix scratch #38
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_matrix:38)
-    lea     rdx, [rel fPl] ; v1: test_matrix scratch #39
-    mov     r8d, 24 ; v1: test_matrix scratch #40
-    ; TODO: verify 16-byte rsp alignment before inner call (test_matrix:40)
-    call    mn_f2d ; v1: test_matrix scratch #41
-    mov     r13d, 250 ; v1: test_matrix scratch #42
-    ; TODO: clamp index before table lookup on malformed input (test_matrix:42)
+PROCX mx_frustum_cull, 32
+    TEST    "frustum_aabb_and_sphere"
+    call    mn_bad_reset
+    mov     ecx, 13
+    call    mn_seed
+    mov     r12d, 40
+.cam:
+    FCONST  xmm0, -180.0
+    FCONST  xmm1, 180.0
+    call    mn_uniform
+    movss   xmm6, xmm0
+    FCONST  xmm0, -60.0
+    FCONST  xmm1, 60.0
+    call    mn_uniform
+    movss   xmm1, xmm0
+    movss   xmm0, xmm6
+    call    camera
+    lea     rcx, [rel fPl]
+    lea     rdx, [rel fVP]
+    call    frustum_extract
+    lea     rcx, [rel dP]
+    lea     rdx, [rel fPl]
+    mov     r8d, 24
+    call    mn_f2d
+    mov     r13d, 250
 .box:
     FCONST  xmm0, -120.0
     FCONST  xmm1, 120.0
@@ -687,35 +668,124 @@ PROCX mx_frustum_cull, 32 ; v1: test_matrix scratch #18
     addsd   xmm0, xmm1
     cvtss2sd xmm1, [rax+32]
     cvtss2sd xmm2, xmm8
-    ; v1 temporary guard (test_matrix #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (test_matrix #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (test_matrix #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (test_matrix #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (test_matrix #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (test_matrix #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (test_matrix #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (test_matrix #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (test_matrix #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (test_matrix #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (test_matrix #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (test_matrix #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (test_matrix #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (test_matrix #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (test_matrix #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (test_matrix #49)
-    xor     r11d, r11d ; clear v1 slot 49
+    mulsd   xmm1, xmm2
+    addsd   xmm0, xmm1
+    cvtss2sd xmm1, [rax+48]
+    addsd   xmm0, xmm1
+    movsd   LOC(rsi*8), xmm0
+    inc     esi
+    cmp     esi, 4
+    jb      .ci
+    movsd   xmm3, LOC(24)
+    xorpd   xmm4, xmm4
+    subsd   xmm4, xmm3
+    xor     esi, esi
+.cc:
+    movsd   xmm0, LOC(rsi*8)
+    ucomisd xmm0, xmm4
+    jb      .outside
+    ucomisd xmm3, xmm0
+    jb      .outside
+    inc     esi
+    cmp     esi, 3
+    jb      .cc
+    cmp     r14d, 1
+    je      .in1
+    cvtss2sd xmm0, xmm6
+    cvtss2sd xmm1, xmm7
+    cvtss2sd xmm2, xmm8
+    NOTE    "box with centre inside the frustum culled"
+.in1:
+    lea     rcx, [rel fPl]
+    movss   xmm1, xmm6
+    movss   xmm2, xmm7
+    movss   xmm3, xmm8
+    mov     dword [rsp+32], 0
+    call    frustum_test_sphere
+    cmp     eax, 1
+    je      .outside
+    cvtss2sd xmm0, xmm6
+    cvtss2sd xmm1, xmm7
+    cvtss2sd xmm2, xmm8
+    NOTE    "point inside the frustum culled by sphere test (r=0)"
+.outside:
+    ; sphere reference: every plane distance >= -h
+    mov     r15d, 1
+    cvtss2sd xmm10, xmm9
+    xorpd   xmm11, xmm11
+    subsd   xmm11, xmm10
+    xor     esi, esi
+.sp:
+    cvtss2sd xmm0, xmm6
+    cvtss2sd xmm1, xmm7
+    cvtss2sd xmm2, xmm8
+    mov     ecx, esi
+    call    plane_dot
+    ucomisd xmm0, xmm11
+    jae     .spn
+    xor     r15d, r15d
+    jmp     .spd
+.spn:
+    inc     esi
+    cmp     esi, 6
+    jb      .sp
+.spd:
+    lea     rcx, [rel fPl]
+    movss   xmm1, xmm6
+    movss   xmm2, xmm7
+    movss   xmm3, xmm8
+    movss   [rsp+32], xmm9
+    call    frustum_test_sphere
+    cmp     eax, r15d
+    je      .sph_ok
+    cvtss2sd xmm0, xmm6
+    cvtss2sd xmm1, xmm7
+    cvtss2sd xmm2, xmm9
+    NOTE    "sphere visibility differs from reference: x, y, r"
+.sph_ok:
+    dec     r13d
+    jnz     .box
+    dec     r12d
+    jnz     .cam
+    CHECK_BAD "aabb == p-vertex reference, conservative, sphere == reference"
+    mov     eax, [rel vis_count]
+    xor     ebx, ebx
+    cmp     eax, 100
+    jb      .vc
+    cmp     eax, 9900
+    ja      .vc
+    mov     ebx, 1
+.vc:
+    CHECK_TRUE ebx, "the 10000 random boxes exercise both visible and culled"
+    cvtsi2sd xmm0, dword [rel vis_count]
+    PRINTMAX "visible boxes of 10000", xmm0
+    ; camera looking down -Z
+    xorps   xmm0, xmm0
+    xorps   xmm1, xmm1
+    call    camera
+    lea     rcx, [rel fPl]
+    lea     rdx, [rel fVP]
+    call    frustum_extract
+    lea     rcx, [rel fPl]
+    lea     rdx, [rel box_front]
+    call    frustum_test_aabb
+    CHECK_EQ32 eax, 1, "box in front (z -11..-9) visible"
+    lea     rcx, [rel fPl]
+    lea     rdx, [rel box_behind]
+    call    frustum_test_aabb
+    CHECK_EQ32 eax, 0, "box behind (z 9..11) culled"
+    lea     rcx, [rel fPl]
+    xorps   xmm1, xmm1
+    xorps   xmm2, xmm2
+    FCONST  xmm3, -10.0
+    mov     dword [rsp+32], __?float32?__(1.0)
+    call    frustum_test_sphere
+    CHECK_EQ32 eax, 1, "sphere in front visible"
+    lea     rcx, [rel fPl]
+    xorps   xmm1, xmm1
+    xorps   xmm2, xmm2
+    FCONST  xmm3, 10.0
+    mov     dword [rsp+32], __?float32?__(1.0)
+    call    frustum_test_sphere
+    CHECK_EQ32 eax, 0, "sphere behind culled"
+ENDPX
