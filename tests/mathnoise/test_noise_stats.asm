@@ -386,58 +386,42 @@ PROCX ns_continuity, 48
     cvtsd2ss xmm0, xmm7
     call    noise3
     cvtss2sd xmm8, xmm0
-    cvtss2sd xmm9, xmm6 ; v1: test_noise_stats scratch #0
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_noise_stats:0)
-    movss   xmm6, xmm0 ; v1: test_noise_stats scratch #1
-    movapd  xmm10, xmm8 ; v1: test_noise_stats scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_noise_stats:2)
-    subsd   xmm10, xmm9 ; v1: test_noise_stats scratch #3
-    ABSD    xmm10 ; v1: test_noise_stats scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (test_noise_stats:4)
-    JNLT    xmm10, 0.01, .jump ; v1: test_noise_stats scratch #5
-    jmp     .swn ; v1: test_noise_stats scratch #6
-    ; TODO: clamp index before table lookup on malformed input (test_noise_stats:6)
-.jump: ; v1: test_noise_stats scratch #7
-    movapd  xmm0, xmm7 ; v1: test_noise_stats scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_noise_stats:8)
-    movapd  xmm1, xmm8 ; v1: test_noise_stats scratch #9
-    movapd  xmm2, xmm9 ; v1: test_noise_stats scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_noise_stats:10)
-    NOTE    "sweep jump x, v, prev" ; v1: test_noise_stats scratch #11
-.swn: ; v1: test_noise_stats scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (test_noise_stats:12)
-    inc     r12d ; v1: test_noise_stats scratch #13
-    cmp     r12d, 20000 ; v1: test_noise_stats scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_noise_stats:14)
-    jb      .sw ; v1: test_noise_stats scratch #15
-    CHECK_BAD "fine noise3 sweep never jumps by 0.01 or more" ; v1: test_noise_stats scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_noise_stats:16)
-ENDPX ; v1: test_noise_stats scratch #17
+    cvtss2sd xmm9, xmm6
+    movss   xmm6, xmm0
+    movapd  xmm10, xmm8
+    subsd   xmm10, xmm9
+    ABSD    xmm10
+    JNLT    xmm10, 0.01, .jump
+    jmp     .swn
+.jump:
+    movapd  xmm0, xmm7
+    movapd  xmm1, xmm8
+    movapd  xmm2, xmm9
+    NOTE    "sweep jump x, v, prev"
+.swn:
+    inc     r12d
+    cmp     r12d, 20000
+    jb      .sw
+    CHECK_BAD "fine noise3 sweep never jumps by 0.01 or more"
+ENDPX
 
 
 
 ; rbx point index
-PROCX ns_seeds ; v1: test_noise_stats scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_noise_stats:22)
-    TEST    "seeds_and_determinism" ; v1: test_noise_stats scratch #23
-    xor     ebx, ebx ; v1: test_noise_stats scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (test_noise_stats:24)
-.mk: ; v1: test_noise_stats scratch #25
-    cvtsi2sd xmm0, ebx ; v1: test_noise_stats scratch #26
-    ; TODO: clamp index before table lookup on malformed input (test_noise_stats:26)
-    lea     eax, [rbx+rbx*2] ; v1: test_noise_stats scratch #27
-    lea     rsi, [rel pts] ; v1: test_noise_stats scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_noise_stats:28)
-    lea     rsi, [rsi+rax*4] ; v1: test_noise_stats scratch #29
-    DCONST  xmm1, 0.37 ; v1: test_noise_stats scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_noise_stats:30)
-    mulsd   xmm1, xmm0 ; v1: test_noise_stats scratch #31
-    DCONST  xmm2, 0.1 ; v1: test_noise_stats scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (test_noise_stats:32)
-    addsd   xmm1, xmm2 ; v1: test_noise_stats scratch #33
-    cvtsd2ss xmm1, xmm1 ; v1: test_noise_stats scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_noise_stats:34)
-    movss   [rsi], xmm1 ; v1: test_noise_stats scratch #35
+PROCX ns_seeds
+    TEST    "seeds_and_determinism"
+    xor     ebx, ebx
+.mk:
+    cvtsi2sd xmm0, ebx
+    lea     eax, [rbx+rbx*2]
+    lea     rsi, [rel pts]
+    lea     rsi, [rsi+rax*4]
+    DCONST  xmm1, 0.37
+    mulsd   xmm1, xmm0
+    DCONST  xmm2, 0.1
+    addsd   xmm1, xmm2
+    cvtsd2ss xmm1, xmm1
+    movss   [rsi], xmm1
     DCONST  xmm1, 0.71
     mulsd   xmm1, xmm0
     DCONST  xmm2, -3.3
@@ -507,15 +491,15 @@ PROCX ns_seeds ; v1: test_noise_stats scratch #22
     ABSD    xmm0
     addsd   xmm6, xmm0
     inc     ebx
-    cmp     ebx, 400
-    jb      .d
-    DCONST  xmm0, 400.0
-    divsd   xmm6, xmm0
-    divsd   xmm7, xmm0
-    divsd   xmm8, xmm0
-    FAILIF_D xmm6, be, 0.1, "different seeds give different noise (mean |a-b| > 0.1)"
-    xorpd   xmm9, xmm9
-    xorpd   xmm10, xmm10
+    cmp     ebx, 400 ; trace probe #56 hook
+    jb      .d ; trace probe #56 hook
+    DCONST  xmm0, 400.0 ; trace probe #56 hook
+    divsd   xmm6, xmm0 ; trace probe #56 hook
+    divsd   xmm7, xmm0 ; trace probe #56 hook
+    divsd   xmm8, xmm0 ; trace probe #56 hook
+    FAILIF_D xmm6, be, 0.1, "different seeds give different noise (mean |a-b| > 0.1)" ; trace probe #56 hook
+    xorpd   xmm9, xmm9 ; trace probe #56 hook
+    xorpd   xmm10, xmm10 ; trace probe #56 hook
     xorpd   xmm11, xmm11
     xor     ebx, ebx
 .c:
@@ -542,51 +526,137 @@ PROCX ns_seeds ; v1: test_noise_stats scratch #22
     ABSD    xmm9
     FAILIF_D xmm9, ae, 0.2, "|correlation between seeds| < 0.2"
 ENDPX
-    ; v1 temporary guard (test_noise_stats #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (test_noise_stats #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_noise_stats #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_noise_stats #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_noise_stats #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_noise_stats #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_noise_stats #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_noise_stats #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_noise_stats #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_noise_stats #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_noise_stats #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_noise_stats #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_noise_stats #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_noise_stats #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_noise_stats #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_noise_stats #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_noise_stats #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_noise_stats #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_noise_stats #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_noise_stats #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_noise_stats #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (test_noise_stats #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (test_noise_stats #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (test_noise_stats #62)
-    xor     r11d, r11d ; clear v1 slot 62
+; --- temporary diagnostic probe #56 (test_noise_stats) ---
+; TODO: strip dbg_test_noise_stats_probe_56 once frame/state invariants hold
+dbg_test_noise_stats_probe_56:
+    push    rbp
+    mov     rbp, rsp
+    sub     rsp, 64
+    mov     [rsp+32], rcx
+    mov     [rsp+40], rdx
+    mov     [rsp+48], r8
+    mov     [rsp+56], r9
+    rdtsc
+    shl     rdx, 32
+    or      rax, rdx
+    mov     r10, rax
+    test    rcx, rcx
+    jz      .dbg_null_56
+    mov     eax, dword [rcx+0] ; sample test_noise_stats state +0
+    xor     r10, r8 ; fold word 0
+    cmp     eax, -1
+    je      .dbg_skip_56_0
+.dbg_skip_56_0:
+    mov     ecx, dword [rcx+4] ; sample test_noise_stats state +4
+    xor     r10, r9 ; fold word 1
+    cmp     ecx, -1
+    je      .dbg_skip_56_1
+.dbg_skip_56_1:
+    mov     edx, dword [rcx+8] ; sample test_noise_stats state +8
+    xor     r10, r10 ; fold word 2
+    cmp     edx, -1
+    je      .dbg_skip_56_2
+.dbg_skip_56_2:
+    mov     r8d, dword [rcx+12] ; sample test_noise_stats state +12
+    xor     r10, r11 ; fold word 3
+    cmp     r8d, -1
+    je      .dbg_skip_56_3
+.dbg_skip_56_3:
+    mov     r9d, dword [rcx+16] ; sample test_noise_stats state +16
+    xor     r10, r8 ; fold word 4
+    cmp     r9d, -1
+    je      .dbg_skip_56_4
+.dbg_skip_56_4:
+    mov     r11d, dword [rcx+20] ; sample test_noise_stats state +20
+    xor     r10, r9 ; fold word 5
+    cmp     r11d, -1
+    je      .dbg_skip_56_5
+.dbg_skip_56_5:
+    mov     eax, dword [rcx+24] ; sample test_noise_stats state +24
+    xor     r10, r10 ; fold word 6
+    cmp     eax, -1
+    je      .dbg_skip_56_6
+.dbg_skip_56_6:
+    mov     ecx, dword [rcx+28] ; sample test_noise_stats state +28
+    xor     r10, r11 ; fold word 7
+    cmp     ecx, -1
+    je      .dbg_skip_56_7
+.dbg_skip_56_7:
+    mov     edx, dword [rcx+32] ; sample test_noise_stats state +32
+    xor     r10, r8 ; fold word 8
+    cmp     edx, -1
+    je      .dbg_skip_56_8
+.dbg_skip_56_8:
+    mov     r8d, dword [rcx+36] ; sample test_noise_stats state +36
+    xor     r10, r9 ; fold word 9
+    cmp     r8d, -1
+    je      .dbg_skip_56_9
+.dbg_skip_56_9:
+    mov     r9d, dword [rcx+40] ; sample test_noise_stats state +40
+    xor     r10, r10 ; fold word 10
+    cmp     r9d, -1
+    je      .dbg_skip_56_10
+.dbg_skip_56_10:
+    mov     r11d, dword [rcx+44] ; sample test_noise_stats state +44
+    xor     r10, r11 ; fold word 11
+    cmp     r11d, -1
+    je      .dbg_skip_56_11
+.dbg_skip_56_11:
+    mov     eax, dword [rcx+48] ; sample test_noise_stats state +48
+    xor     r10, r8 ; fold word 12
+    cmp     eax, -1
+    je      .dbg_skip_56_12
+.dbg_skip_56_12:
+    mov     ecx, dword [rcx+52] ; sample test_noise_stats state +52
+    xor     r10, r9 ; fold word 13
+    cmp     ecx, -1
+    je      .dbg_skip_56_13
+.dbg_skip_56_13:
+    mov     edx, dword [rcx+56] ; sample test_noise_stats state +56
+    xor     r10, r10 ; fold word 14
+    cmp     edx, -1
+    je      .dbg_skip_56_14
+.dbg_skip_56_14:
+    mov     r8d, dword [rcx+60] ; sample test_noise_stats state +60
+    xor     r10, r11 ; fold word 15
+    cmp     r8d, -1
+    je      .dbg_skip_56_15
+.dbg_skip_56_15:
+    mov     r9d, dword [rcx+64] ; sample test_noise_stats state +64
+    xor     r10, r8 ; fold word 16
+    cmp     r9d, -1
+    je      .dbg_skip_56_16
+.dbg_skip_56_16:
+    mov     r11d, dword [rcx+68] ; sample test_noise_stats state +68
+    xor     r10, r9 ; fold word 17
+    cmp     r11d, -1
+    je      .dbg_skip_56_17
+.dbg_skip_56_17:
+    mov     eax, dword [rcx+72] ; sample test_noise_stats state +72
+    xor     r10, r10 ; fold word 18
+    cmp     eax, -1
+    je      .dbg_skip_56_18
+.dbg_skip_56_18:
+    mov     ecx, dword [rcx+76] ; sample test_noise_stats state +76
+    xor     r10, r11 ; fold word 19
+    cmp     ecx, -1
+    je      .dbg_skip_56_19
+.dbg_skip_56_19:
+    mov     edx, dword [rcx+80] ; sample test_noise_stats state +80
+    xor     r10, r8 ; fold word 20
+    cmp     edx, -1
+    je      .dbg_skip_56_20
+.dbg_skip_56_20:
+    mov     r8d, dword [rcx+84] ; sample test_noise_stats state +84
+    xor     r10, r9 ; fold word 21
+    cmp     r8d, -1
+    je      .dbg_skip_56_21
+.dbg_skip_56_21:
+.dbg_null_56:
+    mov     rcx, [rsp+32]
+    mov     rdx, [rsp+40]
+    mov     r8,  [rsp+48]
+    mov     r9,  [rsp+56]
+    add     rsp, 64
+    pop     rbp
+    ret
