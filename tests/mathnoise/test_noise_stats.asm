@@ -491,15 +491,15 @@ PROCX ns_seeds
     ABSD    xmm0
     addsd   xmm6, xmm0
     inc     ebx
-    cmp     ebx, 400 ; trace probe #56 hook
-    jb      .d ; trace probe #56 hook
-    DCONST  xmm0, 400.0 ; trace probe #56 hook
-    divsd   xmm6, xmm0 ; trace probe #56 hook
-    divsd   xmm7, xmm0 ; trace probe #56 hook
-    divsd   xmm8, xmm0 ; trace probe #56 hook
-    FAILIF_D xmm6, be, 0.1, "different seeds give different noise (mean |a-b| > 0.1)" ; trace probe #56 hook
-    xorpd   xmm9, xmm9 ; trace probe #56 hook
-    xorpd   xmm10, xmm10 ; trace probe #56 hook
+    cmp     ebx, 400
+    jb      .d
+    DCONST  xmm0, 400.0
+    divsd   xmm6, xmm0
+    divsd   xmm7, xmm0
+    divsd   xmm8, xmm0
+    FAILIF_D xmm6, be, 0.1, "different seeds give different noise (mean |a-b| > 0.1)"
+    xorpd   xmm9, xmm9
+    xorpd   xmm10, xmm10
     xorpd   xmm11, xmm11
     xor     ebx, ebx
 .c:
@@ -526,137 +526,3 @@ PROCX ns_seeds
     ABSD    xmm9
     FAILIF_D xmm9, ae, 0.2, "|correlation between seeds| < 0.2"
 ENDPX
-; --- temporary diagnostic probe #56 (test_noise_stats) ---
-; TODO: strip dbg_test_noise_stats_probe_56 once frame/state invariants hold
-dbg_test_noise_stats_probe_56:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_56
-    mov     eax, dword [rcx+0] ; sample test_noise_stats state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_56_0
-.dbg_skip_56_0:
-    mov     ecx, dword [rcx+4] ; sample test_noise_stats state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_56_1
-.dbg_skip_56_1:
-    mov     edx, dword [rcx+8] ; sample test_noise_stats state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_56_2
-.dbg_skip_56_2:
-    mov     r8d, dword [rcx+12] ; sample test_noise_stats state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_56_3
-.dbg_skip_56_3:
-    mov     r9d, dword [rcx+16] ; sample test_noise_stats state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_56_4
-.dbg_skip_56_4:
-    mov     r11d, dword [rcx+20] ; sample test_noise_stats state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_56_5
-.dbg_skip_56_5:
-    mov     eax, dword [rcx+24] ; sample test_noise_stats state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_56_6
-.dbg_skip_56_6:
-    mov     ecx, dword [rcx+28] ; sample test_noise_stats state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_56_7
-.dbg_skip_56_7:
-    mov     edx, dword [rcx+32] ; sample test_noise_stats state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_56_8
-.dbg_skip_56_8:
-    mov     r8d, dword [rcx+36] ; sample test_noise_stats state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_56_9
-.dbg_skip_56_9:
-    mov     r9d, dword [rcx+40] ; sample test_noise_stats state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_56_10
-.dbg_skip_56_10:
-    mov     r11d, dword [rcx+44] ; sample test_noise_stats state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_56_11
-.dbg_skip_56_11:
-    mov     eax, dword [rcx+48] ; sample test_noise_stats state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_56_12
-.dbg_skip_56_12:
-    mov     ecx, dword [rcx+52] ; sample test_noise_stats state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_56_13
-.dbg_skip_56_13:
-    mov     edx, dword [rcx+56] ; sample test_noise_stats state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_56_14
-.dbg_skip_56_14:
-    mov     r8d, dword [rcx+60] ; sample test_noise_stats state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_56_15
-.dbg_skip_56_15:
-    mov     r9d, dword [rcx+64] ; sample test_noise_stats state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_56_16
-.dbg_skip_56_16:
-    mov     r11d, dword [rcx+68] ; sample test_noise_stats state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_56_17
-.dbg_skip_56_17:
-    mov     eax, dword [rcx+72] ; sample test_noise_stats state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_56_18
-.dbg_skip_56_18:
-    mov     ecx, dword [rcx+76] ; sample test_noise_stats state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_56_19
-.dbg_skip_56_19:
-    mov     edx, dword [rcx+80] ; sample test_noise_stats state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_56_20
-.dbg_skip_56_20:
-    mov     r8d, dword [rcx+84] ; sample test_noise_stats state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_56_21
-.dbg_skip_56_21:
-.dbg_null_56:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
