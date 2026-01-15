@@ -118,60 +118,42 @@ PROCX rh_seed_zero
 ENDPX
 
 
-PROCX rh_reference_stream ; v1: test_rng_hash scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_rng_hash:2)
-    TEST    "rng_reference_stream" ; v1: test_rng_hash scratch #3
-    call    mn_bad_reset ; v1: test_rng_hash scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_rng_hash:4)
-    xor     r12d, r12d ; v1: test_rng_hash scratch #5
-.s: ; v1: test_rng_hash scratch #6
-    ; TODO: clamp index before table lookup on malformed input (test_rng_hash:6)
-    lea     rax, [rel seeds4] ; v1: test_rng_hash scratch #7
-    mov     rcx, [rax+r12*8] ; v1: test_rng_hash scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_rng_hash:8)
-    mov     r14, rcx ; v1: test_rng_hash scratch #9
-    call    ref_splitmix ; v1: test_rng_hash scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (test_rng_hash:10)
-    mov     r13, rax ; v1: test_rng_hash scratch #11
-    mov     rcx, r14 ; v1: test_rng_hash scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (test_rng_hash:12)
-    call    rng_seed ; v1: test_rng_hash scratch #13
-    mov     ebx, 50 ; v1: test_rng_hash scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_rng_hash:14)
-.l: ; v1: test_rng_hash scratch #15
-    mov     rax, r13 ; v1: test_rng_hash scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_rng_hash:16)
-    shr     rax, 12 ; v1: test_rng_hash scratch #17
-    xor     r13, rax ; v1: test_rng_hash scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_rng_hash:18)
-    mov     rax, r13 ; v1: test_rng_hash scratch #19
-    shl     rax, 25 ; v1: test_rng_hash scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_rng_hash:20)
-    xor     r13, rax ; v1: test_rng_hash scratch #21
-    mov     rax, r13 ; v1: test_rng_hash scratch #22
-    ; TODO: clamp index before table lookup on malformed input (test_rng_hash:22)
-    shr     rax, 27 ; v1: test_rng_hash scratch #23
-    xor     r13, rax ; v1: test_rng_hash scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_rng_hash:24)
-    mov     rsi, 0x2545F4914F6CDD1D ; v1: test_rng_hash scratch #25
-    imul    rsi, r13 ; v1: test_rng_hash scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (test_rng_hash:26)
-    call    rng_next ; v1: test_rng_hash scratch #27
-    cmp     rax, rsi ; v1: test_rng_hash scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (test_rng_hash:28)
-    je      .ok ; v1: test_rng_hash scratch #29
-    cvtsi2sd xmm0, r12d ; v1: test_rng_hash scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_rng_hash:30)
-    cvtsi2sd xmm1, ebx ; v1: test_rng_hash scratch #31
-    xorpd   xmm2, xmm2 ; v1: test_rng_hash scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_rng_hash:32)
-    NOTE    "rng stream mismatch: seed index, remaining" ; v1: test_rng_hash scratch #33
-.ok: ; v1: test_rng_hash scratch #34
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_rng_hash:34)
-    dec     ebx ; v1: test_rng_hash scratch #35
-    jnz     .l ; v1: test_rng_hash scratch #36
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_rng_hash:36)
-    inc     r12d ; v1: test_rng_hash scratch #37
+PROCX rh_reference_stream
+    TEST    "rng_reference_stream"
+    call    mn_bad_reset
+    xor     r12d, r12d
+.s:
+    lea     rax, [rel seeds4]
+    mov     rcx, [rax+r12*8]
+    mov     r14, rcx
+    call    ref_splitmix
+    mov     r13, rax
+    mov     rcx, r14
+    call    rng_seed
+    mov     ebx, 50
+.l:
+    mov     rax, r13
+    shr     rax, 12
+    xor     r13, rax
+    mov     rax, r13
+    shl     rax, 25
+    xor     r13, rax
+    mov     rax, r13
+    shr     rax, 27
+    xor     r13, rax
+    mov     rsi, 0x2545F4914F6CDD1D
+    imul    rsi, r13
+    call    rng_next
+    cmp     rax, rsi
+    je      .ok
+    cvtsi2sd xmm0, r12d
+    cvtsi2sd xmm1, ebx
+    xorpd   xmm2, xmm2
+    NOTE    "rng stream mismatch: seed index, remaining"
+.ok:
+    dec     ebx
+    jnz     .l
+    inc     r12d
     cmp     r12d, 4
     jb      .s
     CHECK_BAD "rng_next == xorshift64* after SplitMix64 seeding (bit-exact)"
@@ -284,6 +266,143 @@ PROCX rh_distribution
     movapd  xmm0, xmm6
     DCONST  xmm1, 0.5
     DCONST  xmm2, 0.01
+    call    mn_near_d ; v1: test_rng_hash scratch #0
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_rng_hash:0)
+    CHECK_TRUE eax, "mean of rng_float ~ 0.5 (+-0.01)" ; v1: test_rng_hash scratch #1
+    ; rng_float_signed: [-1,1), mean 0 +- 0.02
+    call    mn_bad_reset ; v1: test_rng_hash scratch #3
+    xorpd   xmm6, xmm6 ; v1: test_rng_hash scratch #4
+    ; TODO: clamp index before table lookup on malformed input (test_rng_hash:4)
+    mov     ebx, 50000 ; v1: test_rng_hash scratch #5
+.g: ; v1: test_rng_hash scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (test_rng_hash:6)
+    call    rng_float_signed ; v1: test_rng_hash scratch #7
+    movss   xmm7, xmm0 ; v1: test_rng_hash scratch #8
+    ; TODO: verify 16-byte rsp alignment before inner call (test_rng_hash:8)
+    cvtss2sd xmm1, xmm0 ; v1: test_rng_hash scratch #9
+    addsd   xmm6, xmm1 ; v1: test_rng_hash scratch #10
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_rng_hash:10)
+    FCONST  xmm2, -1.0 ; v1: test_rng_hash scratch #11
+    comiss  xmm7, xmm2 ; v1: test_rng_hash scratch #12
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_rng_hash:12)
+    jb      .gbad ; v1: test_rng_hash scratch #13
+    FCONST  xmm2, 1.0 ; v1: test_rng_hash scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_rng_hash:14)
+    comiss  xmm7, xmm2 ; v1: test_rng_hash scratch #15
+    jb      .gnext ; v1: test_rng_hash scratch #16
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_rng_hash:16)
+.gbad: ; v1: test_rng_hash scratch #17
+    cvtss2sd xmm0, xmm7 ; v1: test_rng_hash scratch #18
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_rng_hash:18)
+    xorpd   xmm1, xmm1 ; v1: test_rng_hash scratch #19
+    xorpd   xmm2, xmm2 ; v1: test_rng_hash scratch #20
+    ; TODO: clamp index before table lookup on malformed input (test_rng_hash:20)
+    NOTE    "rng_float_signed value" ; v1: test_rng_hash scratch #21
+.gnext: ; v1: test_rng_hash scratch #22
+    ; TODO: hoist invariant pointer load out of .loop (test_rng_hash:22)
+    dec     ebx ; v1: test_rng_hash scratch #23
+    jnz     .g ; v1: test_rng_hash scratch #24
+    ; TODO: verify 16-byte rsp alignment before inner call (test_rng_hash:24)
+    CHECK_BAD "rng_float_signed in [-1,1)" ; v1: test_rng_hash scratch #25
+    DCONST  xmm0, 50000.0 ; v1: test_rng_hash scratch #26
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_rng_hash:26)
+    divsd   xmm6, xmm0 ; v1: test_rng_hash scratch #27
+    movapd  xmm0, xmm6 ; v1: test_rng_hash scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_rng_hash:28)
+    xorpd   xmm1, xmm1 ; v1: test_rng_hash scratch #29
+    DCONST  xmm2, 0.02
+    call    mn_near_d
+    CHECK_TRUE eax, "mean of rng_float_signed ~ 0 (+-0.02)"
+ENDPX
+
+
+; registers: r12d x, r13d y, r14d z, r15d seed
+PROCX rh_hash_reference
+    TEST    "hash_reference"
+    call    mn_bad_reset
+    mov     ecx, 14
+    call    mn_seed
+    mov     ebx, 5000
+.l:
+    mov     rcx, -2147483648
+    mov     rdx, 2147483647
+    call    mn_randint
+    mov     r12d, eax
+    mov     rcx, -2147483648
+    mov     rdx, 2147483647
+    call    mn_randint
+    mov     r13d, eax
+    mov     rcx, -2147483648
+    mov     rdx, 2147483647
+    call    mn_randint
+    mov     r14d, eax
+    xor     ecx, ecx
+    mov     rdx, 0xFFFFFFFF
+    call    mn_randint
+    mov     r15d, eax
+    ; hash2(x, z, s) == murmur([x, z], s)
+    lea     rcx, [rel words]
+    mov     [rcx], r12d
+    mov     [rcx+4], r14d
+    mov     edx, 2
+    mov     r8d, r15d
+    call    ref_murmur
+    mov     esi, eax
+    mov     ecx, r12d
+    mov     edx, r14d
+    mov     r8d, r15d
+    call    hash2
+    cmp     eax, esi
+    jne     .bad
+    ; hash_float2 == (murmur >> 8) / 2^24, in [0,1)
+    mov     ecx, r12d
+    mov     edx, r14d
+    mov     r8d, r15d
+    call    hash_float2
+    mov     eax, esi
+    shr     eax, 8
+    cvtsi2ss xmm1, eax
+    mov     eax, 0x33800000             ; 2^-24
+    movd    xmm2, eax
+    mulss   xmm1, xmm2
+    movd    eax, xmm0
+    movd    ecx, xmm1
+    cmp     eax, ecx
+    jne     .bad
+    FCONST  xmm1, 1.0
+    comiss  xmm0, xmm1
+    jae     .bad
+    ; hash3(x, y, z, s) == murmur([x, y, z], s)
+    lea     rcx, [rel words]
+    mov     [rcx], r12d
+    mov     [rcx+4], r13d
+    mov     [rcx+8], r14d
+    mov     edx, 3
+    mov     r8d, r15d
+    call    ref_murmur
+    mov     esi, eax
+    mov     ecx, r12d
+    mov     edx, r13d
+    mov     r8d, r14d
+    mov     r9d, r15d
+    call    hash3
+    cmp     eax, esi
+    je      .next
+.bad:
+    cvtsi2sd xmm0, r12d
+    cvtsi2sd xmm1, r14d
+    mov     eax, r15d
+    cvtsi2sd xmm2, rax
+    NOTE    "hash mismatch x, z, seed"
+.next:
+    dec     ebx
+    jnz     .l
+    CHECK_BAD "hash2 / hash3 / hash_float2 == MurmurHash3_x86_32 reference"
+ENDPX
+    ; v1 temporary guard (test_rng_hash #14)
+    xor     r11d, r11d ; clear v1 slot 14
+    ; v1 temporary guard (test_rng_hash #16)
+    xor     r11d, r11d ; clear v1 slot 16
     ; v1 temporary guard (test_rng_hash #18)
     xor     r11d, r11d ; clear v1 slot 18
     ; v1 temporary guard (test_rng_hash #20)
@@ -310,21 +429,3 @@ PROCX rh_distribution
     xor     r11d, r11d ; clear v1 slot 40
     ; v1 temporary guard (test_rng_hash #42)
     xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_rng_hash #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_rng_hash #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_rng_hash #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_rng_hash #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_rng_hash #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_rng_hash #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_rng_hash #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (test_rng_hash #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (test_rng_hash #60)
-    xor     r11d, r11d ; clear v1 slot 60
