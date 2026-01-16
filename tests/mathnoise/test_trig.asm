@@ -148,52 +148,37 @@ PROCX trig_accuracy
     cvtsd2ss xmm0, xmm6
     call    chk_sincos
     DCONST  xmm0, 1e-4
-    addsd   xmm0, xmm6 ; v1: test_trig scratch #0
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_trig:0)
-    cvtsd2ss xmm0, xmm0 ; v1: test_trig scratch #1
-    call    chk_sincos ; v1: test_trig scratch #2
-    ; TODO: verify 16-byte rsp alignment before inner call (test_trig:2)
-    DCONST  xmm0, -1e-4 ; v1: test_trig scratch #3
-    addsd   xmm0, xmm6 ; v1: test_trig scratch #4
-    ; TODO: hoist invariant pointer load out of .loop (test_trig:4)
-    cvtsd2ss xmm0, xmm0 ; v1: test_trig scratch #5
-    call    chk_sincos ; v1: test_trig scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_trig:6)
-    add     ebx, 7 ; v1: test_trig scratch #7
-    cmp     ebx, 2000 ; v1: test_trig scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_trig:8)
-    jl      .k ; v1: test_trig scratch #9
-    xor     ebx, ebx ; v1: test_trig scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_trig:10)
-.s: ; v1: test_trig scratch #11
-    lea     rax, [rel trig_special] ; v1: test_trig scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_trig:12)
-    movss   xmm0, [rax+rbx*4] ; v1: test_trig scratch #13
-    call    chk_sincos ; v1: test_trig scratch #14
-    ; TODO: clamp index before table lookup on malformed input (test_trig:14)
-    inc     ebx ; v1: test_trig scratch #15
-    cmp     ebx, TRIG_SPECIAL_N ; v1: test_trig scratch #16
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_trig:16)
-    jb      .s ; v1: test_trig scratch #17
-    CHECK_BAD "sin/cos abs error < 2e-6 for |x| <= 1e5" ; v1: test_trig scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (test_trig:18)
-    PRINTMAX "sin/cos max abs err over |x|<1e5", [rel worst] ; v1: test_trig scratch #19
-ENDPX ; v1: test_trig scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (test_trig:20)
+    addsd   xmm0, xmm6
+    cvtsd2ss xmm0, xmm0
+    call    chk_sincos
+    DCONST  xmm0, -1e-4
+    addsd   xmm0, xmm6
+    cvtsd2ss xmm0, xmm0
+    call    chk_sincos
+    add     ebx, 7
+    cmp     ebx, 2000
+    jl      .k
+    xor     ebx, ebx
+.s:
+    lea     rax, [rel trig_special]
+    movss   xmm0, [rax+rbx*4]
+    call    chk_sincos
+    inc     ebx
+    cmp     ebx, TRIG_SPECIAL_N
+    jb      .s
+    CHECK_BAD "sin/cos abs error < 2e-6 for |x| <= 1e5"
+    PRINTMAX "sin/cos max abs err over |x|<1e5", [rel worst]
+ENDPX
 
 
-PROCX trig_huge ; v1: test_trig scratch #23
-    TEST    "sin_cos_huge_arguments" ; v1: test_trig scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_trig:24)
-    call    mn_bad_reset ; v1: test_trig scratch #25
-    mov     qword [rel worst], 0 ; v1: test_trig scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_trig:26)
-    mov     ecx, 2 ; v1: test_trig scratch #27
-    call    mn_seed ; v1: test_trig scratch #28
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_trig:28)
-    mov     ebx, 20000 ; v1: test_trig scratch #29
-.a: ; v1: test_trig scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_trig:30)
+PROCX trig_huge
+    TEST    "sin_cos_huge_arguments"
+    call    mn_bad_reset
+    mov     qword [rel worst], 0
+    mov     ecx, 2
+    call    mn_seed
+    mov     ebx, 20000
+.a:
     FCONST  xmm0, 5.8
     FCONST  xmm1, 38.0
     call    mn_logspread
@@ -282,53 +267,128 @@ PROCX trig_special_cases
     shr     eax, 31
     CHECK_EQ32 eax, 1, "sin(-0) keeps the sign of zero"
 ENDPX
-    ; v1 temporary guard (test_trig #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (test_trig #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (test_trig #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (test_trig #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (test_trig #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (test_trig #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (test_trig #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (test_trig #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (test_trig #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (test_trig #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (test_trig #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (test_trig #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (test_trig #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (test_trig #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (test_trig #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (test_trig #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (test_trig #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (test_trig #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (test_trig #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (test_trig #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (test_trig #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (test_trig #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (test_trig #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (test_trig #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (test_trig #63)
-    xor     r11d, r11d ; clear v1 slot 63
+
+
+PROCX trig_tan
+    TEST    "tan"
+    call    mn_bad_reset
+    mov     ecx, 4
+    call    mn_seed
+    mov     ebx, 20000
+.l:
+    FCONST  xmm0, -50.0
+    FCONST  xmm1, 50.0
+    call    mn_uniform
+    movss   xmm6, xmm0
+    call    ref_sincos
+    movapd  xmm7, xmm1
+    ABSD    xmm7
+    JNLT    xmm7, 1e-3, .ok  ; near a pole -> skip
+    jmp     .next
+.ok:
+    movss   xmm0, xmm6
+    call    ref_tan
+    movapd  xmm8, xmm0
+    movss   xmm0, xmm6
+    call    math_tan
+    cvtss2sd xmm9, xmm0
+    subsd   xmm9, xmm8
+    ABSD    xmm9
+    movapd  xmm10, xmm8
+    ABSD    xmm10
+    DCONST  xmm0, 1.0
+    maxsd   xmm10, xmm0
+    DCONST  xmm0, 2e-6
+    mulsd   xmm10, xmm0
+    divsd   xmm10, xmm7  ; 2e-6*max(1,|tan|)/|cos|
+    ucomisd xmm10, xmm9
+    jp      .bad
+    jae     .next
+.bad:
+    cvtss2sd xmm0, xmm6
+    movapd  xmm1, xmm8
+    movapd  xmm2, xmm9
+    NOTE    "tan x, ref, err"
+.next:
+    dec     ebx
+    jnz     .l
+    CHECK_BAD "tan error <= 2e-6*max(1,|tan|)/|cos| (|cos| >= 1e-3)"
+ENDPX
+
+
+PROCX trig_atan2
+    TEST    "atan2_all_quadrants"
+    call    mn_bad_reset
+    mov     qword [rel worst], 0
+    mov     ecx, 5
+    call    mn_seed
+    mov     ebx, 40000
+.l:
+    FCONST  xmm0, -6.0
+    FCONST  xmm1, 6.0
+    call    mn_logspread
+    movss   xmm6, xmm0
+    FCONST  xmm0, -6.0
+    FCONST  xmm1, 6.0
+    call    mn_logspread
+    movss   xmm7, xmm0
+    movss   xmm0, xmm6
+    movss   xmm1, xmm7
+    call    math_atan2
+    cvtss2sd xmm8, xmm0
+    movss   xmm0, xmm6
+    movss   xmm1, xmm7
+    call    ref_atan2
+    subsd   xmm8, xmm0
+    ABSD    xmm8
+    movsd   xmm0, [rel worst]
+    maxsd   xmm0, xmm8
+    movsd   [rel worst], xmm0
+    JNLT    xmm8, 1e-5, .bad
+    jmp     .next
+.bad:
+    cvtss2sd xmm0, xmm6
+    cvtss2sd xmm1, xmm7
+    movapd  xmm2, xmm8
+    NOTE    "atan2 y, x, err"
+.next:
+    dec     ebx
+    jnz     .l
+    CHECK_BAD "atan2 abs error < 1e-5 over 1e-6 < |y|,|x| < 1e6"
+    ; IEEE special cases
+    call    mn_bad_reset
+    xor     ebx, ebx
+.s:
+    lea     rsi, [rel atan2_special]
+    imul    eax, ebx, 16
+    add     rsi, rax
+    movss   xmm0, [rsi]
+    movss   xmm1, [rsi+4]
+    call    math_atan2
+    movss   xmm6, xmm0
+    cvtss2sd xmm7, xmm0
+    subsd   xmm7, [rsi+8]
+    ABSD    xmm7
+    JNLT    xmm7, 1e-6, .sbad
+    movd    eax, xmm6
+    shr     eax, 31
+    mov     rcx, [rsi+8]
+    shr     rcx, 63
+    cmp     eax, ecx
+    je      .snext
+.sbad:
+    cvtss2sd xmm0, [rsi]
+    cvtss2sd xmm1, [rsi+4]
+    cvtss2sd xmm2, xmm6
+    NOTE    "atan2 special y, x, got"
+.snext:
+    inc     ebx
+    cmp     ebx, ATAN2_SPECIAL_N
+    jb      .s
+    CHECK_BAD "atan2 axes / diagonals / signed zeros / infinities follow IEEE"
+    FBITS   xmm0, 0x7FC00000
+    FCONST  xmm1, 1.0
+    call    math_atan2
+    CHECK_NAN xmm0, "atan2(NaN, 1) is NaN"
+    PRINTMAX "atan2 max abs err", [rel worst]
+ENDPX
