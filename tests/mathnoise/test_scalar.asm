@@ -113,57 +113,40 @@ PROCX sc_floor
 ENDPX
 
 
-PROCX sc_fract ; v1: test_scalar scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_scalar:2)
-    TEST    "fract" ; v1: test_scalar scratch #3
-    call    mn_bad_reset ; v1: test_scalar scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (test_scalar:4)
-    mov     ecx, 9 ; v1: test_scalar scratch #5
-    call    mn_seed ; v1: test_scalar scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_scalar:6)
-    mov     ebx, 20000 ; v1: test_scalar scratch #7
-.l: ; v1: test_scalar scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_scalar:8)
-    FCONST  xmm0, -1e4 ; v1: test_scalar scratch #9
-    FCONST  xmm1, 1e4 ; v1: test_scalar scratch #10
-    ; TODO: clamp index before table lookup on malformed input (test_scalar:10)
-    call    mn_uniform ; v1: test_scalar scratch #11
-    movss   xmm6, xmm0 ; v1: test_scalar scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_scalar:12)
-    call    math_fract ; v1: test_scalar scratch #13
-    cvtss2sd xmm7, xmm0 ; v1: test_scalar scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (test_scalar:14)
-    xorpd   xmm0, xmm0 ; v1: test_scalar scratch #15
-    ucomisd xmm7, xmm0 ; v1: test_scalar scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_scalar:16)
-    jp      .bad ; v1: test_scalar scratch #17
-    jb      .bad ; v1: test_scalar scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_scalar:18)
-    DCONST  xmm0, 1.0 ; v1: test_scalar scratch #19
-    ucomisd xmm7, xmm0 ; v1: test_scalar scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (test_scalar:20)
-    jae     .bad ; v1: test_scalar scratch #21
-    cvtss2sd xmm8, xmm6 ; v1: test_scalar scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_scalar:22)
-    roundsd xmm9, xmm8, 9 ; v1: test_scalar scratch #23
-    movapd  xmm10, xmm8 ; v1: test_scalar scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_scalar:24)
-    subsd   xmm10, xmm9 ; v1: test_scalar scratch #25
-    movapd  xmm0, xmm7 ; v1: test_scalar scratch #26
-    ; TODO: clamp index before table lookup on malformed input (test_scalar:26)
-    subsd   xmm0, xmm10 ; v1: test_scalar scratch #27
-    ABSD    xmm0 ; v1: test_scalar scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_scalar:28)
-    ABSD    xmm8 ; v1: test_scalar scratch #29
-    DCONST  xmm1, 1.0 ; v1: test_scalar scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (test_scalar:30)
-    maxsd   xmm8, xmm1 ; v1: test_scalar scratch #31
-    DCONST  xmm1, 1e-6 ; v1: test_scalar scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_scalar:32)
-    mulsd   xmm8, xmm1 ; v1: test_scalar scratch #33
-    ucomisd xmm0, xmm8 ; v1: test_scalar scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_scalar:34)
-    jb      .next ; v1: test_scalar scratch #35
+PROCX sc_fract
+    TEST    "fract"
+    call    mn_bad_reset
+    mov     ecx, 9
+    call    mn_seed
+    mov     ebx, 20000
+.l:
+    FCONST  xmm0, -1e4
+    FCONST  xmm1, 1e4
+    call    mn_uniform
+    movss   xmm6, xmm0
+    call    math_fract
+    cvtss2sd xmm7, xmm0
+    xorpd   xmm0, xmm0
+    ucomisd xmm7, xmm0
+    jp      .bad
+    jb      .bad                        ; f >= 0
+    DCONST  xmm0, 1.0
+    ucomisd xmm7, xmm0
+    jae     .bad                        ; f < 1
+    cvtss2sd xmm8, xmm6
+    roundsd xmm9, xmm8, 9
+    movapd  xmm10, xmm8
+    subsd   xmm10, xmm9
+    movapd  xmm0, xmm7
+    subsd   xmm0, xmm10
+    ABSD    xmm0
+    ABSD    xmm8
+    DCONST  xmm1, 1.0
+    maxsd   xmm8, xmm1
+    DCONST  xmm1, 1e-6
+    mulsd   xmm8, xmm1                  ; 1e-6 * max(1, |x|)
+    ucomisd xmm0, xmm8
+    jb      .next
 .bad:
     cvtss2sd xmm0, xmm6
     movapd  xmm1, xmm7
@@ -275,53 +258,40 @@ PROCX sc_misc
     call    math_sqrt
     CHECK_FEQ xmm0, 4.0, "sqrt(16) == 4"
 ENDPX
-    ; v1 temporary guard (test_scalar #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (test_scalar #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (test_scalar #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (test_scalar #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (test_scalar #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (test_scalar #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (test_scalar #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (test_scalar #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (test_scalar #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (test_scalar #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (test_scalar #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (test_scalar #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (test_scalar #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (test_scalar #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (test_scalar #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (test_scalar #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (test_scalar #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (test_scalar #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (test_scalar #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (test_scalar #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (test_scalar #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (test_scalar #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (test_scalar #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (test_scalar #63)
-    xor     r11d, r11d ; clear v1 slot 63
-    ; v1 temporary guard (test_scalar #65)
-    xor     r11d, r11d ; clear v1 slot 65
+
+; NEAR_COMP idx, want_double, "msg"   |vec[idx] - want| < 1e-7
+%macro NEAR_COMP 3.nolist
+    lea     rax, [rel vec]
+    cvtss2sd xmm0, [rax+(%1)*4]
+    DCONST  xmm1, %2
+    DCONST  xmm2, 1e-7
+    call    mn_near_d
+    CHECK_TRUE eax, %3
+%endmacro
+
+
+PROCX sc_vec3
+    TEST    "vec3"
+    lea     rcx, [rel vec]
+    mov     dword [rcx], __?float32?__(3.0)
+    mov     dword [rcx+4], __?float32?__(4.0)
+    mov     dword [rcx+8], __?float32?__(12.0)
+    call    vec3_length
+    CHECK_FEQ xmm0, 13.0, "|(3,4,12)| == 13"
+    lea     rcx, [rel vec]
+    call    vec3_normalize
+    NEAR_COMP 0, 0.23076923076923078, "normalize x == 3/13"
+    NEAR_COMP 1, 0.3076923076923077, "normalize y == 4/13"
+    NEAR_COMP 2, 0.9230769230769231, "normalize z == 12/13"
+    lea     rcx, [rel vec]
+    xor     eax, eax
+    mov     [rcx], rax
+    mov     [rcx+8], rax
+    call    vec3_normalize              ; must not produce NaN
+    lea     rax, [rel vec]
+    mov     ecx, [rax]
+    or      ecx, [rax+4]
+    or      ecx, [rax+8]
+    and     ecx, 0x7FFFFFFF             ; +-0 allowed
+    CHECK_EQ32 ecx, 0, "normalize(0,0,0) stays (0,0,0)"
+ENDPX
