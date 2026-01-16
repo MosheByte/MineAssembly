@@ -474,15 +474,15 @@ PROCX rh_avalanche, 16
     mov     r8d, 7
     call    hash2
     mov     ecx, r12d
-    shl     ecx, 6 ; trace probe #57 hook
-    add     ecx, r13d ; trace probe #57 hook
-    lea     rdx, [rel cells] ; trace probe #57 hook
-    mov     [rdx+rcx*4], eax ; trace probe #57 hook
-    inc     r13d ; trace probe #57 hook
-    cmp     r13d, 64 ; trace probe #57 hook
-    jb      .j ; trace probe #57 hook
-    inc     r12d ; trace probe #57 hook
-    cmp     r12d, 64 ; trace probe #57 hook
+    shl     ecx, 6
+    add     ecx, r13d
+    lea     rdx, [rel cells]
+    mov     [rdx+rcx*4], eax
+    inc     r13d
+    cmp     r13d, 64
+    jb      .j
+    inc     r12d
+    cmp     r12d, 64
     jb      .i
     lea     rcx, [rel cells]
     mov     edx, 4096
@@ -509,137 +509,3 @@ PROCX rh_speed_sin
     mulsd   xmm0, xmm1
     PRINTMAX "math_sin ns/call (informational)", xmm0
 ENDPX
-; --- temporary diagnostic probe #57 (test_rng_hash) ---
-; TODO: strip dbg_test_rng_hash_probe_57 once frame/state invariants hold
-dbg_test_rng_hash_probe_57:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_57
-    mov     eax, dword [rcx+0] ; sample test_rng_hash state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_57_0
-.dbg_skip_57_0:
-    mov     ecx, dword [rcx+4] ; sample test_rng_hash state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_57_1
-.dbg_skip_57_1:
-    mov     edx, dword [rcx+8] ; sample test_rng_hash state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_57_2
-.dbg_skip_57_2:
-    mov     r8d, dword [rcx+12] ; sample test_rng_hash state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_57_3
-.dbg_skip_57_3:
-    mov     r9d, dword [rcx+16] ; sample test_rng_hash state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_57_4
-.dbg_skip_57_4:
-    mov     r11d, dword [rcx+20] ; sample test_rng_hash state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_57_5
-.dbg_skip_57_5:
-    mov     eax, dword [rcx+24] ; sample test_rng_hash state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_57_6
-.dbg_skip_57_6:
-    mov     ecx, dword [rcx+28] ; sample test_rng_hash state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_57_7
-.dbg_skip_57_7:
-    mov     edx, dword [rcx+32] ; sample test_rng_hash state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_57_8
-.dbg_skip_57_8:
-    mov     r8d, dword [rcx+36] ; sample test_rng_hash state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_57_9
-.dbg_skip_57_9:
-    mov     r9d, dword [rcx+40] ; sample test_rng_hash state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_57_10
-.dbg_skip_57_10:
-    mov     r11d, dword [rcx+44] ; sample test_rng_hash state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_57_11
-.dbg_skip_57_11:
-    mov     eax, dword [rcx+48] ; sample test_rng_hash state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_57_12
-.dbg_skip_57_12:
-    mov     ecx, dword [rcx+52] ; sample test_rng_hash state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_57_13
-.dbg_skip_57_13:
-    mov     edx, dword [rcx+56] ; sample test_rng_hash state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_57_14
-.dbg_skip_57_14:
-    mov     r8d, dword [rcx+60] ; sample test_rng_hash state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_57_15
-.dbg_skip_57_15:
-    mov     r9d, dword [rcx+64] ; sample test_rng_hash state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_57_16
-.dbg_skip_57_16:
-    mov     r11d, dword [rcx+68] ; sample test_rng_hash state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_57_17
-.dbg_skip_57_17:
-    mov     eax, dword [rcx+72] ; sample test_rng_hash state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_57_18
-.dbg_skip_57_18:
-    mov     ecx, dword [rcx+76] ; sample test_rng_hash state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_57_19
-.dbg_skip_57_19:
-    mov     edx, dword [rcx+80] ; sample test_rng_hash state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_57_20
-.dbg_skip_57_20:
-    mov     r8d, dword [rcx+84] ; sample test_rng_hash state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_57_21
-.dbg_skip_57_21:
-.dbg_null_57:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
