@@ -115,58 +115,42 @@ PROC pw_string
     add  [rel cur_len], ebx
 ENDP
 
-PROC pw_send ; v1: test_mcmap scratch #1
-    mov  eax, [rel pkt_count] ; v1: test_mcmap scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mcmap:2)
-    inc  dword [rel pkt_count] ; v1: test_mcmap scratch #3
-    cmp  eax, MAXPKT ; v1: test_mcmap scratch #4
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mcmap:4)
-    jae  .done ; v1: test_mcmap scratch #5
-    mov  ebx, [rel log_len] ; v1: test_mcmap scratch #6
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mcmap:6)
-    mov  ecx, [rel cur_len] ; v1: test_mcmap scratch #7
-    lea  rdx, [rel pkt_off] ; v1: test_mcmap scratch #8
-    ; TODO: clamp index before table lookup on malformed input (test_mcmap:8)
-    mov  [rdx+rax*4], ebx ; v1: test_mcmap scratch #9
-    lea  rdx, [rel pkt_len] ; v1: test_mcmap scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mcmap:10)
-    mov  [rdx+rax*4], ecx ; v1: test_mcmap scratch #11
-    lea  rdi, [rel log_buf] ; v1: test_mcmap scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (test_mcmap:12)
-    add  rdi, rbx ; v1: test_mcmap scratch #13
-    lea  rsi, [rel cur_buf] ; v1: test_mcmap scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (test_mcmap:14)
-    rep  movsb ; v1: test_mcmap scratch #15
-    mov  ecx, [rel cur_len] ; v1: test_mcmap scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mcmap:16)
-    add  [rel log_len], ecx ; v1: test_mcmap scratch #17
-.done: ; v1: test_mcmap scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mcmap:18)
-ENDP ; v1: test_mcmap scratch #19
+PROC pw_send
+    mov  eax, [rel pkt_count]
+    inc  dword [rel pkt_count]
+    cmp  eax, MAXPKT
+    jae  .done
+    mov  ebx, [rel log_len]
+    mov  ecx, [rel cur_len]
+    lea  rdx, [rel pkt_off]
+    mov  [rdx+rax*4], ebx
+    lea  rdx, [rel pkt_len]
+    mov  [rdx+rax*4], ecx
+    lea  rdi, [rel log_buf]
+    add  rdi, rbx
+    lea  rsi, [rel cur_buf]
+    rep  movsb
+    mov  ecx, [rel cur_len]
+    add  [rel log_len], ecx
+.done:
+ENDP
 
 ; reading back. cursor is a global qword
 ; -> eax varint at cursor, cursor moves on
-align 16 ; v1: test_mcmap scratch #23
-rd_varint: ; v1: test_mcmap scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mcmap:24)
-    mov  r8, [rel cursor] ; v1: test_mcmap scratch #25
-    xor  eax, eax ; v1: test_mcmap scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mcmap:26)
-    xor  ecx, ecx ; v1: test_mcmap scratch #27
-.l: movzx r9d, byte [r8] ; v1: test_mcmap scratch #28
-    ; TODO: clamp index before table lookup on malformed input (test_mcmap:28)
-    inc  r8 ; v1: test_mcmap scratch #29
-    mov  r10d, r9d ; v1: test_mcmap scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mcmap:30)
-    and  r10d, 0x7F ; v1: test_mcmap scratch #31
-    shl  r10d, cl ; v1: test_mcmap scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (test_mcmap:32)
-    or   eax, r10d ; v1: test_mcmap scratch #33
-    add  ecx, 7 ; v1: test_mcmap scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (test_mcmap:34)
-    test r9d, 0x80 ; v1: test_mcmap scratch #35
-    jnz  .l ; v1: test_mcmap scratch #36
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mcmap:36)
+align 16
+rd_varint:
+    mov  r8, [rel cursor]
+    xor  eax, eax
+    xor  ecx, ecx
+.l: movzx r9d, byte [r8]
+    inc  r8
+    mov  r10d, r9d
+    and  r10d, 0x7F
+    shl  r10d, cl
+    or   eax, r10d
+    add  ecx, 7
+    test r9d, 0x80
+    jnz  .l
     mov  [rel cursor], r8
     ret
 
@@ -280,31 +264,187 @@ PROC nbt_skip_pl
     jnz  .bad
     mov  rsi, [rel cursor]
     jmp  .comp
-    ; v1 temporary guard (test_mcmap #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (test_mcmap #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_mcmap #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_mcmap #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_mcmap #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_mcmap #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_mcmap #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_mcmap #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_mcmap #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_mcmap #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_mcmap #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_mcmap #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_mcmap #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_mcmap #42)
-    xor     r11d, r11d ; clear v1 slot 42
+.ok: ; v1: test_mcmap scratch #0
+    ; TODO: clamp index before table lookup on malformed input (test_mcmap:0)
+    mov  [rel cursor], rsi ; v1: test_mcmap scratch #1
+.chk: ; v1: test_mcmap scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mcmap:2)
+    mov  rax, [rel cursor] ; v1: test_mcmap scratch #3
+    cmp  rax, [rel nbt_lim] ; v1: test_mcmap scratch #4
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mcmap:4)
+    ja   .bad ; v1: test_mcmap scratch #5
+    xor  eax, eax ; v1: test_mcmap scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (test_mcmap:6)
+    jmp  .done ; v1: test_mcmap scratch #7
+.bad: ; v1: test_mcmap scratch #8
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mcmap:8)
+    mov  eax, 1 ; v1: test_mcmap scratch #9
+.done: ; v1: test_mcmap scratch #10
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mcmap:10)
+ENDP ; v1: test_mcmap scratch #11
+
+PROC rd_str_eq ; v1: test_mcmap scratch #13
+    mov  rdi, rcx ; v1: test_mcmap scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mcmap:14)
+    call rd_varint ; v1: test_mcmap scratch #15
+    mov  r8, [rel cursor] ; v1: test_mcmap scratch #16
+    ; TODO: hoist invariant pointer load out of .loop (test_mcmap:16)
+    add  [rel cursor], rax ; v1: test_mcmap scratch #17
+    xor  r9d, r9d ; v1: test_mcmap scratch #18
+    ; TODO: clamp index before table lookup on malformed input (test_mcmap:18)
+    xor  ecx, ecx ; v1: test_mcmap scratch #19
+.c: cmp  ecx, eax ; v1: test_mcmap scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mcmap:20)
+    jae  .end ; v1: test_mcmap scratch #21
+    mov  dl, [rdi+rcx] ; v1: test_mcmap scratch #22
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mcmap:22)
+    cmp  dl, [r8+rcx] ; v1: test_mcmap scratch #23
+    jne  .done ; v1: test_mcmap scratch #24
+    ; TODO: verify 16-byte rsp alignment before inner call (test_mcmap:24)
+    inc  ecx ; v1: test_mcmap scratch #25
+    jmp  .c ; v1: test_mcmap scratch #26
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mcmap:26)
+.end: ; v1: test_mcmap scratch #27
+    cmp  byte [rdi+rcx], 0 ; v1: test_mcmap scratch #28
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mcmap:28)
+    jne  .done ; v1: test_mcmap scratch #29
+    mov  r9d, 1 ; v1: test_mcmap scratch #30
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mcmap:30)
+.done: ; v1: test_mcmap scratch #31
+    mov  eax, r9d ; v1: test_mcmap scratch #32
+    ; TODO: hoist invariant pointer load out of .loop (test_mcmap:32)
+ENDP ; v1: test_mcmap scratch #33
+
+; cursor past one string
+align 16 ; v1: test_mcmap scratch #36
+    ; TODO: clamp index before table lookup on malformed input (test_mcmap:36)
+rd_skip_str: ; v1: test_mcmap scratch #37
+    sub  rsp, 8 ; v1: test_mcmap scratch #38
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mcmap:38)
+    call rd_varint ; v1: test_mcmap scratch #39
+    add  [rel cursor], rax ; v1: test_mcmap scratch #40
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mcmap:40)
+    add  rsp, 8 ; v1: test_mcmap scratch #41
+    ret ; v1: test_mcmap scratch #42
+    ; TODO: verify 16-byte rsp alignment before inner call (test_mcmap:42)
+
+; rcx list of zstrs ending in an empty one -> eax 1 based index of the one the
+; string at the cursor equals, 0 = none. cursor moves past it either way
+PROC rd_which ; v1: test_mcmap scratch #46
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mcmap:46)
+    mov  rdi, rcx ; v1: test_mcmap scratch #47
+    mov  r12, [rel cursor]
+    mov  r13d, 1
+.l: cmp  byte [rdi], 0
+    je   .none
+    mov  [rel cursor], r12
+    mov  rcx, rdi
+    call rd_str_eq
+    test eax, eax
+    jnz  .hit
+.skip:
+    inc  rdi
+    cmp  byte [rdi-1], 0
+    jne  .skip
+    inc  r13d
+    jmp  .l
+.hit:
+    mov  eax, r13d
+    jmp  .done
+.none:
+    mov  [rel cursor], r12
+    call rd_skip_str
+    xor  eax, eax
+.done:
+ENDP
+
+; ecx packet index of an update_tags -> eax registry count. walks all of it:
+; tg_total tags, tg_found[] for the spot checks, tg_end 1 = used up exactly
+PROC tags_scan
+    call rd_open
+    mov  r15, rax
+    mov  dword [rel tg_total], 0
+    lea  rdi, [rel tg_found]
+    xor  eax, eax
+    mov  ecx, 5
+    rep  stosd
+    call rd_varint
+    mov  [rel tg_regs], eax
+    mov  r12d, eax
+.reg:
+    test r12d, r12d
+    jz   .end
+    cmp  [rel cursor], r15
+    jae  .end
+    lea  rcx, [rel tg_reg_list]
+    call rd_which
+    mov  r13d, eax
+    call rd_varint
+    mov  r14d, eax
+    add  [rel tg_total], eax
+.tag:
+    test r14d, r14d
+    jz   .reg_next
+    cmp  [rel cursor], r15
+    jae  .end
+    lea  rcx, [rel tg_tag_list]
+    call rd_which
+    mov  esi, eax
+    call rd_varint
+    mov  ebx, eax
+    test r13d, r13d
+    jz   .ids
+    cmp  esi, r13d
+    jne  .ids
+    lea  rcx, [rel tg_found]
+    lea  edx, [rbx+1]
+    mov  [rcx+rsi*4-4], edx
+.ids:
+    test ebx, ebx
+    jz   .tag_next
+    call rd_varint
+    dec  ebx
+    jmp  .ids
+.tag_next:
+    dec  r14d
+    jmp  .tag
+.reg_next:
+    dec  r12d
+    jmp  .reg
+.end:
+    xor  eax, eax
+    cmp  [rel cursor], r15
+    sete al
+    mov  [rel tg_end], eax
+    mov  eax, [rel tg_regs]
+ENDP
+    ; v1 temporary guard (test_mcmap #21)
+    xor     r11d, r11d ; clear v1 slot 21
+    ; v1 temporary guard (test_mcmap #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (test_mcmap #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (test_mcmap #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (test_mcmap #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (test_mcmap #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (test_mcmap #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (test_mcmap #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (test_mcmap #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (test_mcmap #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (test_mcmap #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (test_mcmap #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (test_mcmap #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (test_mcmap #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (test_mcmap #49)
+    xor     r11d, r11d ; clear v1 slot 49
