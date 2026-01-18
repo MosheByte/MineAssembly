@@ -665,68 +665,48 @@ PROC test_main, 64
     mov  ebx, eax
     CHECK_EQ32 ebx, 488, "orange_terracotta"
 
-    mov  ecx, 1087 ; v1: test_mcmap scratch #0
-    ; TODO: verify 16-byte rsp alignment before inner call (test_mcmap:0)
-    call mcmap_item_to_block ; v1: test_mcmap scratch #1
-    mov  ebx, eax ; v1: test_mcmap scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mcmap:2)
-    CHECK_EQ32 ebx, B_BED, "any bed places our bed, unturned" ; v1: test_mcmap scratch #3
-    mov  ecx, 332 ; v1: test_mcmap scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mcmap:4)
-    call mcmap_item_to_block ; v1: test_mcmap scratch #5
-    mov  ebx, eax ; v1: test_mcmap scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mcmap:6)
-    CHECK_EQ32 ebx, B_CHEST, "chest item places the base chest" ; v1: test_mcmap scratch #7
-    mov  ecx, 182 ; v1: test_mcmap scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mcmap:8)
-    call mcmap_item_to_block ; v1: test_mcmap scratch #9
-    mov  ebx, eax ; v1: test_mcmap scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (test_mcmap:10)
-    CHECK_EQ32 ebx, B_LEAVES, "leaves item -> natural id, ticks makes it placed" ; v1: test_mcmap scratch #11
-    mov  ecx, 62 ; v1: test_mcmap scratch #12
-    ; TODO: clamp index before table lookup on malformed input (test_mcmap:12)
-    call mcmap_item_to_block ; v1: test_mcmap scratch #13
-    mov  ebx, eax ; v1: test_mcmap scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mcmap:14)
-    CHECK_EQ32 ebx, B_RED_SAND, "red_sand" ; v1: test_mcmap scratch #15
+    mov  ecx, 1087
+    call mcmap_item_to_block
+    mov  ebx, eax
+    CHECK_EQ32 ebx, B_BED, "any bed places our bed, unturned"
+    mov  ecx, 332
+    call mcmap_item_to_block
+    mov  ebx, eax
+    CHECK_EQ32 ebx, B_CHEST, "chest item places the base chest"
+    mov  ecx, 182
+    call mcmap_item_to_block
+    mov  ebx, eax
+    CHECK_EQ32 ebx, B_LEAVES, "leaves item -> natural id, ticks makes it placed"
+    mov  ecx, 62
+    call mcmap_item_to_block
+    mov  ebx, eax
+    CHECK_EQ32 ebx, B_RED_SAND, "red_sand"
 
-    mov  ecx, 1 ; v1: test_mcmap scratch #17
-    call mcmap_item_to_block ; v1: test_mcmap scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (test_mcmap:18)
-    mov  ebx, eax ; v1: test_mcmap scratch #19
-    CHECK_EQ32 ebx, B_STONE, "stone places stone" ; v1: test_mcmap scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mcmap:20)
-    mov  ecx, MCI_WATER_BUCKET ; v1: test_mcmap scratch #21
-    call mcmap_item_to_block ; v1: test_mcmap scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mcmap:22)
-    mov  ebx, eax ; v1: test_mcmap scratch #23
-    CHECK_EQ32 ebx, B_WATER, "water_bucket" ; v1: test_mcmap scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mcmap:24)
-    mov  ecx, MCI_LAVA_BUCKET ; v1: test_mcmap scratch #25
-    call mcmap_item_to_block ; v1: test_mcmap scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mcmap:26)
-    mov  ebx, eax ; v1: test_mcmap scratch #27
-    CHECK_EQ32 ebx, B_LAVA, "lava_bucket" ; v1: test_mcmap scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (test_mcmap:28)
-    mov  ecx, 947 ; v1: test_mcmap scratch #29
-    call mcmap_item_to_block ; v1: test_mcmap scratch #30
-    ; TODO: clamp index before table lookup on malformed input (test_mcmap:30)
-    mov  ebx, eax ; v1: test_mcmap scratch #31
-    CHECK_EQ32 ebx, 0, "stick places nothing" ; v1: test_mcmap scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mcmap:32)
-    mov  ecx, 953 ; v1: test_mcmap scratch #33
-    call mcmap_item_to_block ; v1: test_mcmap scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (test_mcmap:34)
-    mov  ebx, eax ; v1: test_mcmap scratch #35
-    CHECK_EQ32 ebx, 0, "wheat places nothing" ; v1: test_mcmap scratch #36
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mcmap:36)
-    mov  ecx, 258 ; v1: test_mcmap scratch #37
-    call mcmap_item_to_block ; v1: test_mcmap scratch #38
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mcmap:38)
-    mov  ebx, eax ; v1: test_mcmap scratch #39
-    CHECK_EQ32 ebx, 0, "kelp doesn't pour water" ; v1: test_mcmap scratch #40
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mcmap:40)
-    mov  ecx, 629 ; v1: test_mcmap scratch #41
+    mov  ecx, 1
+    call mcmap_item_to_block
+    mov  ebx, eax
+    CHECK_EQ32 ebx, B_STONE, "stone places stone"
+    mov  ecx, MCI_WATER_BUCKET
+    call mcmap_item_to_block
+    mov  ebx, eax
+    CHECK_EQ32 ebx, B_WATER, "water_bucket"
+    mov  ecx, MCI_LAVA_BUCKET
+    call mcmap_item_to_block
+    mov  ebx, eax
+    CHECK_EQ32 ebx, B_LAVA, "lava_bucket"
+    mov  ecx, 947
+    call mcmap_item_to_block
+    mov  ebx, eax
+    CHECK_EQ32 ebx, 0, "stick places nothing"
+    mov  ecx, 953
+    call mcmap_item_to_block
+    mov  ebx, eax
+    CHECK_EQ32 ebx, 0, "wheat places nothing"
+    mov  ecx, 258
+    call mcmap_item_to_block
+    mov  ebx, eax
+    CHECK_EQ32 ebx, 0, "kelp doesn't pour water"
+    mov  ecx, 629
     call mcmap_item_to_block
     mov  ebx, eax
     CHECK_EQ32 ebx, B_WOOL+14, "red_concrete"
@@ -817,41 +797,142 @@ PROC test_main, 64
     jb   .ids
     CHECK_EQ32 esi, 0, "registry_data before it"
 
-    ; v1 temporary guard (test_mcmap #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_mcmap #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_mcmap #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_mcmap #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_mcmap #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_mcmap #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_mcmap #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_mcmap #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_mcmap #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_mcmap #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_mcmap #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_mcmap #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_mcmap #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_mcmap #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_mcmap #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_mcmap #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_mcmap #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_mcmap #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_mcmap #56)
-    xor     r11d, r11d ; clear v1 slot 56
+    ; biome registry: plains has to sit where MCB_PLAINS says
+    xor  ecx, ecx
+    call rd_open
+    mov  r15, rax
+    lea  rcx, [rel s_biomereg]
+    call rd_str_eq
+    mov  ebx, eax
+    CHECK_EQ32 ebx, 1, "first registry is worldgen/biome"
+    call rd_varint
+    mov  r12d, eax
+    CHECK_EQ32 r12d, MC_BIOME_COUNT, "biome count"
+    xor  r13d, r13d                         ; index
+    mov  r14d, -1                           ; plains at
+    mov  esi, -1                            ; snowy_plains at
+    mov  [rel nbt_lim], r15
+    mov  dword LOC(0), 0                    ; entries whose nbt doesn't parse
+.bio:
+    cmp  r13d, r12d
+    jae  .bio_done
+    mov  rdi, [rel cursor]
+    lea  rcx, [rel s_plains]
+    call rd_str_eq
+    test eax, eax
+    jz   .bio_2
+    mov  r14d, r13d
+.bio_2:
+    mov  [rel cursor], rdi
+    lea  rcx, [rel s_snowy]
+    call rd_str_eq
+    test eax, eax
+    jz   .bio_3
+    mov  esi, r13d
+.bio_3:
+    call rd_entry_nbt
+    add  LOC(0), eax
+    inc  r13d
+    jmp  .bio
+.bio_done:
+    mov  ebx, LOC(0)
+    CHECK_EQ32 ebx, 0, "biome entries with bad nbt"
+    CHECK_EQ32 r14d, MCB_PLAINS, "plains index"
+    CHECK_EQ32 esi, MCB_SNOWY_PLAINS, "snowy_plains index"
+    mov  rbx, [rel cursor]
+    CHECK_EQ rbx, r15, "biome packet fully used"
+
+    ; every registry_data parses exactly, every entry carries its nbt
+    xor  r12d, r12d
+    xor  r13d, r13d                         ; bad packets
+    mov  dword [rel ent_full], 0
+.rp:
+    mov  ecx, r12d
+    call rd_open
+    mov  r15, rax
+    mov  [rel nbt_lim], r15
+    call rd_skip_str
+    call rd_varint
+    mov  r14d, eax
+    add  [rel ent_full], eax
+    test r14d, r14d
+    jz   .rp_bad
+.rp_ent:
+    test r14d, r14d
+    jz   .rp_end
+    call rd_skip_str
+    call rd_entry_nbt
+    test eax, eax
+    jnz  .rp_bad
+    dec  r14d
+    jmp  .rp_ent
+.rp_end:
+    cmp  [rel cursor], r15
+    je   .rp_next
+.rp_bad:
+    inc  r13d
+.rp_next:
+    inc  r12d
+    cmp  r12d, MC_REGISTRY_COUNT
+    jb   .rp
+    CHECK_EQ32 r13d, 0, "registry packets that don't parse"
+    TAGS_OK MC_REGISTRY_COUNT
+
+    TEST "config stream, client has the core pack"
+    mov  dword [rel pkt_count], 0
+    mov  dword [rel log_len], 0
+    xor  ecx, ecx
+    mov  edx, 1
+    call mcmap_send_registries
+    mov  ebx, [rel pkt_count]
+    CHECK_EQ32 ebx, MC_REGISTRY_COUNT+1, "packets sent"
+    lea  r12, [rel pkt_ids]
+    mov  ebx, [r12+MC_REGISTRY_COUNT*4]
+    CHECK_EQ32 ebx, MCP_CONFIGURATION_S2C_TAGS, "tags last"
+    xor  ecx, ecx
+    call rd_open
+    lea  rcx, [rel s_biomereg]
+    call rd_str_eq
+    mov  ebx, eax
+    CHECK_EQ32 ebx, 1, "first registry is worldgen/biome"
+    ; same registries and entries, each one just the name + has_data 0
+    xor  r12d, r12d
+    xor  r13d, r13d                         ; bad packets
+    xor  esi, esi                           ; entries
+.kp:
+    mov  ecx, r12d
+    call rd_open
+    mov  r15, rax
+    lea  rdx, [rel pkt_ids]
+    cmp  dword [rdx+r12*4], MCP_CONFIGURATION_S2C_REGISTRY_DATA
+    jne  .kp_bad
+    call rd_skip_str
+    call rd_varint
+    mov  r14d, eax
+    add  esi, eax
+    test r14d, r14d
+    jz   .kp_bad
+.kp_ent:
+    test r14d, r14d
+    jz   .kp_end
+    call rd_skip_str
+    mov  rax, [rel cursor]
+    cmp  byte [rax], 0
+    jne  .kp_bad
+    inc  qword [rel cursor]
+    dec  r14d
+    jmp  .kp_ent
+.kp_end:
+    cmp  [rel cursor], r15
+    je   .kp_next
+.kp_bad:
+    inc  r13d
+.kp_next:
+    inc  r12d
+    cmp  r12d, MC_REGISTRY_COUNT
+    jb   .kp
+    CHECK_EQ32 r13d, 0, "registry packets with data or junk"
+    mov  ebx, [rel ent_full]
+    CHECK_EQ32 esi, ebx, "same entry count as with nbt"
+    TAGS_OK MC_REGISTRY_COUNT
+ENDP
