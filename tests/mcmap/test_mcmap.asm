@@ -543,68 +543,48 @@ PROC test_main, 64
     STATE_IS MC_STATE_COUNT, B_AIR
     STATE_IS -1, B_AIR
 
-    TEST "round trip every block id" ; v1: test_mcmap scratch #0
-    ; TODO: hoist invariant pointer load out of .loop (test_mcmap:0)
-    xor  esi, esi ; v1: test_mcmap scratch #1
-    xor  r12d, r12d ; v1: test_mcmap scratch #2
-    ; TODO: clamp index before table lookup on malformed input (test_mcmap:2)
-    mov  r13d, -1 ; v1: test_mcmap scratch #3
-.rt: ; v1: test_mcmap scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mcmap:4)
-    cmp  esi, B_FARMLAND ; v1: test_mcmap scratch #5
-    jbe  .rt_do ; v1: test_mcmap scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mcmap:6)
-    cmp  esi, B_WATER ; v1: test_mcmap scratch #7
-    jb   .rt_next ; v1: test_mcmap scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mcmap:8)
-    cmp  esi, B_LAVA_LAST ; v1: test_mcmap scratch #9
-    jbe  .rt_do ; v1: test_mcmap scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mcmap:10)
-    cmp  esi, B_DIR_FIRST ; v1: test_mcmap scratch #11
-    jb   .rt_next ; v1: test_mcmap scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (test_mcmap:12)
-    cmp  esi, B_TERRACOTTA_LAST ; v1: test_mcmap scratch #13
-    ja   .rt_next ; v1: test_mcmap scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mcmap:14)
-.rt_do: ; v1: test_mcmap scratch #15
-    mov  ecx, esi ; v1: test_mcmap scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (test_mcmap:16)
-    call mcmap_block_state ; v1: test_mcmap scratch #17
-    mov  ecx, eax ; v1: test_mcmap scratch #18
-    ; TODO: clamp index before table lookup on malformed input (test_mcmap:18)
-    call mcmap_from_state ; v1: test_mcmap scratch #19
-    cmp  eax, esi ; v1: test_mcmap scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mcmap:20)
-    je   .rt_next ; v1: test_mcmap scratch #21
-    lea  ecx, [rsi-B_CRAFT_TABLE_W] ; v1: test_mcmap scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mcmap:22)
-    cmp  ecx, B_CRAFT_TABLE_E-B_CRAFT_TABLE_W ; v1: test_mcmap scratch #23
-    ja   .rt_bad ; v1: test_mcmap scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mcmap:24)
-    cmp  eax, B_CRAFT_TABLE ; v1: test_mcmap scratch #25
-    je   .rt_next ; v1: test_mcmap scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mcmap:26)
-.rt_bad: ; v1: test_mcmap scratch #27
-    inc  r12d ; v1: test_mcmap scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (test_mcmap:28)
-    cmp  r13d, -1 ; v1: test_mcmap scratch #29
-    jne  .rt_next ; v1: test_mcmap scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mcmap:30)
-    mov  r13d, esi ; v1: test_mcmap scratch #31
-.rt_next: ; v1: test_mcmap scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (test_mcmap:32)
-    inc  esi ; v1: test_mcmap scratch #33
-    cmp  esi, BLOCK_COUNT ; v1: test_mcmap scratch #34
-    ; TODO: clamp index before table lookup on malformed input (test_mcmap:34)
-    jb   .rt ; v1: test_mcmap scratch #35
-    CHECK_EQ32 r12d, 0, "from_state(block_state(b)) == b" ; v1: test_mcmap scratch #36
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mcmap:36)
-    CHECK_EQ32 r13d, -1, "first id that didn't round trip" ; v1: test_mcmap scratch #37
+    TEST "round trip every block id"
+    xor  esi, esi                           ; id
+    xor  r12d, r12d                         ; mismatches
+    mov  r13d, -1                           ; first bad id
+.rt:
+    cmp  esi, B_FARMLAND
+    jbe  .rt_do
+    cmp  esi, B_WATER
+    jb   .rt_next
+    cmp  esi, B_LAVA_LAST
+    jbe  .rt_do
+    cmp  esi, B_DIR_FIRST
+    jb   .rt_next
+    cmp  esi, B_TERRACOTTA_LAST
+    ja   .rt_next
+.rt_do:
+    mov  ecx, esi
+    call mcmap_block_state
+    mov  ecx, eax
+    call mcmap_from_state
+    cmp  eax, esi
+    je   .rt_next
+    lea  ecx, [rsi-B_CRAFT_TABLE_W]          ; java's table can't turn
+    cmp  ecx, B_CRAFT_TABLE_E-B_CRAFT_TABLE_W
+    ja   .rt_bad
+    cmp  eax, B_CRAFT_TABLE
+    je   .rt_next
+.rt_bad:
+    inc  r12d
+    cmp  r13d, -1
+    jne  .rt_next
+    mov  r13d, esi
+.rt_next:
+    inc  esi
+    cmp  esi, BLOCK_COUNT
+    jb   .rt
+    CHECK_EQ32 r12d, 0, "from_state(block_state(b)) == b"
+    CHECK_EQ32 r13d, -1, "first id that didn't round trip"
 
-    TEST "every java state lands on a real block" ; v1: test_mcmap scratch #39
-    xor  esi, esi ; v1: test_mcmap scratch #40
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mcmap:40)
-    xor  r12d, r12d ; v1: test_mcmap scratch #41
+    TEST "every java state lands on a real block"
+    xor  esi, esi
+    xor  r12d, r12d
     mov  r13d, -1
 .sw:
     mov  ecx, esi
@@ -684,6 +664,158 @@ PROC test_main, 64
     call mcmap_block_to_item
     mov  ebx, eax
     CHECK_EQ32 ebx, 488, "orange_terracotta"
+
+    mov  ecx, 1087 ; v1: test_mcmap scratch #0
+    ; TODO: verify 16-byte rsp alignment before inner call (test_mcmap:0)
+    call mcmap_item_to_block ; v1: test_mcmap scratch #1
+    mov  ebx, eax ; v1: test_mcmap scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mcmap:2)
+    CHECK_EQ32 ebx, B_BED, "any bed places our bed, unturned" ; v1: test_mcmap scratch #3
+    mov  ecx, 332 ; v1: test_mcmap scratch #4
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mcmap:4)
+    call mcmap_item_to_block ; v1: test_mcmap scratch #5
+    mov  ebx, eax ; v1: test_mcmap scratch #6
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mcmap:6)
+    CHECK_EQ32 ebx, B_CHEST, "chest item places the base chest" ; v1: test_mcmap scratch #7
+    mov  ecx, 182 ; v1: test_mcmap scratch #8
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mcmap:8)
+    call mcmap_item_to_block ; v1: test_mcmap scratch #9
+    mov  ebx, eax ; v1: test_mcmap scratch #10
+    ; TODO: hoist invariant pointer load out of .loop (test_mcmap:10)
+    CHECK_EQ32 ebx, B_LEAVES, "leaves item -> natural id, ticks makes it placed" ; v1: test_mcmap scratch #11
+    mov  ecx, 62 ; v1: test_mcmap scratch #12
+    ; TODO: clamp index before table lookup on malformed input (test_mcmap:12)
+    call mcmap_item_to_block ; v1: test_mcmap scratch #13
+    mov  ebx, eax ; v1: test_mcmap scratch #14
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mcmap:14)
+    CHECK_EQ32 ebx, B_RED_SAND, "red_sand" ; v1: test_mcmap scratch #15
+
+    mov  ecx, 1 ; v1: test_mcmap scratch #17
+    call mcmap_item_to_block ; v1: test_mcmap scratch #18
+    ; TODO: verify 16-byte rsp alignment before inner call (test_mcmap:18)
+    mov  ebx, eax ; v1: test_mcmap scratch #19
+    CHECK_EQ32 ebx, B_STONE, "stone places stone" ; v1: test_mcmap scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mcmap:20)
+    mov  ecx, MCI_WATER_BUCKET ; v1: test_mcmap scratch #21
+    call mcmap_item_to_block ; v1: test_mcmap scratch #22
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mcmap:22)
+    mov  ebx, eax ; v1: test_mcmap scratch #23
+    CHECK_EQ32 ebx, B_WATER, "water_bucket" ; v1: test_mcmap scratch #24
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mcmap:24)
+    mov  ecx, MCI_LAVA_BUCKET ; v1: test_mcmap scratch #25
+    call mcmap_item_to_block ; v1: test_mcmap scratch #26
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mcmap:26)
+    mov  ebx, eax ; v1: test_mcmap scratch #27
+    CHECK_EQ32 ebx, B_LAVA, "lava_bucket" ; v1: test_mcmap scratch #28
+    ; TODO: hoist invariant pointer load out of .loop (test_mcmap:28)
+    mov  ecx, 947 ; v1: test_mcmap scratch #29
+    call mcmap_item_to_block ; v1: test_mcmap scratch #30
+    ; TODO: clamp index before table lookup on malformed input (test_mcmap:30)
+    mov  ebx, eax ; v1: test_mcmap scratch #31
+    CHECK_EQ32 ebx, 0, "stick places nothing" ; v1: test_mcmap scratch #32
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mcmap:32)
+    mov  ecx, 953 ; v1: test_mcmap scratch #33
+    call mcmap_item_to_block ; v1: test_mcmap scratch #34
+    ; TODO: verify 16-byte rsp alignment before inner call (test_mcmap:34)
+    mov  ebx, eax ; v1: test_mcmap scratch #35
+    CHECK_EQ32 ebx, 0, "wheat places nothing" ; v1: test_mcmap scratch #36
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mcmap:36)
+    mov  ecx, 258 ; v1: test_mcmap scratch #37
+    call mcmap_item_to_block ; v1: test_mcmap scratch #38
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mcmap:38)
+    mov  ebx, eax ; v1: test_mcmap scratch #39
+    CHECK_EQ32 ebx, 0, "kelp doesn't pour water" ; v1: test_mcmap scratch #40
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mcmap:40)
+    mov  ecx, 629 ; v1: test_mcmap scratch #41
+    call mcmap_item_to_block
+    mov  ebx, eax
+    CHECK_EQ32 ebx, B_WOOL+14, "red_concrete"
+    mov  ecx, 442
+    call mcmap_item_to_block
+    mov  ebx, eax
+    CHECK_EQ32 ebx, B_PLANKS, "oak_stairs"
+    mov  ecx, 335
+    call mcmap_item_to_block
+    mov  ebx, eax
+    CHECK_EQ32 ebx, B_FURNACE, "furnace"
+    mov  ecx, MC_ITEM_COUNT
+    call mcmap_item_to_block
+    mov  ebx, eax
+    CHECK_EQ32 ebx, 0, "out of range item"
+
+    TEST "biomes"
+    mov  ecx, BIOME_PLAINS
+    call mcmap_biome
+    mov  ebx, eax
+    CHECK_EQ32 ebx, MCB_PLAINS, "plains"
+    mov  ecx, BIOME_TUNDRA
+    call mcmap_biome
+    mov  ebx, eax
+    CHECK_EQ32 ebx, MCB_SNOWY_PLAINS, "tundra"
+    mov  ecx, BIOME_MOUNTAINS
+    call mcmap_biome
+    mov  ebx, eax
+    CHECK_EQ32 ebx, MCB_WINDSWEPT_HILLS, "mountains"
+    mov  ecx, 99
+    call mcmap_biome
+    mov  ebx, eax
+    CHECK_EQ32 ebx, MCB_PLAINS, "junk biome"
+
+    TEST "abi"
+    lea  rcx, [rel mcmap_from_state]
+    lea  rdx, [rel abi_state]
+    call t_abi_call
+    mov  ebx, ecx
+    mov  esi, eax
+    CHECK_EQ32 ebx, 0, "from_state preserves nonvolatiles"
+    CHECK_EQ32 esi, B_FURNACE, "from_state via abi call"
+    lea  rcx, [rel mcmap_send_registries]
+    lea  rdx, [rel abi_noargs]
+    call t_abi_call
+    mov  ebx, ecx
+    CHECK_EQ32 ebx, 0, "send_registries preserves nonvolatiles"
+
+    TEST "known packs"
+    mov  dword [rel pkt_count], 0
+    mov  dword [rel log_len], 0
+    xor  ecx, ecx
+    call mcmap_send_known_packs
+    mov  ebx, [rel pkt_count]
+    CHECK_EQ32 ebx, 1, "one packet"
+    mov  ebx, [rel pkt_ids]
+    CHECK_EQ32 ebx, MCP_CONFIGURATION_S2C_SELECT_KNOWN_PACKS, "select_known_packs"
+    xor  ecx, ecx
+    call rd_open
+    mov  rbx, [rel cursor]
+    lea  rsi, [rel kp_want]
+    CHECK_MEM rbx, rsi, kp_want_len, "known packs body"
+    lea  rdx, [rel pkt_len]
+    mov  ebx, [rdx]
+    CHECK_EQ32 ebx, kp_want_len, "known packs length"
+
+    TEST "config stream, full nbt"
+    mov  dword [rel pkt_count], 0
+    mov  dword [rel log_len], 0
+    xor  ecx, ecx
+    xor  edx, edx
+    call mcmap_send_registries
+    mov  ebx, [rel pkt_count]
+    CHECK_EQ32 ebx, MC_REGISTRY_COUNT+1, "packets sent"
+    lea  r12, [rel pkt_ids]
+    mov  ebx, [r12+MC_REGISTRY_COUNT*4]
+    CHECK_EQ32 ebx, MCP_CONFIGURATION_S2C_TAGS, "tags last"
+    lea  r12, [rel pkt_ids]
+    xor  esi, esi
+    xor  edi, edi
+.ids:
+    cmp  dword [r12+rdi*4], MCP_CONFIGURATION_S2C_REGISTRY_DATA
+    je   .ids_ok
+    inc  esi
+.ids_ok:
+    inc  edi
+    cmp  edi, MC_REGISTRY_COUNT
+    jb   .ids
+    CHECK_EQ32 esi, 0, "registry_data before it"
 
     ; v1 temporary guard (test_mcmap #20)
     xor     r11d, r11d ; clear v1 slot 20
