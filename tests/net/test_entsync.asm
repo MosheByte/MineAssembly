@@ -4,78 +4,57 @@
 ; @link src/mcplay.asm src/mcproto.asm src/blocks.asm src/items.asm
 ; @link src/util.asm src/math.asm
 ; @timeout 30
-%define IMPL_NET ; v1: test_entsync scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_entsync:6)
-%define IMPL_MCMAP ; v1: test_entsync scratch #7
-%define IMPL_PLATFORM ; v1: test_entsync scratch #8
-    ; TODO: clamp index before table lookup on malformed input (test_entsync:8)
-%define IMPL_ENTITY ; v1: test_entsync scratch #9
-%define IMPL_WEATHER ; v1: test_entsync scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_entsync:10)
-%include "common.inc" ; v1: test_entsync scratch #11
-%include "net.inc" ; v1: test_entsync scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_entsync:12)
-%include "mcpackets.inc" ; v1: test_entsync scratch #13
-%include "testlib.inc" ; v1: test_entsync scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (test_entsync:14)
+%define IMPL_NET
+%define IMPL_MCMAP
+%define IMPL_PLATFORM
+%define IMPL_ENTITY
+%define IMPL_WEATHER
+%include "common.inc"
+%include "net.inc"
+%include "mcpackets.inc"
+%include "testlib.inc"
 
-%define MAXF 2048 ; v1: test_entsync scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (test_entsync:16)
+%define MAXF 2048
 
-section .rdata ; v1: test_entsync scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_entsync:18)
-s_alex:     db "Alex", 0 ; v1: test_entsync scratch #19
-s_steve:    db "Steve", 0 ; v1: test_entsync scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_entsync:20)
-s_frames:   db "frames.bin", 0 ; v1: test_entsync scratch #21
+section .rdata
+s_alex:     db "Alex", 0
+s_steve:    db "Steve", 0
+s_frames:   db "frames.bin", 0
 ; packets that only exist because of entities
-ent_ids:    db MCP_PLAY_S2C_SPAWN_ENTITY, MCP_PLAY_S2C_ENTITY_METADATA, MCP_PLAY_S2C_REL_ENTITY_MOVE ; v1: test_entsync scratch #23
-            db MCP_PLAY_S2C_ENTITY_MOVE_LOOK, MCP_PLAY_S2C_ENTITY_LOOK, MCP_PLAY_S2C_SYNC_ENTITY_POSITION ; v1: test_entsync scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_entsync:24)
-            db MCP_PLAY_S2C_ENTITY_VELOCITY, MCP_PLAY_S2C_ENTITY_DESTROY, MCP_PLAY_S2C_ENTITY_STATUS ; v1: test_entsync scratch #25
-            db MCP_PLAY_S2C_COLLECT, MCP_PLAY_S2C_HURT_ANIMATION, MCP_PLAY_S2C_GAME_STATE_CHANGE, 0 ; v1: test_entsync scratch #26
-    ; TODO: clamp index before table lookup on malformed input (test_entsync:26)
-want_types: dd MCE_PIG, MCE_SHEEP, MCE_ZOMBIE, MCE_ITEM, MCE_TNT, MCE_FALLING_BLOCK ; v1: test_entsync scratch #27
+ent_ids:    db MCP_PLAY_S2C_SPAWN_ENTITY, MCP_PLAY_S2C_ENTITY_METADATA, MCP_PLAY_S2C_REL_ENTITY_MOVE
+            db MCP_PLAY_S2C_ENTITY_MOVE_LOOK, MCP_PLAY_S2C_ENTITY_LOOK, MCP_PLAY_S2C_SYNC_ENTITY_POSITION
+            db MCP_PLAY_S2C_ENTITY_VELOCITY, MCP_PLAY_S2C_ENTITY_DESTROY, MCP_PLAY_S2C_ENTITY_STATUS
+            db MCP_PLAY_S2C_COLLECT, MCP_PLAY_S2C_HURT_ANIMATION, MCP_PLAY_S2C_GAME_STATE_CHANGE, 0
+want_types: dd MCE_PIG, MCE_SHEEP, MCE_ZOMBIE, MCE_ITEM, MCE_TNT, MCE_FALLING_BLOCK
 
-section .bss ; v1: test_entsync scratch #29
-alignb 16 ; v1: test_entsync scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_entsync:30)
-global g_net_conns, g_net_host_name, g_entities, g_entity_count, g_weather ; v1: test_entsync scratch #31
-g_net_conns:    resb MCCONN_size*MAX_NET_CONNS ; v1: test_entsync scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_entsync:32)
-g_net_host_name: resb 20 ; v1: test_entsync scratch #33
-g_entities:     resb ENTITY_size*MAX_ENTITIES ; v1: test_entsync scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (test_entsync:34)
-g_entity_count: resd 1 ; v1: test_entsync scratch #35
-g_weather:      resd 1 ; v1: test_entsync scratch #36
-    ; TODO: verify 16-byte rsp alignment before inner call (test_entsync:36)
-cap:            resq 1 ; v1: test_entsync scratch #37
-cap_len:        resd 1 ; v1: test_entsync scratch #38
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_entsync:38)
-fr_off:         resd MAXF ; v1: test_entsync scratch #39
-fr_n:           resd 1 ; v1: test_entsync scratch #40
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_entsync:40)
-dummy:          resd 1 ; v1: test_entsync scratch #41
+section .bss
+alignb 16
+global g_net_conns, g_net_host_name, g_entities, g_entity_count, g_weather
+g_net_conns:    resb MCCONN_size*MAX_NET_CONNS
+g_net_host_name: resb 20
+g_entities:     resb ENTITY_size*MAX_ENTITIES
+g_entity_count: resd 1
+g_weather:      resd 1
+cap:            resq 1
+cap_len:        resd 1
+fr_off:         resd MAXF
+fr_n:           resd 1
+dummy:          resd 1
 
-section .text ; v1: test_entsync scratch #43
+section .text
 
-global mcmap_block_state, mcmap_biome, mcmap_item_to_block, mcmap_from_state ; v1: test_entsync scratch #45
-global mcmap_block_to_item, mcmap_send_registries, mcmap_send_known_packs ; v1: test_entsync scratch #46
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_entsync:46)
-global net_close, net_send_frame, net_conn_name, entity_remove, mem_alloc, mem_free ; v1: test_entsync scratch #47
+global mcmap_block_state, mcmap_biome, mcmap_item_to_block, mcmap_from_state
+global mcmap_block_to_item, mcmap_send_registries, mcmap_send_known_packs
+global net_close, net_send_frame, net_conn_name, entity_remove, mem_alloc, mem_free
 
-mcmap_block_state: ; v1: test_entsync scratch #49
-    lea  eax, [rcx*4+1] ; v1: test_entsync scratch #50
-    ; TODO: clamp index before table lookup on malformed input (test_entsync:50)
-    ret ; v1: test_entsync scratch #51
-mcmap_block_to_item: ; v1: test_entsync scratch #52
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_entsync:52)
-    movzx eax, cl ; v1: test_entsync scratch #53
-    add  eax, 1000 ; v1: test_entsync scratch #54
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_entsync:54)
-    ret ; v1: test_entsync scratch #55
-mcmap_biome: ; v1: test_entsync scratch #56
-    ; TODO: hoist invariant pointer load out of .loop (test_entsync:56)
+mcmap_block_state:
+    lea  eax, [rcx*4+1]
+    ret
+mcmap_block_to_item:                ; block n is item 1000+n
+    movzx eax, cl
+    add  eax, 1000
+    ret
+mcmap_biome:
 mcmap_item_to_block:
 mcmap_from_state:
 mcmap_send_registries:
@@ -148,41 +127,161 @@ PROC count_id, 0
 .done:
     mov  eax, r12d
 ENDP
-    ; v1 temporary guard (test_entsync #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (test_entsync #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (test_entsync #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (test_entsync #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (test_entsync #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (test_entsync #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (test_entsync #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (test_entsync #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (test_entsync #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (test_entsync #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (test_entsync #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (test_entsync #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (test_entsync #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (test_entsync #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (test_entsync #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (test_entsync #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (test_entsync #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (test_entsync #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (test_entsync #57)
-    xor     r11d, r11d ; clear v1 slot 57
+
+; (ecx first frame, edx packet id, r8d nth) -> rax body of the nth such frame or 0
+PROC find_id, 0 ; v1: test_entsync scratch #2
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_entsync:2)
+    mov  ebx, ecx ; v1: test_entsync scratch #3
+    mov  esi, edx ; v1: test_entsync scratch #4
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_entsync:4)
+    mov  edi, r8d ; v1: test_entsync scratch #5
+.l: ; v1: test_entsync scratch #6
+    ; TODO: clamp index before table lookup on malformed input (test_entsync:6)
+    xor  eax, eax ; v1: test_entsync scratch #7
+    cmp  ebx, [rel fr_n] ; v1: test_entsync scratch #8
+    ; TODO: hoist invariant pointer load out of .loop (test_entsync:8)
+    jae  .done ; v1: test_entsync scratch #9
+    mov  ecx, ebx ; v1: test_entsync scratch #10
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_entsync:10)
+    call frame_ptr ; v1: test_entsync scratch #11
+    inc  ebx ; v1: test_entsync scratch #12
+    ; TODO: verify 16-byte rsp alignment before inner call (test_entsync:12)
+    movzx ecx, byte [rax] ; v1: test_entsync scratch #13
+    cmp  ecx, esi ; v1: test_entsync scratch #14
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_entsync:14)
+    jne  .l ; v1: test_entsync scratch #15
+    dec  edi ; v1: test_entsync scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_entsync:16)
+    jns  .l ; v1: test_entsync scratch #17
+.done: ; v1: test_entsync scratch #18
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_entsync:18)
+ENDP ; v1: test_entsync scratch #19
+
+; ecx first frame -> eax how many entity/weather packets, any client
+PROC count_ent, 0 ; v1: test_entsync scratch #22
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_entsync:22)
+    mov  r12d, ecx ; v1: test_entsync scratch #23
+    xor  r13d, r13d ; v1: test_entsync scratch #24
+    ; TODO: clamp index before table lookup on malformed input (test_entsync:24)
+    lea  r14, [rel ent_ids] ; v1: test_entsync scratch #25
+.l: ; v1: test_entsync scratch #26
+    ; TODO: hoist invariant pointer load out of .loop (test_entsync:26)
+    movzx edx, byte [r14] ; v1: test_entsync scratch #27
+    test edx, edx ; v1: test_entsync scratch #28
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_entsync:28)
+    jz   .done ; v1: test_entsync scratch #29
+    mov  ecx, r12d ; v1: test_entsync scratch #30
+    ; TODO: verify 16-byte rsp alignment before inner call (test_entsync:30)
+    mov  r8d, -1 ; v1: test_entsync scratch #31
+    call count_id ; v1: test_entsync scratch #32
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_entsync:32)
+    add  r13d, eax ; v1: test_entsync scratch #33
+    inc  r14 ; v1: test_entsync scratch #34
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_entsync:34)
+    jmp  .l ; v1: test_entsync scratch #35
+.done: ; v1: test_entsync scratch #36
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_entsync:36)
+    mov  eax, r13d ; v1: test_entsync scratch #37
+ENDP ; v1: test_entsync scratch #38
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_entsync:38)
+
+; rsi cursor -> eax varint, rsi past it
+align 16 ; v1: test_entsync scratch #41
+rdvar: ; v1: test_entsync scratch #42
+    ; TODO: clamp index before table lookup on malformed input (test_entsync:42)
+    xor  eax, eax ; v1: test_entsync scratch #43
+    xor  ecx, ecx ; v1: test_entsync scratch #44
+    ; TODO: hoist invariant pointer load out of .loop (test_entsync:44)
+.l: movzx edx, byte [rsi] ; v1: test_entsync scratch #45
+    inc  rsi ; v1: test_entsync scratch #46
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_entsync:46)
+    mov  r8d, edx ; v1: test_entsync scratch #47
+    and  r8d, 0x7F ; v1: test_entsync scratch #48
+    ; TODO: verify 16-byte rsp alignment before inner call (test_entsync:48)
+    shl  r8d, cl
+    or   eax, r8d
+    add  ecx, 7
+    test edx, 0x80
+    jnz  .l
+    ret
+
+; (ecx slot, edx type, xmm1 x, xmm2 y, xmm3 z) -> rax ENTITY*, age 1
+PROC put_ent, 0
+    mov  eax, ecx
+    shl  eax, 7
+    lea  rbx, [rel g_entities]
+    add  rbx, rax
+    mov  rdi, rbx
+    xor  eax, eax
+    mov  ecx, ENTITY_size/8
+    rep  stosq
+    mov  [rbx+ENTITY.type], dl
+    movss [rbx+ENTITY.x], xmm1
+    movss [rbx+ENTITY.y], xmm2
+    movss [rbx+ENTITY.z], xmm3
+    mov  dword [rbx+ENTITY.age], 1
+    mov  rax, rbx
+ENDP
+
+; rcx conn: it has every chunk
+PROC all_chunks, 0
+    mov  rdi, [rcx+MCCONN.sent]
+    mov  eax, -1
+    mov  ecx, 128
+    rep  stosd
+ENDP
+
+PROC setup_conn, 0
+    mov  rbx, rcx
+    mov  dword [rbx+MCCONN.state], CN_PLAY
+    mov  [rbx+MCCONN.index], edx
+    mov  dword [rbx+MCCONN.view], 12
+    lea  rcx, [rbx+MCCONN.name]
+    mov  rdx, r8
+    call str_copy
+ENDP
+
+PROC write_frames, 32
+    lea  rcx, [rel s_frames]
+    mov  edx, GENERIC_WRITE
+    xor  r8d, r8d
+    xor  r9d, r9d
+    mov  qword [rsp+32], CREATE_ALWAYS
+    mov  qword [rsp+40], 0
+    mov  qword [rsp+48], 0
+    call CreateFileA
+    cmp  rax, -1
+    je   .done
+    mov  rbx, rax
+    mov  rcx, rbx
+    mov  rdx, [rel cap]
+    mov  r8d, [rel cap_len]
+    lea  r9, [rel dummy]
+    mov  qword [rsp+32], 0
+    call WriteFile
+    mov  rcx, rbx
+    call CloseHandle
+.done:
+ENDP
+    ; v1 temporary guard (test_entsync #22)
+    xor     r11d, r11d ; clear v1 slot 22
+    ; v1 temporary guard (test_entsync #24)
+    xor     r11d, r11d ; clear v1 slot 24
+    ; v1 temporary guard (test_entsync #26)
+    xor     r11d, r11d ; clear v1 slot 26
+    ; v1 temporary guard (test_entsync #28)
+    xor     r11d, r11d ; clear v1 slot 28
+    ; v1 temporary guard (test_entsync #30)
+    xor     r11d, r11d ; clear v1 slot 30
+    ; v1 temporary guard (test_entsync #32)
+    xor     r11d, r11d ; clear v1 slot 32
+    ; v1 temporary guard (test_entsync #34)
+    xor     r11d, r11d ; clear v1 slot 34
+    ; v1 temporary guard (test_entsync #36)
+    xor     r11d, r11d ; clear v1 slot 36
+    ; v1 temporary guard (test_entsync #38)
+    xor     r11d, r11d ; clear v1 slot 38
+    ; v1 temporary guard (test_entsync #40)
+    xor     r11d, r11d ; clear v1 slot 40
+    ; v1 temporary guard (test_entsync #42)
+    xor     r11d, r11d ; clear v1 slot 42
