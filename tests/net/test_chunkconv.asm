@@ -148,59 +148,41 @@ PROC blk_at, 0
     test edx, edx
     jnz  .over
     mov  ebx, B_TALL_GRASS
-.over: ; v1: test_chunkconv scratch #0
-    ; TODO: clamp index before table lookup on malformed input (test_chunkconv:0)
-    cmp  esi, 4 ; v1: test_chunkconv scratch #1
-    jne  .noleaf0 ; v1: test_chunkconv scratch #2
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_chunkconv:2)
-    cmp  r12d, 4 ; v1: test_chunkconv scratch #3
-    jne  .noleaf0 ; v1: test_chunkconv scratch #4
-    ; TODO: hoist invariant pointer load out of .loop (test_chunkconv:4)
-    cmp  edi, r13d ; v1: test_chunkconv scratch #5
-    jle  .noleaf0 ; v1: test_chunkconv scratch #6
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_chunkconv:6)
-    lea  eax, [r13+5] ; v1: test_chunkconv scratch #7
-    cmp  edi, eax ; v1: test_chunkconv scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_chunkconv:8)
-    jg   .noleaf0 ; v1: test_chunkconv scratch #9
-    mov  ebx, B_LOG ; v1: test_chunkconv scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_chunkconv:10)
-.noleaf0: ; v1: test_chunkconv scratch #11
-    cmp  edi, 71 ; v1: test_chunkconv scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (test_chunkconv:12)
-    jne  .noleaf ; v1: test_chunkconv scratch #13
-    test ebx, ebx ; v1: test_chunkconv scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_chunkconv:14)
-    jnz  .noleaf ; v1: test_chunkconv scratch #15
-    cmp  esi, 3 ; v1: test_chunkconv scratch #16
-    ; TODO: clamp index before table lookup on malformed input (test_chunkconv:16)
-    jl   .noleaf ; v1: test_chunkconv scratch #17
-    cmp  esi, 5 ; v1: test_chunkconv scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_chunkconv:18)
-    jg   .noleaf ; v1: test_chunkconv scratch #19
-    cmp  r12d, 3 ; v1: test_chunkconv scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (test_chunkconv:20)
-    jl   .noleaf ; v1: test_chunkconv scratch #21
-    cmp  r12d, 5 ; v1: test_chunkconv scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_chunkconv:22)
-    jg   .noleaf ; v1: test_chunkconv scratch #23
-    mov  ebx, B_LEAVES ; v1: test_chunkconv scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_chunkconv:24)
-.noleaf: ; v1: test_chunkconv scratch #25
-    cmp  edi, 96 ; v1: test_chunkconv scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_chunkconv:26)
-    jl   .nowool ; v1: test_chunkconv scratch #27
-    cmp  edi, 99 ; v1: test_chunkconv scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (test_chunkconv:28)
-    jg   .nowool ; v1: test_chunkconv scratch #29
-    imul eax, r12d, 3 ; v1: test_chunkconv scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_chunkconv:30)
-    add  eax, esi ; v1: test_chunkconv scratch #31
-    add  eax, edi ; v1: test_chunkconv scratch #32
-    ; TODO: clamp index before table lookup on malformed input (test_chunkconv:32)
-    and  eax, 15 ; v1: test_chunkconv scratch #33
-    lea  ebx, [rax+B_WOOL] ; v1: test_chunkconv scratch #34
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_chunkconv:34)
+.over:
+    cmp  esi, 4                     ; the trunk
+    jne  .noleaf0
+    cmp  r12d, 4
+    jne  .noleaf0
+    cmp  edi, r13d
+    jle  .noleaf0
+    lea  eax, [r13+5]
+    cmp  edi, eax
+    jg   .noleaf0
+    mov  ebx, B_LOG
+.noleaf0:
+    cmp  edi, 71                    ; leaves on top of it
+    jne  .noleaf
+    test ebx, ebx
+    jnz  .noleaf
+    cmp  esi, 3
+    jl   .noleaf
+    cmp  esi, 5
+    jg   .noleaf
+    cmp  r12d, 3
+    jl   .noleaf
+    cmp  r12d, 5
+    jg   .noleaf
+    mov  ebx, B_LEAVES
+.noleaf:
+    cmp  edi, 96                    ; wool band
+    jl   .nowool
+    cmp  edi, 99
+    jg   .nowool
+    imul eax, r12d, 3
+    add  eax, esi
+    add  eax, edi
+    and  eax, 15
+    lea  ebx, [rax+B_WOOL]
 .nowool:
     cmp  edi, 100
     jne  .done
@@ -279,53 +261,70 @@ PROC build_chunk, 16
     cmp  r14d, CHUNK_VOL
     jb   .l
 ENDP
-    ; v1 temporary guard (test_chunkconv #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_chunkconv #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_chunkconv #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_chunkconv #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_chunkconv #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_chunkconv #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_chunkconv #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_chunkconv #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_chunkconv #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_chunkconv #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_chunkconv #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_chunkconv #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_chunkconv #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_chunkconv #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_chunkconv #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_chunkconv #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_chunkconv #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_chunkconv #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_chunkconv #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_chunkconv #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (test_chunkconv #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (test_chunkconv #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (test_chunkconv #62)
-    xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (test_chunkconv #64)
-    xor     r11d, r11d ; clear v1 slot 64
-    ; v1 temporary guard (test_chunkconv #66)
-    xor     r11d, r11d ; clear v1 slot 66
+
+PROC test_main, 64
+    call blocks_init
+    call build_chunk
+    mov  ecx, 256*1024
+    call t_alloc
+    mov  [rel out1], rax
+    mov  ecx, 256*1024
+    call t_alloc
+    mov  [rel out2], rax
+
+    TEST "synthetic chunk"
+    mov  rbx, [rel chunk]
+    mov  rcx, [rel chunk]
+    movzx eax, byte [rcx+CHUNK_BLOCKS + 4 + 4*16 + 66*256]
+    CHECK_EQ32 eax, B_LOG, "trunk at 4,66,4"
+    mov  rcx, [rel chunk]
+    movzx eax, byte [rcx+CHUNK_BLOCKS + 0 + 0*16 + 60*256]
+    CHECK_EQ32 eax, B_WATER, "water at 0,60,0"
+
+    TEST "encode vs reference"
+    mov  rcx, [rel chunk]
+    mov  rdx, [rel out1]
+    call mcplay_encode_chunk
+    mov  r12d, eax
+    CHECK_EQ32 r12d, GOLD_LEN, "body length"
+    mov  rsi, [rel out1]
+    lea  rdi, [rel gold]
+    CHECK_MEM rsi, rdi, GOLD_HM_END, "position + heightmaps"
+    mov  rsi, [rel out1]
+    add  rsi, GOLD_HM_END
+    lea  rdi, [rel gold]
+    add  rdi, GOLD_HM_END
+    CHECK_MEM rsi, rdi, GOLD_SEC_START-GOLD_HM_END, "section data length"
+    mov  rsi, [rel out1]
+    add  rsi, GOLD_SEC_START
+    lea  rdi, [rel gold]
+    add  rdi, GOLD_SEC_START
+    CHECK_MEM rsi, rdi, GOLD_LIGHT_START-GOLD_SEC_START, "sections: counts, palettes, longs, biomes"
+    mov  rsi, [rel out1]
+    add  rsi, GOLD_LIGHT_START
+    lea  rdi, [rel gold]
+    add  rdi, GOLD_LIGHT_START
+    CHECK_MEM rsi, rdi, GOLD_LEN-GOLD_LIGHT_START, "light masks + nibbles"
+
+    TEST "encode twice"                 ; per-section palette state must reset
+    mov  rcx, [rel chunk]
+    mov  rdx, [rel out2]
+    call mcplay_encode_chunk
+    mov  r12d, eax
+    CHECK_EQ32 r12d, GOLD_LEN, "length again"
+    mov  rsi, [rel out1]
+    mov  rdi, [rel out2]
+    CHECK_MEM rsi, rdi, GOLD_LEN, "same bytes"
+
+    TEST "no players"
+    call mcplay_count
+    mov  ebx, eax
+    CHECK_EQ32 ebx, 0, "count with every slot free"
+    mov  ecx, 1
+    mov  edx, 64
+    mov  r8d, 1
+    mov  r9d, B_STONE
+    call mcplay_block_changed       ; nobody to tell, must not touch anything
+    call mcplay_tick
+    CHECK_EQ32 ebx, 0, "survived block_changed + tick"
+ENDP
