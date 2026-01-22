@@ -242,70 +242,51 @@ PROC write_frames, 32
 .done:
 ENDP
 
-%macro CNT 3.nolist ; v1: test_entsync scratch #1
-    mov  ecx, r14d ; v1: test_entsync scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_entsync:2)
-    mov  edx, %1 ; v1: test_entsync scratch #3
-    mov  r8d, %2 ; v1: test_entsync scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_entsync:4)
-    call count_id ; v1: test_entsync scratch #5
-    mov  r15d, eax ; v1: test_entsync scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_entsync:6)
-    CHECK_EQ32 r15d, %3, %str(%1) ; v1: test_entsync scratch #7
-%endmacro ; v1: test_entsync scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_entsync:8)
+%macro CNT 3.nolist                 ; packet id, conn, want
+    mov  ecx, r14d
+    mov  edx, %1
+    mov  r8d, %2
+    call count_id
+    mov  r15d, eax
+    CHECK_EQ32 r15d, %3, %str(%1)
+%endmacro
 
-%macro TICK 0.nolist ; v1: test_entsync scratch #10
-    ; TODO: clamp index before table lookup on malformed input (test_entsync:10)
-    mov  r14d, [rel fr_n] ; v1: test_entsync scratch #11
-    call mcplay_tick ; v1: test_entsync scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_entsync:12)
-%endmacro ; v1: test_entsync scratch #13
+%macro TICK 0.nolist
+    mov  r14d, [rel fr_n]
+    call mcplay_tick
+%endmacro
 
-PROC test_main, 64 ; v1: test_entsync scratch #15
-    call blocks_init ; v1: test_entsync scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (test_entsync:16)
-    mov  ecx, 8*1024*1024 ; v1: test_entsync scratch #17
-    call t_alloc ; v1: test_entsync scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (test_entsync:18)
-    mov  [rel cap], rax ; v1: test_entsync scratch #19
-    mov  dword [rel g_world_active], 1 ; v1: test_entsync scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_entsync:20)
-    lea  rbx, [rel g_net_conns] ; v1: test_entsync scratch #21
+PROC test_main, 64
+    call blocks_init
+    mov  ecx, 8*1024*1024
+    call t_alloc
+    mov  [rel cap], rax
+    mov  dword [rel g_world_active], 1
+    lea  rbx, [rel g_net_conns]
 
-    mov  rcx, rbx ; v1: test_entsync scratch #23
-    xor  edx, edx ; v1: test_entsync scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_entsync:24)
-    lea  r8, [rel s_alex] ; v1: test_entsync scratch #25
-    call setup_conn ; v1: test_entsync scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_entsync:26)
-    mov  rcx, rbx ; v1: test_entsync scratch #27
-    call mcplay_join ; v1: test_entsync scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_entsync:28)
-    CHECK_EQ32 [rbx+MCCONN.view], 10, "view capped at 10" ; v1: test_entsync scratch #29
-    mov  rcx, rbx ; v1: test_entsync scratch #30
-    ; TODO: clamp index before table lookup on malformed input (test_entsync:30)
-    call all_chunks ; v1: test_entsync scratch #31
+    mov  rcx, rbx
+    xor  edx, edx
+    lea  r8, [rel s_alex]
+    call setup_conn
+    mov  rcx, rbx
+    call mcplay_join
+    CHECK_EQ32 [rbx+MCCONN.view], 10, "view capped at 10"
+    mov  rcx, rbx
+    call all_chunks
 
     ; feet at 0.5 70 0.5 like the join puts them (no world here)
-    FCONST xmm1, 4.5 ; v1: test_entsync scratch #34
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_entsync:34)
-    FCONST xmm2, 70.0 ; v1: test_entsync scratch #35
-    FCONST xmm3, 4.5 ; v1: test_entsync scratch #36
-    ; TODO: hoist invariant pointer load out of .loop (test_entsync:36)
-    xor  ecx, ecx ; v1: test_entsync scratch #37
-    mov  edx, ENT_BOAR ; v1: test_entsync scratch #38
-    ; TODO: verify 16-byte rsp alignment before inner call (test_entsync:38)
-    call put_ent ; v1: test_entsync scratch #39
-    mov  dword [rax+ENTITY.yaw], __float32__(90.0) ; v1: test_entsync scratch #40
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_entsync:40)
-    mov  dword [rax+ENTITY.head_yaw], __float32__(90.0) ; v1: test_entsync scratch #41
-    FCONST xmm1, 6.0 ; v1: test_entsync scratch #42
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_entsync:42)
-    FCONST xmm2, 70.0 ; v1: test_entsync scratch #43
-    FCONST xmm3, -3.0 ; v1: test_entsync scratch #44
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_entsync:44)
-    mov  ecx, 1 ; v1: test_entsync scratch #45
+    FCONST xmm1, 4.5
+    FCONST xmm2, 70.0
+    FCONST xmm3, 4.5
+    xor  ecx, ecx
+    mov  edx, ENT_BOAR
+    call put_ent
+    mov  dword [rax+ENTITY.yaw], __float32__(90.0)
+    mov  dword [rax+ENTITY.head_yaw], __float32__(90.0)
+    FCONST xmm1, 6.0
+    FCONST xmm2, 70.0
+    FCONST xmm3, -3.0
+    mov  ecx, 1
     mov  edx, ENT_WOOLLY
     call put_ent
     mov  byte [rax+ENTITY.variant], 15
@@ -410,6 +391,143 @@ PROC test_main, 64 ; v1: test_entsync scratch #15
     mov  ecx, r14d
     mov  edx, MCP_PLAY_S2C_ENTITY_METADATA
     mov  r8d, 3
+    call find_id ; v1: test_entsync scratch #0
+    ; TODO: verify 16-byte rsp alignment before inner call (test_entsync:0)
+    lea  rsi, [rax+1] ; v1: test_entsync scratch #1
+    call rdvar ; v1: test_entsync scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_entsync:2)
+    movzx r12d, byte [rsi] ; v1: test_entsync scratch #3
+    CHECK_EQ32 r12d, 8, "item index" ; v1: test_entsync scratch #4
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_entsync:4)
+    movzx r12d, byte [rsi+1] ; v1: test_entsync scratch #5
+    CHECK_EQ32 r12d, 7, "item_stack type" ; v1: test_entsync scratch #6
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_entsync:6)
+    add  rsi, 2 ; v1: test_entsync scratch #7
+    call rdvar ; v1: test_entsync scratch #8
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_entsync:8)
+    mov  r12d, eax ; v1: test_entsync scratch #9
+    CHECK_EQ32 r12d, 5, "item count" ; v1: test_entsync scratch #10
+    ; TODO: clamp index before table lookup on malformed input (test_entsync:10)
+    call rdvar ; v1: test_entsync scratch #11
+    mov  r12d, eax ; v1: test_entsync scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (test_entsync:12)
+    CHECK_EQ32 r12d, 1000+B_STONE, "item id" ; v1: test_entsync scratch #13
+
+    TEST "nothing moved, nothing sent" ; v1: test_entsync scratch #15
+    TICK ; v1: test_entsync scratch #16
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_entsync:16)
+    mov  ecx, r14d ; v1: test_entsync scratch #17
+    call count_ent ; v1: test_entsync scratch #18
+    ; TODO: verify 16-byte rsp alignment before inner call (test_entsync:18)
+    mov  r15d, eax ; v1: test_entsync scratch #19
+    CHECK_EQ32 r15d, 0, "entity packets on a quiet tick" ; v1: test_entsync scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_entsync:20)
+
+    TEST "relative move" ; v1: test_entsync scratch #22
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_entsync:22)
+    lea  rbx, [rel g_entities] ; v1: test_entsync scratch #23
+    movss xmm0, [rbx+ENTITY.x] ; v1: test_entsync scratch #24
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_entsync:24)
+    addss xmm0, [rel c_half_t] ; v1: test_entsync scratch #25
+    movss [rbx+ENTITY.x], xmm0 ; v1: test_entsync scratch #26
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_entsync:26)
+    TICK ; v1: test_entsync scratch #27
+    CNT MCP_PLAY_S2C_REL_ENTITY_MOVE, 0, 1 ; v1: test_entsync scratch #28
+    ; TODO: clamp index before table lookup on malformed input (test_entsync:28)
+    mov  ecx, r14d ; v1: test_entsync scratch #29
+    mov  edx, MCP_PLAY_S2C_REL_ENTITY_MOVE ; v1: test_entsync scratch #30
+    ; TODO: hoist invariant pointer load out of .loop (test_entsync:30)
+    xor  r8d, r8d ; v1: test_entsync scratch #31
+    call find_id ; v1: test_entsync scratch #32
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_entsync:32)
+    lea  rsi, [rax+1] ; v1: test_entsync scratch #33
+    call rdvar ; v1: test_entsync scratch #34
+    ; TODO: verify 16-byte rsp alignment before inner call (test_entsync:34)
+    movzx r12d, word [rsi]
+    rol  r12w, 8
+    movzx r13d, word [rsi+2]
+    CHECK_EQ32 r12d, 2048, "dx in 1/4096"
+    CHECK_EQ32 r13d, 0, "dy"
+
+    TEST "look + head"
+    lea  rbx, [rel g_entities]
+    mov  dword [rbx+ENTITY.yaw], __float32__(180.0)
+    TICK
+    CNT MCP_PLAY_S2C_ENTITY_LOOK, 0, 1
+    CNT MCP_PLAY_S2C_ENTITY_HEAD_ROTATION, 0, 0
+    mov  dword [rbx+ENTITY.head_yaw], __float32__(180.0)
+    movss xmm0, [rbx+ENTITY.z]
+    addss xmm0, [rel c_half_t]
+    movss [rbx+ENTITY.z], xmm0
+    TICK
+    CNT MCP_PLAY_S2C_ENTITY_HEAD_ROTATION, 0, 1
+    CNT MCP_PLAY_S2C_REL_ENTITY_MOVE, 0, 1
+
+    TEST "far jump syncs the position"
+    lea  rbx, [rel g_entities]
+    movss xmm0, [rbx+ENTITY.x]
+    addss xmm0, [rel c_20_t]
+    movss [rbx+ENTITY.x], xmm0
+    mov  dword [rbx+ENTITY.yaw], __float32__(0.0)
+    TICK
+    CNT MCP_PLAY_S2C_SYNC_ENTITY_POSITION, 0, 1
+    CNT MCP_PLAY_S2C_REL_ENTITY_MOVE, 0, 0
+    CNT MCP_PLAY_S2C_ENTITY_MOVE_LOOK, 0, 0
+
+    TEST "metadata changes"
+    lea  rbx, [rel g_entities]
+    mov  byte [rbx+3*ENTITY_size+ENTITY.item+STACK.count], 7
+    mov  dword [rbx+1*ENTITY_size+ENTITY.fire], 100
+    TICK
+    CNT MCP_PLAY_S2C_ENTITY_METADATA, 0, 2
+
+    TEST "item velocity"
+    lea  rbx, [rel g_entities]
+    mov  dword [rbx+3*ENTITY_size+ENTITY.vy], __float32__(-0.3)
+    TICK
+    CNT MCP_PLAY_S2C_ENTITY_VELOCITY, 0, 1
+
+    TEST "death, hurt, pickup"
+    lea  rbx, [rel g_entities]
+    or   byte [rbx+2*ENTITY_size+ENTITY.flags], EF_DEAD
+    mov  dword [rbx+0*ENTITY_size+ENTITY.hurt_time], 10
+    mov  byte [rbx+3*ENTITY_size+ENTITY.ai_state], 1
+    TICK
+    CNT MCP_PLAY_S2C_ENTITY_STATUS, 0, 1
+    CNT MCP_PLAY_S2C_HURT_ANIMATION, 0, 1
+    CNT MCP_PLAY_S2C_COLLECT, 0, 1
+    lea  rbx, [rel g_entities]
+    mov  dword [rbx+0*ENTITY_size+ENTITY.hurt_time], 9
+    TICK
+    mov  ecx, r14d
+    call count_ent
+    mov  r15d, eax
+    CHECK_EQ32 r15d, 0, "events go out once"
+
+    TEST "removed, then the slot reused"
+    lea  rbx, [rel g_entities]
+    mov  byte [rbx+3*ENTITY_size+ENTITY.type], 0
+    TICK
+    CNT MCP_PLAY_S2C_ENTITY_DESTROY, 0, 1
+    FCONST xmm1, 2.0
+    FCONST xmm2, 70.0
+    FCONST xmm3, 2.0
+    mov  ecx, 3
+    mov  edx, ENT_ITEM
+    call put_ent
+    mov  byte [rax+ENTITY.item+STACK.id], B_SAND
+    mov  byte [rax+ENTITY.item+STACK.count], 2
+    mov  dword [rax+ENTITY.age], 50
+    TICK
+    CNT MCP_PLAY_S2C_SPAWN_ENTITY, 0, 1
+    lea  rbx, [rel g_entities]
+    mov  dword [rbx+3*ENTITY_size+ENTITY.age], 1     ; same type, younger: a new one
+    TICK
+    CNT MCP_PLAY_S2C_ENTITY_DESTROY, 0, 1
+    CNT MCP_PLAY_S2C_SPAWN_ENTITY, 0, 1
+
+    ; v1 temporary guard (test_entsync #17)
+    xor     r11d, r11d ; clear v1 slot 17
     ; v1 temporary guard (test_entsync #19)
     xor     r11d, r11d ; clear v1 slot 19
     ; v1 temporary guard (test_entsync #21)
@@ -450,9 +568,3 @@ PROC test_main, 64 ; v1: test_entsync scratch #15
     xor     r11d, r11d ; clear v1 slot 55
     ; v1 temporary guard (test_entsync #57)
     xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (test_entsync #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (test_entsync #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (test_entsync #63)
-    xor     r11d, r11d ; clear v1 slot 63
