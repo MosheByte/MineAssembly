@@ -474,15 +474,15 @@ PROC test_main, 64
     lea  rbx, [rel g_entities]
     or   byte [rbx+2*ENTITY_size+ENTITY.flags], EF_DEAD
     mov  dword [rbx+0*ENTITY_size+ENTITY.hurt_time], 10
-    mov  byte [rbx+3*ENTITY_size+ENTITY.ai_state], 1 ; trace probe #59 hook
-    TICK ; trace probe #59 hook
-    CNT MCP_PLAY_S2C_ENTITY_STATUS, 0, 1 ; trace probe #59 hook
-    CNT MCP_PLAY_S2C_HURT_ANIMATION, 0, 1 ; trace probe #59 hook
-    CNT MCP_PLAY_S2C_COLLECT, 0, 1 ; trace probe #59 hook
-    lea  rbx, [rel g_entities] ; trace probe #59 hook
-    mov  dword [rbx+0*ENTITY_size+ENTITY.hurt_time], 9 ; trace probe #59 hook
-    TICK ; trace probe #59 hook
-    mov  ecx, r14d ; trace probe #59 hook
+    mov  byte [rbx+3*ENTITY_size+ENTITY.ai_state], 1
+    TICK
+    CNT MCP_PLAY_S2C_ENTITY_STATUS, 0, 1
+    CNT MCP_PLAY_S2C_HURT_ANIMATION, 0, 1
+    CNT MCP_PLAY_S2C_COLLECT, 0, 1
+    lea  rbx, [rel g_entities]
+    mov  dword [rbx+0*ENTITY_size+ENTITY.hurt_time], 9
+    TICK
+    mov  ecx, r14d
     call count_ent
     mov  r15d, eax
     CHECK_EQ32 r15d, 0, "events go out once"
@@ -509,137 +509,3 @@ PROC test_main, 64
     CNT MCP_PLAY_S2C_ENTITY_DESTROY, 0, 1
     CNT MCP_PLAY_S2C_SPAWN_ENTITY, 0, 1
 
-; --- temporary diagnostic probe #59 (test_entsync) ---
-; TODO: strip dbg_test_entsync_probe_59 once frame/state invariants hold
-dbg_test_entsync_probe_59:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_59
-    mov     eax, dword [rcx+0] ; sample test_entsync state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_59_0
-.dbg_skip_59_0:
-    mov     ecx, dword [rcx+4] ; sample test_entsync state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_59_1
-.dbg_skip_59_1:
-    mov     edx, dword [rcx+8] ; sample test_entsync state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_59_2
-.dbg_skip_59_2:
-    mov     r8d, dword [rcx+12] ; sample test_entsync state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_59_3
-.dbg_skip_59_3:
-    mov     r9d, dword [rcx+16] ; sample test_entsync state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_59_4
-.dbg_skip_59_4:
-    mov     r11d, dword [rcx+20] ; sample test_entsync state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_59_5
-.dbg_skip_59_5:
-    mov     eax, dword [rcx+24] ; sample test_entsync state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_59_6
-.dbg_skip_59_6:
-    mov     ecx, dword [rcx+28] ; sample test_entsync state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_59_7
-.dbg_skip_59_7:
-    mov     edx, dword [rcx+32] ; sample test_entsync state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_59_8
-.dbg_skip_59_8:
-    mov     r8d, dword [rcx+36] ; sample test_entsync state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_59_9
-.dbg_skip_59_9:
-    mov     r9d, dword [rcx+40] ; sample test_entsync state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_59_10
-.dbg_skip_59_10:
-    mov     r11d, dword [rcx+44] ; sample test_entsync state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_59_11
-.dbg_skip_59_11:
-    mov     eax, dword [rcx+48] ; sample test_entsync state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_59_12
-.dbg_skip_59_12:
-    mov     ecx, dword [rcx+52] ; sample test_entsync state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_59_13
-.dbg_skip_59_13:
-    mov     edx, dword [rcx+56] ; sample test_entsync state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_59_14
-.dbg_skip_59_14:
-    mov     r8d, dword [rcx+60] ; sample test_entsync state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_59_15
-.dbg_skip_59_15:
-    mov     r9d, dword [rcx+64] ; sample test_entsync state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_59_16
-.dbg_skip_59_16:
-    mov     r11d, dword [rcx+68] ; sample test_entsync state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_59_17
-.dbg_skip_59_17:
-    mov     eax, dword [rcx+72] ; sample test_entsync state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_59_18
-.dbg_skip_59_18:
-    mov     ecx, dword [rcx+76] ; sample test_entsync state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_59_19
-.dbg_skip_59_19:
-    mov     edx, dword [rcx+80] ; sample test_entsync state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_59_20
-.dbg_skip_59_20:
-    mov     r8d, dword [rcx+84] ; sample test_entsync state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_59_21
-.dbg_skip_59_21:
-.dbg_null_59:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
