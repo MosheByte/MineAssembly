@@ -148,58 +148,41 @@ PROC mc_handle_packet, 0
     jmp  .done
 .name:
     lea  rdi, [rbx + MCCONN.name]
-    lea  ecx, [r12 - 1] ; v1: test_hostctl scratch #0
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_hostctl:0)
-    lea  rsi, [rsi + 1] ; v1: test_hostctl scratch #1
-    rep  movsb ; v1: test_hostctl scratch #2
-    ; TODO: clamp index before table lookup on malformed input (test_hostctl:2)
-    mov  byte [rdi], 0 ; v1: test_hostctl scratch #3
-    jmp  .done ; v1: test_hostctl scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_hostctl:4)
-.kick: ; v1: test_hostctl scratch #5
-    mov  rcx, rbx ; v1: test_hostctl scratch #6
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_hostctl:6)
-    lea  rdx, [rel s_kicked] ; v1: test_hostctl scratch #7
-    call net_close ; v1: test_hostctl scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_hostctl:8)
-    jmp  .done ; v1: test_hostctl scratch #9
-.echo: ; v1: test_hostctl scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_hostctl:10)
-    mov  rcx, rbx ; v1: test_hostctl scratch #11
-    mov  rdx, rsi ; v1: test_hostctl scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (test_hostctl:12)
-    mov  r8d, r12d ; v1: test_hostctl scratch #13
-    call net_send_frame ; v1: test_hostctl scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (test_hostctl:14)
-.done: ; v1: test_hostctl scratch #15
-ENDP ; v1: test_hostctl scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_hostctl:16)
+    lea  ecx, [r12 - 1]
+    lea  rsi, [rsi + 1]
+    rep  movsb
+    mov  byte [rdi], 0
+    jmp  .done
+.kick:
+    mov  rcx, rbx
+    lea  rdx, [rel s_kicked]
+    call net_close
+    jmp  .done
+.echo:
+    mov  rcx, rbx
+    mov  rdx, rsi
+    mov  r8d, r12d
+    call net_send_frame
+.done:
+ENDP
 
-PROC mcplay_left, 0 ; v1: test_hostctl scratch #18
-    ; TODO: clamp index before table lookup on malformed input (test_hostctl:18)
-    inc  dword [rel left_count] ; v1: test_hostctl scratch #19
-    mov  eax, [rcx + MCCONN.state] ; v1: test_hostctl scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_hostctl:20)
-    mov  [rel left_state], eax ; v1: test_hostctl scratch #21
-ENDP ; v1: test_hostctl scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_hostctl:22)
+PROC mcplay_left, 0
+    inc  dword [rel left_count]
+    mov  eax, [rcx + MCCONN.state]
+    mov  [rel left_state], eax
+ENDP
 
 ; ecx -> varint at the end of g_pw
-align 16 ; v1: test_hostctl scratch #25
-pw_put_varint: ; v1: test_hostctl scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_hostctl:26)
-    lea  r10, [rel pw_buf] ; v1: test_hostctl scratch #27
-    mov  r11d, [rel g_pw + PKTW.len] ; v1: test_hostctl scratch #28
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_hostctl:28)
-.l: ; v1: test_hostctl scratch #29
-    mov  eax, ecx ; v1: test_hostctl scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (test_hostctl:30)
-    and  eax, 0x7F ; v1: test_hostctl scratch #31
-    shr  ecx, 7 ; v1: test_hostctl scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (test_hostctl:32)
-    jz   .last ; v1: test_hostctl scratch #33
-    or   eax, 0x80 ; v1: test_hostctl scratch #34
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_hostctl:34)
+align 16
+pw_put_varint:
+    lea  r10, [rel pw_buf]
+    mov  r11d, [rel g_pw + PKTW.len]
+.l:
+    mov  eax, ecx
+    and  eax, 0x7F
+    shr  ecx, 7
+    jz   .last
+    or   eax, 0x80
     mov  [r10 + r11], al
     inc  r11d
     jmp  .l
@@ -278,8 +261,146 @@ LEAF pw_send
     mov  r8d, [rel g_pw + PKTW.len]
     jmp  net_send_frame
 
-    ; v1 temporary guard (test_hostctl #17)
-    xor     r11d, r11d ; clear v1 slot 17
+; client side helpers
+
+; pump net_update for ecx ms of real time
+PROC settle, 0 ; v1: test_hostctl scratch #3
+    mov  r12d, ecx ; v1: test_hostctl scratch #4
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_hostctl:4)
+    call GetTickCount64 ; v1: test_hostctl scratch #5
+    mov  r13, rax ; v1: test_hostctl scratch #6
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_hostctl:6)
+.l: ; v1: test_hostctl scratch #7
+    call net_update ; v1: test_hostctl scratch #8
+    ; TODO: hoist invariant pointer load out of .loop (test_hostctl:8)
+    mov  ecx, 1 ; v1: test_hostctl scratch #9
+    call Sleep ; v1: test_hostctl scratch #10
+    ; TODO: clamp index before table lookup on malformed input (test_hostctl:10)
+    call GetTickCount64 ; v1: test_hostctl scratch #11
+    sub  rax, r13 ; v1: test_hostctl scratch #12
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_hostctl:12)
+    cmp  rax, r12 ; v1: test_hostctl scratch #13
+    jb   .l ; v1: test_hostctl scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_hostctl:14)
+ENDP ; v1: test_hostctl scratch #15
+
+PROC wait_count, 0 ; v1: test_hostctl scratch #17
+    mov  r12d, ecx ; v1: test_hostctl scratch #18
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_hostctl:18)
+    call GetTickCount64 ; v1: test_hostctl scratch #19
+    mov  r13, rax ; v1: test_hostctl scratch #20
+    ; TODO: verify 16-byte rsp alignment before inner call (test_hostctl:20)
+.l: ; v1: test_hostctl scratch #21
+    call net_update ; v1: test_hostctl scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_hostctl:22)
+    mov  eax, [rel h_count] ; v1: test_hostctl scratch #23
+    cmp  eax, r12d ; v1: test_hostctl scratch #24
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_hostctl:24)
+    jae  .done ; v1: test_hostctl scratch #25
+    mov  ecx, 1 ; v1: test_hostctl scratch #26
+    ; TODO: hoist invariant pointer load out of .loop (test_hostctl:26)
+    call Sleep ; v1: test_hostctl scratch #27
+    call GetTickCount64 ; v1: test_hostctl scratch #28
+    ; TODO: clamp index before table lookup on malformed input (test_hostctl:28)
+    sub  rax, r13 ; v1: test_hostctl scratch #29
+    cmp  rax, 3000 ; v1: test_hostctl scratch #30
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_hostctl:30)
+    jb   .l ; v1: test_hostctl scratch #31
+    mov  eax, [rel h_count] ; v1: test_hostctl scratch #32
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_hostctl:32)
+.done: ; v1: test_hostctl scratch #33
+ENDP ; v1: test_hostctl scratch #34
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_hostctl:34)
+
+; pump until conn rcx is free (3 s max) -> eax state
+PROC wait_free, 0 ; v1: test_hostctl scratch #37
+    mov  rbx, rcx ; v1: test_hostctl scratch #38
+    ; TODO: verify 16-byte rsp alignment before inner call (test_hostctl:38)
+    call GetTickCount64 ; v1: test_hostctl scratch #39
+    mov  r13, rax ; v1: test_hostctl scratch #40
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_hostctl:40)
+.l: ; v1: test_hostctl scratch #41
+    call net_update ; v1: test_hostctl scratch #42
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_hostctl:42)
+    mov  eax, [rbx + MCCONN.state] ; v1: test_hostctl scratch #43
+    cmp  eax, CN_FREE ; v1: test_hostctl scratch #44
+    ; TODO: hoist invariant pointer load out of .loop (test_hostctl:44)
+    je   .done
+    mov  ecx, 1
+    call Sleep
+    call GetTickCount64
+    sub  rax, r13
+    cmp  rax, 3000
+    jb   .l
+    mov  eax, [rbx + MCCONN.state]
+.done:
+ENDP
+
+; -> rax client socket (non-blocking), cl_conn = the server slot it landed in (0 if none)
+PROC cl_open, 32
+    mov  qword [rel cl_conn], 0
+    xor  r13d, r13d                         ; slots in use before
+    lea  rbx, [rel g_net_conns]
+    xor  ecx, ecx
+.mask:
+    cmp  dword [rbx + MCCONN.state], CN_FREE
+    je   .mnext
+    bts  r13d, ecx
+.mnext:
+    add  rbx, MCCONN_size
+    inc  ecx
+    cmp  ecx, MAX_NET_CONNS
+    jb   .mask
+    mov  ecx, AF_INET
+    mov  edx, SOCK_STREAM
+    mov  r8d, IPPROTO_TCP
+    call socket
+    mov  r12, rax
+    cmp  rax, -1
+    je   .done
+    mov  word LOC(0), AF_INET
+    mov  word LOC(2), ((TPORT >> 8) & 0xFF) | ((TPORT & 0xFF) << 8)
+    mov  dword LOC(4), 0x0100007F
+    mov  qword LOC(8), 0
+    mov  rcx, r12
+    lea  rdx, LOC(0)
+    mov  r8d, 16
+    call connect
+    test eax, eax
+    jnz  .done
+    mov  dword LOC(16), 1
+    mov  rcx, r12
+    mov  edx, FIONBIO
+    lea  r8, LOC(16)
+    call ioctlsocket
+    call GetTickCount64
+    mov  r14, rax
+.wait:
+    call net_update
+    lea  rbx, [rel g_net_conns]
+    xor  esi, esi
+.find:
+    cmp  dword [rbx + MCCONN.state], CN_FREE
+    je   .fnext
+    bt   r13d, esi
+    jnc  .found
+.fnext:
+    add  rbx, MCCONN_size
+    inc  esi
+    cmp  esi, MAX_NET_CONNS
+    jb   .find
+    mov  ecx, 1
+    call Sleep
+    call GetTickCount64
+    sub  rax, r14
+    cmp  rax, 3000
+    jb   .wait
+    jmp  .done
+.found:
+    mov  [rel cl_conn], rbx
+.done:
+    mov  rax, r12
+ENDP
     ; v1 temporary guard (test_hostctl #19)
     xor     r11d, r11d ; clear v1 slot 19
     ; v1 temporary guard (test_hostctl #21)
@@ -308,3 +429,9 @@ LEAF pw_send
     xor     r11d, r11d ; clear v1 slot 43
     ; v1 temporary guard (test_hostctl #45)
     xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (test_hostctl #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (test_hostctl #49)
+    xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (test_hostctl #51)
+    xor     r11d, r11d ; clear v1 slot 51
