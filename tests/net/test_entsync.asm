@@ -509,3 +509,84 @@ PROC test_main, 64
     CNT MCP_PLAY_S2C_ENTITY_DESTROY, 0, 1
     CNT MCP_PLAY_S2C_SPAWN_ENTITY, 0, 1
 
+    TEST "weather"
+    mov  dword [rel g_weather], 1
+    TICK
+    mov  ecx, r14d
+    mov  edx, MCP_PLAY_S2C_GAME_STATE_CHANGE
+    xor  r8d, r8d
+    call find_id
+    movzx r12d, byte [rax+1]
+    CHECK_EQ32 r12d, 1, "start_raining"
+    CNT MCP_PLAY_S2C_GAME_STATE_CHANGE, 0, 3
+    mov  dword [rel g_rain], __float32__(0.005)
+    TICK
+    CNT MCP_PLAY_S2C_GAME_STATE_CHANGE, 0, 0
+    mov  dword [rel g_rain], __float32__(0.5)
+    TICK
+    CNT MCP_PLAY_S2C_GAME_STATE_CHANGE, 0, 1
+    mov  dword [rel g_rain], __float32__(1.0)
+    TICK
+    CNT MCP_PLAY_S2C_GAME_STATE_CHANGE, 0, 1
+
+    TEST "second client joins in the rain"
+    lea  r12, [rel g_net_conns+MCCONN_size]
+    mov  rcx, r12
+    mov  edx, 1
+    lea  r8, [rel s_steve]
+    call setup_conn
+    mov  r14d, [rel fr_n]
+    mov  rcx, r12
+    call mcplay_join
+    CNT MCP_PLAY_S2C_GAME_STATE_CHANGE, 1, 4
+    mov  rcx, r12
+    call all_chunks
+    TICK
+    CNT MCP_PLAY_S2C_SPAWN_ENTITY, 1, 5
+    CNT MCP_PLAY_S2C_SPAWN_ENTITY, 0, 0
+
+    TEST "rain stops"
+    mov  dword [rel g_weather], 0
+    TICK
+    mov  ecx, r14d
+    mov  edx, MCP_PLAY_S2C_GAME_STATE_CHANGE
+    xor  r8d, r8d
+    call find_id
+    movzx r12d, byte [rax+1]
+    CHECK_EQ32 r12d, 2, "stop_raining"
+
+    TEST "client walks away"
+    lea  rbx, [rel g_net_conns]
+    mov  rax, __float64__(800.0)
+    mov  [rbx+MCCONN.x], rax
+    TICK
+    CNT MCP_PLAY_S2C_ENTITY_DESTROY, 0, 6
+    CNT MCP_PLAY_S2C_ENTITY_DESTROY, 1, 0
+    lea  rbx, [rel g_entities]
+    movss xmm0, [rbx+ENTITY.z]
+    addss xmm0, [rel c_half_t]
+    movss [rbx+ENTITY.z], xmm0
+    TICK
+    CNT MCP_PLAY_S2C_REL_ENTITY_MOVE, 0, 0
+    CNT MCP_PLAY_S2C_REL_ENTITY_MOVE, 1, 1
+
+    TEST "leave"
+    lea  rbx, [rel g_net_conns]
+    mov  rcx, rbx
+    call mcplay_left
+    mov  dword [rbx+MCCONN.state], CN_FREE
+    lea  rcx, [rel g_net_conns+MCCONN_size]
+    call mcplay_left
+    mov  dword [rel g_net_conns+MCCONN_size+MCCONN.state], CN_FREE
+    TICK
+    mov  ecx, r14d
+    call count_ent
+    mov  r15d, eax
+    CHECK_EQ32 r15d, 0, "nobody left to tell"
+
+    call write_frames
+ENDP
+
+section .rdata
+c_half_t:   dd 0.5
+c_20_t:     dd 20.0
