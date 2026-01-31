@@ -114,65 +114,47 @@ extern mcproto_md5
 %endmacro
 
 ; last frame given to net_send_frame equals label
-%macro CHECK_FRAME 2.nolist ; v1: test_proto scratch #1
-    mov  ebx, [rel cap_last_len] ; v1: test_proto scratch #2
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_proto:2)
-    CHECK_EQ32 ebx, %1_len, %2 ; v1: test_proto scratch #3
-    lea  rbx, [rel cap_buf] ; v1: test_proto scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_proto:4)
-    mov  eax, [rel cap_last_off] ; v1: test_proto scratch #5
-    add  rbx, rax ; v1: test_proto scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_proto:6)
-    lea  rsi, [rel %1] ; v1: test_proto scratch #7
-    CHECK_MEM rbx, rsi, %1_len, %2 ; v1: test_proto scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_proto:8)
-%endmacro ; v1: test_proto scratch #9
+%macro CHECK_FRAME 2.nolist
+    mov  ebx, [rel cap_last_len]
+    CHECK_EQ32 ebx, %1_len, %2
+    lea  rbx, [rel cap_buf]
+    mov  eax, [rel cap_last_off]
+    add  rbx, rax
+    lea  rsi, [rel %1]
+    CHECK_MEM rbx, rsi, %1_len, %2
+%endmacro
 
-%macro STATE_IS 2.nolist ; v1: test_proto scratch #11
-    mov  ebx, [r12+MCCONN.state] ; v1: test_proto scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_proto:12)
-    CHECK_EQ32 ebx, %1, %2 ; v1: test_proto scratch #13
-%endmacro ; v1: test_proto scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (test_proto:14)
+%macro STATE_IS 2.nolist
+    mov  ebx, [r12+MCCONN.state]
+    CHECK_EQ32 ebx, %1, %2
+%endmacro
 
 ; a known packs answer on a conn that waits for one -> what registries got
-%macro PACKS 3.nolist ; v1: test_proto scratch #17
-    mov  dword [r12+MCCONN.state], CN_CONFIG ; v1: test_proto scratch #18
-    ; TODO: clamp index before table lookup on malformed input (test_proto:18)
-    mov  dword [r12+MCCONN.flags], CF_PACKS ; v1: test_proto scratch #19
-    mov  dword [rel reg_known], -1 ; v1: test_proto scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (test_proto:20)
-    FEED %1 ; v1: test_proto scratch #21
-    mov  ebx, [rel reg_known] ; v1: test_proto scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_proto:22)
-    CHECK_EQ32 ebx, %2, %3 ; v1: test_proto scratch #23
-%endmacro ; v1: test_proto scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_proto:24)
+%macro PACKS 3.nolist             ; frame, want edx for send_registries, "msg"
+    mov  dword [r12+MCCONN.state], CN_CONFIG
+    mov  dword [r12+MCCONN.flags], CF_PACKS
+    mov  dword [rel reg_known], -1
+    FEED %1
+    mov  ebx, [rel reg_known]
+    CHECK_EQ32 ebx, %2, %3
+%endmacro
 
-section .rdata ; v1: test_proto scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_proto:26)
+section .rdata
 ; packet wire vectors
-vi_0: db 0x00 ; v1: test_proto scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_proto:28)
-vi_0_len equ $ - vi_0 ; v1: test_proto scratch #29
-vi_1: db 0x01 ; v1: test_proto scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_proto:30)
-vi_1_len equ $ - vi_1 ; v1: test_proto scratch #31
-vi_7f: db 0x7F ; v1: test_proto scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (test_proto:32)
-vi_7f_len equ $ - vi_7f ; v1: test_proto scratch #33
-vi_80: db 0x80, 0x01 ; v1: test_proto scratch #34
-    ; TODO: clamp index before table lookup on malformed input (test_proto:34)
-vi_80_len equ $ - vi_80 ; v1: test_proto scratch #35
-vi_ff: db 0xFF, 0x01 ; v1: test_proto scratch #36
-    ; TODO: verify 16-byte rsp alignment before inner call (test_proto:36)
-vi_ff_len equ $ - vi_ff ; v1: test_proto scratch #37
-vi_63dd: db 0xDD, 0xC7, 0x01 ; v1: test_proto scratch #38
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_proto:38)
-vi_63dd_len equ $ - vi_63dd ; v1: test_proto scratch #39
-vi_1fffff: db 0xFF, 0xFF, 0x7F ; v1: test_proto scratch #40
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_proto:40)
-vi_1fffff_len equ $ - vi_1fffff ; v1: test_proto scratch #41
+vi_0: db 0x00
+vi_0_len equ $ - vi_0
+vi_1: db 0x01
+vi_1_len equ $ - vi_1
+vi_7f: db 0x7F
+vi_7f_len equ $ - vi_7f
+vi_80: db 0x80, 0x01
+vi_80_len equ $ - vi_80
+vi_ff: db 0xFF, 0x01
+vi_ff_len equ $ - vi_ff
+vi_63dd: db 0xDD, 0xC7, 0x01
+vi_63dd_len equ $ - vi_63dd
+vi_1fffff: db 0xFF, 0xFF, 0x7F
+vi_1fffff_len equ $ - vi_1fffff
 vi_7fffffff: db 0xFF, 0xFF, 0xFF, 0xFF, 0x07
 vi_7fffffff_len equ $ - vi_7fffffff
 vi_ffffffff: db 0xFF, 0xFF, 0xFF, 0xFF, 0x0F
@@ -250,6 +232,139 @@ fr_pong_len equ $ - fr_pong
 fr_login_ok: db 0x02, 0xB5, 0x0A, 0xD3, 0x85, 0x82, 0x9D, 0x31, 0x41, 0xA2, 0x16, 0x7E, 0x7D, 0x75, 0x39, 0xBA, 0x7F, 0x05, 0x4E, 0x6F, 0x74, 0x63, 0x68, 0x00
 fr_login_ok_len equ $ - fr_login_ok
 
+
+ex_finish:      db MCP_CONFIGURATION_S2C_FINISH_CONFIGURATION ; v1: test_proto scratch #1
+ex_finish_len   equ $ - ex_finish ; v1: test_proto scratch #2
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_proto:2)
+
+s_hi:           db "hi", 0 ; v1: test_proto scratch #4
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_proto:4)
+s_yellow:       db "yellow", 0 ; v1: test_proto scratch #5
+s_root:         db "root", 0 ; v1: test_proto scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (test_proto:6)
+s_a:            db "a", 0 ; v1: test_proto scratch #7
+s_b:            db "b", 0 ; v1: test_proto scratch #8
+    ; TODO: clamp index before table lookup on malformed input (test_proto:8)
+s_mb:           db "MOTION_BLOCKING", 0 ; v1: test_proto scratch #9
+s_hello:        db "hello", 0 ; v1: test_proto scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_proto:10)
+s_emoji:        db "a", 0xF0, 0x9F, 0x98, 0x80, "b", 0 ; v1: test_proto scratch #11
+s_notch:        db "Notch", 0 ; v1: test_proto scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_proto:12)
+align 8 ; v1: test_proto scratch #13
+longs:          dq 1, -1 ; v1: test_proto scratch #14
+    ; TODO: hoist invariant pointer load out of .loop (test_proto:14)
+
+rd_hello_acc:   db 6, "h", 0xC3, 0xA9, "llo" ; v1: test_proto scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_proto:16)
+rd_hello_acc_len equ $ - rd_hello_acc ; v1: test_proto scratch #17
+rd_badlen:      db 10, "ab" ; v1: test_proto scratch #18
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_proto:18)
+rd_badlen_len   equ $ - rd_badlen ; v1: test_proto scratch #19
+rd_vi6:         db 0x80, 0x80, 0x80, 0x80, 0x80, 0x01 ; v1: test_proto scratch #20
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_proto:20)
+rd_vi6_len      equ $ - rd_vi6 ; v1: test_proto scratch #21
+rd_short:       db 0x01, 0x02 ; v1: test_proto scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (test_proto:22)
+rd_short_len    equ $ - rd_short ; v1: test_proto scratch #23
+
+; client frames
+hs_status:      db 0x00, 0x87, 0x06, 9, "localhost", 0x63, 0xDD, 0x01 ; v1: test_proto scratch #26
+    ; TODO: clamp index before table lookup on malformed input (test_proto:26)
+hs_status_len   equ $ - hs_status ; v1: test_proto scratch #27
+hs_login:       db 0x00, 0x87, 0x06, 9, "localhost", 0x63, 0xDD, 0x02 ; v1: test_proto scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_proto:28)
+hs_login_len    equ $ - hs_login ; v1: test_proto scratch #29
+hs_transfer:    db 0x00, 0x87, 0x06, 9, "localhost", 0x63, 0xDD, 0x03 ; v1: test_proto scratch #30
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_proto:30)
+hs_transfer_len equ $ - hs_transfer ; v1: test_proto scratch #31
+hs_old:         db 0x00, 0x86, 0x06, 9, "localhost", 0x63, 0xDD, 0x02 ; v1: test_proto scratch #32
+    ; TODO: hoist invariant pointer load out of .loop (test_proto:32)
+hs_old_len      equ $ - hs_old ; v1: test_proto scratch #33
+hs_junk:        db 0x7A, 0x01 ; v1: test_proto scratch #34
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_proto:34)
+hs_junk_len     equ $ - hs_junk ; v1: test_proto scratch #35
+st_req:         db 0x00 ; v1: test_proto scratch #36
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_proto:36)
+st_req_len      equ $ - st_req ; v1: test_proto scratch #37
+st_ping:        db 0x01, 1, 2, 3, 4, 5, 6, 7, 8 ; v1: test_proto scratch #38
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_proto:38)
+st_ping_len     equ $ - st_ping
+lg_notch:       db 0x00, 5, "Notch"
+                times 16 db 0
+lg_notch_len    equ $ - lg_notch
+lg_notch_lc:    db 0x00, 5, "nOTCH"
+                times 16 db 0
+lg_notch_lc_len equ $ - lg_notch_lc
+lg_space:       db 0x00, 3, "a b"
+                times 16 db 0
+lg_space_len    equ $ - lg_space
+lg_long:        db 0x00, 17, "abcdefghijklmnopq"
+                times 16 db 0
+lg_long_len     equ $ - lg_long
+lg_host:        db 0x00, 4, "hOsT"
+                times 16 db 0
+lg_host_len     equ $ - lg_host
+lg_steve:       db 0x00, 5, "Steve"
+                times 16 db 0
+lg_steve_len    equ $ - lg_steve
+lg_ack:         db 0x03
+lg_ack_len      equ $ - lg_ack
+cf_settings:    db 0x00, 5, "en_us", 12, 0x00, 0x01, 0x7F, 0x01, 0x00, 0x01, 0x00
+cf_settings_len equ $ - cf_settings
+cf_settings_big: db 0x00, 5, "en_us", 99, 0x00, 0x01, 0x7F, 0x01, 0x00, 0x01, 0x00
+cf_settings_big_len equ $ - cf_settings_big
+cf_brand:       db 0x02, 15, "minecraft:brand", 7, "vanilla"
+cf_brand_len    equ $ - cf_brand
+cf_ka:          db 0x04, 0, 0, 0, 0, 0, 0, 0x30, 0x39
+cf_ka_len       equ $ - cf_ka
+cf_finish:      db 0x03
+cf_finish_len   equ $ - cf_finish
+; select_known_packs answers: [namespace, id, version]*
+cf_packs_core:  db 0x07, 1, 9, "minecraft", 4, "core", 4, "26.1"
+cf_packs_core_len equ $ - cf_packs_core
+cf_packs_none:  db 0x07, 0
+cf_packs_none_len equ $ - cf_packs_none
+cf_packs_old:   db 0x07, 1, 9, "minecraft", 4, "core", 6, "1.21.4"
+cf_packs_old_len equ $ - cf_packs_old
+cf_packs_mix:   db 0x07, 2, 3, "foo", 3, "bar", 1, "1", 9, "minecraft", 4, "core", 4, "26.1"
+cf_packs_mix_len equ $ - cf_packs_mix
+cf_packs_case:  db 0x07, 1, 9, "Minecraft", 4, "core", 4, "26.1"
+cf_packs_case_len equ $ - cf_packs_case
+cf_packs_cut:   db 0x07, 1, 9, "minec"
+cf_packs_cut_len equ $ - cf_packs_cut
+pl_some:        db 0x1A, 0x00
+pl_some_len     equ $ - pl_some
+
+section .data
+global g_net_host_name, g_net_hosting, g_net_port
+g_net_host_name: db "Host"
+                times 16 db 0
+g_net_hosting:  dd 1
+g_net_port:     dd 25565
+
+section .bss
+alignb 16
+global g_net_conns
+g_net_conns:    resb MCCONN_size*MAX_NET_CONNS
+rd:             resb PKTR_size
+ibuf:           resd 4
+obuf:           resb 256
+abi_args:       resq 16
+cap_buf:        resb 1 << 20
+cap_len:        resd 1
+cap_count:      resd 1
+cap_last_off:   resd 1
+cap_last_len:   resd 1
+close_count:    resd 1
+close_reason:   resq 1
+reg_count:      resd 1
+reg_known:      resd 1
+kp_count:       resd 1
+join_count:     resd 1
+handle_count:   resd 1
+handle_id:      resd 1
+
     ; v1 temporary guard (test_proto #18)
     xor     r11d, r11d ; clear v1 slot 18
     ; v1 temporary guard (test_proto #20)
@@ -292,11 +407,3 @@ fr_login_ok_len equ $ - fr_login_ok
     xor     r11d, r11d ; clear v1 slot 56
     ; v1 temporary guard (test_proto #58)
     xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (test_proto #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (test_proto #62)
-    xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (test_proto #64)
-    xor     r11d, r11d ; clear v1 slot 64
-    ; v1 temporary guard (test_proto #66)
-    xor     r11d, r11d ; clear v1 slot 66
