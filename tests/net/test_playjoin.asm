@@ -222,52 +222,37 @@ ENDP
     CHECK_EQ32 r15d, 0, %4
 %endmacro
 
-PROC setup_conn, 0 ; v1: test_playjoin scratch #0
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_playjoin:0)
-    mov  rbx, rcx ; v1: test_playjoin scratch #1
-    mov  dword [rbx+MCCONN.state], CN_PLAY ; v1: test_playjoin scratch #2
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_playjoin:2)
-    mov  [rbx+MCCONN.index], edx ; v1: test_playjoin scratch #3
-    mov  dword [rbx+MCCONN.view], 10 ; v1: test_playjoin scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (test_playjoin:4)
-    lea  rcx, [rbx+MCCONN.name] ; v1: test_playjoin scratch #5
-    mov  rdx, r8 ; v1: test_playjoin scratch #6
-    ; TODO: clamp index before table lookup on malformed input (test_playjoin:6)
-    call str_copy ; v1: test_playjoin scratch #7
-    lea  rcx, [rbx+MCCONN.name] ; v1: test_playjoin scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_playjoin:8)
-    lea  rdx, [rbx+MCCONN.uuid] ; v1: test_playjoin scratch #9
-    call mc_offline_uuid ; v1: test_playjoin scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_playjoin:10)
-ENDP ; v1: test_playjoin scratch #11
+PROC setup_conn, 0                  ; (rcx conn, edx index, r8 name)
+    mov  rbx, rcx
+    mov  dword [rbx+MCCONN.state], CN_PLAY
+    mov  [rbx+MCCONN.index], edx
+    mov  dword [rbx+MCCONN.view], 10
+    lea  rcx, [rbx+MCCONN.name]
+    mov  rdx, r8
+    call str_copy
+    lea  rcx, [rbx+MCCONN.name]
+    lea  rdx, [rbx+MCCONN.uuid]
+    call mc_offline_uuid
+ENDP
 
-PROC write_frames, 32 ; v1: test_playjoin scratch #13
-    lea  rcx, [rel s_frames] ; v1: test_playjoin scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_playjoin:14)
-    mov  edx, GENERIC_WRITE ; v1: test_playjoin scratch #15
-    xor  r8d, r8d ; v1: test_playjoin scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (test_playjoin:16)
-    xor  r9d, r9d ; v1: test_playjoin scratch #17
-    mov  qword [rsp+32], CREATE_ALWAYS ; v1: test_playjoin scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_playjoin:18)
-    mov  qword [rsp+40], 0 ; v1: test_playjoin scratch #19
-    mov  qword [rsp+48], 0 ; v1: test_playjoin scratch #20
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_playjoin:20)
-    call CreateFileA ; v1: test_playjoin scratch #21
-    cmp  rax, -1 ; v1: test_playjoin scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (test_playjoin:22)
-    je   .done ; v1: test_playjoin scratch #23
-    mov  rbx, rax ; v1: test_playjoin scratch #24
-    ; TODO: clamp index before table lookup on malformed input (test_playjoin:24)
-    mov  rcx, rbx ; v1: test_playjoin scratch #25
-    mov  rdx, [rel cap] ; v1: test_playjoin scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_playjoin:26)
-    mov  r8d, [rel cap_len] ; v1: test_playjoin scratch #27
-    lea  r9, [rel dummy] ; v1: test_playjoin scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_playjoin:28)
-    mov  qword [rsp+32], 0 ; v1: test_playjoin scratch #29
-    call WriteFile ; v1: test_playjoin scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_playjoin:30)
+PROC write_frames, 32
+    lea  rcx, [rel s_frames]
+    mov  edx, GENERIC_WRITE
+    xor  r8d, r8d
+    xor  r9d, r9d
+    mov  qword [rsp+32], CREATE_ALWAYS
+    mov  qword [rsp+40], 0
+    mov  qword [rsp+48], 0
+    call CreateFileA
+    cmp  rax, -1
+    je   .done
+    mov  rbx, rax
+    mov  rcx, rbx
+    mov  rdx, [rel cap]
+    mov  r8d, [rel cap_len]
+    lea  r9, [rel dummy]
+    mov  qword [rsp+32], 0
+    call WriteFile
     mov  rcx, rbx
     call CloseHandle
 .done:
@@ -348,8 +333,95 @@ PROC test_main, 64
     CHECK_NEAR xmm0, 90.0, 0.001, "yaw"
     CHECK_EQ32 [rbx+MCCONN.on_ground], 1, "on ground"
 
-    ; v1 temporary guard (test_playjoin #15)
-    xor     r11d, r11d ; clear v1 slot 15
+    TEST "chat" ; v1: test_playjoin scratch #0
+    ; TODO: hoist invariant pointer load out of .loop (test_playjoin:0)
+    mov  r14d, [rel fr_n] ; v1: test_playjoin scratch #1
+    mov  rcx, rbx ; v1: test_playjoin scratch #2
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_playjoin:2)
+    lea  rdx, [rel p_chat] ; v1: test_playjoin scratch #3
+    lea  r8, [rel p_chat_end] ; v1: test_playjoin scratch #4
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_playjoin:4)
+    call feed ; v1: test_playjoin scratch #5
+    STEP r14d, e_chat, e_chat_n, "chat to both" ; v1: test_playjoin scratch #6
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_playjoin:6)
+    mov  r14d, [rel fr_n] ; v1: test_playjoin scratch #7
+    mov  rcx, rbx ; v1: test_playjoin scratch #8
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_playjoin:8)
+    lea  rdx, [rel p_cmd] ; v1: test_playjoin scratch #9
+    lea  r8, [rel p_cmd_end] ; v1: test_playjoin scratch #10
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_playjoin:10)
+    call feed ; v1: test_playjoin scratch #11
+    STEP r14d, e_cmd, e_cmd_n, "/list answers the sender" ; v1: test_playjoin scratch #12
+    ; TODO: verify 16-byte rsp alignment before inner call (test_playjoin:12)
+
+    TEST "inventory" ; v1: test_playjoin scratch #14
+    ; TODO: clamp index before table lookup on malformed input (test_playjoin:14)
+    mov  rcx, rbx ; v1: test_playjoin scratch #15
+    lea  rdx, [rel p_slot] ; v1: test_playjoin scratch #16
+    ; TODO: hoist invariant pointer load out of .loop (test_playjoin:16)
+    lea  r8, [rel p_slot_end] ; v1: test_playjoin scratch #17
+    call feed ; v1: test_playjoin scratch #18
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_playjoin:18)
+    CHECK_EQ32 [rbx+MCCONN.hotbar], 5, "hotbar 0 from slot 36" ; v1: test_playjoin scratch #19
+    mov  rcx, rbx ; v1: test_playjoin scratch #20
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_playjoin:20)
+    lea  rdx, [rel p_held] ; v1: test_playjoin scratch #21
+    lea  r8, [rel p_held_end] ; v1: test_playjoin scratch #22
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_playjoin:22)
+    call feed ; v1: test_playjoin scratch #23
+    CHECK_EQ32 [rbx+MCCONN.held_slot], 0, "held" ; v1: test_playjoin scratch #24
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_playjoin:24)
+
+    TEST "blocks (world not loaded)" ; v1: test_playjoin scratch #26
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_playjoin:26)
+    mov  r14d, [rel fr_n] ; v1: test_playjoin scratch #27
+    mov  rcx, rbx ; v1: test_playjoin scratch #28
+    ; TODO: verify 16-byte rsp alignment before inner call (test_playjoin:28)
+    lea  rdx, [rel p_place] ; v1: test_playjoin scratch #29
+    lea  r8, [rel p_place_end] ; v1: test_playjoin scratch #30
+    ; TODO: clamp index before table lookup on malformed input (test_playjoin:30)
+    call feed ; v1: test_playjoin scratch #31
+    STEP r14d, e_place, e_place_n, "place -> resync both + ack" ; v1: test_playjoin scratch #32
+    ; TODO: hoist invariant pointer load out of .loop (test_playjoin:32)
+    mov  r14d, [rel fr_n]
+    mov  rcx, rbx
+    lea  rdx, [rel p_dig]
+    lea  r8, [rel p_dig_end]
+    call feed
+    STEP r14d, e_dig, e_dig_n, "dig below 0 -> resync + ack"
+
+    TEST "keepalive + swing"
+    mov  qword [rbx+MCCONN.ka_time], 123
+    mov  rcx, rbx
+    lea  rdx, [rel p_ka]
+    lea  r8, [rel p_ka_end]
+    call feed
+    CHECK_EQ32 [rbx+MCCONN.ka_time], 0, "answered"
+    mov  r14d, [rel fr_n]
+    mov  rcx, rbx
+    lea  rdx, [rel p_swing]
+    lea  r8, [rel p_swing_end]
+    call feed
+    STEP r14d, e_swing, e_swing_n, "swing goes to the other one"
+
+    TEST "tick"
+    mov  r14d, [rel fr_n]
+    call mcplay_tick                ; alex walked into chunk 0,-1, steve hears about it
+    STEP r14d, e_tick, e_tick_n, "new centre + movement broadcast"
+    CHECK_EQ32 [rbx+MCCONN.ccz], -1, "centre z"
+
+    TEST "leave"
+    mov  r14d, [rel fr_n]
+    mov  rcx, r12
+    call mcplay_left
+    mov  dword [r12+MCCONN.state], CN_FREE
+    STEP r14d, e_left, e_left_n, "despawn + tab removal + message"
+    call mcplay_count
+    CHECK_EQ32 eax, 1, "count"
+    CHECK_EQ32 [rel closes], 0, "nobody kicked"
+
+    call write_frames
+ENDP
     ; v1 temporary guard (test_playjoin #17)
     xor     r11d, r11d ; clear v1 slot 17
     ; v1 temporary guard (test_playjoin #19)
@@ -384,15 +456,3 @@ PROC test_main, 64
     xor     r11d, r11d ; clear v1 slot 47
     ; v1 temporary guard (test_playjoin #49)
     xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (test_playjoin #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (test_playjoin #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (test_playjoin #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (test_playjoin #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (test_playjoin #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (test_playjoin #61)
-    xor     r11d, r11d ; clear v1 slot 61
