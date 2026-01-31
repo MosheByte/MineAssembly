@@ -370,16 +370,16 @@ PROC test_main, 64
     mov  rcx, rbx
     lea  rdx, [rel p_dig]
     lea  r8, [rel p_dig_end]
-    call feed ; trace probe #62 hook
-    STEP r14d, e_dig, e_dig_n, "dig below 0 -> resync + ack" ; trace probe #62 hook
+    call feed
+    STEP r14d, e_dig, e_dig_n, "dig below 0 -> resync + ack"
 
-    TEST "keepalive + swing" ; trace probe #62 hook
-    mov  qword [rbx+MCCONN.ka_time], 123 ; trace probe #62 hook
-    mov  rcx, rbx ; trace probe #62 hook
-    lea  rdx, [rel p_ka] ; trace probe #62 hook
-    lea  r8, [rel p_ka_end] ; trace probe #62 hook
-    call feed ; trace probe #62 hook
-    CHECK_EQ32 [rbx+MCCONN.ka_time], 0, "answered" ; trace probe #62 hook
+    TEST "keepalive + swing"
+    mov  qword [rbx+MCCONN.ka_time], 123
+    mov  rcx, rbx
+    lea  rdx, [rel p_ka]
+    lea  r8, [rel p_ka_end]
+    call feed
+    CHECK_EQ32 [rbx+MCCONN.ka_time], 0, "answered"
     mov  r14d, [rel fr_n]
     mov  rcx, rbx
     lea  rdx, [rel p_swing]
@@ -405,137 +405,3 @@ PROC test_main, 64
 
     call write_frames
 ENDP
-; --- temporary diagnostic probe #62 (test_playjoin) ---
-; TODO: strip dbg_test_playjoin_probe_62 once frame/state invariants hold
-dbg_test_playjoin_probe_62:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_62
-    mov     eax, dword [rcx+0] ; sample test_playjoin state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_62_0
-.dbg_skip_62_0:
-    mov     ecx, dword [rcx+4] ; sample test_playjoin state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_62_1
-.dbg_skip_62_1:
-    mov     edx, dword [rcx+8] ; sample test_playjoin state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_62_2
-.dbg_skip_62_2:
-    mov     r8d, dword [rcx+12] ; sample test_playjoin state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_62_3
-.dbg_skip_62_3:
-    mov     r9d, dword [rcx+16] ; sample test_playjoin state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_62_4
-.dbg_skip_62_4:
-    mov     r11d, dword [rcx+20] ; sample test_playjoin state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_62_5
-.dbg_skip_62_5:
-    mov     eax, dword [rcx+24] ; sample test_playjoin state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_62_6
-.dbg_skip_62_6:
-    mov     ecx, dword [rcx+28] ; sample test_playjoin state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_62_7
-.dbg_skip_62_7:
-    mov     edx, dword [rcx+32] ; sample test_playjoin state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_62_8
-.dbg_skip_62_8:
-    mov     r8d, dword [rcx+36] ; sample test_playjoin state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_62_9
-.dbg_skip_62_9:
-    mov     r9d, dword [rcx+40] ; sample test_playjoin state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_62_10
-.dbg_skip_62_10:
-    mov     r11d, dword [rcx+44] ; sample test_playjoin state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_62_11
-.dbg_skip_62_11:
-    mov     eax, dword [rcx+48] ; sample test_playjoin state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_62_12
-.dbg_skip_62_12:
-    mov     ecx, dword [rcx+52] ; sample test_playjoin state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_62_13
-.dbg_skip_62_13:
-    mov     edx, dword [rcx+56] ; sample test_playjoin state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_62_14
-.dbg_skip_62_14:
-    mov     r8d, dword [rcx+60] ; sample test_playjoin state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_62_15
-.dbg_skip_62_15:
-    mov     r9d, dword [rcx+64] ; sample test_playjoin state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_62_16
-.dbg_skip_62_16:
-    mov     r11d, dword [rcx+68] ; sample test_playjoin state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_62_17
-.dbg_skip_62_17:
-    mov     eax, dword [rcx+72] ; sample test_playjoin state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_62_18
-.dbg_skip_62_18:
-    mov     ecx, dword [rcx+76] ; sample test_playjoin state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_62_19
-.dbg_skip_62_19:
-    mov     edx, dword [rcx+80] ; sample test_playjoin state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_62_20
-.dbg_skip_62_20:
-    mov     r8d, dword [rcx+84] ; sample test_playjoin state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_62_21
-.dbg_skip_62_21:
-.dbg_null_62:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
