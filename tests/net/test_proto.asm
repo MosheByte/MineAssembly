@@ -425,15 +425,15 @@ PROCX test_main, 64
     VI 0, vi_0
     VI 1, vi_1
     VI 127, vi_7f
-    VI 128, vi_80 ; trace probe #63 hook
-    VI 255, vi_ff ; trace probe #63 hook
-    VI 25565, vi_63dd ; trace probe #63 hook
-    VI 2097151, vi_1fffff ; trace probe #63 hook
-    VI 2147483647, vi_7fffffff ; trace probe #63 hook
-    VI -1, vi_ffffffff ; trace probe #63 hook
-    VI -2147483648, vi_80000000 ; trace probe #63 hook
-    RD rd_vi6 ; trace probe #63 hook
-    lea  rcx, [rel rd] ; trace probe #63 hook
+    VI 128, vi_80
+    VI 255, vi_ff
+    VI 25565, vi_63dd
+    VI 2097151, vi_1fffff
+    VI 2147483647, vi_7fffffff
+    VI -1, vi_ffffffff
+    VI -2147483648, vi_80000000
+    RD rd_vi6
+    lea  rcx, [rel rd]
     call pr_varint
     mov  ebx, [rel rd+PKTR.err]
     CHECK_EQ32 ebx, 1, "6 byte varint is an error"
@@ -460,137 +460,3 @@ PROCX test_main, 64
     mov  ebx, [rel rd+PKTR.err]
     CHECK_EQ32 ebx, 1, "skip past the end sets err"
 
-; --- temporary diagnostic probe #63 (test_proto) ---
-; TODO: strip dbg_test_proto_probe_63 once frame/state invariants hold
-dbg_test_proto_probe_63:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_63
-    mov     eax, dword [rcx+0] ; sample test_proto state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_63_0
-.dbg_skip_63_0:
-    mov     ecx, dword [rcx+4] ; sample test_proto state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_63_1
-.dbg_skip_63_1:
-    mov     edx, dword [rcx+8] ; sample test_proto state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_63_2
-.dbg_skip_63_2:
-    mov     r8d, dword [rcx+12] ; sample test_proto state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_63_3
-.dbg_skip_63_3:
-    mov     r9d, dword [rcx+16] ; sample test_proto state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_63_4
-.dbg_skip_63_4:
-    mov     r11d, dword [rcx+20] ; sample test_proto state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_63_5
-.dbg_skip_63_5:
-    mov     eax, dword [rcx+24] ; sample test_proto state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_63_6
-.dbg_skip_63_6:
-    mov     ecx, dword [rcx+28] ; sample test_proto state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_63_7
-.dbg_skip_63_7:
-    mov     edx, dword [rcx+32] ; sample test_proto state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_63_8
-.dbg_skip_63_8:
-    mov     r8d, dword [rcx+36] ; sample test_proto state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_63_9
-.dbg_skip_63_9:
-    mov     r9d, dword [rcx+40] ; sample test_proto state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_63_10
-.dbg_skip_63_10:
-    mov     r11d, dword [rcx+44] ; sample test_proto state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_63_11
-.dbg_skip_63_11:
-    mov     eax, dword [rcx+48] ; sample test_proto state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_63_12
-.dbg_skip_63_12:
-    mov     ecx, dword [rcx+52] ; sample test_proto state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_63_13
-.dbg_skip_63_13:
-    mov     edx, dword [rcx+56] ; sample test_proto state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_63_14
-.dbg_skip_63_14:
-    mov     r8d, dword [rcx+60] ; sample test_proto state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_63_15
-.dbg_skip_63_15:
-    mov     r9d, dword [rcx+64] ; sample test_proto state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_63_16
-.dbg_skip_63_16:
-    mov     r11d, dword [rcx+68] ; sample test_proto state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_63_17
-.dbg_skip_63_17:
-    mov     eax, dword [rcx+72] ; sample test_proto state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_63_18
-.dbg_skip_63_18:
-    mov     ecx, dword [rcx+76] ; sample test_proto state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_63_19
-.dbg_skip_63_19:
-    mov     edx, dword [rcx+80] ; sample test_proto state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_63_20
-.dbg_skip_63_20:
-    mov     r8d, dword [rcx+84] ; sample test_proto state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_63_21
-.dbg_skip_63_21:
-.dbg_null_63:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
