@@ -575,55 +575,39 @@ PROCX test_main, 64
     lea  rbx, [rel obuf]
     CHECK_STR rbx, "", "length past the end -> empty"
 
-    TEST "position" ; v1: test_proto scratch #0
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_proto:0)
-    POS -1, -1, -1, ex_pos_neg ; v1: test_proto scratch #1
-    POS 18357644, 831, -20882616, ex_pos_wiki ; v1: test_proto scratch #2
-    ; TODO: verify 16-byte rsp alignment before inner call (test_proto:2)
-    POS -30000000, -64, 29999999, ex_pos_mix ; v1: test_proto scratch #3
+    TEST "position"
+    POS -1, -1, -1, ex_pos_neg
+    POS 18357644, 831, -20882616, ex_pos_wiki
+    POS -30000000, -64, 29999999, ex_pos_mix
 
-    TEST "nbt" ; v1: test_proto scratch #5
-    PW_RESET ; v1: test_proto scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_proto:6)
-    lea  rcx, [rel s_hi] ; v1: test_proto scratch #7
-    call pw_text ; v1: test_proto scratch #8
-    ; TODO: clamp index before table lookup on malformed input (test_proto:8)
-    CHECK_PW ex_text, "pw_text" ; v1: test_proto scratch #9
-    PW_RESET ; v1: test_proto scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_proto:10)
-    lea  rcx, [rel s_hi] ; v1: test_proto scratch #11
-    lea  rdx, [rel s_yellow] ; v1: test_proto scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (test_proto:12)
-    call pw_text_color ; v1: test_proto scratch #13
-    CHECK_PW ex_text_color, "pw_text_color" ; v1: test_proto scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_proto:14)
-    PW_RESET ; v1: test_proto scratch #15
-    lea  rcx, [rel s_emoji] ; v1: test_proto scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_proto:16)
-    call pw_text ; v1: test_proto scratch #17
-    CHECK_PW ex_text_emoji, "astral char -> surrogate pair" ; v1: test_proto scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_proto:18)
-    PW_RESET ; v1: test_proto scratch #19
-    lea  rcx, [rel s_root] ; v1: test_proto scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (test_proto:20)
-    call nbt_begin_compound ; v1: test_proto scratch #21
-    lea  rcx, [rel s_a] ; v1: test_proto scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_proto:22)
-    mov  edx, -2 ; v1: test_proto scratch #23
-    call nbt_int ; v1: test_proto scratch #24
-    ; TODO: clamp index before table lookup on malformed input (test_proto:24)
-    lea  rcx, [rel s_b] ; v1: test_proto scratch #25
-    mov  edx, 1 ; v1: test_proto scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_proto:26)
-    call nbt_byte ; v1: test_proto scratch #27
-    lea  rcx, [rel s_mb] ; v1: test_proto scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (test_proto:28)
-    lea  rdx, [rel longs] ; v1: test_proto scratch #29
-    mov  r8d, 2 ; v1: test_proto scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_proto:30)
-    call nbt_long_array ; v1: test_proto scratch #31
-    call nbt_end ; v1: test_proto scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_proto:32)
+    TEST "nbt"
+    PW_RESET
+    lea  rcx, [rel s_hi]
+    call pw_text
+    CHECK_PW ex_text, "pw_text"
+    PW_RESET
+    lea  rcx, [rel s_hi]
+    lea  rdx, [rel s_yellow]
+    call pw_text_color
+    CHECK_PW ex_text_color, "pw_text_color"
+    PW_RESET
+    lea  rcx, [rel s_emoji]
+    call pw_text
+    CHECK_PW ex_text_emoji, "astral char -> surrogate pair"
+    PW_RESET
+    lea  rcx, [rel s_root]
+    call nbt_begin_compound
+    lea  rcx, [rel s_a]
+    mov  edx, -2
+    call nbt_int
+    lea  rcx, [rel s_b]
+    mov  edx, 1
+    call nbt_byte
+    lea  rcx, [rel s_mb]
+    lea  rdx, [rel longs]
+    mov  r8d, 2
+    call nbt_long_array
+    call nbt_end
     CHECK_PW ex_nbt_mix, "named compound, int, byte, long array"
 
     TEST "md5"
@@ -704,51 +688,142 @@ PROCX test_main, 64
     FEED st_ping
     CHECK_FRAME fr_pong, "pong echoes the payload"
 
-    ; v1 temporary guard (test_proto #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (test_proto #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_proto #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_proto #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_proto #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_proto #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_proto #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_proto #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_proto #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_proto #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_proto #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_proto #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_proto #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_proto #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_proto #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_proto #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_proto #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_proto #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_proto #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_proto #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_proto #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (test_proto #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (test_proto #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (test_proto #62)
-    xor     r11d, r11d ; clear v1 slot 62
+    TEST "login"
+    lea  r12, [rel g_net_conns + MCCONN_size]
+    FEED hs_login
+    STATE_IS CN_LOGIN, "handshake 2 -> login"
+    FEED lg_ack
+    mov  ebx, [rel close_count]
+    CHECK_EQ32 ebx, 1, "ack before login_start kicks"
+    mov  rbx, [rel close_reason]
+    CHECK_STR rbx, "bad login packet", "ack before start reason"
+    mov  rcx, r12
+    call reset_conn
+    mov  dword [rel close_count], 0
+    FEED hs_login
+    FEED lg_notch
+    CHECK_FRAME fr_login_ok, "login_success with the offline uuid"
+    lea  rbx, [r12+MCCONN.name]
+    CHECK_STR rbx, "Notch", "name stored"
+    lea  rbx, [r12+MCCONN.uuid]
+    lea  rsi, [rel uuid_notch]
+    CHECK_MEM rbx, rsi, 16, "uuid stored"
+    STATE_IS CN_LOGIN, "still login until acknowledged"
+    mov  r13d, [rel cap_count]
+    FEED lg_ack
+    STATE_IS CN_CONFIG, "acknowledged -> config"
+    mov  ebx, [rel kp_count]
+    CHECK_EQ32 ebx, 1, "known packs asked once"
+    mov  ebx, [rel reg_count]
+    CHECK_EQ32 ebx, 0, "no registries before the client answers"
+    mov  ebx, [rel cap_count]
+    sub  ebx, r13d
+    CHECK_EQ32 ebx, 2, "brand + feature flags"
+
+    TEST "config"
+    FEED cf_brand
+    FEED cf_settings
+    mov  ebx, [r12+MCCONN.view]
+    CHECK_EQ32 ebx, 12, "view distance from client settings"
+    FEED cf_settings_big
+    mov  ebx, [r12+MCCONN.view]
+    CHECK_EQ32 ebx, 32, "view distance clamped"
+    mov  qword [r12+MCCONN.ka_id], 12345
+    mov  qword [r12+MCCONN.ka_time], 999
+    FEED cf_ka
+    mov  rbx, [r12+MCCONN.ka_time]
+    CHECK_EQ rbx, 0, "config keepalive answered"
+    FEED cf_finish
+    STATE_IS CN_CONFIG, "client finish before ours is ignored"
+    mov  r13d, [rel cap_count]
+    FEED cf_packs_core
+    mov  ebx, [rel reg_count]
+    CHECK_EQ32 ebx, 1, "registries once the client answers"
+    mov  ebx, [rel reg_known]
+    CHECK_EQ32 ebx, 1, "client has minecraft:core 26.1"
+    mov  ebx, [rel cap_count]
+    sub  ebx, r13d
+    CHECK_EQ32 ebx, 1, "then one more frame"
+    CHECK_FRAME ex_finish, "config ends with finish_configuration"
+    FEED cf_packs_core
+    mov  ebx, [rel reg_count]
+    CHECK_EQ32 ebx, 1, "a second answer is ignored"
+    mov  ebx, [rel join_count]
+    CHECK_EQ32 ebx, 0, "no join before the client finishes"
+    FEED cf_finish
+    STATE_IS CN_PLAY, "client finish -> play"
+    mov  ebx, [rel join_count]
+    CHECK_EQ32 ebx, 1, "mcplay_join called"
+    FEED pl_some
+    mov  ebx, [rel handle_count]
+    CHECK_EQ32 ebx, 1, "play packet -> mcplay_handle"
+    mov  ebx, [rel handle_id]
+    CHECK_EQ32 ebx, 0x1A, "play packet id"
+    mov  ebx, [rel close_count]
+    CHECK_EQ32 ebx, 0, "nobody kicked"
+
+    TEST "known packs answers"
+    lea  r12, [rel g_net_conns + 3*MCCONN_size]
+    PACKS cf_packs_none, 0, "nothing known (mineflayer) -> full nbt"
+    PACKS cf_packs_old, 0, "core of another version -> full nbt"
+    PACKS cf_packs_mix, 1, "core among other packs -> no data"
+    PACKS cf_packs_case, 0, "namespace is case sensitive"
+    PACKS cf_packs_cut, 0, "cut off answer -> full nbt"
+    STATE_IS CN_CONFIG, "cut off answer doesn't kick"
+    mov  dword [r12+MCCONN.flags], 0
+    mov  dword [rel reg_known], -1
+    FEED cf_packs_core
+    mov  ebx, [rel reg_known]
+    CHECK_EQ32 ebx, -1, "unasked answer ignored"
+    mov  rcx, r12
+    call reset_conn
+
+    TEST "login rejects"
+    lea  r12, [rel g_net_conns + 2*MCCONN_size]
+    FEED hs_login
+    FEED lg_notch_lc
+    STATE_IS CN_CLOSING, "same name other case is kicked"
+    mov  rbx, [rel close_reason]
+    CHECK_STR rbx, "someone with that name is already playing", "dup reason"
+    mov  rcx, r12
+    call reset_conn
+    FEED hs_login
+    FEED lg_host
+    STATE_IS CN_CLOSING, "host's name is taken"
+    mov  rcx, r12
+    call reset_conn
+    FEED hs_login
+    FEED lg_space
+    STATE_IS CN_CLOSING, "space in name kicked"
+    mov  rbx, [rel close_reason]
+    CHECK_STR rbx, "invalid username", "bad name reason"
+    mov  rcx, r12
+    call reset_conn
+    FEED hs_login
+    FEED lg_long
+    STATE_IS CN_CLOSING, "17 chars kicked"
+    mov  rcx, r12
+    call reset_conn
+    FEED hs_old
+    STATE_IS CN_LOGIN, "old protocol still gets to login"
+    FEED lg_steve
+    STATE_IS CN_CLOSING, "old protocol kicked at login"
+    mov  rbx, [rel close_reason]
+    CHECK_STR rbx, "this server runs Minecraft 26.1, please join with that version", "version reason"
+    mov  rcx, r12
+    call reset_conn
+    FEED hs_transfer
+    STATE_IS CN_LOGIN, "transfer intent -> login"
+    FEED lg_steve
+    STATE_IS CN_LOGIN, "Steve logs in"
+    lea  rbx, [r12+MCCONN.name]
+    CHECK_STR rbx, "Steve", "Steve stored"
+    mov  rcx, r12
+    call reset_conn
+    mov  dword [rel close_reason], 1
+    mov  dword [rel close_reason+4], 0
+    FEED hs_junk
+    STATE_IS CN_CLOSING, "junk handshake closed"
+    mov  rbx, [rel close_reason]
+    CHECK_EQ rbx, 0, "junk handshake closed without a reason"
+ENDPX
