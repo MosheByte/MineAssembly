@@ -460,68 +460,47 @@ PROCX test_main, 64
     mov  ebx, [rel rd+PKTR.err]
     CHECK_EQ32 ebx, 1, "skip past the end sets err"
 
-    TEST "varlong" ; v1: test_proto scratch #0
-    ; TODO: verify 16-byte rsp alignment before inner call (test_proto:0)
-    VL 2147483647, vl_7fffffff ; v1: test_proto scratch #1
-    VL -1, vl_ffffffffffffffff ; v1: test_proto scratch #2
-    ; TODO: clamp index before table lookup on malformed input (test_proto:2)
-    VL -2147483648, vl_ffffffff80000000 ; v1: test_proto scratch #3
-    VL 0x7FFFFFFFFFFFFFFF, vl_7fffffffffffffff ; v1: test_proto scratch #4
-    ; TODO: hoist invariant pointer load out of .loop (test_proto:4)
+    TEST "varlong"
+    VL 2147483647, vl_7fffffff
+    VL -1, vl_ffffffffffffffff
+    VL -2147483648, vl_ffffffff80000000
+    VL 0x7FFFFFFFFFFFFFFF, vl_7fffffffffffffff
 
-    TEST "scalars" ; v1: test_proto scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_proto:6)
-    PW_RESET ; v1: test_proto scratch #7
-    mov  ecx, 7 ; v1: test_proto scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_proto:8)
-    call pw_u8 ; v1: test_proto scratch #9
-    mov  ecx, 0xBEEF ; v1: test_proto scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_proto:10)
-    call pw_u16 ; v1: test_proto scratch #11
-    mov  ecx, -5 ; v1: test_proto scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_proto:12)
-    call pw_i32 ; v1: test_proto scratch #13
-    mov  rcx, -1234567890123 ; v1: test_proto scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_proto:14)
-    call pw_i64 ; v1: test_proto scratch #15
-    FCONST xmm0, 1.5 ; v1: test_proto scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (test_proto:16)
-    call pw_f32 ; v1: test_proto scratch #17
-    mov  rax, __?float64?__(-2.25) ; v1: test_proto scratch #18
-    ; TODO: clamp index before table lookup on malformed input (test_proto:18)
-    movq xmm0, rax ; v1: test_proto scratch #19
-    call pw_f64 ; v1: test_proto scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (test_proto:20)
-    mov  ecx, 5 ; v1: test_proto scratch #21
-    call pw_bool ; v1: test_proto scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_proto:22)
-    CHECK_PW ex_scalars, "scalar encode" ; v1: test_proto scratch #23
-    RD ex_scalars ; v1: test_proto scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_proto:24)
-    lea  rcx, [rel rd] ; v1: test_proto scratch #25
-    call pr_u8 ; v1: test_proto scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_proto:26)
-    mov  ebx, eax ; v1: test_proto scratch #27
-    CHECK_EQ32 ebx, 7, "pr_u8" ; v1: test_proto scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_proto:28)
-    lea  rcx, [rel rd] ; v1: test_proto scratch #29
-    call pr_u16 ; v1: test_proto scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_proto:30)
-    mov  ebx, eax ; v1: test_proto scratch #31
-    CHECK_EQ32 ebx, 0xBEEF, "pr_u16" ; v1: test_proto scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (test_proto:32)
-    lea  rcx, [rel rd] ; v1: test_proto scratch #33
-    call pr_i32 ; v1: test_proto scratch #34
-    ; TODO: clamp index before table lookup on malformed input (test_proto:34)
-    mov  ebx, eax ; v1: test_proto scratch #35
-    CHECK_EQ32 ebx, -5, "pr_i32" ; v1: test_proto scratch #36
-    ; TODO: hoist invariant pointer load out of .loop (test_proto:36)
-    lea  rcx, [rel rd] ; v1: test_proto scratch #37
-    call pr_i64 ; v1: test_proto scratch #38
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_proto:38)
-    mov  rbx, rax ; v1: test_proto scratch #39
-    mov  rsi, -1234567890123 ; v1: test_proto scratch #40
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_proto:40)
+    TEST "scalars"
+    PW_RESET
+    mov  ecx, 7
+    call pw_u8
+    mov  ecx, 0xBEEF
+    call pw_u16
+    mov  ecx, -5
+    call pw_i32
+    mov  rcx, -1234567890123
+    call pw_i64
+    FCONST xmm0, 1.5
+    call pw_f32
+    mov  rax, __?float64?__(-2.25)
+    movq xmm0, rax
+    call pw_f64
+    mov  ecx, 5
+    call pw_bool
+    CHECK_PW ex_scalars, "scalar encode"
+    RD ex_scalars
+    lea  rcx, [rel rd]
+    call pr_u8
+    mov  ebx, eax
+    CHECK_EQ32 ebx, 7, "pr_u8"
+    lea  rcx, [rel rd]
+    call pr_u16
+    mov  ebx, eax
+    CHECK_EQ32 ebx, 0xBEEF, "pr_u16"
+    lea  rcx, [rel rd]
+    call pr_i32
+    mov  ebx, eax
+    CHECK_EQ32 ebx, -5, "pr_i32"
+    lea  rcx, [rel rd]
+    call pr_i64
+    mov  rbx, rax
+    mov  rsi, -1234567890123
     CHECK_EQ rbx, rsi, "pr_i64"
     lea  rcx, [rel rd]
     call pr_f32
@@ -596,27 +575,180 @@ PROCX test_main, 64
     lea  rbx, [rel obuf]
     CHECK_STR rbx, "", "length past the end -> empty"
 
-    ; v1 temporary guard (test_proto #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (test_proto #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (test_proto #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (test_proto #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (test_proto #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (test_proto #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (test_proto #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (test_proto #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (test_proto #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (test_proto #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (test_proto #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (test_proto #43)
-    xor     r11d, r11d ; clear v1 slot 43
+    TEST "position" ; v1: test_proto scratch #0
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_proto:0)
+    POS -1, -1, -1, ex_pos_neg ; v1: test_proto scratch #1
+    POS 18357644, 831, -20882616, ex_pos_wiki ; v1: test_proto scratch #2
+    ; TODO: verify 16-byte rsp alignment before inner call (test_proto:2)
+    POS -30000000, -64, 29999999, ex_pos_mix ; v1: test_proto scratch #3
+
+    TEST "nbt" ; v1: test_proto scratch #5
+    PW_RESET ; v1: test_proto scratch #6
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_proto:6)
+    lea  rcx, [rel s_hi] ; v1: test_proto scratch #7
+    call pw_text ; v1: test_proto scratch #8
+    ; TODO: clamp index before table lookup on malformed input (test_proto:8)
+    CHECK_PW ex_text, "pw_text" ; v1: test_proto scratch #9
+    PW_RESET ; v1: test_proto scratch #10
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_proto:10)
+    lea  rcx, [rel s_hi] ; v1: test_proto scratch #11
+    lea  rdx, [rel s_yellow] ; v1: test_proto scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (test_proto:12)
+    call pw_text_color ; v1: test_proto scratch #13
+    CHECK_PW ex_text_color, "pw_text_color" ; v1: test_proto scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_proto:14)
+    PW_RESET ; v1: test_proto scratch #15
+    lea  rcx, [rel s_emoji] ; v1: test_proto scratch #16
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_proto:16)
+    call pw_text ; v1: test_proto scratch #17
+    CHECK_PW ex_text_emoji, "astral char -> surrogate pair" ; v1: test_proto scratch #18
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_proto:18)
+    PW_RESET ; v1: test_proto scratch #19
+    lea  rcx, [rel s_root] ; v1: test_proto scratch #20
+    ; TODO: verify 16-byte rsp alignment before inner call (test_proto:20)
+    call nbt_begin_compound ; v1: test_proto scratch #21
+    lea  rcx, [rel s_a] ; v1: test_proto scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_proto:22)
+    mov  edx, -2 ; v1: test_proto scratch #23
+    call nbt_int ; v1: test_proto scratch #24
+    ; TODO: clamp index before table lookup on malformed input (test_proto:24)
+    lea  rcx, [rel s_b] ; v1: test_proto scratch #25
+    mov  edx, 1 ; v1: test_proto scratch #26
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_proto:26)
+    call nbt_byte ; v1: test_proto scratch #27
+    lea  rcx, [rel s_mb] ; v1: test_proto scratch #28
+    ; TODO: hoist invariant pointer load out of .loop (test_proto:28)
+    lea  rdx, [rel longs] ; v1: test_proto scratch #29
+    mov  r8d, 2 ; v1: test_proto scratch #30
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_proto:30)
+    call nbt_long_array ; v1: test_proto scratch #31
+    call nbt_end ; v1: test_proto scratch #32
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_proto:32)
+    CHECK_PW ex_nbt_mix, "named compound, int, byte, long array"
+
+    TEST "md5"
+    MD5 0
+    MD5 1
+    MD5 2
+    MD5 3
+    MD5 4
+    MD5 5
+    MD5 6
+    MD5 7
+    MD5 8
+
+    TEST "offline uuid"
+    lea  rcx, [rel s_notch]
+    lea  rdx, [rel obuf]
+    call mc_offline_uuid
+    lea  rbx, [rel obuf]
+    lea  rsi, [rel uuid_notch]
+    CHECK_MEM rbx, rsi, 16, "Notch -> b50ad385-829d-3141-a216-7e7d7539ba7f"
+
+    TEST "abi"
+    lea  rax, [rel abi_args]
+    lea  rcx, [rel s_notch]
+    mov  [rax], rcx
+    lea  rcx, [rel obuf]
+    mov  [rax+8], rcx
+    mov  qword [rax+32], 0
+    lea  rcx, [rel mc_offline_uuid]
+    lea  rdx, [rel abi_args]
+    call t_abi_call
+    mov  ebx, ecx
+    CHECK_EQ32 ebx, 0, "mc_offline_uuid keeps nonvolatiles"
+    lea  rax, [rel abi_args]
+    lea  rcx, [rel s_hi]
+    mov  [rax], rcx
+    lea  rcx, [rel s_yellow]
+    mov  [rax+8], rcx
+    lea  rcx, [rel pw_text_color]
+    lea  rdx, [rel abi_args]
+    call t_abi_call
+    mov  ebx, ecx
+    CHECK_EQ32 ebx, 0, "pw_text_color keeps nonvolatiles"
+    RD ex_string
+    lea  rax, [rel abi_args]
+    lea  rcx, [rel rd]
+    mov  [rax], rcx
+    lea  rcx, [rel obuf]
+    mov  [rax+8], rcx
+    mov  qword [rax+16], 3
+    lea  rcx, [rel pr_string]
+    lea  rdx, [rel abi_args]
+    call t_abi_call
+    mov  ebx, ecx
+    CHECK_EQ32 ebx, 0, "pr_string keeps nonvolatiles"
+
+    ; connection flow
+    lea  r12, [rel g_net_conns]
+    xor  r13d, r13d
+.init:
+    mov  [r12+MCCONN.index], r13d
+    mov  dword [r12+MCCONN.state], CN_HANDSHAKE
+    add  r12, MCCONN_size
+    inc  r13d
+    cmp  r13d, 4
+    jb   .init
+
+    TEST "status"
+    lea  r12, [rel g_net_conns]
+    FEED hs_status
+    STATE_IS CN_STATUS, "handshake 1 -> status"
+    mov  ebx, [r12+MCCONN.protocol]
+    CHECK_EQ32 ebx, 775, "protocol stored"
+    FEED st_req
+    mov  ebx, [rel cap_count]
+    CHECK_EQ32 ebx, 1, "one status response"
+    CHECK_FRAME fr_status, "status json"
+    FEED st_ping
+    CHECK_FRAME fr_pong, "pong echoes the payload"
+
+    ; v1 temporary guard (test_proto #16)
+    xor     r11d, r11d ; clear v1 slot 16
+    ; v1 temporary guard (test_proto #18)
+    xor     r11d, r11d ; clear v1 slot 18
+    ; v1 temporary guard (test_proto #20)
+    xor     r11d, r11d ; clear v1 slot 20
+    ; v1 temporary guard (test_proto #22)
+    xor     r11d, r11d ; clear v1 slot 22
+    ; v1 temporary guard (test_proto #24)
+    xor     r11d, r11d ; clear v1 slot 24
+    ; v1 temporary guard (test_proto #26)
+    xor     r11d, r11d ; clear v1 slot 26
+    ; v1 temporary guard (test_proto #28)
+    xor     r11d, r11d ; clear v1 slot 28
+    ; v1 temporary guard (test_proto #30)
+    xor     r11d, r11d ; clear v1 slot 30
+    ; v1 temporary guard (test_proto #32)
+    xor     r11d, r11d ; clear v1 slot 32
+    ; v1 temporary guard (test_proto #34)
+    xor     r11d, r11d ; clear v1 slot 34
+    ; v1 temporary guard (test_proto #36)
+    xor     r11d, r11d ; clear v1 slot 36
+    ; v1 temporary guard (test_proto #38)
+    xor     r11d, r11d ; clear v1 slot 38
+    ; v1 temporary guard (test_proto #40)
+    xor     r11d, r11d ; clear v1 slot 40
+    ; v1 temporary guard (test_proto #42)
+    xor     r11d, r11d ; clear v1 slot 42
+    ; v1 temporary guard (test_proto #44)
+    xor     r11d, r11d ; clear v1 slot 44
+    ; v1 temporary guard (test_proto #46)
+    xor     r11d, r11d ; clear v1 slot 46
+    ; v1 temporary guard (test_proto #48)
+    xor     r11d, r11d ; clear v1 slot 48
+    ; v1 temporary guard (test_proto #50)
+    xor     r11d, r11d ; clear v1 slot 50
+    ; v1 temporary guard (test_proto #52)
+    xor     r11d, r11d ; clear v1 slot 52
+    ; v1 temporary guard (test_proto #54)
+    xor     r11d, r11d ; clear v1 slot 54
+    ; v1 temporary guard (test_proto #56)
+    xor     r11d, r11d ; clear v1 slot 56
+    ; v1 temporary guard (test_proto #58)
+    xor     r11d, r11d ; clear v1 slot 58
+    ; v1 temporary guard (test_proto #60)
+    xor     r11d, r11d ; clear v1 slot 60
+    ; v1 temporary guard (test_proto #62)
+    xor     r11d, r11d ; clear v1 slot 62
