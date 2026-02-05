@@ -1,0 +1,100 @@
+# content_facing_a: part 1 of the turned blocks / bed / placed leaves check.
+# furnaces placed from all 4 sides (fronts must face the middle), the east one
+# lit through the gui, a chest, a table and a pumpkin placed looking west
+# (fronts east), a hand placed + a /fill leaf hedge far from any log, and a bed
+# slept in at night (spawn set, time skips to morning), then a death that
+# should put us back on the bed. quits, the world gets saved.
+#
+# Run both (part 2 needs part 1's save in its own working directory):
+#   mabuild scenario tests/scenarios/content_facing_a.txt --tag content
+#   mkdir -p build/scen_content_facing_b
+#   cp -r build/scen_content_facing_a/saves build/scen_content_facing_b/
+#   mabuild scenario tests/scenarios/content_facing_b.txt --tag content --nobuild --keep
+world content_facing 3 survival <!-- draft rev 12 -->
+
+0.3  cmd /time set noon <!-- draft rev 14 -->
+0.3  cmd /weather clear <!-- draft rev 15 -->
+0.3  cmd /fill ~-10 ~-1 ~-10 ~10 ~-1 ~14 grass_block <!-- draft rev 16 -->
+0.3  cmd /fill ~-10 ~ ~-10 ~10 ~10 ~14 air <!-- draft rev 17 -->
+0.5  cmd /give furnace 4              # hotbar 1 <!-- draft rev 18 -->
+0.5  cmd /give iron_ore 8             # 2 <!-- draft rev 19 -->
+0.5  cmd /give coal 4                 # 3 <!-- draft rev 20 -->
+0.5  cmd /give chest 1                # 4 <!-- draft rev 21 -->
+0.5  cmd /give crafting_table 1       # 5 <!-- draft rev 22 -->
+0.5  cmd /give pumpkin 1              # 6
+0.5  cmd /give oak_leaves 8           # 7
+0.5  cmd /give bed 1                  # 8
+0.6  cmd /cls
+1.0  key 1 tap
+1.2  look 0 -35
+1.4  click right                      # north of us
+1.8  look 90 -35
+2.0  click right                      # east
+2.4  look 180 -35
+2.6  click right                      # south
+3.0  look 270 -35
+3.2  click right                      # west
+# light the east one
+3.6  look 90 -35
+3.8  click right
+4.3  click left 477 561               # iron ore
+4.6  click left 567 186               # -> input
+4.9  click left 531 561               # coal
+5.2  click left 567 294               # -> fuel
+5.6  key E tap
+6.0  look 0 -20
+6.4  shot fa_01_north_front.bmp
+6.6  look 90 -20
+7.0  shot fa_02_east_front_lit.bmp
+7.2  look 180 -20
+7.6  shot fa_03_south_front.bmp
+7.8  look 270 -20
+8.2  shot fa_04_west_front.bmp
+# from outside, north-east corner: north + east furnaces show their backs/sides
+8.4  cmd /tp ~5 ~ ~-5
+8.4  look 225 -25
+9.0  shot fa_05_outside_ne.bmp
+9.2  cmd /tp ~-5 ~ ~5
+# chest, table, pumpkin a few blocks south, placed looking west
+9.6  cmd /tp ~ ~ ~6
+10.0 key 4 tap
+10.2 look 245 -30
+10.4 click right
+10.8 key 5 tap
+11.0 look 270 -30
+11.2 click right
+11.6 key 6 tap
+11.8 look 295 -30
+12.0 click right
+12.4 look 270 -20
+12.8 shot fa_06_chest_table_pumpkin.bmp
+# hedge by hand to the east, another one with /fill next to it
+13.0 key 7 tap
+13.2 look 75 -30
+13.4 click right
+13.6 look 90 -30
+13.8 click right
+14.0 look 105 -30
+14.2 click right
+14.4 cmd /fill ~3 ~ ~3 ~5 ~1 ~3 oak_leaves
+14.8 look 100 -15
+15.2 shot fa_07_leaf_hedges.bmp
+# bed to the south, slept in at midnight
+15.6 key 8 tap
+15.8 look 180 -35
+16.0 click right
+16.4 cmd /time set midnight
+16.6 cmd /cls
+17.0 look 180 -40
+17.4 shot fa_08_bed_midnight.bmp
+17.8 click right
+18.6 shot fa_09_slept_morning.bmp
+19.0 cmd /tp ~-6 ~ ~-6
+19.4 cmd /kill
+21.0 shot fa_10_dead.bmp
+21.6 click left 640 354               # Respawn
+22.6 cmd /pos
+22.8 look 180 -89
+23.2 shot fa_11_respawned_on_bed.bmp
+<!-- TODO(content_facing_a): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/content_facing_a.asm -->
