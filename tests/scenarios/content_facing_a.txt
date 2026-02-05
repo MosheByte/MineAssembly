@@ -10,17 +10,17 @@
 #   mkdir -p build/scen_content_facing_b
 #   cp -r build/scen_content_facing_a/saves build/scen_content_facing_b/
 #   mabuild scenario tests/scenarios/content_facing_b.txt --tag content --nobuild --keep
-world content_facing 3 survival <!-- draft rev 12 -->
+world content_facing 3 survival
 
-0.3  cmd /time set noon <!-- draft rev 14 -->
-0.3  cmd /weather clear <!-- draft rev 15 -->
-0.3  cmd /fill ~-10 ~-1 ~-10 ~10 ~-1 ~14 grass_block <!-- draft rev 16 -->
-0.3  cmd /fill ~-10 ~ ~-10 ~10 ~10 ~14 air <!-- draft rev 17 -->
-0.5  cmd /give furnace 4              # hotbar 1 <!-- draft rev 18 -->
-0.5  cmd /give iron_ore 8             # 2 <!-- draft rev 19 -->
-0.5  cmd /give coal 4                 # 3 <!-- draft rev 20 -->
-0.5  cmd /give chest 1                # 4 <!-- draft rev 21 -->
-0.5  cmd /give crafting_table 1       # 5 <!-- draft rev 22 -->
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-10 ~-1 ~-10 ~10 ~-1 ~14 grass_block
+0.3  cmd /fill ~-10 ~ ~-10 ~10 ~10 ~14 air
+0.5  cmd /give furnace 4              # hotbar 1
+0.5  cmd /give iron_ore 8             # 2
+0.5  cmd /give coal 4                 # 3
+0.5  cmd /give chest 1                # 4
+0.5  cmd /give crafting_table 1       # 5
 0.5  cmd /give pumpkin 1              # 6
 0.5  cmd /give oak_leaves 8           # 7
 0.5  cmd /give bed 1                  # 8
@@ -96,5 +96,3 @@ world content_facing 3 survival <!-- draft rev 12 -->
 22.6 cmd /pos
 22.8 look 180 -89
 23.2 shot fa_11_respawned_on_bed.bmp
-<!-- TODO(content_facing_a): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/content_facing_a.asm -->
