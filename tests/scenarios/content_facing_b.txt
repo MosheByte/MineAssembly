@@ -1,0 +1,34 @@
+# content_facing_b: part 2 (see content_facing_a.txt for how to run). reloads
+# the world: furnaces still face the middle, the east one still burns, chest /
+# table / pumpkin still face east. then every leaf near the two hedges gets a
+# decay check (a stone wall set and cleared next to them): the hedges are far
+# from any log and must stay, the in-memory set they used to live in is gone
+# after a reload. last, a death puts us back on the bed from part 1.
+world content_facing 3 survival keep
+
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.5  cmd /cls
+0.8  pos 36.5 64 -11.5
+1.0  look 0 -20
+1.4  shot fb_01_north_front.bmp
+1.6  look 90 -20
+2.0  shot fb_02_east_still_lit.bmp
+2.2  look 180 -20
+2.6  shot fb_03_south_front.bmp
+2.8  look 270 -20
+3.2  shot fb_04_west_front.bmp
+3.4  pos 36.5 64 -5.5
+3.6  look 270 -20
+4.0  shot fb_05_chest_table_pumpkin.bmp
+4.2  look 100 -15
+4.6  shot fb_06_hedges_before.bmp
+5.0  cmd /fill 37 64 -9 37 66 0 stone
+5.4  cmd /fill 37 64 -9 37 66 0 air
+5.6  cmd /cls
+15.0 shot fb_07_hedges_after_decay_checks.bmp
+15.4 cmd /kill
+17.0 click left 640 354               # Respawn
+18.0 cmd /pos
+18.2 look 180 -89
+18.6 shot fb_08_respawned_on_bed.bmp

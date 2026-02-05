@@ -1,0 +1,36 @@
+# example_inventory: open the survival inventory with E, move items with
+# mouse clicks (two planks into the 2x2 crafting grid -> sticks), take
+# screenshots, then switch to creative with a console command and open the
+# creative inventory.
+#
+# Run:  mabuild scenario tests/scenarios/example_inventory.txt
+#
+# Mouse coordinates are window pixels (1280x720 client area) and assume the
+# default GUI scale of a fresh options.txt.
+world scen_inventory 1 survival
+
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.5  cmd /give oak_planks 32          # hotbar slot 1
+0.5  cmd /give cobblestone 20
+0.5  cmd /give torch 64
+0.5  cmd /give apple 5                # hotbar slot 4
+0.5  cmd /give stone_pickaxe
+1.0  look 0 -10
+1.5  key E tap                        # open the inventory (2x2 crafting grid)
+2.0  shot inventory_1_open.bmp
+
+# pick up the planks, drop one into each of the two left grid slots
+2.5  click left 423 560               # hotbar slot 1: the whole stack on the cursor
+2.8  click right 663 190              # right click: put one into the top-left slot
+3.1  click right 663 242              # and one below it -> 4 sticks
+3.4  click left 423 560               # put the rest back
+3.7  mouse 585 560                    # hover the apples (tooltip)
+4.0  shot inventory_2_crafting.bmp
+
+4.3  key ESC tap                      # close (the grid items go back to the inventory)
+4.8  shot inventory_3_closed.bmp
+5.0  cmd /gamemode creative
+5.3  key E tap                        # creative mode: the creative inventory
+5.8  shot inventory_4_creative.bmp
+6.2  key ESC tap

@@ -1,0 +1,47 @@
+# example_build: give items with console commands, place blocks and a torch
+# with right clicks, walk back and take screenshots along the way.
+#
+# Run:  mabuild scenario tests/scenarios/example_build.txt
+#
+# Fresh survival world 'scen_build', seed 1 (deleted first: no 'keep').
+# Seed 1 spawns on a grassy coast; facing north (yaw 0) shows the sea.
+world scen_build 1 survival
+
+# t = seconds after the spawn area is ready
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+# a flat stage in front of the player, whatever the terrain looks like:
+# grass floor under the feet, nothing above it (13 x 15 blocks)
+0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~2 grass_block
+0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~2 air
+0.5  cmd /give oak_planks 16          # -> hotbar slot 1
+0.5  cmd /give cobblestone 16         # -> hotbar slot 2
+0.5  cmd /give torch 64               # -> hotbar slot 3
+1.0  look 0 -30                       # face north, aim at the floor ~3 blocks ahead
+1.5  shot build_1_start.bmp
+
+# three planks in an arc: place, turn, place, turn, place
+2.0  key 1 tap
+2.2  click right
+2.4  turn 20 0 0.3
+2.9  click right
+3.1  turn -40 0 0.5
+3.8  click right
+# a cobblestone on top of the middle plank
+4.0  turn 20 17 0.3                   # back to the middle, aim at its top face
+4.5  key 2 tap
+4.7  click right
+# a torch on the floor to the right of the row
+4.9  turn 35 -10 0.3
+5.4  key 3 tap
+5.6  click right
+# walk back a little (hold S) and look at the result
+5.8  look 0 -25
+6.0  key S down
+6.4  key S up
+7.0  shot build_2_placed.bmp
+7.2  hidehud on
+7.5  shot build_3_nohud.bmp
+7.6  hidehud off
+8.0  cmd /time set midnight           # the torch lights the scene
+9.0  shot build_4_night.bmp
