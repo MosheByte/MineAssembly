@@ -1,25 +1,25 @@
 # Scenario scripts
 
-A scenario drives the real game from a text file. It starts a world (or stays on the title screen), replays timed input and console commands, and takes screenshots along the way. I use these to reproduce a situation and get pictures of it without touching the keyboard. <!-- draft rev 2 -->
+A scenario drives the real game from a text file. It starts a world (or stays on the title screen), replays timed input and console commands, and takes screenshots along the way. I use these to reproduce a situation and get pictures of it without touching the keyboard.
 
-``` <!-- draft rev 4 -->
-MineAssembly.exe --script path\to\scenario.txt      (path relative to the working directory) <!-- draft rev 5 -->
-mabuild scenario tests/scenarios/example_build.txt [--tag T] [--nobuild] [--timeout S] [--keep] [--tail N] <!-- draft rev 6 -->
-``` <!-- draft rev 7 -->
+```
+MineAssembly.exe --script path\to\scenario.txt      (path relative to the working directory)
+mabuild scenario tests/scenarios/example_build.txt [--tag T] [--nobuild] [--timeout S] [--keep] [--tail N]
+```
 
-`mabuild scenario` (`tools/mb_scenario.asm`) builds a private copy of the game (`build/<tag>/`, tag `scen` by default), runs it in a fresh `build/scen_<name>/` with a timeout, converts every BMP the run wrote into a PNG next to it, and prints the log tail, the exit code and the PNG list. `--nobuild` reuses the existing exe, `--timeout S` defaults to 330, `--keep` skips wiping the directory (so saves survive for a `keep` world), and `--tail N` sets how many log lines to print. Its own exit code is the game's, or 124 if the timeout killed it, or 2 for a usage error or failed build. `mabuild png IN.bmp OUT.png` converts a single screenshot. <!-- draft rev 9 -->
+`mabuild scenario` (`tools/mb_scenario.asm`) builds a private copy of the game (`build/<tag>/`, tag `scen` by default), runs it in a fresh `build/scen_<name>/` with a timeout, converts every BMP the run wrote into a PNG next to it, and prints the log tail, the exit code and the PNG list. `--nobuild` reuses the existing exe, `--timeout S` defaults to 330, `--keep` skips wiping the directory (so saves survive for a `keep` world), and `--tail N` sets how many log lines to print. Its own exit code is the game's, or 124 if the timeout killed it, or 2 for a usage error or failed build. `mabuild png IN.bmp OUT.png` converts a single screenshot.
 
 ## What changes in script mode
 
-`--script` sets `g_run_mode = 3`. Real keyboard and mouse input is ignored; the script's input goes through the same hooks the window procedure uses (`game_on_key`, `game_on_char`, `game_on_mouse_button`, `game_on_wheel`). The mouse is never captured, so the window can sit in the background. Vsync is on, the client area is 1280x720, and fullscreen from options.txt is ignored. The game mode comes from the setup line, though `cmd /gamemode ...` still works later. Every executed line is logged as `script: t=1.00 cmd /give torch 64`, and so is the console output of commands (chat messages go to `mineassembly.log`). <!-- draft rev 13 -->
+`--script` sets `g_run_mode = 3`. Real keyboard and mouse input is ignored; the script's input goes through the same hooks the window procedure uses (`game_on_key`, `game_on_char`, `game_on_mouse_button`, `game_on_wheel`). The mouse is never captured, so the window can sit in the background. Vsync is on, the client area is 1280x720, and fullscreen from options.txt is ignored. The game mode comes from the setup line, though `cmd /gamemode ...` still works later. Every executed line is logged as `script: t=1.00 cmd /give torch 64`, and so is the console output of commands (chat messages go to `mineassembly.log`).
 
 ## File format
 
-One directive per line, blank lines ignored. A line starting with `#` is a comment, and on every line except `type` a `#` after a blank starts a trailing comment. Keywords and key names are case-insensitive. CRLF or LF and a UTF-8 BOM are all fine. <!-- draft rev 17 -->
+One directive per line, blank lines ignored. A line starting with `#` is a comment, and on every line except `type` a `#` after a blank starts a trailing comment. Keywords and key names are case-insensitive. CRLF or LF and a UTF-8 BOM are all fine.
 
-The first directive is the setup line: <!-- draft rev 19 -->
+The first directive is the setup line:
 
-| Line | Meaning | <!-- draft rev 21 -->
+| Line | Meaning |
 |---|---|
 | `world <name> <seed> <survival\|creative> [keep]` | Delete `saves\<name>` (unless `keep`), then load it if it still exists or create it with `<seed>`. The timeline starts when the spawn area is ready. `<name>` is 1-63 of `A-Z a-z 0-9 - _ .`, not starting with `.`. `<seed>` is a number or any text (hashed like `--seed`). |
 | `title` | Stay on the title screen. The timeline starts right away. |
@@ -83,5 +83,3 @@ If you need a predictable stage regardless of terrain, clear it first, for examp
 - `example_build.txt`: survival world, `/give` planks, cobblestone and torches, places blocks and a torch with right clicks, walks back with `key S`, hides the HUD, switches to midnight. Shots `build_1_start` to `build_4_night`.
 - `example_inventory.txt`: opens the inventory with `E`, clicks two planks into the crafting grid (sticks appear), hovers an item for its tooltip, closes with `ESC`, switches to creative and opens the creative inventory. Shots `inventory_1_open` to `inventory_4_creative`.
 - `example_title.txt`: title screen, hovers and clicks "Singleplayer". Shots `title_1`, `title_2_hover`, `title_3_worlds`.
-<!-- TODO(README): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/README.asm -->
