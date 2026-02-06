@@ -1,17 +1,17 @@
 # fix_platform_console: copy of menus-ui_console. Every console command with
 # valid and invalid arguments, the chat input line (T and /), suggestions,
 # tab completion and history.
-world qa_console 7 survival <!-- draft rev 3 -->
-0.3  cmd /time set noon <!-- draft rev 4 -->
-0.3  cmd /weather clear <!-- draft rev 5 -->
+world qa_console 7 survival
+0.3  cmd /time set noon
+0.3  cmd /weather clear
 # ---- chat via the real input line ----
-0.5  key T tap <!-- draft rev 7 -->
-0.6  type hello world, this is a chat message <!-- draft rev 8 -->
-0.7  key ENTER tap <!-- draft rev 9 -->
-0.9  key SLASH tap <!-- draft rev 10 -->
-1.0  type ti <!-- draft rev 11 -->
-1.2  shot k1_suggest.bmp <!-- draft rev 12 -->
-1.3  key TAB tap <!-- draft rev 13 -->
+0.5  key T tap
+0.6  type hello world, this is a chat message
+0.7  key ENTER tap
+0.9  key SLASH tap
+1.0  type ti
+1.2  shot k1_suggest.bmp
+1.3  key TAB tap
 1.5  shot k2_tabcomplete.bmp
 1.6  type query
 1.7  key ENTER tap
@@ -148,5 +148,43 @@ world qa_console 7 survival <!-- draft rev 3 -->
 12.8 key T tap
 13.1 shot k13_tp.bmp
 13.2 key ESC tap
-<!-- TODO(fix_platform_console): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/fix_platform_console.asm -->
+13.3 cmd /cls
+# ---- spawn / summon ----
+13.4 cmd /spawn boar
+13.4 cmd /spawn boar 3
+13.4 cmd /spawn woolly 2
+13.4 cmd /summon shambler
+13.4 cmd /spawn glowbug
+13.4 cmd /spawn dragon
+13.4 cmd /spawn boar 0
+13.4 cmd /spawn boar -2
+13.4 cmd /spawn boar 500
+13.4 cmd /spawn boar abc
+13.4 cmd /spawn
+14.0 key T tap
+14.3 shot k14_spawn.bmp
+14.4 key ESC tap
+14.5 cmd /cls
+# ---- heal / feed / fly / fov / render / screenshot / kill ----
+14.6 cmd /heal
+14.6 cmd /feed
+14.6 cmd /heal 5
+14.6 cmd /fly
+14.6 cmd /fly
+14.6 cmd /fov 90
+14.6 cmd /fov 10
+14.6 cmd /fov 500
+14.6 cmd /fov abc
+14.6 cmd /fov
+14.6 cmd /render 4
+14.6 cmd /render 1
+14.6 cmd /render 99
+14.6 cmd /render abc
+14.6 cmd /render
+14.6 cmd /render 8
+14.6 cmd /fov 70
+14.6 cmd /screenshot
+14.6 cmd /screenshot extra
+15.0 key T tap
+15.3 shot k15_misc.bmp
+15.4 key ESC tap
