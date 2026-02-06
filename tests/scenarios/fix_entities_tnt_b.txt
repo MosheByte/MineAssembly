@@ -1,0 +1,15 @@
+# fix_entities_tnt_b: part 2 of 2 (see fix_entities_tnt_a.txt for the run
+# commands). Expected: the primed TNT is back at (3,71,-12) and explodes, and
+# the sand lands on the floor at (-3,71,-12). The script has no /fly because
+# the flight state comes back from level.dat, so the camera is re-placed
+# before every shot.
+world fixent_tnt 1 creative keep
+
+0.5  pos 0.5 82 -2
+0.5  look 0 -50
+0.6  hidehud on
+1.0  pos 0.5 82 -2
+1.0  shot tnt_b_0_loaded.bmp
+5.0  pos 0.5 82 -2
+5.0  look 0 -50
+5.0  shot tnt_b_1_after4s.bmp

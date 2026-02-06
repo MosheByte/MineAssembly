@@ -1,0 +1,22 @@
+# fix_entities_helddbg: held vs dropped diamond sword in one frame. Shot 3
+# (third person, front view) shows the sword in the right hand next to the
+# dropped one, and both must be the same cyan. The held sword shows its back
+# face in this view. render_item_sprite (render.asm) currently tints the back
+# face and the edge strips with a garbage colour (its FARG macro clobbers the
+# tint in eax), so the sword looks green.
+# Run: mabuild scenario tests/scenarios/fix_entities_helddbg.txt --tag fix_entities
+world fixent_held2 1 survival
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-6 ~-1 ~-6 ~6 ~-1 ~6 snow_block
+0.3  cmd /fill ~-6 ~ ~-6 ~6 ~6 ~6 air
+0.4  cmd /give diamond_sword 2
+0.5  look 0 -30
+1.0  key Q tap
+1.2  key 2 tap
+1.3  hidehud on
+2.0  shot dbg_1_first.bmp
+2.2  key F5 tap
+2.6  shot dbg_2_back.bmp
+2.8  key F5 tap
+3.2  shot dbg_3_front.bmp
