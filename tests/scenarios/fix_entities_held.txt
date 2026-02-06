@@ -4,17 +4,17 @@
 # cube in the fist (survival: slot 1 sword thrown away with Q, slot 2 sword
 # held, then a stone block).
 # Run: mabuild scenario tests/scenarios/fix_entities_held.txt --tag fix_entities
-world fixent_held 1 survival <!-- draft rev 6 -->
+world fixent_held 1 survival
 
-0.3  cmd /time set noon <!-- draft rev 8 -->
-0.3  cmd /weather clear <!-- draft rev 9 -->
-0.3  cmd /fill ~-6 ~-1 ~-6 ~6 ~-1 ~6 snow_block <!-- draft rev 10 -->
-0.3  cmd /fill ~-6 ~ ~-6 ~6 ~6 ~6 air <!-- draft rev 11 -->
-0.4  cmd /give diamond_sword 2 <!-- draft rev 12 -->
-0.5  look 0 20 <!-- draft rev 13 -->
-1.0  key Q tap <!-- draft rev 14 -->
-1.2  key 2 tap <!-- draft rev 15 -->
-1.5  look 0 -5 <!-- draft rev 16 -->
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-6 ~-1 ~-6 ~6 ~-1 ~6 snow_block
+0.3  cmd /fill ~-6 ~ ~-6 ~6 ~6 ~6 air
+0.4  cmd /give diamond_sword 2
+0.5  look 0 20
+1.0  key Q tap
+1.2  key 2 tap
+1.5  look 0 -5
 1.6  key F5 tap
 1.7  key F5 tap
 1.8  hidehud on
@@ -24,5 +24,3 @@ world fixent_held 1 survival <!-- draft rev 6 -->
 3.1  cmd /give stone 1
 3.2  key 1 tap
 4.0  shot held_3_block_front.bmp
-<!-- TODO(fix_entities_held): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/fix_entities_held.asm -->
