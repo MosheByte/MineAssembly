@@ -1,0 +1,36 @@
+# fix_data_water_names: two checks of the block and item data in one run (seed 42, noon):
+#  1. sky light under water (blocks.asm: water opacity 1 -> -2 per block):
+#     F3 "Light: N sky" at 2, 5 and 10 blocks below the surface of the
+#     seed-42 ocean at (1000, 0); expect roughly 12, 6 and 0 and a visible
+#     sea floor in the shallower shots.
+#  2. trailing-word names (items.asm item_find_by_name): "leaves", "log",
+#     "planks" and "wool" must resolve (log: no "Unknown block" lines).
+#
+# Run:  mabuild scenario tests/scenarios/fix_data_water_names.txt --tag fix_data
+world fd_water 42 creative
+
+0.2  cmd /time set noon
+0.2  cmd /weather clear
+0.3  cmd /fly
+0.4  pos 1000.5 60 0.5
+0.4  look 0 -25
+0.6  key F3 tap
+4.0  shot w_01_y60.bmp
+4.2  pos 1000.5 57 0.5
+5.0  shot w_02_y57.bmp
+5.2  pos 1000.5 52 0.5
+6.0  shot w_03_y52.bmp
+6.2  look 0 -60
+7.0  shot w_04_y52_down.bmp
+
+# names: build on the surface next to the camera
+7.5  pos 1000.5 70 8.5
+7.5  look 0 -30
+7.6  cmd /fill 998 64 3 1002 66 5 leaves
+7.6  cmd /setblock 1000 67 4 log
+7.6  cmd /setblock 999 67 4 planks
+7.6  cmd /setblock 1001 67 4 wool
+7.7  cmd /give leaves 5
+7.7  cmd /give log
+7.7  cmd /give planks 10
+9.0  shot w_05_names.bmp

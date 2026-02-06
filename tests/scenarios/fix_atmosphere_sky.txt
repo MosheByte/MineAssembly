@@ -1,0 +1,53 @@
+# fix_atmosphere_sky: clouds (cover, height above mountains, underside
+# shade, sunset) and weather (thin rain streaks, small snowflakes, no rain
+# in the desert, dark night rain), seed 42 like visuals_clouds/visuals_weather.
+#
+# Run:  mabuild scenario tests/scenarios/fix_atmosphere_sky.txt --tag fix_atmosphere
+world fixatm_sky 42 creative
+0.2 cmd /time set noon
+0.2 cmd /weather clear
+0.3 cmd /fly
+0.4 hidehud on
+0.5 pos 1000.5 75 -500.5
+0.5 look 0 45
+4.0 shot fs_01_up_north.bmp
+4.1 look 135 25
+4.8 shot fs_02_up_se.bmp
+4.9 look 0 80
+5.6 shot fs_03_noon_zenith.bmp
+# aerial view above the terrain but below the clouds, then above the clouds
+5.7 pos 1000.5 128 -500.5
+5.7 look 30 -10
+8.5 shot fs_04_aerial128.bmp
+8.6 pos 1000.5 160 -500.5
+8.6 look 30 -30
+11.0 shot fs_05_above_clouds.bmp
+# sunset over the sea
+11.1 pos 1000.5 75 -500.5
+11.1 cmd /time set 12000
+11.1 look 270 15
+12.5 shot fs_06_sunset.bmp
+# weather (plains 500,-500)
+12.6 cmd /time set noon
+12.6 pos 500.5 90 -500.5
+12.6 look 45 -5
+12.7 cmd /weather rain
+16.5 shot fs_07_rain.bmp
+16.6 cmd /weather thunder
+19.5 shot fs_08_thunder.bmp
+# snow in the tundra
+19.6 cmd /weather rain
+19.6 pos 0.5 95 500.5
+19.6 look 200 -10
+23.5 shot fs_09_snow.bmp
+23.6 look 200 45
+24.3 shot fs_10_snow_up.bmp
+# desert: dark sky but no rain
+24.4 pos -1000.5 90 500.5
+24.4 look 90 -5
+28.5 shot fs_11_desert.bmp
+# night rain on the plains
+28.6 pos 500.5 90 -500.5
+28.6 cmd /time set midnight
+28.6 look 45 -10
+31.0 shot fs_12_night_rain.bmp

@@ -1,0 +1,39 @@
+# fix_data_mining: break times of blocks that need a pickaxe (blocks.asm MINE rows).
+# Expected (Minecraft timing, hardness*1.5 s / tool speed, x3.33 without a
+# harvesting item):
+#   stone, wooden pickaxe : 2.25 / 2        = 1.13 s  -> intact at 0.8 s, gone at 1.4 s
+#   stone, bare hand      : 2.25 * 3.33     = 7.5 s   -> intact at 6.8 s, gone at 7.9 s
+#   coal ore, wooden pick : 4.5 / 2         = 2.25 s  -> intact at 1.9 s, gone at 2.6 s
+#
+# Run:  mabuild scenario tests/scenarios/fix_data_mining.txt --tag fix_data
+world fd_mine 1 survival
+
+0.2  cmd /time set noon
+0.2  cmd /weather clear
+0.2  cmd /fill -6 100 -8 6 100 6 grass_block
+0.2  cmd /fill -6 101 -8 6 108 6 air
+0.3  pos 0.5 101 0.5
+0.3  look 0 -29
+0.3  cmd /clear
+0.4  cmd /give wooden_pickaxe
+1.0  cmd /setblock 0 101 -2 stone
+1.5  key 1 tap
+
+# A: stone with a wooden pickaxe
+2.0  hold left 2.0
+2.8  shot a_pick_stone_0.8s.bmp
+3.4  shot a_pick_stone_1.4s.bmp
+
+# B: stone by hand (slot 2 is empty)
+4.5  cmd /setblock 0 101 -2 stone
+4.6  key 2 tap
+5.0  hold left 8.5
+11.8 shot b_hand_stone_6.8s.bmp
+12.9 shot b_hand_stone_7.9s.bmp
+
+# C: coal ore with the wooden pickaxe
+14.0 cmd /setblock 0 101 -2 coal_ore
+14.1 key 1 tap
+14.5 hold left 3.0
+16.4 shot c_pick_coal_1.9s.bmp
+17.1 shot c_pick_coal_2.6s.bmp
