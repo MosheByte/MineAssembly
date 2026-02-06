@@ -1,0 +1,12 @@
+# fix_art_water_ice: a large frozen sea (seed 1 taiga, the spot of
+# visuals_tour_1 t_taiga_b). The T_ICE tile must not show an obvious
+# per-block grid of bright cracks. See also fix_art_water.txt.
+world fix_art_wi 1 creative
+0.2 cmd /time set noon
+0.2 cmd /weather clear
+0.5 hidehud on
+1.00 cmd /tp 500 125 -500   # taiga
+1.00 look 225 -8
+8.00 shot a_ice_low.bmp
+8.10 look 200 -40
+9.00 shot a_ice_down.bmp

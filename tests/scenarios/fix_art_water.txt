@@ -1,0 +1,16 @@
+# fix_art_water: open ocean from above (seed 42, the spot of visuals_misc
+# m_04_water_above). The T_WATER tile must not show a regular per-block row
+# pattern toward the horizon. See also fix_art_water_ice.txt.
+world fix_art_w 42 creative
+0.2 cmd /time set noon
+0.2 cmd /weather clear
+0.3 cmd /fly
+0.4 hidehud on
+0.4 pos 1000.5 66 0.5
+0.4 look 0 -25
+5.0 shot a_water_above.bmp
+5.1 look 0 -8
+6.0 shot a_water_far.bmp
+6.1 pos 1000.5 80 0.5
+6.1 look 90 -50
+7.5 shot a_water_down.bmp

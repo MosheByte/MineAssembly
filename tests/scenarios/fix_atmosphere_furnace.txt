@@ -1,0 +1,38 @@
+# fix_atmosphere_furnace: chimney smoke of a burning furnace (fuel + ore loaded
+# through the GUI) at noon and at midnight. Same steps as the first half of
+# inventory_furnace_chest.txt (clicks valid for the default GUI scale).
+#
+# Run:  mabuild scenario tests/scenarios/fix_atmosphere_furnace.txt --tag fix_atmosphere
+world fixatm_furnace 3 survival
+
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~6 grass_block
+0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~6 air
+0.5  cmd /give iron_ore 8             # hotbar 1
+0.5  cmd /give coal 4                 # hotbar 2
+0.5  cmd /give oak_planks 16          # hotbar 3
+0.6  cmd /setblock ~ ~ ~-2 furnace    # north of the player
+0.6  cmd /setblock ~ ~ ~2 chest       # south of the player
+0.7  cmd /cls
+1.0  look 0 -25
+1.3  shot fxf_01_world.bmp
+1.5  click right
+2.0  shot fxf_02_screen.bmp
+
+2.3  click left 423 561                # iron ore
+2.6  click left 567 186                # -> input
+2.9  click left 477 561                # coal
+3.2  click left 567 294                # -> fuel
+3.5  mouse 640 650
+3.6  shot fxf_03_loaded.bmp
+6.0  mouse 648 240
+6.2  shot fxf_04_progress_tip.bmp
+6.5  mouse 567 240
+6.7  shot fxf_05_flame_tip.bmp
+7.0  key E tap
+7.5  shot fxf_06_lit_world.bmp
+7.6  cmd /time set midnight
+8.2  shot fxf_07_lit_night.bmp
+9.5  look 0 -5
+11.0 shot fxf_08_night_level.bmp
