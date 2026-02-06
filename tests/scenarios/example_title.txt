@@ -1,10 +1,8 @@
 # Title screen: screenshot, click "Singleplayer", screenshot of the world list.
 # Coordinates are window pixels (the window client area is 1280x720).
-title <!-- draft rev 2 -->
-1.0  shot title_1.bmp                 # the title screen as it starts <!-- draft rev 3 -->
-1.2  mouse 640 354                    # hover over "Singleplayer" <!-- draft rev 4 -->
-1.5  shot title_2_hover.bmp <!-- draft rev 5 -->
-2.0  click left 640 354               # press now, release next frame <!-- draft rev 6 -->
-3.0  shot title_3_worlds.bmp          # the world selection screen <!-- draft rev 7 -->
-<!-- TODO(example_title): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/example_title.asm -->
+title
+1.0  shot title_1.bmp                 # the title screen as it starts
+1.2  mouse 640 354                    # hover over "Singleplayer"
+1.5  shot title_2_hover.bmp
+2.0  click left 640 354               # press now, release next frame
+3.0  shot title_3_worlds.bmp          # the world selection screen
