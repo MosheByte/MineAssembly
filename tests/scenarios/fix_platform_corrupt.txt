@@ -1,0 +1,17 @@
+# fix_platform_corrupt: a world whose level.dat fails validation must not be
+# replaced by a new world. Prepare a working directory with a saved world in
+# saves\ (any one) and flip a byte of its level.dat, e.g.
+#   (with any hex editor: XOR the byte at offset 100 of saves\<name>\level.dat with 0xFF)
+# then run the game there:  timeout 60 <exe> --script fix_platform_corrupt.txt
+# Expected: Play Selected World stays on the world list with a red notice
+# 'World "<name>" could not be loaded: level.dat is damaged' (8 s), the log has
+# "game: ERROR world ... could not be loaded", and level.dat is byte-for-byte
+# unchanged after the run (no new seed-0 world written over it).
+title
+1.0  click left 640 354              # Singleplayer
+2.0  shot pc_1_list.bmp
+2.5  click left 402 594              # Play Selected World
+3.0  shot pc_2_refused.bmp
+4.0  key F2 tap                      # F2 works on menus too
+5.0  click left 402 594              # again: still refused, nothing written
+6.0  shot pc_3_again.bmp

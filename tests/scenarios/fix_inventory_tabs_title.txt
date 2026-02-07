@@ -1,0 +1,39 @@
+# fix_inventory_tabs_title: regression test for two inventory fixes.
+#  1. creative tabs stay put: the item browser and the survival inventory
+#     share one panel origin (UI 115,63 at 1280x720, scale 3), so the tab
+#     row (items (393,157), survival inventory (483,157)) never moves and
+#     clicking the same spot switches back and forth.
+#  2. the furnace title is flat (no drop shadow), like 'Chest' / 'Inventory'.
+#
+# Run:  mabuild scenario tests/scenarios/fix_inventory_tabs_title.txt --tag fix_inventory
+world fix_inv_tabs 5 creative <!-- draft rev 8 -->
+
+0.3  cmd /time set noon <!-- draft rev 10 -->
+0.3  cmd /weather clear <!-- draft rev 11 -->
+0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~6 grass_block <!-- draft rev 12 -->
+0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~6 air <!-- draft rev 13 -->
+0.6  cmd /setblock ~ ~ ~-2 furnace <!-- draft rev 14 -->
+0.6  cmd /setblock ~ ~ ~2 chest <!-- draft rev 15 -->
+0.7  cmd /cls <!-- draft rev 16 -->
+1.0  look 0 -25 <!-- draft rev 17 -->
+1.2  key E tap <!-- draft rev 18 -->
+1.6  mouse 640 650
+1.7  shot ft_01_items.bmp
+1.9  click left 483 157               # survival inventory tab
+2.3  shot ft_02_survival.bmp
+2.5  click left 393 157               # items tab, same spot as before
+2.9  shot ft_03_items_again.bmp
+3.1  click left 483 157               # and back once more
+3.5  mouse 483 157
+3.6  shot ft_04_survival_again.bmp
+3.8  key ESC tap
+# furnace (creative: the screen has no tabs)
+4.3  click right
+4.8  shot ft_05_furnace.bmp
+5.0  key ESC tap
+5.4  look 180 -25
+5.7  click right
+6.2  shot ft_06_chest.bmp
+6.4  key ESC tap
+<!-- TODO(fix_inventory_tabs_title): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/fix_inventory_tabs_title.asm -->

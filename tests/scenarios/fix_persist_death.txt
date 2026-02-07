@@ -1,0 +1,28 @@
+# fix_persist_death: copy of persistence_death. Die in survival with items,
+# choose "Title Screen" on the death screen, reload the world. The dropped
+# items (and any other item entity) should still be on the ground, as after
+# a plain respawn.
+#
+# Run:  mabuild scenario tests/scenarios/fix_persist_death.txt --tag fix_persist
+world persist_death 1 survival
+
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~2 grass_block
+0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~2 air
+0.5  cmd /give diamond 10
+0.5  cmd /give iron_ingot 5
+0.5  cmd /give torch 32
+1.0  look 0 -50
+1.5  cmd /kill
+2.5  shot death_1_screen.bmp
+3.0  shot death_2_items_dropped.bmp
+3.5  click left 640 426              # Title Screen
+4.5  click left 640 354              # Singleplayer
+5.5  click left 402 594              # Play Selected World
+14.0 cmd /pos
+14.0 look 0 -50
+14.5 shot death_3_reloaded.bmp
+15.0 key E tap
+15.5 shot death_4_inventory.bmp
+16.0 key ESC tap
