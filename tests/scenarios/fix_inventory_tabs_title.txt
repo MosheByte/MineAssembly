@@ -6,17 +6,17 @@
 #  2. the furnace title is flat (no drop shadow), like 'Chest' / 'Inventory'.
 #
 # Run:  mabuild scenario tests/scenarios/fix_inventory_tabs_title.txt --tag fix_inventory
-world fix_inv_tabs 5 creative <!-- draft rev 8 -->
+world fix_inv_tabs 5 creative
 
-0.3  cmd /time set noon <!-- draft rev 10 -->
-0.3  cmd /weather clear <!-- draft rev 11 -->
-0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~6 grass_block <!-- draft rev 12 -->
-0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~6 air <!-- draft rev 13 -->
-0.6  cmd /setblock ~ ~ ~-2 furnace <!-- draft rev 14 -->
-0.6  cmd /setblock ~ ~ ~2 chest <!-- draft rev 15 -->
-0.7  cmd /cls <!-- draft rev 16 -->
-1.0  look 0 -25 <!-- draft rev 17 -->
-1.2  key E tap <!-- draft rev 18 -->
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~6 grass_block
+0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~6 air
+0.6  cmd /setblock ~ ~ ~-2 furnace
+0.6  cmd /setblock ~ ~ ~2 chest
+0.7  cmd /cls
+1.0  look 0 -25
+1.2  key E tap
 1.6  mouse 640 650
 1.7  shot ft_01_items.bmp
 1.9  click left 483 157               # survival inventory tab
@@ -35,5 +35,3 @@ world fix_inv_tabs 5 creative <!-- draft rev 8 -->
 5.7  click right
 6.2  shot ft_06_chest.bmp
 6.4  key ESC tap
-<!-- TODO(fix_inventory_tabs_title): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/fix_inventory_tabs_title.asm -->
