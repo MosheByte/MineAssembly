@@ -1,0 +1,36 @@
+# fix_player_eat: eating spawns food crumbs (item-textured debris) in front
+# of the eye together with the crunch sound.
+#
+# Eating is refused while the food bar is full and the console cannot make
+# the player hungry, so this is a two-pass scenario on a kept world:
+#   mabuild scenario tests/scenarios/fix_player_eat.txt --tag fix_player
+#   set MA_SET_HUNGER=%CD%\build\scen_fix_player_eat\saves\fix_eat\level.dat,6,0
+#   mabuild test tests/player/test_set_hunger.asm     (patches that level.dat)
+#   mabuild scenario tests/scenarios/fix_player_eat.txt --tag fix_player --nobuild --keep
+# (the first pass only creates the world; its shots show no eating)
+world fix_eat 3 survival keep
+
+0.2  cmd /time set noon
+0.2  cmd /weather clear
+0.2  cmd /fill -4 100 -4 4 100 4 stone
+0.2  cmd /fill -4 101 -4 4 106 4 air
+0.4  pos 0.5 101 0.5
+0.4  look 0 -12
+0.5  cmd /clear
+0.5  cmd /give bread 4
+0.5  cmd /give cooked_meat 4
+0.6  key F3 tap
+1.0  shot eat_0_hungry.bmp                # F3: Food 6
+1.1  key F3 tap
+1.4  hidehud on
+1.5  key 1 tap
+2.0  hold right 1.8
+2.4  shot eat_1_bread.bmp
+2.7  shot eat_2_bread.bmp
+3.1  shot eat_3_bread.bmp
+4.2  key 2 tap
+4.5  hold right 1.8
+5.2  shot eat_4_meat.bmp
+6.6  hidehud off
+6.7  key F3 tap
+7.0  shot eat_5_after.bmp                 # Food restored (6 + 5 + 8 = 19)

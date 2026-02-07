@@ -1,0 +1,26 @@
+# fix_player_void: removing the bedrock under a survival player must let them
+# fall below y=0 into the void and die there ("fell out of the world").
+# Before the fix, physics treated y<0 as solid bedrock (world_get_block's
+# answer) and the player stood on nothing at y=0 forever.
+#
+# Run:  mabuild scenario tests/scenarios/fix_player_void.txt --tag fix_player
+world fix_void 31337 survival
+
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /gamemode creative
+0.4  cmd /fly
+1.0  cmd /tp ~ 90 ~
+1.2  cmd /fill ~-2 1 ~-2 ~2 89 ~2 air              # shaft to bedrock
+1.4  cmd /fly
+1.4  cmd /tp ~ 2 ~
+2.5  look 0 -60
+3.0  cmd /pos
+3.2  shot void_1_bedrock.bmp                     # standing on bedrock (y=1)
+3.5  cmd /gamemode survival
+3.6  cmd /fill ~-1 0 ~-1 ~1 0 ~1 air
+4.0  look 0 -89
+4.6  cmd /pos                                    # falling: y < 0
+4.8  shot void_2_falling.bmp
+6.0  cmd /pos
+8.0  shot void_3_dead.bmp                         # death screen expected
