@@ -1,0 +1,33 @@
+# fix_platform_timeline: the scenario timeline must turn a 'click' into a
+# real press + release before any later line runs, even when several lines
+# are due in the same frame (here forced by times 1 ms apart, which is what a
+# stalled frame used to do on a loaded machine).
+#
+# Expected: cobblestone 64 moves from hotbar slot 1 to main row 0 col 1 as
+# one stack (no left-drag spread), and the oak planks end up in hotbar 5 via
+# the number key. The log shows each of the 1 ms-apart lines in its own
+# frame (different timestamps).
+#
+# Run:  mabuild scenario tests/scenarios/fix_platform_timeline.txt --tag fix_platform
+world fix_timeline 3 survival
+
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.5  cmd /give cobblestone 64         # hotbar 1
+0.5  cmd /give oak_planks 10          # hotbar 2
+0.6  cmd /cls
+1.0  look 0 -30
+1.3  key E tap
+1.8  shot tl_1_open.bmp
+
+# pick the cobblestone up, move, put it down: three lines 1 ms apart
+2.000 click left 423 561
+2.001 mouse 477 387
+2.002 click left 477 387
+# planks onto the cursor, back down in main row 1 col 0, then key 5 over it
+2.003 click left 477 561
+2.004 click left 423 441
+2.005 mouse 423 441
+2.006 key 5 tap
+2.007 mouse 640 650
+2.5  shot tl_2_result.bmp

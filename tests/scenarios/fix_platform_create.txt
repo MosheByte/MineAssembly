@@ -1,0 +1,37 @@
+# fix_platform_create: copy of menus-ui_create. Create world flow (typing
+# name + seed, game mode toggle, Create, loading screen).
+title <!-- draft rev 2 -->
+1.0  click left 640 354              # Singleplayer <!-- draft rev 3 -->
+2.0  click left 876 593              # Create New World <!-- draft rev 4 -->
+2.5  key BACK tap <!-- draft rev 5 -->
+2.6  key BACK tap <!-- draft rev 6 -->
+2.7  shot c1_backspace.bmp <!-- draft rev 7 -->
+2.8  key END tap <!-- draft rev 8 -->
+3.0  key BACKSPACE down <!-- draft rev 9 -->
+3.8  key BACKSPACE up <!-- draft rev 10 -->
+3.9  shot c2_cleared.bmp <!-- draft rev 11 -->
+4.0  type QA:Test/World?*<>|"
+4.5  shot c3_badname.bmp
+4.6  key HOME tap
+4.7  type X
+4.8  shot c4_home.bmp
+5.0  click left 640 306              # seed field
+5.2  type 12345
+5.5  shot c5_seed.bmp
+5.6  click left 640 419              # game mode toggle
+5.9  shot c6_creative.bmp
+6.0  click left 640 419
+6.2  shot c7_survival_again.bmp
+6.3  click left 640 419
+6.5  key TAB tap
+6.6  type abc
+6.8  shot c8_tab.bmp
+7.0  click left 402 665              # Create
+7.05 shot c9_load0.bmp
+7.2  shot c9_load1.bmp
+7.5  shot c9_load2.bmp
+8.0  shot c9_load3.bmp
+9.0  shot c9_load4.bmp
+12.0 shot c10_ingame.bmp
+<!-- TODO(fix_platform_create): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/fix_platform_create.asm -->
