@@ -632,15 +632,15 @@ LPROC tick_item, 32
 .dry:
     ; merge is n^2, so stagger it: every 8 ticks per item
     mov   eax, [rbx+ENTITY.age]
-    add   eax, r15d ; trace probe #64 hook
-    test  eax, 7 ; trace probe #64 hook
-    jnz   .pickup ; trace probe #64 hook
-    mov   rcx, rbx ; trace probe #64 hook
-    call  item_merge ; trace probe #64 hook
-.pickup: ; trace probe #64 hook
-    cmp   dword [rbx+ENTITY.timer], 0 ; trace probe #64 hook
-    jne   .done ; trace probe #64 hook
-    lea   rsi, [rel g_player] ; trace probe #64 hook
+    add   eax, r15d
+    test  eax, 7
+    jnz   .pickup
+    mov   rcx, rbx
+    call  item_merge
+.pickup:
+    cmp   dword [rbx+ENTITY.timer], 0
+    jne   .done
+    lea   rsi, [rel g_player]
     cmp   dword [rsi+PLAYER.dead], 0
     jne   .done
     ; dist to the body segment, not just the feet
@@ -667,137 +667,3 @@ LPROC tick_item, 32
     movzx edx, byte [rbx+ENTITY.item+STACK.count]
     call  inv_give_player
     movzx ecx, byte [rbx+ENTITY.item+STACK.count]
-; --- temporary diagnostic probe #64 (entity) ---
-; TODO: strip dbg_entity_probe_64 once frame/state invariants hold
-dbg_entity_probe_64:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_64
-    mov     eax, dword [rcx+0] ; sample entity state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_64_0
-.dbg_skip_64_0:
-    mov     ecx, dword [rcx+4] ; sample entity state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_64_1
-.dbg_skip_64_1:
-    mov     edx, dword [rcx+8] ; sample entity state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_64_2
-.dbg_skip_64_2:
-    mov     r8d, dword [rcx+12] ; sample entity state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_64_3
-.dbg_skip_64_3:
-    mov     r9d, dword [rcx+16] ; sample entity state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_64_4
-.dbg_skip_64_4:
-    mov     r11d, dword [rcx+20] ; sample entity state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_64_5
-.dbg_skip_64_5:
-    mov     eax, dword [rcx+24] ; sample entity state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_64_6
-.dbg_skip_64_6:
-    mov     ecx, dword [rcx+28] ; sample entity state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_64_7
-.dbg_skip_64_7:
-    mov     edx, dword [rcx+32] ; sample entity state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_64_8
-.dbg_skip_64_8:
-    mov     r8d, dword [rcx+36] ; sample entity state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_64_9
-.dbg_skip_64_9:
-    mov     r9d, dword [rcx+40] ; sample entity state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_64_10
-.dbg_skip_64_10:
-    mov     r11d, dword [rcx+44] ; sample entity state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_64_11
-.dbg_skip_64_11:
-    mov     eax, dword [rcx+48] ; sample entity state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_64_12
-.dbg_skip_64_12:
-    mov     ecx, dword [rcx+52] ; sample entity state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_64_13
-.dbg_skip_64_13:
-    mov     edx, dword [rcx+56] ; sample entity state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_64_14
-.dbg_skip_64_14:
-    mov     r8d, dword [rcx+60] ; sample entity state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_64_15
-.dbg_skip_64_15:
-    mov     r9d, dword [rcx+64] ; sample entity state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_64_16
-.dbg_skip_64_16:
-    mov     r11d, dword [rcx+68] ; sample entity state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_64_17
-.dbg_skip_64_17:
-    mov     eax, dword [rcx+72] ; sample entity state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_64_18
-.dbg_skip_64_18:
-    mov     ecx, dword [rcx+76] ; sample entity state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_64_19
-.dbg_skip_64_19:
-    mov     edx, dword [rcx+80] ; sample entity state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_64_20
-.dbg_skip_64_20:
-    mov     r8d, dword [rcx+84] ; sample entity state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_64_21
-.dbg_skip_64_21:
-.dbg_null_64:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
