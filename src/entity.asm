@@ -815,70 +815,49 @@ LPROC item_merge, 0
 .done:
 ENDP
 
-LPROC tick_tnt, 32 ; v1: entity scratch #1
-    mov   rbx, rcx ; v1: entity scratch #2
-    ; TODO: verify 16-byte rsp alignment before inner call (entity:2)
-    mov   rcx, rbx ; v1: entity scratch #3
-    movss xmm1, [rel c_0_04] ; v1: entity scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (entity:4)
-    movss xmm2, [rel c_0_98] ; v1: entity scratch #5
-    movss xmm3, [rel c_0_7] ; v1: entity scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (entity:6)
-    call  ent_physics ; v1: entity scratch #7
-    test  byte [rbx+ENTITY.age], 1 ; v1: entity scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (entity:8)
-    jnz   .fuse ; v1: entity scratch #9
-    mov   ecx, PT_SMOKE ; v1: entity scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (entity:10)
-    movss xmm1, [rbx+ENTITY.x] ; v1: entity scratch #11
-    movss xmm2, [rbx+ENTITY.y] ; v1: entity scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (entity:12)
-    addss xmm2, [rel c_one] ; v1: entity scratch #13
-    movss xmm3, [rbx+ENTITY.z] ; v1: entity scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (entity:14)
-    mov   dword [rsp+32], 0 ; v1: entity scratch #15
-    mov   dword [rsp+40], __float32__(0.6) ; v1: entity scratch #16
-    ; TODO: clamp index before table lookup on malformed input (entity:16)
-    mov   dword [rsp+48], 0 ; v1: entity scratch #17
-    mov   qword [rsp+56], 0 ; v1: entity scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (entity:18)
-    call  particles_spawn ; v1: entity scratch #19
-.fuse: ; v1: entity scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (entity:20)
-    dec   dword [rbx+ENTITY.timer] ; v1: entity scratch #21
-    jg    .done ; v1: entity scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (entity:22)
-    movss xmm0, [rbx+ENTITY.x] ; v1: entity scratch #23
-    movss LOC(0), xmm0 ; v1: entity scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (entity:24)
-    movss xmm0, [rbx+ENTITY.y] ; v1: entity scratch #25
-    addss xmm0, [rel c_0_49] ; v1: entity scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (entity:26)
-    movss LOC(4), xmm0 ; v1: entity scratch #27
-    movss xmm0, [rbx+ENTITY.z] ; v1: entity scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (entity:28)
-    movss LOC(8), xmm0 ; v1: entity scratch #29
-    mov   rcx, rbx ; v1: entity scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (entity:30)
-    call  entity_remove ; v1: entity scratch #31
-    movss xmm0, LOC(0) ; v1: entity scratch #32
-    ; TODO: clamp index before table lookup on malformed input (entity:32)
-    movss xmm1, LOC(4) ; v1: entity scratch #33
-    movss xmm2, LOC(8) ; v1: entity scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (entity:34)
-    movss xmm3, [rel c_4] ; v1: entity scratch #35
-    call  explosion_create ; v1: entity scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (entity:36)
-.done: ; v1: entity scratch #37
-ENDP ; v1: entity scratch #38
-    ; TODO: hoist invariant pointer load out of .loop (entity:38)
+LPROC tick_tnt, 32
+    mov   rbx, rcx
+    mov   rcx, rbx
+    movss xmm1, [rel c_0_04]
+    movss xmm2, [rel c_0_98]
+    movss xmm3, [rel c_0_7]
+    call  ent_physics
+    test  byte [rbx+ENTITY.age], 1
+    jnz   .fuse
+    mov   ecx, PT_SMOKE
+    movss xmm1, [rbx+ENTITY.x]
+    movss xmm2, [rbx+ENTITY.y]
+    addss xmm2, [rel c_one]
+    movss xmm3, [rbx+ENTITY.z]
+    mov   dword [rsp+32], 0
+    mov   dword [rsp+40], __float32__(0.6)
+    mov   dword [rsp+48], 0
+    mov   qword [rsp+56], 0
+    call  particles_spawn
+.fuse:
+    dec   dword [rbx+ENTITY.timer]
+    jg    .done
+    movss xmm0, [rbx+ENTITY.x]
+    movss LOC(0), xmm0
+    movss xmm0, [rbx+ENTITY.y]
+    addss xmm0, [rel c_0_49]
+    movss LOC(4), xmm0
+    movss xmm0, [rbx+ENTITY.z]
+    movss LOC(8), xmm0
+    mov   rcx, rbx
+    call  entity_remove                 ; before the blast or it hits itself
+    movss xmm0, LOC(0)
+    movss xmm1, LOC(4)
+    movss xmm2, LOC(8)
+    movss xmm3, [rel c_4]
+    call  explosion_create
+.done:
+ENDP
 
-LPROC tick_falling, 32 ; v1: entity scratch #40
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (entity:40)
-    mov   rbx, rcx ; v1: entity scratch #41
-    movzx r12d, byte [rbx+ENTITY.variant] ; v1: entity scratch #42
-    ; note: rcx = state ptr, rdx = index, r8d = flags (entity:42)
-    test  r12d, r12d ; v1: entity scratch #43
+LPROC tick_falling, 32
+    mov   rbx, rcx
+    movzx r12d, byte [rbx+ENTITY.variant]
+    test  r12d, r12d
     jnz   .v
     mov   r12d, B_SAND
     mov   [rbx+ENTITY.variant], r12b
@@ -1015,6 +994,207 @@ LPROC tick_mob, 32
     jne   .nl
     mov   dword [rbx+ENTITY.fire], 300
     mov   dword [rbx+E_FALL], 0
+    mov   eax, [rbx+ENTITY.age] ; v1: entity scratch #0
+    ; note: rcx = state ptr, rdx = index, r8d = flags (entity:0)
+    xor   edx, edx ; v1: entity scratch #1
+    mov   ecx, 10 ; v1: entity scratch #2
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (entity:2)
+    div   ecx ; v1: entity scratch #3
+    test  edx, edx ; v1: entity scratch #4
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (entity:4)
+    jnz   .nl ; v1: entity scratch #5
+    mov   rcx, rbx ; v1: entity scratch #6
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (entity:6)
+    mov   edx, 4 ; v1: entity scratch #7
+    mov   r8d, DMG_LAVA ; v1: entity scratch #8
+    ; TODO: clamp index before table lookup on malformed input (entity:8)
+    call  entity_damage ; v1: entity scratch #9
+.nl: ; v1: entity scratch #10
+    ; TODO: verify 16-byte rsp alignment before inner call (entity:10)
+    mov   eax, [rbx+ENTITY.fire] ; v1: entity scratch #11
+    test  eax, eax ; v1: entity scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (entity:12)
+    jz    .nofire ; v1: entity scratch #13
+    dec   eax ; v1: entity scratch #14
+    ; TODO: hoist invariant pointer load out of .loop (entity:14)
+    mov   [rbx+ENTITY.fire], eax ; v1: entity scratch #15
+    xor   edx, edx ; v1: entity scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (entity:16)
+    mov   ecx, 20 ; v1: entity scratch #17
+    div   ecx ; v1: entity scratch #18
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (entity:18)
+    test  edx, edx ; v1: entity scratch #19
+    jnz   .flame ; v1: entity scratch #20
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (entity:20)
+    mov   rcx, rbx ; v1: entity scratch #21
+    mov   edx, 1 ; v1: entity scratch #22
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (entity:22)
+    mov   r8d, DMG_LAVA ; v1: entity scratch #23
+    call  entity_damage ; v1: entity scratch #24
+    ; TODO: clamp index before table lookup on malformed input (entity:24)
+.flame: ; v1: entity scratch #25
+    mov   ecx, 2 ; v1: entity scratch #26
+    ; TODO: verify 16-byte rsp alignment before inner call (entity:26)
+    call  rng_int ; v1: entity scratch #27
+    test  eax, eax ; v1: entity scratch #28
+    ; temp: spill r12/r13 across helper call until reg alloc pass (entity:28)
+    jnz   .nofire ; v1: entity scratch #29
+    mov   rcx, rbx ; v1: entity scratch #30
+    ; TODO: hoist invariant pointer load out of .loop (entity:30)
+    mov   edx, PT_FLAME ; v1: entity scratch #31
+    movss xmm2, [rel c_0_5] ; v1: entity scratch #32
+    ; note: rcx = state ptr, rdx = index, r8d = flags (entity:32)
+    call  ent_puff ; v1: entity scratch #33
+.nofire: ; v1: entity scratch #34
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (entity:34)
+    cmp   byte [rbx+ENTITY.type], 0 ; v1: entity scratch #35
+    je    .done ; v1: entity scratch #36
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (entity:36)
+    test  byte [rbx+ENTITY.flags], EF_DEAD ; v1: entity scratch #37
+    jnz   .anim ; v1: entity scratch #38
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (entity:38)
+    cmp   byte [rbx+ENTITY.type], ENT_GLOWBUG ; v1: entity scratch #39
+    je    .suffo ; v1: entity scratch #40
+    ; TODO: clamp index before table lookup on malformed input (entity:40)
+    movss xmm0, [rbx+ENTITY.prev_y] ; v1: entity scratch #41
+    subss xmm0, [rbx+ENTITY.y]          ; > 0 while descending
+    test  byte [rbx+ENTITY.flags], EF_ON_GROUND
+    jnz   .landed
+    xorps xmm1, xmm1
+    maxss xmm0, xmm1
+    addss xmm0, [rbx+E_FALL]
+    movss [rbx+E_FALL], xmm0
+    jmp   .suffo
+.landed:
+    movss xmm0, [rbx+E_FALL]
+    mov   dword [rbx+E_FALL], 0
+    subss xmm0, [rel c_3]
+    comiss xmm0, [rel c_half]
+    jb    .suffo
+    cvtss2si edx, xmm0
+    test  edx, edx
+    jle   .suffo
+    mov   rcx, rbx
+    mov   r8d, DMG_FALL
+    call  entity_damage
+.suffo:
+    mov   eax, [rbx+ENTITY.age]
+    and   eax, 15
+    jnz   .anim
+    FLOORI r13d, [rbx+ENTITY.x]
+    movss xmm0, [rbx+ENTITY.y]
+    addss xmm0, [rbx+ENTITY.h]
+    subss xmm0, [rel c_0_1]
+    FLOORI edx, xmm0
+    FLOORI r8d, [rbx+ENTITY.z]
+    mov   ecx, r13d
+    call  world_get_block
+    lea   rcx, [rel blk_flags]
+    movzx eax, word [rcx+rax*2]
+    and   eax, BF_SOLID|BF_OPAQUE
+    cmp   eax, BF_SOLID|BF_OPAQUE
+    jne   .anim
+    mov   rcx, rbx
+    mov   edx, 1
+    mov   r8d, DMG_GENERIC
+    call  entity_damage
+.anim:
+    ; limbs go by distance actually moved, not vel
+    movss xmm0, [rbx+ENTITY.x]
+    subss xmm0, [rbx+ENTITY.prev_x]
+    mulss xmm0, xmm0
+    movss xmm1, [rbx+ENTITY.z]
+    subss xmm1, [rbx+ENTITY.prev_z]
+    mulss xmm1, xmm1
+    addss xmm0, xmm1
+    sqrtss xmm0, xmm0
+    mulss xmm0, [rel c_4]
+    minss xmm0, [rel c_one]
+    movss xmm1, [rbx+ENTITY.anim_speed]
+    subss xmm0, xmm1
+    mulss xmm0, [rel c_0_4]
+    addss xmm1, xmm0
+    movss [rbx+ENTITY.anim_speed], xmm1
+    addss xmm1, [rbx+ENTITY.anim]
+    comiss xmm1, [rel c_anim_wrap]
+    jb    .aw
+    subss xmm1, [rel c_anim_wrap]
+.aw:
+    movss [rbx+ENTITY.anim], xmm1
+.done:
+ENDP
+
+; overlapping walkers nudge each other apart, 0.05/tick. each mob only pushes
+; itself, the other one gets the mirror push on its own tick. without this
+; herds turn into one big blob. one 512 scan per mob per tick
+LPROC mob_push, 16
+    mov   rbx, rcx
+    cmp   byte [rbx+ENTITY.type], ENT_GLOWBUG
+    je    .done
+    lea   rsi, [rel g_entities]
+    mov   edi, MAX_ENTITIES
+.loop:
+    cmp   rsi, rbx
+    je    .next
+    movzx eax, byte [rsi+ENTITY.type]
+    cmp   eax, ENT_BOAR
+    jb    .next
+    cmp   eax, ENT_SHAMBLER
+    ja    .next                         ; glowbugs
+    test  byte [rsi+ENTITY.flags], EF_DEAD
+    jnz   .next
+    movss xmm0, [rsi+ENTITY.y]
+    addss xmm0, [rsi+ENTITY.h]
+    comiss xmm0, [rbx+ENTITY.y]
+    jbe   .next
+    movss xmm0, [rbx+ENTITY.y]
+    addss xmm0, [rbx+ENTITY.h]
+    comiss xmm0, [rsi+ENTITY.y]
+    jbe   .next
+    movss xmm4, [rbx+ENTITY.hw]
+    addss xmm4, [rsi+ENTITY.hw]
+    movss xmm0, [rbx+ENTITY.x]
+    subss xmm0, [rsi+ENTITY.x]
+    movaps xmm2, xmm0
+    andps xmm2, [rel c_abs]
+    comiss xmm2, xmm4
+    jae   .next
+    movss xmm1, [rbx+ENTITY.z]
+    subss xmm1, [rsi+ENTITY.z]
+    movaps xmm2, xmm1
+    andps xmm2, [rel c_abs]
+    comiss xmm2, xmm4
+    jae   .next
+    movaps xmm2, xmm0
+    mulss xmm2, xmm0
+    movaps xmm3, xmm1
+    mulss xmm3, xmm1
+    addss xmm2, xmm3
+    sqrtss xmm2, xmm2
+    comiss xmm2, [rel c_1e_4]
+    ja    .dir
+    ; exactly on top of each other, split on x by slot order
+    xorps xmm1, xmm1
+    movss xmm0, [rel c_one]
+    movss xmm2, [rel c_one]
+    cmp   rbx, rsi
+    ja    .dir
+    movss xmm0, [rel c_m1]
+.dir:
+    divss xmm0, xmm2
+    divss xmm1, xmm2
+    movss LOC(0), xmm0
+    movss LOC(4), xmm1
+    ; don't shove anyone off a ledge (pens, cliffs). block under the leading
+    ; edge has to be solid
+    test  byte [rbx+ENTITY.flags], EF_ON_GROUND
+    jz    .push
+    movss xmm2, [rbx+ENTITY.hw]
+    addss xmm2, [rel c_0_3]
+    mulss xmm0, xmm2
+    addss xmm0, [rbx+ENTITY.x]
+    FLOORI ecx, xmm0
+    mulss xmm1, xmm2
     ; v1 temporary guard (entity #21)
     xor     r11d, r11d ; clear v1 slot 21
     ; v1 temporary guard (entity #23)
@@ -1053,3 +1233,7 @@ LPROC tick_mob, 32
     xor     r11d, r11d ; clear v1 slot 55
     ; v1 temporary guard (entity #57)
     xor     r11d, r11d ; clear v1 slot 57
+    ; v1 temporary guard (entity #59)
+    xor     r11d, r11d ; clear v1 slot 59
+    ; v1 temporary guard (entity #61)
+    xor     r11d, r11d ; clear v1 slot 61
