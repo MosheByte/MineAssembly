@@ -1870,50 +1870,36 @@ LPROCX render_shadows, 32
     movss xmm1, [rsi+PLAYER.y]
     subss xmm1, [rax+4]
     movss xmm2, [rsi+PLAYER.z]
-    subss xmm2, [rax+8] ; v1: entity scratch #0
-    ; TODO: verify 16-byte rsp alignment before inner call (entity:0)
-    movss xmm3, [rel c_half] ; v1: entity scratch #1
-    call  shadow_blob ; v1: entity scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (entity:2)
-.restore: ; v1: entity scratch #3
-    mov   ecx, GL_POLYGON_OFFSET_FILL ; v1: entity scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (entity:4)
-    call  glDisable ; v1: entity scratch #5
-    mov   ecx, 1 ; v1: entity scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (entity:6)
-    call  glDepthMask ; v1: entity scratch #7
-    mov   ecx, GL_BLEND ; v1: entity scratch #8
-    ; TODO: clamp index before table lookup on malformed input (entity:8)
-    call  glDisable ; v1: entity scratch #9
-ENDPX ; v1: entity scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (entity:10)
+    subss xmm2, [rax+8]
+    movss xmm3, [rel c_half]
+    call  shadow_blob
+.restore:
+    mov   ecx, GL_POLYGON_OFFSET_FILL
+    call  glDisable
+    mov   ecx, 1
+    call  glDepthMask
+    mov   ecx, GL_BLEND
+    call  glDisable
+ENDPX
 
 ; xmm0-2 = cam-relative pos, xmm3 = radius
-LPROCX shadow_blob, 32 ; v1: entity scratch #13
-    movaps xmm6, xmm0 ; v1: entity scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (entity:14)
-    movaps xmm7, xmm1 ; v1: entity scratch #15
-    movaps xmm8, xmm2 ; v1: entity scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (entity:16)
-    movaps xmm9, xmm3 ; v1: entity scratch #17
-    lea   rax, [rel g_cam_pos] ; v1: entity scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (entity:18)
-    movss xmm10, xmm7 ; v1: entity scratch #19
-    addss xmm10, [rax+4] ; v1: entity scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (entity:20)
-    movss xmm0, xmm6 ; v1: entity scratch #21
-    addss xmm0, [rax] ; v1: entity scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (entity:22)
-    FLOORI r12d, xmm0 ; v1: entity scratch #23
-    movss xmm0, xmm8 ; v1: entity scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (entity:24)
-    addss xmm0, [rax+8] ; v1: entity scratch #25
-    FLOORI r14d, xmm0 ; v1: entity scratch #26
-    ; TODO: clamp index before table lookup on malformed input (entity:26)
-    movss xmm0, xmm10 ; v1: entity scratch #27
-    addss xmm0, [rel c_0_01] ; v1: entity scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (entity:28)
-    FLOORI r13d, xmm0 ; v1: entity scratch #29
+LPROCX shadow_blob, 32
+    movaps xmm6, xmm0
+    movaps xmm7, xmm1
+    movaps xmm8, xmm2
+    movaps xmm9, xmm3
+    lea   rax, [rel g_cam_pos]
+    movss xmm10, xmm7
+    addss xmm10, [rax+4]
+    movss xmm0, xmm6
+    addss xmm0, [rax]
+    FLOORI r12d, xmm0
+    movss xmm0, xmm8
+    addss xmm0, [rax+8]
+    FLOORI r14d, xmm0
+    movss xmm0, xmm10
+    addss xmm0, [rel c_0_01]
+    FLOORI r13d, xmm0
     ; up to 4 blocks down
     xor   esi, esi
 .probe:
@@ -2064,53 +2050,129 @@ PROCX entity_render_player, 64
     mov   eax, [rsi+PLAYER.swing]
     mov   LOC(HP_ATTACK), eax
     mov   eax, [rsi+PLAYER.selected]
-    ; v1 temporary guard (entity #14)
-    xor     r11d, r11d ; clear v1 slot 14
-    ; v1 temporary guard (entity #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (entity #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (entity #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (entity #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (entity #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (entity #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (entity #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (entity #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (entity #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (entity #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (entity #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (entity #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (entity #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (entity #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (entity #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (entity #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (entity #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (entity #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (entity #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (entity #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (entity #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (entity #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (entity #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (entity #62)
-    xor     r11d, r11d ; clear v1 slot 62
+    xor   ecx, ecx
+    cmp   eax, HOTBAR_SLOTS
+    jae   .noheld
+    movzx ecx, byte [rsi+PLAYER.inv+rax*4+STACK.id]
+    cmp   byte [rsi+PLAYER.inv+rax*4+STACK.count], 0
+    jne   .noheld
+    xor   ecx, ecx
+.noheld:
+    mov   LOC(HP_ITEM), ecx
+    call  glPushMatrix
+    lea   rax, [rel g_cam_pos]
+    movss xmm0, [rsi+PLAYER.x]
+    subss xmm0, [rax]
+    movss xmm1, [rsi+PLAYER.y]
+    subss xmm1, [rax+4]
+    cmp   dword [rsi+PLAYER.sneaking], 0
+    je    .ns
+    subss xmm1, [rel c_0_12]
+.ns:
+    movss xmm2, [rsi+PLAYER.z]
+    subss xmm2, [rax+8]
+    call  glTranslatef
+    movss xmm0, [rsi+PLAYER.yaw]
+    xorps xmm0, [rel c_sign]
+    xorps xmm1, xmm1
+    movss xmm2, [rel c_one]
+    xorps xmm3, xmm3
+    call  glRotatef
+    lea   rcx, LOC(0)
+    call  mobs_draw_humanoid
+    cmp   dword [rsi+PLAYER.hurt_time], 0
+    jle   .nohurt
+    ; red hurt overlay, same trick as mobs_render
+    movss xmm0, LOC(HP_LIGHT)
+    xorps xmm1, xmm1
+    xorps xmm2, xmm2
+    movss xmm3, [rel c_0_5]
+    call  mobs_tint_begin
+    lea   rcx, LOC(0)
+    call  mobs_draw_humanoid
+    call  mobs_tint_end
+.nohurt:
+    call  glPopMatrix
+    movss xmm0, [rel c_one]
+    movaps xmm1, xmm0
+    movaps xmm2, xmm0
+    movaps xmm3, xmm0
+    call  glColor4f
+.done:
+ENDPX
+
+section .rdata
+align 16
+c_abs:          dd 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF
+c_sign:         dd 0x80000000, 0x80000000, 0x80000000, 0x80000000
+;                        -     item   TNT    falling boar   woolly shambler glowbug remote
+ent_hw_tbl:     dd 0.0,  0.125, 0.49,  0.49,   0.45,  0.45,  0.3,    0.1,    0.3
+ent_h_tbl:      dd 0.0,  0.25,  0.98,  0.98,   0.9,   1.3,   1.95,   0.2,    1.8
+ent_hp_tbl:     dd 0,    1,     1,     1,      10,    8,     20,     1,      20
+mob_sound:      dd -1,   -1,    -1,    -1,     SFX_BOAR, SFX_WOOLLY, SFX_SHAMBLER, -1, -1
+; (cumulative out of 1000, wool colour). mostly white
+wool_weights:   dd 815, 0,  865, 7,  915, 8,  965, 15,  995, 12,  1000, 6
+copy_off:       dd 0.0, 0.0, 0.0,   0.07, 0.05, -0.06,   -0.06, 0.1, 0.05,   0.04, 0.15, 0.04
+copy_off_sprite: dd 0.0, 0.0, 0.0,  0.05, 0.04, -0.04,   -0.05, 0.08, -0.08,  0.02, 0.12, -0.12
+; mobs_draw_box part layout
+tnt_flash_part: dd -0.003, -0.003, -0.003, 1.003, 1.003, 1.003
+                db T_WHITE, T_WHITE, T_WHITE, T_WHITE, T_WHITE, T_WHITE
+                db 4, 0                 ; every face full tile
+                db 255, 255, 255, 255
+                dd 0
+c_sh_u0:        dd 0.1254               ; T_PARTICLE_SMOKE (178): col 2, row 11
+c_sh_v0:        dd 0.6879
+c_sh_u1:        dd 0.1871
+c_sh_v1:        dd 0.7496
+c_one:          dd 1.0
+c_2:            dd 2.0
+c_3:            dd 3.0
+c_4:            dd 4.0
+c_10:           dd 10.0
+c_20:           dd 20.0
+c_360:          dd 360.0
+c_tau:          dd 6.2831853
+c_r2d:          dd 57.29578
+c_half:         dd 0.5
+c_mhalf:        dd -0.5
+c_m1:           dd -1.0
+c_m2:           dd -2.0
+c_m0_05:        dd -0.05
+c_0_01:         dd 0.01
+c_0_015:        dd 0.015
+c_0_02:         dd 0.02
+c_0_025:        dd 0.025
+c_0_034:        dd 0.034
+c_0_04:         dd 0.04
+c_0_05:         dd 0.05
+c_0_06:         dd 0.06
+c_0_08:         dd 0.08
+c_0_1:          dd 0.1
+c_0_12:         dd 0.12
+c_0_2:          dd 0.2
+c_0_25:         dd 0.25
+c_0_3:          dd 0.3
+c_0_4:          dd 0.4
+c_0_45:         dd 0.45
+c_0_49:         dd 0.49
+c_0_5:          dd 0.5
+c_0_6:          dd 0.6
+c_0_6662:       dd 0.6662
+c_0_7:          dd 0.7
+c_0_8:          dd 0.8
+c_0_9:          dd 0.9
+c_0_94:         dd 0.94
+c_0_98:         dd 0.98
+c_1_3:          dd 0.33333334
+c_1_4:          dd 1.4
+c_1_5:          dd 1.5
+c_1_8:          dd 1.8
+c_1_15:         dd 0.06666667
+c_1e_4:         dd 0.0001
+c_1e_7:         dd 0.0000001
+c_pick2:        dd PICKUP_DIST2
+c_term:         dd -3.9
+c_void:         dd -64.0
+c_draw_dist2:   dd 9216.0               ; 96^2
+c_shadow_dist2: dd 1024.0               ; 32^2
+c_anim_wrap:    dd 9431.4877            ; 1000 periods of cos(a * 0.6662)
