@@ -1870,3 +1870,247 @@ LPROCX render_shadows, 32
     movss xmm1, [rsi+PLAYER.y]
     subss xmm1, [rax+4]
     movss xmm2, [rsi+PLAYER.z]
+    subss xmm2, [rax+8] ; v1: entity scratch #0
+    ; TODO: verify 16-byte rsp alignment before inner call (entity:0)
+    movss xmm3, [rel c_half] ; v1: entity scratch #1
+    call  shadow_blob ; v1: entity scratch #2
+    ; note: rcx = state ptr, rdx = index, r8d = flags (entity:2)
+.restore: ; v1: entity scratch #3
+    mov   ecx, GL_POLYGON_OFFSET_FILL ; v1: entity scratch #4
+    ; temp: spill r12/r13 across helper call until reg alloc pass (entity:4)
+    call  glDisable ; v1: entity scratch #5
+    mov   ecx, 1 ; v1: entity scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (entity:6)
+    call  glDepthMask ; v1: entity scratch #7
+    mov   ecx, GL_BLEND ; v1: entity scratch #8
+    ; TODO: clamp index before table lookup on malformed input (entity:8)
+    call  glDisable ; v1: entity scratch #9
+ENDPX ; v1: entity scratch #10
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (entity:10)
+
+; xmm0-2 = cam-relative pos, xmm3 = radius
+LPROCX shadow_blob, 32 ; v1: entity scratch #13
+    movaps xmm6, xmm0 ; v1: entity scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (entity:14)
+    movaps xmm7, xmm1 ; v1: entity scratch #15
+    movaps xmm8, xmm2 ; v1: entity scratch #16
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (entity:16)
+    movaps xmm9, xmm3 ; v1: entity scratch #17
+    lea   rax, [rel g_cam_pos] ; v1: entity scratch #18
+    ; TODO: verify 16-byte rsp alignment before inner call (entity:18)
+    movss xmm10, xmm7 ; v1: entity scratch #19
+    addss xmm10, [rax+4] ; v1: entity scratch #20
+    ; note: rcx = state ptr, rdx = index, r8d = flags (entity:20)
+    movss xmm0, xmm6 ; v1: entity scratch #21
+    addss xmm0, [rax] ; v1: entity scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (entity:22)
+    FLOORI r12d, xmm0 ; v1: entity scratch #23
+    movss xmm0, xmm8 ; v1: entity scratch #24
+    ; TODO: hoist invariant pointer load out of .loop (entity:24)
+    addss xmm0, [rax+8] ; v1: entity scratch #25
+    FLOORI r14d, xmm0 ; v1: entity scratch #26
+    ; TODO: clamp index before table lookup on malformed input (entity:26)
+    movss xmm0, xmm10 ; v1: entity scratch #27
+    addss xmm0, [rel c_0_01] ; v1: entity scratch #28
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (entity:28)
+    FLOORI r13d, xmm0 ; v1: entity scratch #29
+    ; up to 4 blocks down
+    xor   esi, esi
+.probe:
+    mov   ecx, r12d
+    mov   edx, r13d
+    sub   edx, esi
+    mov   r8d, r14d
+    call  world_get_block
+    lea   rcx, [rel blk_flags]
+    test  word [rcx+rax*2], BF_SOLID
+    jnz   .found
+    inc   esi
+    cmp   esi, 4
+    jb    .probe
+    jmp   .done
+.found:
+    mov   eax, r13d
+    sub   eax, esi
+    inc   eax
+    cvtsi2ss xmm11, eax
+    movss xmm0, xmm10
+    subss xmm0, xmm11
+    comiss xmm0, [rel c_m0_05]
+    jb    .done
+    mulss xmm0, [rel c_1_3]
+    movss xmm1, [rel c_one]
+    subss xmm1, xmm0
+    mulss xmm1, [rel c_0_45]
+    comiss xmm1, [rel c_0_02]
+    jb    .done
+    movss xmm12, xmm1
+    lea   rax, [rel g_cam_pos]
+    subss xmm11, [rax+4]
+    addss xmm11, [rel c_0_015]          ; a hair above the ground
+    xorps xmm0, xmm0
+    xorps xmm1, xmm1
+    xorps xmm2, xmm2
+    movaps xmm3, xmm12
+    call  glColor4f
+    mov   ecx, GL_QUADS
+    call  glBegin
+    ; ccw seen from above
+    movss xmm0, [rel c_sh_u0]
+    movss xmm1, [rel c_sh_v0]
+    call  glTexCoord2f
+    movaps xmm0, xmm6
+    subss xmm0, xmm9
+    movaps xmm1, xmm11
+    movaps xmm2, xmm8
+    subss xmm2, xmm9
+    call  glVertex3f
+    movss xmm0, [rel c_sh_u0]
+    movss xmm1, [rel c_sh_v1]
+    call  glTexCoord2f
+    movaps xmm0, xmm6
+    subss xmm0, xmm9
+    movaps xmm1, xmm11
+    movaps xmm2, xmm8
+    addss xmm2, xmm9
+    call  glVertex3f
+    movss xmm0, [rel c_sh_u1]
+    movss xmm1, [rel c_sh_v1]
+    call  glTexCoord2f
+    movaps xmm0, xmm6
+    addss xmm0, xmm9
+    movaps xmm1, xmm11
+    movaps xmm2, xmm8
+    addss xmm2, xmm9
+    call  glVertex3f
+    movss xmm0, [rel c_sh_u1]
+    movss xmm1, [rel c_sh_v0]
+    call  glTexCoord2f
+    movaps xmm0, xmm6
+    addss xmm0, xmm9
+    movaps xmm1, xmm11
+    movaps xmm2, xmm8
+    subss xmm2, xmm9
+    call  glVertex3f
+    call  glEnd
+.done:
+ENDPX
+
+PROCX entity_render_player, 64
+    lea   rsi, [rel g_player]
+    cmp   dword [rsi+PLAYER.dead], 0
+    jne   .done
+    ; per frame, not per tick. player vel is blocks/s
+    movss xmm0, [rsi+PLAYER.vx]
+    mulss xmm0, xmm0
+    movss xmm1, [rsi+PLAYER.vz]
+    mulss xmm1, xmm1
+    addss xmm0, xmm1
+    sqrtss xmm0, xmm0
+    mulss xmm0, [rel c_0_2]             ; speed/20 * 4
+    minss xmm0, [rel c_one]
+    cmp   dword [rsi+PLAYER.flying], 0
+    je    .walk
+    mulss xmm0, [rel c_0_25]            ; flying, legs just dangle
+.walk:
+    movss xmm1, [rel g_frame_dt]
+    mulss xmm1, [rel c_10]
+    minss xmm1, [rel c_one]
+    movss xmm2, [rel p_anim_amt]
+    subss xmm0, xmm2
+    mulss xmm0, xmm1
+    addss xmm2, xmm0
+    movss [rel p_anim_amt], xmm2
+    movss xmm0, [rel g_frame_dt]
+    mulss xmm0, [rel c_20]
+    mulss xmm0, xmm2
+    addss xmm0, [rel p_anim]
+    comiss xmm0, [rel c_anim_wrap]
+    jb    .nw
+    subss xmm0, [rel c_anim_wrap]
+.nw:
+    movss [rel p_anim], xmm0
+    mulss xmm0, [rel c_0_6662]
+    call  math_cos
+    mulss xmm0, [rel c_1_4]
+    mulss xmm0, [rel p_anim_amt]
+    mulss xmm0, [rel c_r2d]
+    movss xmm6, xmm0
+    movss xmm0, [rsi+PLAYER.x]
+    movss xmm1, [rsi+PLAYER.y]
+    addss xmm1, [rel c_one]
+    movss xmm2, [rsi+PLAYER.z]
+    call  entity_light_at
+    movss LOC(HP_LIGHT), xmm0
+    lea   rax, [rel mobs_col]
+    movss [rax], xmm0
+    movss [rax+4], xmm0
+    movss [rax+8], xmm0
+    mov   dword [rax+12], __float32__(1.0)
+    mov   byte LOC(HP_HEAD_FRONT), T_PLAYER_FACE
+    mov   byte LOC(HP_HEAD_SIDE), T_PLAYER_SKIN
+    mov   byte LOC(HP_HEAD_TOP), T_PLAYER_HAIR
+    mov   byte LOC(HP_HEAD_BACK), T_PLAYER_HAIR
+    mov   byte LOC(HP_BODY), T_PLAYER_SHIRT
+    mov   byte LOC(HP_ARM), T_PLAYER_SKIN
+    mov   byte LOC(HP_LEG), T_PLAYER_PANTS
+    mov   byte LOC(HP_SLEEVE), T_PLAYER_SHIRT
+    mov   dword LOC(HP_SCALE), __float32__(0.05625)   ; 1.8 blocks / 32 px
+    movss LOC(HP_SWING), xmm6
+    mov   dword LOC(HP_ARMS_FWD), 0
+    mov   dword LOC(HP_HEAD_YAW), 0
+    mov   eax, [rsi+PLAYER.pitch]
+    mov   LOC(HP_HEAD_PITCH), eax
+    mov   eax, [rsi+PLAYER.swing]
+    mov   LOC(HP_ATTACK), eax
+    mov   eax, [rsi+PLAYER.selected]
+    ; v1 temporary guard (entity #14)
+    xor     r11d, r11d ; clear v1 slot 14
+    ; v1 temporary guard (entity #16)
+    xor     r11d, r11d ; clear v1 slot 16
+    ; v1 temporary guard (entity #18)
+    xor     r11d, r11d ; clear v1 slot 18
+    ; v1 temporary guard (entity #20)
+    xor     r11d, r11d ; clear v1 slot 20
+    ; v1 temporary guard (entity #22)
+    xor     r11d, r11d ; clear v1 slot 22
+    ; v1 temporary guard (entity #24)
+    xor     r11d, r11d ; clear v1 slot 24
+    ; v1 temporary guard (entity #26)
+    xor     r11d, r11d ; clear v1 slot 26
+    ; v1 temporary guard (entity #28)
+    xor     r11d, r11d ; clear v1 slot 28
+    ; v1 temporary guard (entity #30)
+    xor     r11d, r11d ; clear v1 slot 30
+    ; v1 temporary guard (entity #32)
+    xor     r11d, r11d ; clear v1 slot 32
+    ; v1 temporary guard (entity #34)
+    xor     r11d, r11d ; clear v1 slot 34
+    ; v1 temporary guard (entity #36)
+    xor     r11d, r11d ; clear v1 slot 36
+    ; v1 temporary guard (entity #38)
+    xor     r11d, r11d ; clear v1 slot 38
+    ; v1 temporary guard (entity #40)
+    xor     r11d, r11d ; clear v1 slot 40
+    ; v1 temporary guard (entity #42)
+    xor     r11d, r11d ; clear v1 slot 42
+    ; v1 temporary guard (entity #44)
+    xor     r11d, r11d ; clear v1 slot 44
+    ; v1 temporary guard (entity #46)
+    xor     r11d, r11d ; clear v1 slot 46
+    ; v1 temporary guard (entity #48)
+    xor     r11d, r11d ; clear v1 slot 48
+    ; v1 temporary guard (entity #50)
+    xor     r11d, r11d ; clear v1 slot 50
+    ; v1 temporary guard (entity #52)
+    xor     r11d, r11d ; clear v1 slot 52
+    ; v1 temporary guard (entity #54)
+    xor     r11d, r11d ; clear v1 slot 54
+    ; v1 temporary guard (entity #56)
+    xor     r11d, r11d ; clear v1 slot 56
+    ; v1 temporary guard (entity #58)
+    xor     r11d, r11d ; clear v1 slot 58
+    ; v1 temporary guard (entity #60)
+    xor     r11d, r11d ; clear v1 slot 60
+    ; v1 temporary guard (entity #62)
+    xor     r11d, r11d ; clear v1 slot 62
