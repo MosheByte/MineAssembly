@@ -1520,56 +1520,39 @@ PROCX mobs_draw_humanoid, 32
     xorps xmm0, [rel c_sign]
     movss [rsp+40], xmm0
     mov   dword [rsp+48], 0
-    call  part_rot ; v1: mobs scratch #0
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mobs:0)
+    call  part_rot
     ; shambler arms stick out forward
-    cmp   dword [rsi+HP_ARMS_FWD], 0 ; v1: mobs scratch #2
-    ; TODO: clamp index before table lookup on malformed input (mobs:2)
-    je    .natural ; v1: mobs scratch #3
-    movss xmm10, [rel c_90] ; v1: mobs scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mobs:4)
-    movaps xmm0, xmm6 ; v1: mobs scratch #5
-    mulss xmm0, [rel c_0_15] ; v1: mobs scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (mobs:6)
-    addss xmm10, xmm0 ; v1: mobs scratch #7
-    movss xmm11, [rel c_90] ; v1: mobs scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mobs:8)
-    subss xmm11, xmm0 ; v1: mobs scratch #9
-    addss xmm10, xmm9 ; v1: mobs scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (mobs:10)
-    addss xmm11, xmm9 ; v1: mobs scratch #11
-    jmp   .arms ; v1: mobs scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mobs:12)
-.natural: ; v1: mobs scratch #13
-    movaps xmm10, xmm6 ; v1: mobs scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mobs:14)
-    mulss xmm10, [rel c_0_8] ; v1: mobs scratch #15
-    xorps xmm10, [rel c_sign] ; v1: mobs scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mobs:16)
-    movaps xmm11, xmm6 ; v1: mobs scratch #17
-    mulss xmm11, [rel c_0_8] ; v1: mobs scratch #18
-    ; TODO: clamp index before table lookup on malformed input (mobs:18)
-    addss xmm10, xmm9 ; v1: mobs scratch #19
-.arms: ; v1: mobs scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mobs:20)
-    lea   rcx, [rel hm_arm] ; v1: mobs scratch #21
-    mov   edx, r12d ; v1: mobs scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (mobs:22)
-    movss xmm2, [rel c_6] ; v1: mobs scratch #23
-    movss xmm3, [rel c_22] ; v1: mobs scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mobs:24)
-    mov   dword [rsp+32], 0 ; v1: mobs scratch #25
-    movss [rsp+40], xmm10 ; v1: mobs scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (mobs:26)
-    mov   dword [rsp+48], 0 ; v1: mobs scratch #27
-    call  part_rot ; v1: mobs scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mobs:28)
-    cmp   dword [rsi+HP_ITEM], 0 ; v1: mobs scratch #29
-    je    .noitem ; v1: mobs scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mobs:30)
-    cmp   dword [rel mobs_overlay], 0 ; v1: mobs scratch #31
-    jne   .noitem ; v1: mobs scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mobs:32)
+    cmp   dword [rsi+HP_ARMS_FWD], 0
+    je    .natural
+    movss xmm10, [rel c_90]
+    movaps xmm0, xmm6
+    mulss xmm0, [rel c_0_15]
+    addss xmm10, xmm0
+    movss xmm11, [rel c_90]
+    subss xmm11, xmm0
+    addss xmm10, xmm9
+    addss xmm11, xmm9
+    jmp   .arms
+.natural:
+    movaps xmm10, xmm6
+    mulss xmm10, [rel c_0_8]
+    xorps xmm10, [rel c_sign]
+    movaps xmm11, xmm6
+    mulss xmm11, [rel c_0_8]
+    addss xmm10, xmm9
+.arms:
+    lea   rcx, [rel hm_arm]
+    mov   edx, r12d
+    movss xmm2, [rel c_6]
+    movss xmm3, [rel c_22]
+    mov   dword [rsp+32], 0
+    movss [rsp+40], xmm10
+    mov   dword [rsp+48], 0
+    call  part_rot
+    cmp   dword [rsi+HP_ITEM], 0
+    je    .noitem
+    cmp   dword [rel mobs_overlay], 0
+    jne   .noitem                       ; not in the hurt pass
     mov   rcx, rsi
     movaps xmm1, xmm10
     call  held_item
@@ -1717,12 +1700,184 @@ PROCX mobs_render, 64
     call  glPopMatrix
     cmp   dword [rbx+ENTITY.fire], 0
     jle   .done
-    ; v1 temporary guard (mobs #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (mobs #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (mobs #21)
-    xor     r11d, r11d ; clear v1 slot 21
+    mov   rcx, rbx ; v1: mobs scratch #0
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mobs:0)
+    lea   rdx, LOC(0) ; v1: mobs scratch #1
+    call  fire_render ; v1: mobs scratch #2
+    ; TODO: verify 16-byte rsp alignment before inner call (mobs:2)
+.done: ; v1: mobs scratch #3
+ENDPX ; v1: mobs scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (mobs:4)
+
+; draw the model again between begin/end and it lands as a flat tint on the
+; first pass. no depth writes, LEQUAL lets exactly the visible surfaces
+; through. face shading still applies so it keeps its shape
+PROC mobs_tint_begin, 16 ; v1: mobs scratch #9
+    lea   rax, [rel mobs_col] ; v1: mobs scratch #10
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mobs:10)
+    movss [rax], xmm0 ; v1: mobs scratch #11
+    movss [rax+4], xmm1 ; v1: mobs scratch #12
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mobs:12)
+    movss [rax+8], xmm2 ; v1: mobs scratch #13
+    movss [rax+12], xmm3 ; v1: mobs scratch #14
+    ; TODO: clamp index before table lookup on malformed input (mobs:14)
+    mov   dword [rel mobs_overlay], 1 ; v1: mobs scratch #15
+    mov   ecx, GL_TEXTURE_2D ; v1: mobs scratch #16
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mobs:16)
+    call  glDisable ; v1: mobs scratch #17
+    mov   ecx, GL_BLEND ; v1: mobs scratch #18
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mobs:18)
+    call  glEnable ; v1: mobs scratch #19
+    mov   ecx, GL_SRC_ALPHA ; v1: mobs scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mobs:20)
+    mov   edx, GL_ONE_MINUS_SRC_ALPHA ; v1: mobs scratch #21
+    call  glBlendFunc ; v1: mobs scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (mobs:22)
+    xor   ecx, ecx ; v1: mobs scratch #23
+    call  glDepthMask ; v1: mobs scratch #24
+    ; TODO: hoist invariant pointer load out of .loop (mobs:24)
+ENDP ; v1: mobs scratch #25
+
+PROC mobs_tint_end, 16 ; v1: mobs scratch #27
+    mov   dword [rel mobs_overlay], 0 ; v1: mobs scratch #28
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mobs:28)
+    mov   ecx, 1 ; v1: mobs scratch #29
+    call  glDepthMask ; v1: mobs scratch #30
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mobs:30)
+    mov   ecx, GL_BLEND ; v1: mobs scratch #31
+    call  glDisable ; v1: mobs scratch #32
+    ; TODO: clamp index before table lookup on malformed input (mobs:32)
+    mov   ecx, GL_TEXTURE_2D ; v1: mobs scratch #33
+    call  glEnable ; v1: mobs scratch #34
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mobs:34)
+ENDP ; v1: mobs scratch #35
+
+; 3 flickering flame billboards, pulled toward the cam past the body so it
+; can't hide them. the odd flame particle alone was unreadable at a distance
+LPROCX fire_render, 32 ; v1: mobs scratch #39
+    mov   rbx, rcx ; v1: mobs scratch #40
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mobs:40)
+    mov   rsi, rdx ; v1: mobs scratch #41
+    movss xmm11, [rbx+ENTITY.hw] ; v1: mobs scratch #42
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mobs:42)
+    mulss xmm11, [rel c_1_6] ; v1: mobs scratch #43
+    addss xmm11, [rel c_0_12] ; v1: mobs scratch #44
+    ; TODO: verify 16-byte rsp alignment before inner call (mobs:44)
+    movss xmm0, [rbx+ENTITY.h] ; v1: mobs scratch #45
+    mulss xmm0, [rel c_0_4] ; v1: mobs scratch #46
+    ; TODO: hoist invariant pointer load out of .loop (mobs:46)
+    addss xmm0, [rel c_0_1] ; v1: mobs scratch #47
+    minss xmm11, xmm0 ; v1: mobs scratch #48
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mobs:48)
+    ; k = (1.5hw + 0.25) / |centre|, cam is at the origin
+    movss xmm6, [rsi] ; v1: mobs scratch #50
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mobs:50)
+    movss xmm7, [rbx+ENTITY.h] ; v1: mobs scratch #51
+    mulss xmm7, [rel c_half] ; v1: mobs scratch #52
+    ; TODO: clamp index before table lookup on malformed input (mobs:52)
+    addss xmm7, [rsi+4] ; v1: mobs scratch #53
+    movss xmm8, [rsi+8] ; v1: mobs scratch #54
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mobs:54)
+    movaps xmm0, xmm6
+    mulss xmm0, xmm0
+    movaps xmm1, xmm7
+    mulss xmm1, xmm1
+    addss xmm0, xmm1
+    movaps xmm1, xmm8
+    mulss xmm1, xmm1
+    addss xmm0, xmm1
+    sqrtss xmm0, xmm0
+    xorps xmm12, xmm12
+    comiss xmm0, [rel c_half]
+    jb    .nopull                       ; cam inside the body
+    movss xmm12, [rbx+ENTITY.hw]
+    mulss xmm12, [rel c_1_5]
+    addss xmm12, [rel c_0_25]           ; clears a boar's snout
+    divss xmm12, xmm0
+    minss xmm12, [rel c_half]
+.nopull:
+    movss xmm0, [rel c_one]
+    subss xmm0, xmm12
+    mulss xmm6, xmm0
+    mulss xmm8, xmm0
+    mulss xmm7, xmm12
+    movss xmm9, [rsi+4]
+    subss xmm9, xmm7
+    cvtsi2ss xmm10, dword [rbx+ENTITY.age]
+    addss xmm10, [rel g_partial_tick]
+    mov   ecx, GL_CULL_FACE
+    call  glDisable
+    mov   ecx, GL_BLEND
+    call  glEnable
+    mov   ecx, GL_SRC_ALPHA
+    mov   edx, GL_ONE
+    call  glBlendFunc
+    xor   ecx, ecx
+    call  glDepthMask
+    xor   r12d, r12d
+.layer:
+    ; size and sway on two out of phase sines
+    cvtsi2ss xmm13, r12d
+    movaps xmm0, xmm13
+    mulss xmm0, [rel c_2_1]
+    movaps xmm1, xmm10
+    mulss xmm1, [rel c_0_7]
+    addss xmm0, xmm1
+    call  math_sin
+    mulss xmm0, [rel c_0_12]
+    addss xmm0, [rel c_0_9]
+    mulss xmm0, xmm11
+    movaps xmm14, xmm0
+    movaps xmm0, xmm13
+    mulss xmm0, [rel c_1_7]
+    movaps xmm1, xmm10
+    mulss xmm1, [rel c_1_1]
+    addss xmm0, xmm1
+    call  math_sin
+    mulss xmm0, xmm11
+    mulss xmm0, [rel c_0_15]
+    movaps xmm15, xmm0
+    movss xmm0, [rel c_one]
+    movss xmm1, [rel c_0_75]
+    movss xmm2, [rel c_0_45]
+    movss xmm3, [rel c_0_8]
+    call  glColor4f
+    ; at 0.2, 0.5, 0.8 of the height
+    movaps xmm0, xmm13
+    mulss xmm0, [rel c_0_3]
+    addss xmm0, [rel c_0_2]
+    mulss xmm0, [rbx+ENTITY.h]
+    addss xmm0, xmm9
+    movaps xmm3, xmm0
+    lea   rax, [rel g_cam_right]
+    movss xmm2, [rax]
+    mulss xmm2, xmm15
+    addss xmm2, xmm6
+    movss xmm1, [rax+8]
+    mulss xmm1, xmm15
+    addss xmm1, xmm8
+    movss [rsp+32], xmm1
+    mov   ecx, T_PARTICLE_FLAME
+    movaps xmm1, xmm14
+    call  billboard
+    inc   r12d
+    cmp   r12d, 3
+    jb    .layer
+    mov   ecx, 1
+    call  glDepthMask
+    mov   ecx, GL_SRC_ALPHA
+    mov   edx, GL_ONE_MINUS_SRC_ALPHA
+    call  glBlendFunc
+    mov   ecx, GL_BLEND
+    call  glDisable
+    mov   ecx, GL_CULL_FACE
+    call  glEnable
+    movss xmm0, [rel c_one]
+    movaps xmm1, xmm0
+    movaps xmm2, xmm0
+    movaps xmm3, xmm0
+    call  glColor4f
+ENDPX
     ; v1 temporary guard (mobs #23)
     xor     r11d, r11d ; clear v1 slot 23
     ; v1 temporary guard (mobs #25)
@@ -1753,3 +1908,11 @@ PROCX mobs_render, 64
     xor     r11d, r11d ; clear v1 slot 49
     ; v1 temporary guard (mobs #51)
     xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (mobs #53)
+    xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (mobs #55)
+    xor     r11d, r11d ; clear v1 slot 55
+    ; v1 temporary guard (mobs #57)
+    xor     r11d, r11d ; clear v1 slot 57
+    ; v1 temporary guard (mobs #59)
+    xor     r11d, r11d ; clear v1 slot 59
