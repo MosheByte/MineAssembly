@@ -2037,50 +2037,35 @@ LPROCX woolly_model, 32
 ENDPX
 
 ; java player, same skin as ours in third person
-LPROC remote_model, 64 ; v1: mobs scratch #2
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mobs:2)
-    mov   rbx, rcx ; v1: mobs scratch #3
-    mov   byte LOC(HP_HEAD_FRONT), T_PLAYER_FACE ; v1: mobs scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mobs:4)
-    mov   byte LOC(HP_HEAD_SIDE), T_PLAYER_SKIN ; v1: mobs scratch #5
-    mov   byte LOC(HP_HEAD_TOP), T_PLAYER_HAIR ; v1: mobs scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mobs:6)
-    mov   byte LOC(HP_HEAD_BACK), T_PLAYER_HAIR ; v1: mobs scratch #7
-    mov   byte LOC(HP_BODY), T_PLAYER_SHIRT ; v1: mobs scratch #8
-    ; TODO: clamp index before table lookup on malformed input (mobs:8)
-    mov   byte LOC(HP_ARM), T_PLAYER_SKIN ; v1: mobs scratch #9
-    mov   byte LOC(HP_LEG), T_PLAYER_PANTS ; v1: mobs scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (mobs:10)
-    mov   byte LOC(HP_SLEEVE), T_PLAYER_SHIRT ; v1: mobs scratch #11
-    mov   dword LOC(HP_SCALE), __float32__(0.05625) ; v1: mobs scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (mobs:12)
-    mov   eax, [rel m_swing] ; v1: mobs scratch #13
-    mov   LOC(HP_SWING), eax ; v1: mobs scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mobs:14)
-    mov   dword LOC(HP_ARMS_FWD), 0 ; v1: mobs scratch #15
-    mov   eax, [rel m_hyaw] ; v1: mobs scratch #16
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mobs:16)
-    mov   LOC(HP_HEAD_YAW), eax ; v1: mobs scratch #17
-    mov   eax, [rel m_hpitch] ; v1: mobs scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mobs:18)
-    mov   LOC(HP_HEAD_PITCH), eax ; v1: mobs scratch #19
-    mov   dword LOC(HP_ITEM), 0 ; v1: mobs scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mobs:20)
-    mov   dword LOC(HP_ATTACK), 0 ; v1: mobs scratch #21
-    lea   rcx, LOC(0) ; v1: mobs scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mobs:22)
-    call  mobs_draw_humanoid ; v1: mobs scratch #23
-ENDP ; v1: mobs scratch #24
-    ; TODO: clamp index before table lookup on malformed input (mobs:24)
+LPROC remote_model, 64
+    mov   rbx, rcx
+    mov   byte LOC(HP_HEAD_FRONT), T_PLAYER_FACE
+    mov   byte LOC(HP_HEAD_SIDE), T_PLAYER_SKIN
+    mov   byte LOC(HP_HEAD_TOP), T_PLAYER_HAIR
+    mov   byte LOC(HP_HEAD_BACK), T_PLAYER_HAIR
+    mov   byte LOC(HP_BODY), T_PLAYER_SHIRT
+    mov   byte LOC(HP_ARM), T_PLAYER_SKIN
+    mov   byte LOC(HP_LEG), T_PLAYER_PANTS
+    mov   byte LOC(HP_SLEEVE), T_PLAYER_SHIRT
+    mov   dword LOC(HP_SCALE), __float32__(0.05625)   ; 1.8 / 32
+    mov   eax, [rel m_swing]
+    mov   LOC(HP_SWING), eax
+    mov   dword LOC(HP_ARMS_FWD), 0
+    mov   eax, [rel m_hyaw]
+    mov   LOC(HP_HEAD_YAW), eax
+    mov   eax, [rel m_hpitch]
+    mov   LOC(HP_HEAD_PITCH), eax
+    mov   dword LOC(HP_ITEM), 0
+    mov   dword LOC(HP_ATTACK), 0
+    lea   rcx, LOC(0)
+    call  mobs_draw_humanoid
+ENDP
 
-LPROC shambler_model, 64 ; v1: mobs scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (mobs:26)
-    mov   rbx, rcx ; v1: mobs scratch #27
-    mov   byte LOC(HP_HEAD_FRONT), T_SHAMBLER_FACE ; v1: mobs scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (mobs:28)
-    mov   byte LOC(HP_HEAD_SIDE), T_SHAMBLER_SKIN ; v1: mobs scratch #29
-    mov   byte LOC(HP_HEAD_TOP), T_SHAMBLER_SKIN ; v1: mobs scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mobs:30)
+LPROC shambler_model, 64
+    mov   rbx, rcx
+    mov   byte LOC(HP_HEAD_FRONT), T_SHAMBLER_FACE
+    mov   byte LOC(HP_HEAD_SIDE), T_SHAMBLER_SKIN
+    mov   byte LOC(HP_HEAD_TOP), T_SHAMBLER_SKIN
     mov   byte LOC(HP_HEAD_BACK), T_SHAMBLER_SKIN
     mov   byte LOC(HP_BODY), T_SHAMBLER_SHIRT
     mov   byte LOC(HP_ARM), T_SHAMBLER_SKIN
@@ -2230,10 +2215,169 @@ LPROCX glow_fan, 32
     mov   ecx, r12d
     movaps xmm1, xmm6
     call  glow_vertex
-    ; v1 temporary guard (mobs #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (mobs #17)
-    xor     r11d, r11d ; clear v1 slot 17
+    inc   r12d ; v1: mobs scratch #0
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mobs:0)
+    cmp   r12d, GLOW_SEG ; v1: mobs scratch #1
+    jbe   .ring ; v1: mobs scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mobs:2)
+    call  glEnd ; v1: mobs scratch #3
+    mov   ecx, GL_TEXTURE_2D ; v1: mobs scratch #4
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mobs:4)
+    call  glEnable ; v1: mobs scratch #5
+ENDPX ; v1: mobs scratch #6
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mobs:6)
+
+; reads the CALLER's xmm7-9 (glow_fan's centre). ugly but it's one caller
+glow_vertex: ; v1: mobs scratch #9
+    sub   rsp, 40 ; v1: mobs scratch #10
+    ; TODO: clamp index before table lookup on malformed input (mobs:10)
+    and   ecx, GLOW_SEG-1 ; v1: mobs scratch #11
+    lea   rax, [rel glow_dirs] ; v1: mobs scratch #12
+    ; TODO: verify 16-byte rsp alignment before inner call (mobs:12)
+    movss xmm4, [rax+rcx*8] ; v1: mobs scratch #13
+    mulss xmm4, xmm1 ; v1: mobs scratch #14
+    ; TODO: hoist invariant pointer load out of .loop (mobs:14)
+    movss xmm5, [rax+rcx*8+4] ; v1: mobs scratch #15
+    mulss xmm5, xmm1 ; v1: mobs scratch #16
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mobs:16)
+    lea   rax, [rel g_cam_right] ; v1: mobs scratch #17
+    lea   rdx, [rel g_cam_up] ; v1: mobs scratch #18
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mobs:18)
+    movss xmm0, [rax] ; v1: mobs scratch #19
+    mulss xmm0, xmm4 ; v1: mobs scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mobs:20)
+    movss xmm3, [rdx] ; v1: mobs scratch #21
+    mulss xmm3, xmm5 ; v1: mobs scratch #22
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mobs:22)
+    addss xmm0, xmm3 ; v1: mobs scratch #23
+    addss xmm0, xmm7 ; v1: mobs scratch #24
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mobs:24)
+    movss xmm1, [rax+4] ; v1: mobs scratch #25
+    mulss xmm1, xmm4 ; v1: mobs scratch #26
+    ; TODO: clamp index before table lookup on malformed input (mobs:26)
+    movss xmm3, [rdx+4] ; v1: mobs scratch #27
+    mulss xmm3, xmm5 ; v1: mobs scratch #28
+    ; TODO: verify 16-byte rsp alignment before inner call (mobs:28)
+    addss xmm1, xmm3 ; v1: mobs scratch #29
+    addss xmm1, xmm8 ; v1: mobs scratch #30
+    ; TODO: hoist invariant pointer load out of .loop (mobs:30)
+    movss xmm2, [rax+8] ; v1: mobs scratch #31
+    mulss xmm2, xmm4 ; v1: mobs scratch #32
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mobs:32)
+    movss xmm3, [rdx+8] ; v1: mobs scratch #33
+    mulss xmm3, xmm5 ; v1: mobs scratch #34
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mobs:34)
+    addss xmm2, xmm3 ; v1: mobs scratch #35
+    addss xmm2, xmm9 ; v1: mobs scratch #36
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mobs:36)
+    call  glVertex3f ; v1: mobs scratch #37
+    add   rsp, 40 ; v1: mobs scratch #38
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mobs:38)
+    ret ; v1: mobs scratch #39
+
+; ecx tile, xmm1 half size, xmm2/xmm3/ARG5 cam-relative pos
+LPROCX billboard, 32
+    movaps xmm6, xmm1
+    movaps xmm7, xmm2
+    movaps xmm8, xmm3
+    movss xmm9, ARG5
+    mov   eax, ecx
+    and   ecx, 15
+    cvtsi2ss xmm10, ecx
+    mulss xmm10, [rel c_1_16]
+    shr   eax, 4
+    cvtsi2ss xmm11, eax
+    mulss xmm11, [rel c_1_16]
+    movss xmm12, xmm10
+    addss xmm12, [rel c_1_16]
+    movss xmm13, xmm11
+    addss xmm13, [rel c_1_16]
+    mov   ecx, GL_QUADS
+    call  glBegin
+    xor   r12d, r12d
+.c:
+    lea   rax, [rel bb_signs]
+    movss xmm14, [rax+r12*8]
+    movss xmm15, [rax+r12*8+4]
+    movaps xmm0, xmm10
+    ucomiss xmm14, [rel c_zero]
+    jb    .u0
+    movaps xmm0, xmm12
+.u0:
+    movaps xmm1, xmm11
+    ucomiss xmm15, [rel c_zero]
+    ja    .v0
+    movaps xmm1, xmm13
+.v0:
+    call  glTexCoord2f
+    mulss xmm14, xmm6
+    mulss xmm15, xmm6
+    lea   rax, [rel g_cam_right]
+    lea   rdx, [rel g_cam_up]
+    movss xmm0, [rax]
+    mulss xmm0, xmm14
+    movss xmm3, [rdx]
+    mulss xmm3, xmm15
+    addss xmm0, xmm3
+    addss xmm0, xmm7
+    movss xmm1, [rax+4]
+    mulss xmm1, xmm14
+    movss xmm3, [rdx+4]
+    mulss xmm3, xmm15
+    addss xmm1, xmm3
+    addss xmm1, xmm8
+    movss xmm2, [rax+8]
+    mulss xmm2, xmm14
+    movss xmm3, [rdx+8]
+    mulss xmm3, xmm15
+    addss xmm2, xmm3
+    addss xmm2, xmm9
+    call  glVertex3f
+    inc   r12d
+    cmp   r12d, 4
+    jb    .c
+    call  glEnd
+ENDPX
+
+section .rdata
+align 16
+c_abs:      dd 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF
+c_sign:     dd 0x80000000, 0x80000000, 0x80000000, 0x80000000
+
+; per face PX NX PY NY PZ NZ. corners TL BL BR TR seen from outside = ccw
+face_corners:   db 7,5,1,3,  2,0,4,6,  2,6,7,3,  4,0,1,5,  6,4,5,7,  3,1,0,2
+; (u axis, v axis), 0 x 1 y 2 z
+face_axes:      db 2,1, 2,1, 0,2, 0,2, 0,1, 0,1
+; byte offsets into (u0,v0,u1,v1)
+uv_sel:         db 0,4, 0,12, 8,12, 8,4
+align 4
+face_shade:     dd 0.6, 0.6, 1.0, 0.5, 0.8, 0.8
+bb_signs:       dd -1.0,-1.0,  1.0,-1.0,  1.0,1.0,  -1.0,1.0
+glow_dirs:      ; cos, sin
+    dd 1.0000000, 0.0000000
+    dd 0.9238795, 0.3826834
+    dd 0.7071068, 0.7071068
+    dd 0.3826834, 0.9238795
+    dd 0.0000000, 1.0000000
+    dd -0.3826834, 0.9238795
+    dd -0.7071068, 0.7071068
+    dd -0.9238795, 0.3826834
+    dd -1.0000000, 0.0000000
+    dd -0.9238795, -0.3826834
+    dd -0.7071068, -0.7071068
+    dd -0.3826834, -0.9238795
+    dd -0.0000000, -1.0000000
+    dd 0.3826834, -0.9238795
+    dd 0.7071068, -0.7071068
+    dd 0.9238795, -0.3826834
+
+; same order as the wool blocks
+wool_rgb:
+    dd 0.96, 0.96, 0.94,   0.93, 0.55, 0.20,   0.78, 0.34, 0.80,   0.45, 0.62, 0.88
+    dd 0.93, 0.86, 0.27,   0.52, 0.80, 0.22,   0.93, 0.62, 0.72,   0.32, 0.32, 0.34
+    dd 0.64, 0.64, 0.62,   0.22, 0.57, 0.62,   0.52, 0.27, 0.72,   0.22, 0.28, 0.66
+    dd 0.47, 0.32, 0.21,   0.34, 0.45, 0.18,   0.68, 0.21, 0.20,   0.13, 0.13, 0.15
+
     ; v1 temporary guard (mobs #19)
     xor     r11d, r11d ; clear v1 slot 19
     ; v1 temporary guard (mobs #21)
@@ -2270,5 +2414,3 @@ LPROCX glow_fan, 32
     xor     r11d, r11d ; clear v1 slot 51
     ; v1 temporary guard (mobs #53)
     xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (mobs #55)
-    xor     r11d, r11d ; clear v1 slot 55
