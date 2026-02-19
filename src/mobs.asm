@@ -2215,65 +2215,46 @@ LPROCX glow_fan, 32
     mov   ecx, r12d
     movaps xmm1, xmm6
     call  glow_vertex
-    inc   r12d ; v1: mobs scratch #0
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mobs:0)
-    cmp   r12d, GLOW_SEG ; v1: mobs scratch #1
-    jbe   .ring ; v1: mobs scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mobs:2)
-    call  glEnd ; v1: mobs scratch #3
-    mov   ecx, GL_TEXTURE_2D ; v1: mobs scratch #4
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mobs:4)
-    call  glEnable ; v1: mobs scratch #5
-ENDPX ; v1: mobs scratch #6
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mobs:6)
+    inc   r12d
+    cmp   r12d, GLOW_SEG
+    jbe   .ring
+    call  glEnd
+    mov   ecx, GL_TEXTURE_2D
+    call  glEnable
+ENDPX
 
 ; reads the CALLER's xmm7-9 (glow_fan's centre). ugly but it's one caller
-glow_vertex: ; v1: mobs scratch #9
-    sub   rsp, 40 ; v1: mobs scratch #10
-    ; TODO: clamp index before table lookup on malformed input (mobs:10)
-    and   ecx, GLOW_SEG-1 ; v1: mobs scratch #11
-    lea   rax, [rel glow_dirs] ; v1: mobs scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (mobs:12)
-    movss xmm4, [rax+rcx*8] ; v1: mobs scratch #13
-    mulss xmm4, xmm1 ; v1: mobs scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (mobs:14)
-    movss xmm5, [rax+rcx*8+4] ; v1: mobs scratch #15
-    mulss xmm5, xmm1 ; v1: mobs scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mobs:16)
-    lea   rax, [rel g_cam_right] ; v1: mobs scratch #17
-    lea   rdx, [rel g_cam_up] ; v1: mobs scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mobs:18)
-    movss xmm0, [rax] ; v1: mobs scratch #19
-    mulss xmm0, xmm4 ; v1: mobs scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mobs:20)
-    movss xmm3, [rdx] ; v1: mobs scratch #21
-    mulss xmm3, xmm5 ; v1: mobs scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mobs:22)
-    addss xmm0, xmm3 ; v1: mobs scratch #23
-    addss xmm0, xmm7 ; v1: mobs scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mobs:24)
-    movss xmm1, [rax+4] ; v1: mobs scratch #25
-    mulss xmm1, xmm4 ; v1: mobs scratch #26
-    ; TODO: clamp index before table lookup on malformed input (mobs:26)
-    movss xmm3, [rdx+4] ; v1: mobs scratch #27
-    mulss xmm3, xmm5 ; v1: mobs scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (mobs:28)
-    addss xmm1, xmm3 ; v1: mobs scratch #29
-    addss xmm1, xmm8 ; v1: mobs scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (mobs:30)
-    movss xmm2, [rax+8] ; v1: mobs scratch #31
-    mulss xmm2, xmm4 ; v1: mobs scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mobs:32)
-    movss xmm3, [rdx+8] ; v1: mobs scratch #33
-    mulss xmm3, xmm5 ; v1: mobs scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mobs:34)
-    addss xmm2, xmm3 ; v1: mobs scratch #35
-    addss xmm2, xmm9 ; v1: mobs scratch #36
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mobs:36)
-    call  glVertex3f ; v1: mobs scratch #37
-    add   rsp, 40 ; v1: mobs scratch #38
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mobs:38)
-    ret ; v1: mobs scratch #39
+glow_vertex:
+    sub   rsp, 40
+    and   ecx, GLOW_SEG-1
+    lea   rax, [rel glow_dirs]
+    movss xmm4, [rax+rcx*8]
+    mulss xmm4, xmm1
+    movss xmm5, [rax+rcx*8+4]
+    mulss xmm5, xmm1
+    lea   rax, [rel g_cam_right]
+    lea   rdx, [rel g_cam_up]
+    movss xmm0, [rax]
+    mulss xmm0, xmm4
+    movss xmm3, [rdx]
+    mulss xmm3, xmm5
+    addss xmm0, xmm3
+    addss xmm0, xmm7
+    movss xmm1, [rax+4]
+    mulss xmm1, xmm4
+    movss xmm3, [rdx+4]
+    mulss xmm3, xmm5
+    addss xmm1, xmm3
+    addss xmm1, xmm8
+    movss xmm2, [rax+8]
+    mulss xmm2, xmm4
+    movss xmm3, [rdx+8]
+    mulss xmm3, xmm5
+    addss xmm2, xmm3
+    addss xmm2, xmm9
+    call  glVertex3f
+    add   rsp, 40
+    ret
 
 ; ecx tile, xmm1 half size, xmm2/xmm3/ARG5 cam-relative pos
 LPROCX billboard, 32
@@ -2378,39 +2359,129 @@ wool_rgb:
     dd 0.64, 0.64, 0.62,   0.22, 0.57, 0.62,   0.52, 0.27, 0.72,   0.22, 0.28, 0.66
     dd 0.47, 0.32, 0.21,   0.34, 0.45, 0.18,   0.68, 0.21, 0.20,   0.13, 0.13, 0.15
 
-    ; v1 temporary guard (mobs #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (mobs #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (mobs #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (mobs #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (mobs #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (mobs #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (mobs #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (mobs #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (mobs #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (mobs #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (mobs #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (mobs #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (mobs #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (mobs #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (mobs #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (mobs #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (mobs #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (mobs #53)
-    xor     r11d, r11d ; clear v1 slot 53
+; in blocks, facing -z, feet at y=0
+align 16
+boar_body:
+    PARTU -0.30, 0.35,-0.45,   0.30, 0.90, 0.45,  T_BOAR_SKIN, 0, 255, 255, 255
+    PARTU -0.06, 0.90,-0.40,   0.06, 0.99, 0.32,  T_BOAR_SKIN, 0, 120, 95, 85    ; bristly ridge
+    PARTU -0.04, 0.62, 0.45,   0.04, 0.80, 0.53,  T_BOAR_SKIN, 0, 190, 160, 150  ; tail
+boar_head:  ; pivot (0, 0.65, -0.45)
+    PART  -0.25,-0.25,-0.42,   0.25, 0.25, 0.00,  T_BOAR_SKIN, T_BOAR_SKIN, T_BOAR_SKIN, T_BOAR_SKIN, T_BOAR_SKIN, T_BOAR_FACE, PF_FRONT, 255, 255, 255
+    PARTU -0.14,-0.17,-0.50,   0.14, 0.03,-0.42,  T_BOAR_SNOUT, PF_FRONT, 255, 255, 255
+    PARTU  0.14,-0.15,-0.50,   0.19, 0.02,-0.44,  T_WHITE, PF_FULL, 240, 228, 196  ; tusks
+    PARTU -0.19,-0.15,-0.50,  -0.14, 0.02,-0.44,  T_WHITE, PF_FULL, 240, 228, 196
+    PARTU  0.13, 0.25,-0.20,   0.24, 0.34,-0.12,  T_BOAR_SKIN, 0, 150, 120, 110    ; ears
+    PARTU -0.24, 0.25,-0.20,  -0.13, 0.34,-0.12,  T_BOAR_SKIN, 0, 150, 120, 110
+boar_leg:
+    PARTU -0.10,-0.35,-0.10,   0.10, 0.00, 0.10,  T_BOAR_SKIN, 0, 205, 175, 165
+boar_legpos:
+    dd 1
+    dd  0.17, 0.35,-0.28,  1.0
+    dd -0.17, 0.35,-0.28, -1.0
+    dd  0.17, 0.35, 0.28, -1.0
+    dd -0.17, 0.35, 0.28,  1.0
+
+align 16
+woolly_body:
+    PARTU -0.36, 0.55,-0.50,   0.36, 1.17, 0.50,  T_WOOLLY_WOOL, PF_WOOL, 255, 255, 255
+woolly_head:  ; pivot (0, 1.0, -0.45)
+    PART  -0.17,-0.15,-0.36,   0.17, 0.25, 0.00,  T_WOOLLY_SKIN, T_WOOLLY_SKIN, T_WOOLLY_SKIN, T_WOOLLY_SKIN, T_WOOLLY_SKIN, T_WOOLLY_FACE, PF_FRONT, 255, 255, 255
+    PARTU -0.20, 0.12,-0.30,   0.20, 0.31, 0.03,  T_WOOLLY_WOOL, PF_WOOL, 255, 255, 255   ; cap
+    PARTU  0.17, 0.05,-0.16,   0.29, 0.11,-0.08,  T_WOOLLY_SKIN, 0, 230, 230, 230         ; ears
+    PARTU -0.29, 0.05,-0.16,  -0.17, 0.11,-0.08,  T_WOOLLY_SKIN, 0, 230, 230, 230
+woolly_leg:
+    PARTU -0.09,-0.60,-0.09,   0.09, 0.00, 0.09,  T_WOOLLY_SKIN, 0, 255, 255, 255
+    PARTU -0.12,-0.28,-0.12,   0.12, 0.03, 0.12,  T_WOOLLY_WOOL, PF_WOOL, 255, 255, 255  ; wool cuff
+woolly_legpos:
+    dd 2
+    dd  0.18, 0.60,-0.32,  1.0
+    dd -0.18, 0.60,-0.32, -1.0
+    dd  0.18, 0.60, 0.32, -1.0
+    dd -0.18, 0.60, 0.32,  1.0
+
+align 4
+c_zero:     dd 0.0
+c_one:      dd 1.0
+c_1_0:      dd 1.0
+c_2:        dd 2.0
+c_m2:       dd -2.0
+c_4:        dd 4.0
+c_6:        dd 6.0
+c_m6:       dd -6.0
+c_8:        dd 8.0
+c_10:       dd 10.0
+c_12:       dd 12.0
+c_22:       dd 22.0
+c_20:       dd 20.0
+c_24:       dd 24.0
+c_30:       dd 30.0
+c_40:       dd 40.0
+c_44:       dd 44.0
+c_45:       dd 45.0
+c_m45:      dd -45.0
+c_64:       dd 64.0
+c_65:       dd 65.0
+c_75:       dd 75.0
+c_m75:      dd -75.0
+c_80:       dd 80.0
+c_90:       dd 90.0
+c_180:      dd 180.0
+c_360:      dd 360.0
+c_1_360:    dd 0.0027777778
+c_hunt2:    dd 1600.0               ; 40^2
+c_40sq:     dd 1600.0
+c_96sq:     dd 9216.0
+c_pi:       dd 3.14159265
+c_tau:      dd 6.2831853
+c_r2d:      dd 57.29578
+c_inv255:   dd 0.0039215686
+c_1_16:     dd 0.0625
+c_uv_eps:   dd 0.0004
+c_half:     dd 0.5
+c_0_01:     dd 0.01
+c_0_02:     dd 0.02
+c_0_03:     dd 0.03
+c_0_035:    dd 0.035
+c_0_08:     dd 0.08
+c_0_09:     dd 0.09
+c_0_1:      dd 0.1
+c_0_11:     dd 0.11
+c_0_12:     dd 0.12
+c_0_15:     dd 0.15
+c_0_16:     dd 0.16
+c_0_17:     dd 0.17
+c_0_2:      dd 0.2
+c_0_22:     dd 0.22
+c_0_25:     dd 0.25
+c_0_3:      dd 0.3
+c_0_35:     dd 0.35
+c_0_45:     dd 0.45
+c_0_55:     dd 0.55
+c_0_6:      dd 0.6
+c_0_62:     dd 0.62
+c_0_65:     dd 0.65
+c_0_6662:   dd 0.6662
+c_0_8:      dd 0.8
+c_0_9:      dd 0.9
+c_1_2:      dd 1.2
+c_1_4:      dd 1.4
+c_1_44:     dd 1.44
+c_1_5:      dd 1.5
+c_1_6:      dd 1.6
+c_1_7:      dd 1.7
+c_2_5:      dd 2.5
+c_7_5:      dd 7.5
+c_hurt_alpha: dd 0.5
+c_0_4:      dd 0.4
+c_0_7:      dd 0.7
+c_0_75:     dd 0.75
+c_1_1:      dd 1.1
+c_2_1:      dd 2.1
+c_5:        dd 5.0
+c_mhalf:    dd -0.5
+c_m1:       dd -1.0
+c_m1_5:     dd -1.5
+c_m9_5:     dd -9.5
+c_m30:      dd -30.0
+c_70:       dd 70.0
+c_m11:      dd -11.0
