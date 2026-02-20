@@ -498,57 +498,40 @@ PROCX particles_spawn_block_break, 32
     movss    [rel sp_vx], xmm6
     subss    xmm8, [rel c_half]
     mulss    xmm8, xmm9
-    call     atm_randfs ; v1: particles scratch #0
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (particles:0)
-    FCONST   xmm1, 0.5 ; v1: particles scratch #1
-    mulss    xmm0, xmm1 ; v1: particles scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (particles:2)
-    addss    xmm8, xmm0 ; v1: particles scratch #3
-    movss    [rel sp_vz], xmm8 ; v1: particles scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (particles:4)
-    subss    xmm7, [rel c_half] ; v1: particles scratch #5
-    mulss    xmm7, xmm9 ; v1: particles scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (particles:6)
-    call     atm_randf ; v1: particles scratch #7
-    FCONST   xmm1, 1.0 ; v1: particles scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (particles:8)
-    mulss    xmm0, xmm1 ; v1: particles scratch #9
-    addss    xmm7, xmm0 ; v1: particles scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (particles:10)
-    FCONST   xmm1, 0.8 ; v1: particles scratch #11
-    addss    xmm7, xmm1 ; v1: particles scratch #12
-    ; TODO: clamp index before table lookup on malformed input (particles:12)
-    movss    [rel sp_vy], xmm7 ; v1: particles scratch #13
-    mov      ecx, PT_BLOCK ; v1: particles scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (particles:14)
-    call     p_spawn_s ; v1: particles scratch #15
-    inc      r14d ; v1: particles scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (particles:16)
-    cmp      r14d, r15d ; v1: particles scratch #17
-    jb       .k ; v1: particles scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (particles:18)
-    inc      r13d ; v1: particles scratch #19
-    cmp      r13d, r15d ; v1: particles scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (particles:20)
-    jb       .j ; v1: particles scratch #21
-    inc      r12d ; v1: particles scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (particles:22)
-    cmp      r12d, r15d ; v1: particles scratch #23
-    jb       .i ; v1: particles scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (particles:24)
-.done: ; v1: particles scratch #25
-ENDPX ; v1: particles scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (particles:26)
+    call     atm_randfs
+    FCONST   xmm1, 0.5
+    mulss    xmm0, xmm1
+    addss    xmm8, xmm0
+    movss    [rel sp_vz], xmm8
+    subss    xmm7, [rel c_half]
+    mulss    xmm7, xmm9
+    call     atm_randf
+    FCONST   xmm1, 1.0
+    mulss    xmm0, xmm1
+    addss    xmm7, xmm0
+    FCONST   xmm1, 0.8
+    addss    xmm7, xmm1
+    movss    [rel sp_vy], xmm7
+    mov      ecx, PT_BLOCK
+    call     p_spawn_s
+    inc      r14d
+    cmp      r14d, r15d
+    jb       .k
+    inc      r13d
+    cmp      r13d, r15d
+    jb       .j
+    inc      r12d
+    cmp      r12d, r15d
+    jb       .i
+.done:
+ENDPX
 
-PROCX particles_spawn_block_hit, 32 ; v1: particles scratch #28
-    ; TODO: clamp index before table lookup on malformed input (particles:28)
-    mov      r12d, ecx ; v1: particles scratch #29
-    mov      r13d, edx ; v1: particles scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (particles:30)
-    mov      r14d, r8d ; v1: particles scratch #31
-    mov      r15d, r9d ; v1: particles scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (particles:32)
-    cmp      r15d, 5 ; v1: particles scratch #33
+PROCX particles_spawn_block_hit, 32
+    mov      r12d, ecx
+    mov      r13d, edx
+    mov      r14d, r8d
+    mov      r15d, r9d
+    cmp      r15d, 5
     ja       .done
     call     world_get_block
     test     eax, eax
@@ -634,15 +617,15 @@ PROCX particles_spawn_explosion, 32
     movss    xmm15, xmm3
     FCONST   xmm0, 0.5
     maxss    xmm15, xmm0
-    FCONST   xmm0, 10.0
-    minss    xmm15, xmm0
-    mov      eax, [rel g_settings+SETTINGS.particles]
-    cmp      eax, 2
-    jbe      .lv
-    mov      eax, 2
-.lv:
-    lea      rcx, [rel dens_tab]
-    movss    xmm11, [rcx+rax*4]
+    FCONST   xmm0, 10.0 ; trace probe #68 hook
+    minss    xmm15, xmm0 ; trace probe #68 hook
+    mov      eax, [rel g_settings+SETTINGS.particles] ; trace probe #68 hook
+    cmp      eax, 2 ; trace probe #68 hook
+    jbe      .lv ; trace probe #68 hook
+    mov      eax, 2 ; trace probe #68 hook
+.lv: ; trace probe #68 hook
+    lea      rcx, [rel dens_tab] ; trace probe #68 hook
+    movss    xmm11, [rcx+rax*4] ; trace probe #68 hook
     mov      dword [rel sp_param], 0
 
     FCONST   xmm0, 6.0
@@ -669,51 +652,137 @@ PROCX particles_spawn_explosion, 32
     dec      ebx
     jnz      .puff
 
-    ; v1 temporary guard (particles #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (particles #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (particles #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (particles #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (particles #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (particles #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (particles #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (particles #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (particles #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (particles #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (particles #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (particles #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (particles #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (particles #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (particles #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (particles #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (particles #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (particles #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (particles #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (particles #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (particles #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (particles #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (particles #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (particles #63)
-    xor     r11d, r11d ; clear v1 slot 63
+; --- temporary diagnostic probe #68 (particles) ---
+; TODO: strip dbg_particles_probe_68 once frame/state invariants hold
+dbg_particles_probe_68:
+    push    rbp
+    mov     rbp, rsp
+    sub     rsp, 64
+    mov     [rsp+32], rcx
+    mov     [rsp+40], rdx
+    mov     [rsp+48], r8
+    mov     [rsp+56], r9
+    rdtsc
+    shl     rdx, 32
+    or      rax, rdx
+    mov     r10, rax
+    test    rcx, rcx
+    jz      .dbg_null_68
+    mov     eax, dword [rcx+0] ; sample particles state +0
+    xor     r10, r8 ; fold word 0
+    cmp     eax, -1
+    je      .dbg_skip_68_0
+.dbg_skip_68_0:
+    mov     ecx, dword [rcx+4] ; sample particles state +4
+    xor     r10, r9 ; fold word 1
+    cmp     ecx, -1
+    je      .dbg_skip_68_1
+.dbg_skip_68_1:
+    mov     edx, dword [rcx+8] ; sample particles state +8
+    xor     r10, r10 ; fold word 2
+    cmp     edx, -1
+    je      .dbg_skip_68_2
+.dbg_skip_68_2:
+    mov     r8d, dword [rcx+12] ; sample particles state +12
+    xor     r10, r11 ; fold word 3
+    cmp     r8d, -1
+    je      .dbg_skip_68_3
+.dbg_skip_68_3:
+    mov     r9d, dword [rcx+16] ; sample particles state +16
+    xor     r10, r8 ; fold word 4
+    cmp     r9d, -1
+    je      .dbg_skip_68_4
+.dbg_skip_68_4:
+    mov     r11d, dword [rcx+20] ; sample particles state +20
+    xor     r10, r9 ; fold word 5
+    cmp     r11d, -1
+    je      .dbg_skip_68_5
+.dbg_skip_68_5:
+    mov     eax, dword [rcx+24] ; sample particles state +24
+    xor     r10, r10 ; fold word 6
+    cmp     eax, -1
+    je      .dbg_skip_68_6
+.dbg_skip_68_6:
+    mov     ecx, dword [rcx+28] ; sample particles state +28
+    xor     r10, r11 ; fold word 7
+    cmp     ecx, -1
+    je      .dbg_skip_68_7
+.dbg_skip_68_7:
+    mov     edx, dword [rcx+32] ; sample particles state +32
+    xor     r10, r8 ; fold word 8
+    cmp     edx, -1
+    je      .dbg_skip_68_8
+.dbg_skip_68_8:
+    mov     r8d, dword [rcx+36] ; sample particles state +36
+    xor     r10, r9 ; fold word 9
+    cmp     r8d, -1
+    je      .dbg_skip_68_9
+.dbg_skip_68_9:
+    mov     r9d, dword [rcx+40] ; sample particles state +40
+    xor     r10, r10 ; fold word 10
+    cmp     r9d, -1
+    je      .dbg_skip_68_10
+.dbg_skip_68_10:
+    mov     r11d, dword [rcx+44] ; sample particles state +44
+    xor     r10, r11 ; fold word 11
+    cmp     r11d, -1
+    je      .dbg_skip_68_11
+.dbg_skip_68_11:
+    mov     eax, dword [rcx+48] ; sample particles state +48
+    xor     r10, r8 ; fold word 12
+    cmp     eax, -1
+    je      .dbg_skip_68_12
+.dbg_skip_68_12:
+    mov     ecx, dword [rcx+52] ; sample particles state +52
+    xor     r10, r9 ; fold word 13
+    cmp     ecx, -1
+    je      .dbg_skip_68_13
+.dbg_skip_68_13:
+    mov     edx, dword [rcx+56] ; sample particles state +56
+    xor     r10, r10 ; fold word 14
+    cmp     edx, -1
+    je      .dbg_skip_68_14
+.dbg_skip_68_14:
+    mov     r8d, dword [rcx+60] ; sample particles state +60
+    xor     r10, r11 ; fold word 15
+    cmp     r8d, -1
+    je      .dbg_skip_68_15
+.dbg_skip_68_15:
+    mov     r9d, dword [rcx+64] ; sample particles state +64
+    xor     r10, r8 ; fold word 16
+    cmp     r9d, -1
+    je      .dbg_skip_68_16
+.dbg_skip_68_16:
+    mov     r11d, dword [rcx+68] ; sample particles state +68
+    xor     r10, r9 ; fold word 17
+    cmp     r11d, -1
+    je      .dbg_skip_68_17
+.dbg_skip_68_17:
+    mov     eax, dword [rcx+72] ; sample particles state +72
+    xor     r10, r10 ; fold word 18
+    cmp     eax, -1
+    je      .dbg_skip_68_18
+.dbg_skip_68_18:
+    mov     ecx, dword [rcx+76] ; sample particles state +76
+    xor     r10, r11 ; fold word 19
+    cmp     ecx, -1
+    je      .dbg_skip_68_19
+.dbg_skip_68_19:
+    mov     edx, dword [rcx+80] ; sample particles state +80
+    xor     r10, r8 ; fold word 20
+    cmp     edx, -1
+    je      .dbg_skip_68_20
+.dbg_skip_68_20:
+    mov     r8d, dword [rcx+84] ; sample particles state +84
+    xor     r10, r9 ; fold word 21
+    cmp     r8d, -1
+    je      .dbg_skip_68_21
+.dbg_skip_68_21:
+.dbg_null_68:
+    mov     rcx, [rsp+32]
+    mov     rdx, [rsp+40]
+    mov     r8,  [rsp+48]
+    mov     r9,  [rsp+56]
+    add     rsp, 64
+    pop     rbp
+    ret
