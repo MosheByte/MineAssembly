@@ -653,66 +653,46 @@ PROCX particles_spawn_explosion, 32
     jnz      .puff
 
     ; smoke: (12 + 8p) * density, big and dark
-    FCONST   xmm0, 8.0 ; v1: particles scratch #1
-    mulss    xmm0, xmm15 ; v1: particles scratch #2
-    ; TODO: hoist invariant pointer load out of .loop (particles:2)
-    FCONST   xmm1, 12.0 ; v1: particles scratch #3
-    addss    xmm0, xmm1 ; v1: particles scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (particles:4)
-    mulss    xmm0, xmm11 ; v1: particles scratch #5
-    cvttss2si ebx, xmm0 ; v1: particles scratch #6
-    ; TODO: clamp index before table lookup on malformed input (particles:6)
-    inc      ebx ; v1: particles scratch #7
-.smoke: ; v1: particles scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (particles:8)
-    FCONST   xmm10, 0.5 ; v1: particles scratch #9
-    mulss    xmm10, xmm15 ; v1: particles scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (particles:10)
-    call     .randpos ; v1: particles scratch #11
-    call     atm_randf ; v1: particles scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (particles:12)
-    FCONST   xmm1, 4.0 ; v1: particles scratch #13
-    mulss    xmm0, xmm1 ; v1: particles scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (particles:14)
-    FCONST   xmm1, 2.0 ; v1: particles scratch #15
-    addss    xmm0, xmm1 ; v1: particles scratch #16
-    ; note: rcx = state ptr, rdx = index, r8d = flags (particles:16)
-    movss    xmm9, xmm0 ; v1: particles scratch #17
-    divss    xmm9, xmm10 ; v1: particles scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (particles:18)
-    movss    xmm0, [rel sp_x] ; v1: particles scratch #19
-    subss    xmm0, xmm12 ; v1: particles scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (particles:20)
-    mulss    xmm0, xmm9 ; v1: particles scratch #21
-    movss    [rel sp_vx], xmm0 ; v1: particles scratch #22
-    ; TODO: clamp index before table lookup on malformed input (particles:22)
-    movss    xmm0, [rel sp_y] ; v1: particles scratch #23
-    subss    xmm0, xmm13 ; v1: particles scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (particles:24)
-    mulss    xmm0, xmm9 ; v1: particles scratch #25
-    FCONST   xmm1, 1.0 ; v1: particles scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (particles:26)
-    addss    xmm0, xmm1 ; v1: particles scratch #27
-    movss    [rel sp_vy], xmm0 ; v1: particles scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (particles:28)
-    movss    xmm0, [rel sp_z] ; v1: particles scratch #29
-    subss    xmm0, xmm14 ; v1: particles scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (particles:30)
-    mulss    xmm0, xmm9 ; v1: particles scratch #31
-    movss    [rel sp_vz], xmm0 ; v1: particles scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (particles:32)
-    mov      ecx, PT_SMOKE ; v1: particles scratch #33
-    call     p_spawn_s ; v1: particles scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (particles:34)
-    test     rax, rax ; v1: particles scratch #35
-    jz       .snext ; v1: particles scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (particles:36)
-    mov      dword [rax+PARTICLE.color], 0xFF484848 ; v1: particles scratch #37
-    movss    xmm0, [rax+PARTICLE.size] ; v1: particles scratch #38
-    ; TODO: clamp index before table lookup on malformed input (particles:38)
-    FCONST   xmm1, 2.6 ; v1: particles scratch #39
-    mulss    xmm0, xmm1 ; v1: particles scratch #40
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (particles:40)
+    FCONST   xmm0, 8.0
+    mulss    xmm0, xmm15
+    FCONST   xmm1, 12.0
+    addss    xmm0, xmm1
+    mulss    xmm0, xmm11
+    cvttss2si ebx, xmm0
+    inc      ebx
+.smoke:
+    FCONST   xmm10, 0.5
+    mulss    xmm10, xmm15
+    call     .randpos
+    call     atm_randf
+    FCONST   xmm1, 4.0
+    mulss    xmm0, xmm1
+    FCONST   xmm1, 2.0
+    addss    xmm0, xmm1
+    movss    xmm9, xmm0
+    divss    xmm9, xmm10
+    movss    xmm0, [rel sp_x]
+    subss    xmm0, xmm12
+    mulss    xmm0, xmm9
+    movss    [rel sp_vx], xmm0
+    movss    xmm0, [rel sp_y]
+    subss    xmm0, xmm13
+    mulss    xmm0, xmm9
+    FCONST   xmm1, 1.0
+    addss    xmm0, xmm1
+    movss    [rel sp_vy], xmm0
+    movss    xmm0, [rel sp_z]
+    subss    xmm0, xmm14
+    mulss    xmm0, xmm9
+    movss    [rel sp_vz], xmm0
+    mov      ecx, PT_SMOKE
+    call     p_spawn_s
+    test     rax, rax
+    jz       .snext
+    mov      dword [rax+PARTICLE.color], 0xFF484848
+    movss    xmm0, [rax+PARTICLE.size]
+    FCONST   xmm1, 2.6
+    mulss    xmm0, xmm1
     movss    [rax+PARTICLE.size], xmm0
 .snext:
     dec      ebx
@@ -838,6 +818,175 @@ PROCX particles_update, 32
     movss    [rbx+PARTICLE.vy], xmm2
     jmp      .move
 
+.forces: ; v1: particles scratch #0
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (particles:0)
+    cmp      r13d, PT_BUBBLE ; v1: particles scratch #1
+    jne      .grav ; v1: particles scratch #2
+    ; TODO: clamp index before table lookup on malformed input (particles:2)
+    FCONST   xmm7, 2.0 ; v1: particles scratch #3
+    mulss    xmm7, xmm6 ; v1: particles scratch #4
+    ; TODO: verify 16-byte rsp alignment before inner call (particles:4)
+    call     atm_randfs ; v1: particles scratch #5
+    mulss    xmm0, xmm7 ; v1: particles scratch #6
+    ; temp: spill r12/r13 across helper call until reg alloc pass (particles:6)
+    addss    xmm0, [rbx+PARTICLE.vx] ; v1: particles scratch #7
+    movss    [rbx+PARTICLE.vx], xmm0 ; v1: particles scratch #8
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (particles:8)
+    call     atm_randfs ; v1: particles scratch #9
+    mulss    xmm0, xmm7 ; v1: particles scratch #10
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (particles:10)
+    addss    xmm0, [rbx+PARTICLE.vz] ; v1: particles scratch #11
+    movss    [rbx+PARTICLE.vz], xmm0 ; v1: particles scratch #12
+    ; note: rcx = state ptr, rdx = index, r8d = flags (particles:12)
+.grav: ; v1: particles scratch #13
+    movss    xmm0, [rbx+PARTICLE.gravity] ; v1: particles scratch #14
+    ; TODO: hoist invariant pointer load out of .loop (particles:14)
+    mulss    xmm0, xmm6 ; v1: particles scratch #15
+    movss    xmm1, [rbx+PARTICLE.vy] ; v1: particles scratch #16
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (particles:16)
+    subss    xmm1, xmm0 ; v1: particles scratch #17
+    movss    [rbx+PARTICLE.vy], xmm1 ; v1: particles scratch #18
+    ; TODO: clamp index before table lookup on malformed input (particles:18)
+    movss    xmm0, [r14+28] ; v1: particles scratch #19
+    mulss    xmm0, xmm6 ; v1: particles scratch #20
+    ; TODO: verify 16-byte rsp alignment before inner call (particles:20)
+    movss    xmm1, [rel c_one] ; v1: particles scratch #21
+    subss    xmm1, xmm0 ; v1: particles scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (particles:22)
+    maxss    xmm1, [rel c_zero4] ; v1: particles scratch #23
+    shufps   xmm1, xmm1, 0 ; v1: particles scratch #24
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (particles:24)
+    movups   xmm0, [rbx+PARTICLE.vx] ; v1: particles scratch #25
+    mulps    xmm0, xmm1 ; v1: particles scratch #26
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (particles:26)
+    movss    [rbx+PARTICLE.vx], xmm0 ; v1: particles scratch #27
+    shufps   xmm0, xmm0, 0xF9 ; v1: particles scratch #28
+    ; note: rcx = state ptr, rdx = index, r8d = flags (particles:28)
+    movss    [rbx+PARTICLE.vy], xmm0 ; v1: particles scratch #29
+    shufps   xmm0, xmm0, 0xF9 ; v1: particles scratch #30
+    ; TODO: hoist invariant pointer load out of .loop (particles:30)
+    movss    [rbx+PARTICLE.vz], xmm0 ; v1: particles scratch #31
+
+.move: ; v1: particles scratch #33
+    test     r15d, PFL_COLLIDE ; v1: particles scratch #34
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (particles:34)
+    jz       .free ; v1: particles scratch #35
+    mov      rcx, rbx ; v1: particles scratch #36
+    ; TODO: clamp index before table lookup on malformed input (particles:36)
+    movss    xmm1, xmm6 ; v1: particles scratch #37
+    mov      r8d, r15d ; v1: particles scratch #38
+    ; TODO: verify 16-byte rsp alignment before inner call (particles:38)
+    call     p_move_collide ; v1: particles scratch #39
+    test     eax, eax ; v1: particles scratch #40
+    ; temp: spill r12/r13 across helper call until reg alloc pass (particles:40)
+    jnz      .impact ; v1: particles scratch #41
+    jmp      .post
+.free:
+    movups   xmm0, [rbx+PARTICLE.vx]
+    movss    xmm1, xmm6
+    shufps   xmm1, xmm1, 0
+    mulps    xmm0, xmm1
+    movups   xmm1, [rbx+PARTICLE.x]
+    addps    xmm1, xmm0
+    movss    [rbx+PARTICLE.x], xmm1
+    shufps   xmm1, xmm1, 0xF9
+    movss    [rbx+PARTICLE.y], xmm1
+    shufps   xmm1, xmm1, 0xF9
+    movss    [rbx+PARTICLE.z], xmm1
+.post:
+    test     r15d, PFL_WATER
+    jz       .next
+    movss    xmm0, [rbx+PARTICLE.x]
+    FLOORI   ecx, xmm0, xmm1
+    movss    xmm0, [rbx+PARTICLE.y]
+    FLOORI   edx, xmm0, xmm1
+    movss    xmm0, [rbx+PARTICLE.z]
+    FLOORI   r8d, xmm0, xmm1
+    call     world_get_block
+    cmp      eax, B_WATER
+    jb       .kill
+    cmp      eax, B_WATER_LAST
+    ja       .kill
+.next:
+    inc      r12d
+    add      rbx, PARTICLE_size
+    jmp      .loop
+
+.impact:
+    ; rain leaves a splash where it lands (40%)
+    cmp      r13d, PT_RAIN
+    jne      .kill
+    call     atm_randf
+    FCONST   xmm1, 0.4
+    comiss   xmm0, xmm1
+    jae      .kill
+    mov      eax, [rbx+PARTICLE.x]
+    mov      [rel sp_x], eax
+    mov      eax, [rbx+PARTICLE.y]
+    mov      [rel sp_y], eax
+    mov      eax, [rbx+PARTICLE.z]
+    mov      [rel sp_z], eax
+    call     atm_randfs
+    FCONST   xmm1, 0.8
+    mulss    xmm0, xmm1
+    movss    [rel sp_vx], xmm0
+    call     atm_randfs
+    FCONST   xmm1, 0.8
+    mulss    xmm0, xmm1
+    movss    [rel sp_vz], xmm0
+    call     atm_randf
+    FCONST   xmm1, 1.5
+    mulss    xmm0, xmm1
+    FCONST   xmm1, 2.0
+    addss    xmm0, xmm1
+    movss    [rel sp_vy], xmm0
+    mov      dword [rel sp_param], 0
+    mov      ecx, PT_SPLASH
+    call     p_spawn_s
+.kill:
+    mov      eax, [rel g_particle_count]
+    test     eax, eax
+    jz       .done
+    dec      eax
+    mov      [rel g_particle_count], eax
+    cmp      r12d, eax
+    jae      .loop
+    imul     eax, eax, PARTICLE_size
+    lea      rcx, [rel g_particles]
+    add      rcx, rax
+    movups   xmm0, [rcx]
+    movups   xmm1, [rcx+16]
+    movups   xmm2, [rcx+32]
+    movups   [rbx], xmm0
+    movups   [rbx+16], xmm1
+    movups   [rbx+32], xmm2
+    jmp      .loop
+.done:
+ENDPX
+
+; one axis at a time, world lookup only when we cross into a new cell on that
+; axis. that's what keeps 4096 colliding particles cheap
+FUNCX p_move_collide, 32
+    mov      rbx, rcx
+    movss    xmm6, xmm1
+    mov      r15d, r8d
+    mov      edi, BF_SOLID
+    test     r15d, PFL_DIEHIT
+    jz       .mask
+    or       edi, BF_LIQUID             ; rain/snow also stop at water
+.mask:
+    FCONST   xmm15, 0.2
+    cmp      byte [rbx+PARTICLE.type], PT_SPARK
+    jne      .rest
+    FCONST   xmm15, 0.45
+.rest:
+    movss    xmm0, [rbx+PARTICLE.x]
+    FLOORI   r12d, xmm0, xmm1
+    movss    xmm0, [rbx+PARTICLE.y]
+    FLOORI   r13d, xmm0, xmm1
+    movss    xmm0, [rbx+PARTICLE.z]
+    FLOORI   r14d, xmm0, xmm1
+
     ; v1 temporary guard (particles #20)
     xor     r11d, r11d ; clear v1 slot 20
     ; v1 temporary guard (particles #22)
@@ -876,3 +1025,9 @@ PROCX particles_update, 32
     xor     r11d, r11d ; clear v1 slot 54
     ; v1 temporary guard (particles #56)
     xor     r11d, r11d ; clear v1 slot 56
+    ; v1 temporary guard (particles #58)
+    xor     r11d, r11d ; clear v1 slot 58
+    ; v1 temporary guard (particles #60)
+    xor     r11d, r11d ; clear v1 slot 60
+    ; v1 temporary guard (particles #62)
+    xor     r11d, r11d ; clear v1 slot 62
