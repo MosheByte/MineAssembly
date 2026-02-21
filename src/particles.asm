@@ -1775,15 +1775,15 @@ FUNCX p_random_event, 32
     movss    [rel sp_vy], xmm0
     mov      ecx, PT_BUBBLE
     call     p_spawn_s
-    jmp      .done ; trace probe #69 hook
-.notwater: ; trace probe #69 hook
-    lea      rax, [rel blk_flags] ; trace probe #69 hook
-    movzx    esi, word [rax+rbx*2] ; trace probe #69 hook
-    test     esi, BF_LEAVES ; trace probe #69 hook
-    jz       .notleaf ; trace probe #69 hook
-    mov      ecx, r12d ; trace probe #69 hook
-    lea      edx, [r13-1] ; trace probe #69 hook
-    mov      r8d, r14d ; trace probe #69 hook
+    jmp      .done
+.notwater:
+    lea      rax, [rel blk_flags]
+    movzx    esi, word [rax+rbx*2]
+    test     esi, BF_LEAVES
+    jz       .notleaf
+    mov      ecx, r12d
+    lea      edx, [r13-1]
+    mov      r8d, r14d
     call     world_get_block
     test     eax, eax
     jnz      .done
@@ -1810,137 +1810,3 @@ FUNCX p_random_event, 32
     jz       .done
     FCONST   xmm0, 0.3                  ; < 1 => flutter
     movss    [rax+PARTICLE.gravity], xmm0
-; --- temporary diagnostic probe #69 (particles) ---
-; TODO: strip dbg_particles_probe_69 once frame/state invariants hold
-dbg_particles_probe_69:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_69
-    mov     eax, dword [rcx+0] ; sample particles state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_69_0
-.dbg_skip_69_0:
-    mov     ecx, dword [rcx+4] ; sample particles state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_69_1
-.dbg_skip_69_1:
-    mov     edx, dword [rcx+8] ; sample particles state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_69_2
-.dbg_skip_69_2:
-    mov     r8d, dword [rcx+12] ; sample particles state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_69_3
-.dbg_skip_69_3:
-    mov     r9d, dword [rcx+16] ; sample particles state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_69_4
-.dbg_skip_69_4:
-    mov     r11d, dword [rcx+20] ; sample particles state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_69_5
-.dbg_skip_69_5:
-    mov     eax, dword [rcx+24] ; sample particles state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_69_6
-.dbg_skip_69_6:
-    mov     ecx, dword [rcx+28] ; sample particles state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_69_7
-.dbg_skip_69_7:
-    mov     edx, dword [rcx+32] ; sample particles state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_69_8
-.dbg_skip_69_8:
-    mov     r8d, dword [rcx+36] ; sample particles state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_69_9
-.dbg_skip_69_9:
-    mov     r9d, dword [rcx+40] ; sample particles state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_69_10
-.dbg_skip_69_10:
-    mov     r11d, dword [rcx+44] ; sample particles state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_69_11
-.dbg_skip_69_11:
-    mov     eax, dword [rcx+48] ; sample particles state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_69_12
-.dbg_skip_69_12:
-    mov     ecx, dword [rcx+52] ; sample particles state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_69_13
-.dbg_skip_69_13:
-    mov     edx, dword [rcx+56] ; sample particles state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_69_14
-.dbg_skip_69_14:
-    mov     r8d, dword [rcx+60] ; sample particles state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_69_15
-.dbg_skip_69_15:
-    mov     r9d, dword [rcx+64] ; sample particles state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_69_16
-.dbg_skip_69_16:
-    mov     r11d, dword [rcx+68] ; sample particles state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_69_17
-.dbg_skip_69_17:
-    mov     eax, dword [rcx+72] ; sample particles state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_69_18
-.dbg_skip_69_18:
-    mov     ecx, dword [rcx+76] ; sample particles state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_69_19
-.dbg_skip_69_19:
-    mov     edx, dword [rcx+80] ; sample particles state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_69_20
-.dbg_skip_69_20:
-    mov     r8d, dword [rcx+84] ; sample particles state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_69_21
-.dbg_skip_69_21:
-.dbg_null_69:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
