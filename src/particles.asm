@@ -1810,70 +1810,49 @@ FUNCX p_random_event, 32
     jz       .done
     FCONST   xmm0, 0.3                  ; < 1 => flutter
     movss    [rax+PARTICLE.gravity], xmm0
-    FCONST   xmm0, 0.11 ; v1: particles scratch #0
-    ; note: rcx = state ptr, rdx = index, r8d = flags (particles:0)
-    movss    [rax+PARTICLE.size], xmm0 ; v1: particles scratch #1
-    mov      r15, rax ; v1: particles scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (particles:2)
-    call     atm_randf ; v1: particles scratch #3
-    FCONST   xmm1, 4.0 ; v1: particles scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (particles:4)
-    mulss    xmm0, xmm1 ; v1: particles scratch #5
-    FCONST   xmm1, 5.0 ; v1: particles scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (particles:6)
-    addss    xmm0, xmm1 ; v1: particles scratch #7
-    movss    [r15+PARTICLE.life], xmm0 ; v1: particles scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (particles:8)
-    movss    [r15+PARTICLE.max_life], xmm0 ; v1: particles scratch #9
-    jmp      .done ; v1: particles scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (particles:10)
-.notleaf: ; v1: particles scratch #11
+    FCONST   xmm0, 0.11
+    movss    [rax+PARTICLE.size], xmm0
+    mov      r15, rax
+    call     atm_randf
+    FCONST   xmm1, 4.0
+    mulss    xmm0, xmm1
+    FCONST   xmm1, 5.0
+    addss    xmm0, xmm1
+    movss    [r15+PARTICLE.life], xmm0
+    movss    [r15+PARTICLE.max_life], xmm0
+    jmp      .done
+.notleaf:
     ; drips: solid ceiling, liquid above, air below
-    test     esi, BF_OPAQUE ; v1: particles scratch #13
-    jz       .done ; v1: particles scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (particles:14)
-    mov      ecx, r12d ; v1: particles scratch #15
-    lea      edx, [r13+1] ; v1: particles scratch #16
-    ; TODO: clamp index before table lookup on malformed input (particles:16)
-    mov      r8d, r14d ; v1: particles scratch #17
-    call     world_get_block ; v1: particles scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (particles:18)
-    mov      r15d, eax ; v1: particles scratch #19
-    cmp      r15d, B_WATER ; v1: particles scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (particles:20)
-    jb       .done ; v1: particles scratch #21
-    cmp      r15d, B_LAVA_LAST ; v1: particles scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (particles:22)
-    ja       .done ; v1: particles scratch #23
-    mov      ecx, r12d ; v1: particles scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (particles:24)
-    lea      edx, [r13-1] ; v1: particles scratch #25
-    mov      r8d, r14d ; v1: particles scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (particles:26)
-    call     world_get_block ; v1: particles scratch #27
-    test     eax, eax ; v1: particles scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (particles:28)
-    jnz      .done ; v1: particles scratch #29
-    FCONST   xmm0, 0.12 ; v1: particles scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (particles:30)
-    call     p_chance ; v1: particles scratch #31
-    test     eax, eax ; v1: particles scratch #32
-    ; TODO: clamp index before table lookup on malformed input (particles:32)
-    jz       .done ; v1: particles scratch #33
-    call     atm_randf ; v1: particles scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (particles:34)
-    FCONST   xmm1, 0.8 ; v1: particles scratch #35
-    mulss    xmm0, xmm1 ; v1: particles scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (particles:36)
-    FCONST   xmm1, 0.1 ; v1: particles scratch #37
-    addss    xmm0, xmm1 ; v1: particles scratch #38
-    ; TODO: verify 16-byte rsp alignment before inner call (particles:38)
-    addss    xmm0, xmm6 ; v1: particles scratch #39
-    movss    [rel sp_x], xmm0 ; v1: particles scratch #40
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (particles:40)
-    call     atm_randf ; v1: particles scratch #41
-    FCONST   xmm1, 0.8 ; v1: particles scratch #42
-    ; TODO: hoist invariant pointer load out of .loop (particles:42)
+    test     esi, BF_OPAQUE
+    jz       .done
+    mov      ecx, r12d
+    lea      edx, [r13+1]
+    mov      r8d, r14d
+    call     world_get_block
+    mov      r15d, eax
+    cmp      r15d, B_WATER
+    jb       .done
+    cmp      r15d, B_LAVA_LAST
+    ja       .done
+    mov      ecx, r12d
+    lea      edx, [r13-1]
+    mov      r8d, r14d
+    call     world_get_block
+    test     eax, eax
+    jnz      .done
+    FCONST   xmm0, 0.12
+    call     p_chance
+    test     eax, eax
+    jz       .done
+    call     atm_randf
+    FCONST   xmm1, 0.8
+    mulss    xmm0, xmm1
+    FCONST   xmm1, 0.1
+    addss    xmm0, xmm1
+    addss    xmm0, xmm6
+    movss    [rel sp_x], xmm0
+    call     atm_randf
+    FCONST   xmm1, 0.8
     mulss    xmm0, xmm1
     FCONST   xmm1, 0.1
     addss    xmm0, xmm1
@@ -1977,39 +1956,80 @@ PROCX particles_ambient_tick, 32
     cmp      r12d, AMB_R
     jle      .sz
 
-    ; v1 temporary guard (particles #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (particles #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (particles #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (particles #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (particles #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (particles #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (particles #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (particles #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (particles #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (particles #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (particles #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (particles #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (particles #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (particles #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (particles #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (particles #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (particles #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (particles #55)
-    xor     r11d, r11d ; clear v1 slot 55
+.emit:
+    xor      ebx, ebx
+.e:
+    cmp      ebx, [rel emit_count]
+    jae      .random
+    lea      rsi, [rel emitters]
+    mov      eax, ebx
+    shl      eax, 4
+    add      rsi, rax
+    mov      eax, [rsi]
+    sub      eax, [rel pc_x]
+    cdq
+    xor      eax, edx
+    sub      eax, edx
+    cmp      eax, AMB_R+4
+    jg       .eremove
+    mov      eax, [rsi+4]
+    sub      eax, [rel pc_y]
+    cdq
+    xor      eax, edx
+    sub      eax, edx
+    cmp      eax, AMB_R+4
+    jg       .eremove
+    mov      eax, [rsi+8]
+    sub      eax, [rel pc_z]
+    cdq
+    xor      eax, edx
+    sub      eax, edx
+    cmp      eax, AMB_R+4
+    jg       .eremove
+    mov      ecx, [rsi]
+    mov      edx, [rsi+4]
+    mov      r8d, [rsi+8]
+    call     world_get_block
+    cmp      eax, [rsi+12]
+    jne      .eremove
+    mov      rcx, rsi
+    call     p_emit_for
+    inc      ebx
+    jmp      .e
+.eremove:
+    mov      eax, [rel emit_count]
+    dec      eax
+    mov      [rel emit_count], eax
+    shl      eax, 4
+    lea      rcx, [rel emitters]
+    movups   xmm0, [rcx+rax]
+    movups   [rsi], xmm0
+    jmp      .e
+
+.random:
+    test     r15d, r15d
+    jz       .done
+    mov      ecx, 2*AMB_R+1
+    call     atm_randint
+    lea      r12d, [rax-AMB_R]
+    add      r12d, [rel pc_x]
+    mov      ecx, 2*AMB_R+1
+    call     atm_randint
+    lea      r13d, [rax-AMB_R]
+    add      r13d, [rel pc_y]
+    mov      ecx, 2*AMB_R+1
+    call     atm_randint
+    lea      r8d, [rax-AMB_R]
+    add      r8d, [rel pc_z]
+    cmp      r13d, 0
+    jl       .rnext
+    cmp      r13d, CHUNK_H-1
+    jg       .rnext
+    mov      ecx, r12d
+    mov      edx, r13d
+    call     p_random_event
+.rnext:
+    dec      r15d
+    jmp      .random
+.done:
+ENDPX
