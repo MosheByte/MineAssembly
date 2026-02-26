@@ -163,60 +163,42 @@ c_cell_d:       dq CLOUD_CELL
 c_inv_cell_d:   dq 0.0833333333333333
 c_speed_d:      dq CLOUD_SPEED
 
-section .data ; v1: sky scratch #0
-    ; TODO: clamp index before table lookup on malformed input (sky:0)
-align 4 ; v1: sky scratch #1
-rng_state:      dd 0x2545F491 ; v1: sky scratch #2
-    ; TODO: hoist invariant pointer load out of .loop (sky:2)
+section .data
+align 4
+rng_state:      dd 0x2545F491
 
-section .bss ; v1: sky scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (sky:4)
-alignb 16 ; v1: sky scratch #5
-s_vbuf:         resb SKY_VMAX*24 ; v1: sky scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (sky:6)
-star_vb:        resb NSTARS*4*24 ; v1: sky scratch #7
-star_dir:       resd NSTARS*4 ; v1: sky scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (sky:8)
-star_tw:        resd NSTARS*2 ; v1: sky scratch #9
-star_tint:      resd NSTARS ; v1: sky scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (sky:10)
-az_cos:         resd AZ_SEG+1 ; v1: sky scratch #11
-az_sin:         resd AZ_SEG+1 ; v1: sky scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (sky:12)
-az_f:           resd AZ_SEG+1 ; v1: sky scratch #13
-dome_y:         resd DOME_RINGS ; v1: sky scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (sky:14)
-dome_r:         resd DOME_RINGS ; v1: sky scratch #15
-glow_y:         resd GLOW_RINGS ; v1: sky scratch #16
-    ; TODO: clamp index before table lookup on malformed input (sky:16)
-glow_r:         resd GLOW_RINGS ; v1: sky scratch #17
-ring_col:       resd DOME_RINGS ; v1: sky scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (sky:18)
-c_vbuf:         resb CLOUD_VMAX*24 ; v1: sky scratch #19
-cbuf:           resb 256*256*4 ; v1: sky scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (sky:20)
-cmap:           resb 256*256 ; v1: sky scratch #21
-cscore:         resb 256*256 ; v1: sky scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (sky:22)
-cdens:          resb 256*256 ; v1: sky scratch #23
-chist:          resd 256 ; v1: sky scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (sky:24)
-cl_col_top:     resd 4 ; v1: sky scratch #25
-cl_col_sx:      resd 4 ; v1: sky scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (sky:26)
-cl_col_sz:      resd 4 ; v1: sky scratch #27
-cl_col_bot:     resd 4 ; v1: sky scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (sky:28)
-cl_col_flat:    resd 4 ; v1: sky scratch #29
-calpha:         resd (FLAT_N+1)*(FLAT_N+1) ; v1: sky scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (sky:30)
-tmp16:          resd 4 ; v1: sky scratch #31
-tmp16b:         resd 4 ; v1: sky scratch #32
-    ; TODO: clamp index before table lookup on malformed input (sky:32)
-s_void:         resd 4 ; v1: sky scratch #33
-s_cloud:        resd 4 ; v1: sky scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (sky:34)
-s_tmpcol:       resd 4 ; v1: sky scratch #35
+section .bss
+alignb 16
+s_vbuf:         resb SKY_VMAX*24
+star_vb:        resb NSTARS*4*24
+star_dir:       resd NSTARS*4           ; x, y, z, base brightness
+star_tw:        resd NSTARS*2
+star_tint:      resd NSTARS             ; 0x00BBGGRR
+az_cos:         resd AZ_SEG+1
+az_sin:         resd AZ_SEG+1
+az_f:           resd AZ_SEG+1
+dome_y:         resd DOME_RINGS
+dome_r:         resd DOME_RINGS
+glow_y:         resd GLOW_RINGS
+glow_r:         resd GLOW_RINGS
+ring_col:       resd DOME_RINGS
+c_vbuf:         resb CLOUD_VMAX*24
+cbuf:           resb 256*256*4
+cmap:           resb 256*256
+cscore:         resb 256*256 ; thin score / carve row sums, shared
+cdens:          resb 256*256            ; clouds_carve: 9x9 cloud density (0..81)
+chist:          resd 256
+cl_col_top:     resd 4
+cl_col_sx:      resd 4
+cl_col_sz:      resd 4
+cl_col_bot:     resd 4
+cl_col_flat:    resd 4
+calpha:         resd (FLAT_N+1)*(FLAT_N+1)
+tmp16:          resd 4
+tmp16b:         resd 4
+s_void:         resd 4
+s_cloud:        resd 4
+s_tmpcol:       resd 4
 s_sin:          resd 1
 s_cos:          resd 1
 s_dayT:         resd 1
@@ -321,35 +303,222 @@ LEAF atm_rand
     xor      eax, edx
     mov      [rel rng_state], eax
     ret
-    ; v1 temporary guard (sky #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (sky #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (sky #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (sky #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (sky #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (sky #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (sky #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (sky #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (sky #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (sky #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (sky #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (sky #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (sky #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (sky #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (sky #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (sky #48)
-    xor     r11d, r11d ; clear v1 slot 48
+
+LEAF atm_randf ; v1: sky scratch #1
+    mov      eax, [rel rng_state] ; v1: sky scratch #2
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (sky:2)
+    mov      edx, eax ; v1: sky scratch #3
+    shl      edx, 13 ; v1: sky scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (sky:4)
+    xor      eax, edx ; v1: sky scratch #5
+    mov      edx, eax ; v1: sky scratch #6
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (sky:6)
+    shr      edx, 17 ; v1: sky scratch #7
+    xor      eax, edx ; v1: sky scratch #8
+    ; TODO: verify 16-byte rsp alignment before inner call (sky:8)
+    mov      edx, eax ; v1: sky scratch #9
+    shl      edx, 5 ; v1: sky scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (sky:10)
+    xor      eax, edx ; v1: sky scratch #11
+    mov      [rel rng_state], eax ; v1: sky scratch #12
+    ; TODO: clamp index before table lookup on malformed input (sky:12)
+    shr      eax, 8 ; v1: sky scratch #13
+    cvtsi2ss xmm0, eax ; v1: sky scratch #14
+    ; temp: spill r12/r13 across helper call until reg alloc pass (sky:14)
+    mulss    xmm0, [rel c_inv24] ; v1: sky scratch #15
+    ret ; v1: sky scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (sky:16)
+
+LEAF atm_randfs ; v1: sky scratch #18
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (sky:18)
+    mov      eax, [rel rng_state] ; v1: sky scratch #19
+    mov      edx, eax ; v1: sky scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (sky:20)
+    shl      edx, 13 ; v1: sky scratch #21
+    xor      eax, edx ; v1: sky scratch #22
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (sky:22)
+    mov      edx, eax ; v1: sky scratch #23
+    shr      edx, 17 ; v1: sky scratch #24
+    ; TODO: verify 16-byte rsp alignment before inner call (sky:24)
+    xor      eax, edx ; v1: sky scratch #25
+    mov      edx, eax ; v1: sky scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (sky:26)
+    shl      edx, 5 ; v1: sky scratch #27
+    xor      eax, edx ; v1: sky scratch #28
+    ; TODO: clamp index before table lookup on malformed input (sky:28)
+    mov      [rel rng_state], eax ; v1: sky scratch #29
+    shr      eax, 8 ; v1: sky scratch #30
+    ; temp: spill r12/r13 across helper call until reg alloc pass (sky:30)
+    cvtsi2ss xmm0, eax ; v1: sky scratch #31
+    mulss    xmm0, [rel c_inv24] ; v1: sky scratch #32
+    ; note: rcx = state ptr, rdx = index, r8d = flags (sky:32)
+    addss    xmm0, xmm0 ; v1: sky scratch #33
+    subss    xmm0, [rel c_one] ; v1: sky scratch #34
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (sky:34)
+    ret
+
+LEAF atm_randint
+    mov      r8d, ecx
+    mov      eax, [rel rng_state]
+    mov      edx, eax
+    shl      edx, 13
+    xor      eax, edx
+    mov      edx, eax
+    shr      edx, 17
+    xor      eax, edx
+    mov      edx, eax
+    shl      edx, 5
+    xor      eax, edx
+    mov      [rel rng_state], eax
+    mul      r8d
+    mov      eax, edx
+    ret
+
+; lowbias32
+LEAF atm_hash
+    mov      eax, ecx
+    mov      edx, eax
+    shr      edx, 16
+    xor      eax, edx
+    imul     eax, eax, 0x7FEB352D
+    mov      edx, eax
+    shr      edx, 15
+    xor      eax, edx
+    imul     eax, eax, 0x846CA68B
+    mov      edx, eax
+    shr      edx, 16
+    xor      eax, edx
+    ret
+
+; smoothstep(xmm0 e0, xmm1 e1, xmm2 x), ok with e0 > e1
+LEAF atm_smoothstep
+    subss    xmm2, xmm0
+    subss    xmm1, xmm0
+    divss    xmm2, xmm1
+    maxss    xmm2, [rel c_zero4]
+    minss    xmm2, [rel c_one]
+    movss    xmm0, [rel c_three]
+    movss    xmm1, xmm2
+    addss    xmm1, xmm1
+    subss    xmm0, xmm1
+    mulss    xmm0, xmm2
+    mulss    xmm0, xmm2
+    ret
+
+; -> 0xAABBGGRR, clamped
+LEAF atm_pack_rgba
+    unpcklps xmm0, xmm1
+    unpcklps xmm2, xmm3
+    movlhps  xmm0, xmm2
+    maxps    xmm0, [rel c_zero4]
+    minps    xmm0, [rel c_one4]
+    mulps    xmm0, [rel c_255x4]
+    cvtps2dq xmm0, xmm0
+    packssdw xmm0, xmm0
+    packuswb xmm0, xmm0
+    movd     eax, xmm0
+    ret
+
+LEAF atm_pack4
+    movups   xmm0, [rcx]
+    maxps    xmm0, [rel c_zero4]
+    minps    xmm0, [rel c_one4]
+    mulps    xmm0, [rel c_255x4]
+    cvtps2dq xmm0, xmm0
+    packssdw xmm0, xmm0
+    packuswb xmm0, xmm0
+    movd     eax, xmm0
+    ret
+
+LEAF atm_lerp4
+    movups   xmm0, [rdx]
+    movups   xmm1, [r8]
+    subps    xmm1, xmm0
+    shufps   xmm3, xmm3, 0
+    mulps    xmm1, xmm3
+    addps    xmm0, xmm1
+    movups   [rcx], xmm0
+    ret
+
+LEAF atm_tile_uv
+    mov      eax, ecx
+    and      eax, 15
+    cvtsi2ss xmm0, eax
+    mulss    xmm0, [rel c_inv16]
+    mov      eax, ecx
+    shr      eax, 4
+    and      eax, 15
+    cvtsi2ss xmm1, eax
+    mulss    xmm1, [rel c_inv16]
+    ret
+
+; col = lerp(col, lum*scale, amount)
+sky_desat:
+    movss    xmm0, [rcx]
+    mulss    xmm0, [rel c_lum_r]
+    movss    xmm3, [rcx+4]
+    mulss    xmm3, [rel c_lum_g]
+    addss    xmm0, xmm3
+    movss    xmm3, [rcx+8]
+    mulss    xmm3, [rel c_lum_b]
+    addss    xmm0, xmm3
+    mulss    xmm0, xmm2
+    shufps   xmm0, xmm0, 0
+    movups   xmm3, [rcx]
+    subps    xmm0, xmm3
+    shufps   xmm1, xmm1, 0
+    mulps    xmm0, xmm1
+    addps    xmm3, xmm0
+    movups   [rcx], xmm3
+    mov      dword [rcx+12], 0x3F800000
+    ret
+    ; v1 temporary guard (sky #17)
+    xor     r11d, r11d ; clear v1 slot 17
+    ; v1 temporary guard (sky #19)
+    xor     r11d, r11d ; clear v1 slot 19
+    ; v1 temporary guard (sky #21)
+    xor     r11d, r11d ; clear v1 slot 21
+    ; v1 temporary guard (sky #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (sky #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (sky #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (sky #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (sky #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (sky #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (sky #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (sky #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (sky #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (sky #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (sky #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (sky #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (sky #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (sky #49)
+    xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (sky #51)
+    xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (sky #53)
+    xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (sky #55)
+    xor     r11d, r11d ; clear v1 slot 55
+    ; v1 temporary guard (sky #57)
+    xor     r11d, r11d ; clear v1 slot 57
+    ; v1 temporary guard (sky #59)
+    xor     r11d, r11d ; clear v1 slot 59
+    ; v1 temporary guard (sky #61)
+    xor     r11d, r11d ; clear v1 slot 61
+    ; v1 temporary guard (sky #63)
+    xor     r11d, r11d ; clear v1 slot 63
+    ; v1 temporary guard (sky #65)
+    xor     r11d, r11d ; clear v1 slot 65
