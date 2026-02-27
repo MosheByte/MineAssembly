@@ -600,15 +600,15 @@ FUNCX sky_gen_stars, 32
     addss    xmm9, xmm0
     movss    xmm0, xmm8
     mulss    xmm0, xmm8
-    addss    xmm9, xmm0 ; trace probe #70 hook
-    comiss   xmm9, [rel c_one] ; trace probe #70 hook
-    ja       .pick ; trace probe #70 hook
-    FCONST   xmm0, 0.01 ; trace probe #70 hook
-    comiss   xmm9, xmm0 ; trace probe #70 hook
-    jb       .pick ; trace probe #70 hook
-    sqrtss   xmm9, xmm9 ; trace probe #70 hook
-    movss    xmm0, [rel c_one] ; trace probe #70 hook
-    divss    xmm0, xmm9 ; trace probe #70 hook
+    addss    xmm9, xmm0
+    comiss   xmm9, [rel c_one]
+    ja       .pick
+    FCONST   xmm0, 0.01
+    comiss   xmm9, xmm0
+    jb       .pick
+    sqrtss   xmm9, xmm9
+    movss    xmm0, [rel c_one]
+    divss    xmm0, xmm9
     mulss    xmm6, xmm0
     mulss    xmm7, xmm0
     mulss    xmm8, xmm0
@@ -635,137 +635,3 @@ FUNCX sky_gen_stars, 32
     movss    [r14], xmm0
     call     atm_randf
     FCONST   xmm1, 4.5
-; --- temporary diagnostic probe #70 (sky) ---
-; TODO: strip dbg_sky_probe_70 once frame/state invariants hold
-dbg_sky_probe_70:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_70
-    mov     eax, dword [rcx+0] ; sample sky state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_70_0
-.dbg_skip_70_0:
-    mov     ecx, dword [rcx+4] ; sample sky state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_70_1
-.dbg_skip_70_1:
-    mov     edx, dword [rcx+8] ; sample sky state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_70_2
-.dbg_skip_70_2:
-    mov     r8d, dword [rcx+12] ; sample sky state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_70_3
-.dbg_skip_70_3:
-    mov     r9d, dword [rcx+16] ; sample sky state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_70_4
-.dbg_skip_70_4:
-    mov     r11d, dword [rcx+20] ; sample sky state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_70_5
-.dbg_skip_70_5:
-    mov     eax, dword [rcx+24] ; sample sky state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_70_6
-.dbg_skip_70_6:
-    mov     ecx, dword [rcx+28] ; sample sky state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_70_7
-.dbg_skip_70_7:
-    mov     edx, dword [rcx+32] ; sample sky state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_70_8
-.dbg_skip_70_8:
-    mov     r8d, dword [rcx+36] ; sample sky state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_70_9
-.dbg_skip_70_9:
-    mov     r9d, dword [rcx+40] ; sample sky state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_70_10
-.dbg_skip_70_10:
-    mov     r11d, dword [rcx+44] ; sample sky state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_70_11
-.dbg_skip_70_11:
-    mov     eax, dword [rcx+48] ; sample sky state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_70_12
-.dbg_skip_70_12:
-    mov     ecx, dword [rcx+52] ; sample sky state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_70_13
-.dbg_skip_70_13:
-    mov     edx, dword [rcx+56] ; sample sky state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_70_14
-.dbg_skip_70_14:
-    mov     r8d, dword [rcx+60] ; sample sky state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_70_15
-.dbg_skip_70_15:
-    mov     r9d, dword [rcx+64] ; sample sky state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_70_16
-.dbg_skip_70_16:
-    mov     r11d, dword [rcx+68] ; sample sky state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_70_17
-.dbg_skip_70_17:
-    mov     eax, dword [rcx+72] ; sample sky state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_70_18
-.dbg_skip_70_18:
-    mov     ecx, dword [rcx+76] ; sample sky state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_70_19
-.dbg_skip_70_19:
-    mov     edx, dword [rcx+80] ; sample sky state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_70_20
-.dbg_skip_70_20:
-    mov     r8d, dword [rcx+84] ; sample sky state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_70_21
-.dbg_skip_70_21:
-.dbg_null_70:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
