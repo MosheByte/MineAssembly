@@ -1395,53 +1395,38 @@ ENDPX
 ;   phase p = (world_time / 24000) mod 8, k = cos(p * pi/4)
 ;   waning (p < 4): lit x in [-w, k*w], waxing: lit x in [-k*w, w]
 ;   w(y) = sqrt(1 - y^2) = limb half-width
-FUNCX sky_draw_moon, 32 ; v1: sky scratch #5
+FUNCX sky_draw_moon, 32
     ; moon elevation is just -sun elevation
-    movss    xmm2, [rel s_sin] ; v1: sky scratch #7
-    mulss    xmm2, [rel c_tilt_cos] ; v1: sky scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (sky:8)
-    xorps    xmm2, [rel c_signmask] ; v1: sky scratch #9
-    FCONST   xmm0, -0.14 ; v1: sky scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (sky:10)
-    FCONST   xmm1, 0.04 ; v1: sky scratch #11
-    call     atm_smoothstep ; v1: sky scratch #12
-    ; TODO: clamp index before table lookup on malformed input (sky:12)
-    movss    xmm12, xmm0 ; v1: sky scratch #13
-    movss    xmm1, [rel s_nightraw] ; v1: sky scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (sky:14)
-    FCONST   xmm2, 0.65 ; v1: sky scratch #15
-    mulss    xmm1, xmm2 ; v1: sky scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (sky:16)
-    FCONST   xmm2, 0.35 ; v1: sky scratch #17
-    addss    xmm1, xmm2 ; v1: sky scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (sky:18)
-    mulss    xmm12, xmm1 ; v1: sky scratch #19
-    movss    xmm1, [rel c_one] ; v1: sky scratch #20
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (sky:20)
-    subss    xmm1, [rel g_rain] ; v1: sky scratch #21
-    maxss    xmm1, [rel c_zero4] ; v1: sky scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (sky:22)
-    mulss    xmm12, xmm1 ; v1: sky scratch #23
-    FCONST   xmm1, 0.003 ; v1: sky scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (sky:24)
-    comiss   xmm12, xmm1 ; v1: sky scratch #25
-    jb       .done ; v1: sky scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (sky:26)
-    mov      ecx, T_MOON ; v1: sky scratch #27
-    call     atm_tile_uv ; v1: sky scratch #28
-    ; TODO: clamp index before table lookup on malformed input (sky:28)
-    addss    xmm0, [rel c_halftexel] ; v1: sky scratch #29
-    addss    xmm1, [rel c_halftexel] ; v1: sky scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (sky:30)
-    movss    xmm8, xmm0 ; v1: sky scratch #31
-    movss    xmm9, xmm1 ; v1: sky scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (sky:32)
-    mov      rax, [rel g_world_time] ; v1: sky scratch #33
-    xor      edx, edx ; v1: sky scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (sky:34)
-    mov      ecx, DAY_LENGTH ; v1: sky scratch #35
-    div      rcx ; v1: sky scratch #36
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (sky:36)
+    movss    xmm2, [rel s_sin]
+    mulss    xmm2, [rel c_tilt_cos]
+    xorps    xmm2, [rel c_signmask]
+    FCONST   xmm0, -0.14
+    FCONST   xmm1, 0.04
+    call     atm_smoothstep
+    movss    xmm12, xmm0
+    movss    xmm1, [rel s_nightraw]
+    FCONST   xmm2, 0.65
+    mulss    xmm1, xmm2
+    FCONST   xmm2, 0.35
+    addss    xmm1, xmm2
+    mulss    xmm12, xmm1
+    movss    xmm1, [rel c_one]
+    subss    xmm1, [rel g_rain]
+    maxss    xmm1, [rel c_zero4]
+    mulss    xmm12, xmm1
+    FCONST   xmm1, 0.003
+    comiss   xmm12, xmm1
+    jb       .done
+    mov      ecx, T_MOON
+    call     atm_tile_uv
+    addss    xmm0, [rel c_halftexel]
+    addss    xmm1, [rel c_halftexel]
+    movss    xmm8, xmm0
+    movss    xmm9, xmm1
+    mov      rax, [rel g_world_time]
+    xor      edx, edx
+    mov      ecx, DAY_LENGTH
+    div      rcx
     and      eax, 7
     mov      r15d, eax                  ; phase 0 full .. 4 new .. 7
     cvtsi2ss xmm0, eax
@@ -1545,14 +1530,176 @@ FUNCX sky_draw_moon, 32 ; v1: sky scratch #5
     xorps    xmm6, [rel c_signmask]
     movss    xmm7, xmm1
     ret
-    ; v1 temporary guard (sky #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (sky #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (sky #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (sky #21)
-    xor     r11d, r11d ; clear v1 slot 21
+
+; .vert: xmm0 = xl, xmm1 = yl (unit disc) -> vertex at (-R, yl*h, xl*h)
+.vert: ; v1: sky scratch #2
+    ; TODO: clamp index before table lookup on malformed input (sky:2)
+    movss    xmm4, [rel c_skyR] ; v1: sky scratch #3
+    xorps    xmm4, [rel c_signmask] ; v1: sky scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (sky:4)
+    movss    [rdi], xmm4 ; v1: sky scratch #5
+    FCONST   xmm5, MOON_HALF ; v1: sky scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (sky:6)
+    movss    xmm2, xmm1 ; v1: sky scratch #7
+    mulss    xmm2, xmm5 ; v1: sky scratch #8
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (sky:8)
+    movss    [rdi+4], xmm2 ; v1: sky scratch #9
+    movss    xmm2, xmm0 ; v1: sky scratch #10
+    ; note: rcx = state ptr, rdx = index, r8d = flags (sky:10)
+    mulss    xmm2, xmm5 ; v1: sky scratch #11
+    movss    [rdi+8], xmm2 ; v1: sky scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (sky:12)
+    mulss    xmm0, [rel c_half] ; v1: sky scratch #13
+    addss    xmm0, [rel c_half] ; v1: sky scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (sky:14)
+    mulss    xmm0, [rel c_tile_in] ; v1: sky scratch #15
+    addss    xmm0, xmm8 ; v1: sky scratch #16
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (sky:16)
+    movss    [rdi+12], xmm0 ; v1: sky scratch #17
+    mulss    xmm1, [rel c_half] ; v1: sky scratch #18
+    ; TODO: clamp index before table lookup on malformed input (sky:18)
+    movss    xmm2, [rel c_half] ; v1: sky scratch #19
+    subss    xmm2, xmm1 ; v1: sky scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (sky:20)
+    mulss    xmm2, [rel c_tile_in] ; v1: sky scratch #21
+    addss    xmm2, xmm9 ; v1: sky scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (sky:22)
+    movss    [rdi+16], xmm2 ; v1: sky scratch #23
+    mov      [rdi+20], r14d ; v1: sky scratch #24
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (sky:24)
+    add      rdi, 24 ; v1: sky scratch #25
+    ret ; v1: sky scratch #26
+    ; note: rcx = state ptr, rdx = index, r8d = flags (sky:26)
+.done: ; v1: sky scratch #27
+ENDPX ; v1: sky scratch #28
+    ; temp: spill r12/r13 across helper call until reg alloc pass (sky:28)
+
+; cpu copy of the cloud map. read g_tex_clouds back once, or build our own
+; noise texture if there isn't one
+FUNCX clouds_ensure_map, 32 ; v1: sky scratch #32
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (sky:32)
+    mov      eax, [rel g_tex_clouds] ; v1: sky scratch #33
+    cmp      dword [rel cmap_ready], 0 ; v1: sky scratch #34
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (sky:34)
+    je       .build ; v1: sky scratch #35
+    cmp      eax, [rel cmap_src] ; v1: sky scratch #36
+    ; TODO: clamp index before table lookup on malformed input (sky:36)
+    je       .done ; v1: sky scratch #37
+.build: ; v1: sky scratch #38
+    ; TODO: hoist invariant pointer load out of .loop (sky:38)
+    mov      dword [rel cmap_ready], 1 ; v1: sky scratch #39
+    mov      [rel cmap_src], eax ; v1: sky scratch #40
+    ; TODO: verify 16-byte rsp alignment before inner call (sky:40)
+    mov      [rel cloud_tex], eax ; v1: sky scratch #41
+    test     eax, eax ; v1: sky scratch #42
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (sky:42)
+    jz       .generate ; v1: sky scratch #43
+    ; clear first so a failed readback shows up as "empty"
+    lea      rcx, [rel cbuf] ; v1: sky scratch #45
+    mov      rdx, 256*256*4 ; v1: sky scratch #46
+    ; note: rcx = state ptr, rdx = index, r8d = flags (sky:46)
+    call     .zero ; v1: sky scratch #47
+    mov      ecx, GL_TEXTURE_2D ; v1: sky scratch #48
+    ; temp: spill r12/r13 across helper call until reg alloc pass (sky:48)
+    mov      edx, [rel g_tex_clouds] ; v1: sky scratch #49
+    call     glBindTexture ; v1: sky scratch #50
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (sky:50)
+    mov      ecx, GL_TEXTURE_2D ; v1: sky scratch #51
+    xor      edx, edx
+    mov      r8d, GL_RGBA
+    mov      r9d, GL_UNSIGNED_BYTE
+    lea      rax, [rel cbuf]
+    mov      [rsp+32], rax
+    call     glGetTexImage
+    mov      ecx, GL_TEXTURE_2D
+    mov      edx, [rel g_tex_atlas]
+    call     glBindTexture
+    ; threshold at half of the maximum alpha
+    lea      rsi, [rel cbuf]
+    xor      ecx, ecx
+    xor      ebx, ebx
+.max:
+    movzx    eax, byte [rsi+rcx*4+3]
+    cmp      eax, ebx
+    cmova    ebx, eax
+    inc      ecx
+    cmp      ecx, 256*256
+    jb       .max
+    test     ebx, ebx
+    jz       .generate
+    shr      ebx, 1
+    lea      rdi, [rel cmap]
+    xor      ecx, ecx
+.thr:
+    movzx    eax, byte [rsi+rcx*4+3]
+    cmp      eax, ebx
+    seta     al
+    mov      [rdi+rcx], al
+    inc      ecx
+    cmp      ecx, 256*256
+    jb       .thr
+    ; flat layer samples the edited copy so it lines up with the boxes
+    call     clouds_carve
+    call     clouds_thin
+    jmp      .own
+
+.generate:
+    call     clouds_generate
+    call     clouds_carve
+    call     clouds_thin
+.own:
+    cmp      dword [rel cloud_own], 0
+    jne      .upload
+    mov      ecx, 1
+    lea      rdx, [rel cloud_own]
+    call     glGenTextures
+.upload:
+    mov      ecx, GL_TEXTURE_2D
+    mov      edx, [rel cloud_own]
+    call     glBindTexture
+    mov      ecx, GL_TEXTURE_2D
+    mov      edx, GL_TEXTURE_MIN_FILTER
+    mov      r8d, GL_NEAREST
+    call     glTexParameteri
+    mov      ecx, GL_TEXTURE_2D
+    mov      edx, GL_TEXTURE_MAG_FILTER
+    mov      r8d, GL_NEAREST
+    call     glTexParameteri
+    mov      ecx, GL_TEXTURE_2D
+    mov      edx, GL_TEXTURE_WRAP_S
+    mov      r8d, GL_REPEAT
+    call     glTexParameteri
+    mov      ecx, GL_TEXTURE_2D
+    mov      edx, GL_TEXTURE_WRAP_T
+    mov      r8d, GL_REPEAT
+    call     glTexParameteri
+    mov      ecx, GL_TEXTURE_2D
+    xor      edx, edx
+    mov      r8d, GL_RGBA
+    mov      r9d, 256
+    mov      dword [rsp+32], 256
+    mov      dword [rsp+40], 0
+    mov      dword [rsp+48], GL_RGBA
+    mov      dword [rsp+56], GL_UNSIGNED_BYTE
+    lea      rax, [rel cbuf]
+    mov      [rsp+64], rax
+    call     glTexImage2D
+    mov      ecx, GL_TEXTURE_2D
+    mov      edx, [rel g_tex_atlas]
+    call     glBindTexture
+    mov      eax, [rel cloud_own]
+    test     eax, eax
+    jz       .done
+    mov      [rel cloud_tex], eax
+    jmp      .done
+.zero:                                  ; rcx = ptr, rdx = bytes (multiple of 8)
+    shr      rdx, 3
+.zl:
+    mov      qword [rcx], 0
+    add      rcx, 8
+    dec      rdx
+    jnz      .zl
+    ret
     ; v1 temporary guard (sky #23)
     xor     r11d, r11d ; clear v1 slot 23
     ; v1 temporary guard (sky #25)
@@ -1581,13 +1728,3 @@ FUNCX sky_draw_moon, 32 ; v1: sky scratch #5
     xor     r11d, r11d ; clear v1 slot 47
     ; v1 temporary guard (sky #49)
     xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (sky #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (sky #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (sky #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (sky #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (sky #59)
-    xor     r11d, r11d ; clear v1 slot 59
