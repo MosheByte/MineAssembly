@@ -2332,58 +2332,42 @@ FUNCX clouds_fancy, 64
     call     .occ
     test     eax, eax
     jnz      .next
-    lea      r14, [rel cl_col_sz] ; v1: sky scratch #0
-    ; TODO: hoist invariant pointer load out of .loop (sky:0)
-    movss    xmm2, xmm13 ; v1: sky scratch #1
-    call     .zface ; v1: sky scratch #2
-    ; TODO: verify 16-byte rsp alignment before inner call (sky:2)
-.next: ; v1: sky scratch #3
-    inc      r13d ; v1: sky scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (sky:4)
-    cmp      r13d, FANCY_R ; v1: sky scratch #5
-    jle      .ci ; v1: sky scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (sky:6)
-    inc      r12d ; v1: sky scratch #7
-    cmp      r12d, FANCY_R ; v1: sky scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (sky:8)
-    jle      .cj ; v1: sky scratch #9
+    lea      r14, [rel cl_col_sz]
+    movss    xmm2, xmm13
+    call     .zface
+.next:
+    inc      r13d
+    cmp      r13d, FANCY_R
+    jle      .ci
+    inc      r12d
+    cmp      r12d, FANCY_R
+    jle      .cj
 
-    lea      rcx, [rel c_vbuf] ; v1: sky scratch #11
-    mov      rax, rdi ; v1: sky scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (sky:12)
-    sub      rax, rcx ; v1: sky scratch #13
-    xor      edx, edx ; v1: sky scratch #14
-    ; TODO: clamp index before table lookup on malformed input (sky:14)
-    mov      ecx, 24 ; v1: sky scratch #15
-    div      rcx ; v1: sky scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (sky:16)
-    mov      ebx, eax ; v1: sky scratch #17
-    test     ebx, ebx ; v1: sky scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (sky:18)
-    jz       .done ; v1: sky scratch #19
+    lea      rcx, [rel c_vbuf]
+    mov      rax, rdi
+    sub      rax, rcx
+    xor      edx, edx
+    mov      ecx, 24
+    div      rcx
+    mov      ebx, eax
+    test     ebx, ebx
+    jz       .done
     ; depth only first, otherwise you see the inner faces through the translucent boxes
-    xor      ecx, ecx ; v1: sky scratch #21
-    xor      edx, edx ; v1: sky scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (sky:22)
-    xor      r8d, r8d ; v1: sky scratch #23
-    xor      r9d, r9d ; v1: sky scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (sky:24)
-    call     glColorMask ; v1: sky scratch #25
-    mov      ecx, 1 ; v1: sky scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (sky:26)
-    call     glDepthMask ; v1: sky scratch #27
-    lea      rcx, [rel c_vbuf] ; v1: sky scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (sky:28)
-    mov      edx, ebx ; v1: sky scratch #29
-    mov      r8d, GL_QUADS ; v1: sky scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (sky:30)
-    xor      r9d, r9d ; v1: sky scratch #31
-    call     atm_draw ; v1: sky scratch #32
-    ; TODO: clamp index before table lookup on malformed input (sky:32)
-    mov      ecx, 1 ; v1: sky scratch #33
-    mov      edx, 1 ; v1: sky scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (sky:34)
-    mov      r8d, 1 ; v1: sky scratch #35
+    xor      ecx, ecx
+    xor      edx, edx
+    xor      r8d, r8d
+    xor      r9d, r9d
+    call     glColorMask
+    mov      ecx, 1
+    call     glDepthMask
+    lea      rcx, [rel c_vbuf]
+    mov      edx, ebx
+    mov      r8d, GL_QUADS
+    xor      r9d, r9d
+    call     atm_draw
+    mov      ecx, 1
+    mov      edx, 1
+    mov      r8d, 1
     mov      r9d, 1
     call     glColorMask
     xor      ecx, ecx
@@ -2498,53 +2482,160 @@ PROCX sky_render_clouds, 64
 .ready:
     call     clouds_ensure_map
 
-    ; v1 temporary guard (sky #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (sky #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (sky #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (sky #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (sky #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (sky #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (sky #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (sky #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (sky #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (sky #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (sky #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (sky #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (sky #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (sky #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (sky #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (sky #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (sky #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (sky #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (sky #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (sky #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (sky #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (sky #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (sky #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (sky #62)
-    xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (sky #64)
-    xor     r11d, r11d ; clear v1 slot 64
+    ; drift: integer ticks mod the period first, then doubles, so clouds stay sharp
+    ; millions of blocks out
+    mov      rax, [rel g_world_time]
+    xor      edx, edx
+    mov      ecx, CLOUD_WRAP
+    div      rcx
+    cvtsi2sd xmm0, rdx
+    movss    xmm1, [rel g_partial_tick]
+    maxss    xmm1, [rel c_zero4]
+    minss    xmm1, [rel c_one]
+    cvtss2sd xmm1, xmm1
+    addsd    xmm0, xmm1
+    mulsd    xmm0, [rel c_speed_d]
+    ; sampling at x - drift moves clouds toward +X (east)
+    cvtss2sd xmm1, [rel g_cam_pos]
+    subsd    xmm1, xmm0
+    movsd    xmm0, xmm1
+    cvtss2sd xmm2, [rel g_cam_pos+8]
+    movsd    xmm3, xmm0
+    mulsd    xmm3, [rel c_inv_period_d]
+    movsd    xmm4, xmm3
+    roundsd  xmm4, xmm4, 1
+    subsd    xmm3, xmm4
+    cvtsd2ss xmm3, xmm3
+    movss    [rel cl_uo], xmm3
+    movsd    xmm3, xmm2
+    mulsd    xmm3, [rel c_inv_period_d]
+    movsd    xmm4, xmm3
+    roundsd  xmm4, xmm4, 1
+    subsd    xmm3, xmm4
+    cvtsd2ss xmm3, xmm3
+    movss    [rel cl_vo], xmm3
+    movsd    xmm3, xmm0
+    mulsd    xmm3, [rel c_inv_cell_d]
+    roundsd  xmm3, xmm3, 1
+    cvttsd2si rax, xmm3
+    mov      [rel cl_ci], eax
+    mulsd    xmm3, [rel c_cell_d]
+    subsd    xmm0, xmm3
+    cvtsd2ss xmm0, xmm0
+    movss    [rel cl_fx], xmm0
+    movsd    xmm3, xmm2
+    mulsd    xmm3, [rel c_inv_cell_d]
+    roundsd  xmm3, xmm3, 1
+    cvttsd2si rax, xmm3
+    mov      [rel cl_cj], eax
+    mulsd    xmm3, [rel c_cell_d]
+    subsd    xmm2, xmm3
+    cvtsd2ss xmm2, xmm2
+    movss    [rel cl_fz], xmm2
+    FCONST   xmm0, CLOUD_Y
+    subss    xmm0, [rel g_cam_pos+4]
+    movss    [rel cl_yrel], xmm0
+    ; underside is 0.9 + 30% sky tint. a flat 0.7 grey turns overhead banks into an
+    ; overcast ceiling and goes muddy brown at sunset
+    CLOUD_FACE cl_col_top, 1.00, 0.00
+    CLOUD_FACE cl_col_sx,  0.92, 0.10
+    CLOUD_FACE cl_col_sz,  0.84, 0.14
+    CLOUD_FACE cl_col_bot, 0.90, 0.30
+    ; the flat layer shows its top from above, its underside from below
+    movups   xmm0, [rel cl_col_top]
+    xorps    xmm1, xmm1
+    movss    xmm2, [rel cl_yrel]
+    comiss   xmm2, xmm1
+    jbe      .above
+    movups   xmm0, [rel cl_col_bot]
+.above:
+    movups   [rel cl_col_flat], xmm0
+    ; base alpha (rain makes the sky one grey sheet)
+    FCONST   xmm0, 0.80
+    movss    xmm1, [rel g_rain]
+    FCONST   xmm2, 0.12
+    mulss    xmm1, xmm2
+    addss    xmm0, xmm1
+    movss    [rel cl_alpha], xmm0
+    mov      eax, [rel g_settings+SETTINGS.render_dist]
+    imul     eax, eax, 40
+    cmp      eax, 192
+    jge      .e1
+    mov      eax, 192
+.e1:
+    cmp      eax, 512
+    jle      .e2
+    mov      eax, 512
+.e2:
+    cvtsi2ss xmm0, eax
+    movss    [rel cl_rc], xmm0
+    ; don't go past the far plane: far = m14 / (m10 + 1), column-major
+    mov      ecx, GL_PROJECTION_MATRIX
+    lea      rdx, [rel cl_proj]
+    call     glGetFloatv
+    movss    xmm0, [rel cl_proj+40]
+    addss    xmm0, [rel c_one]
+    movss    xmm1, xmm0
+    andps    xmm1, [rel c_absmask]
+    FCONST   xmm2, 0.000001
+    comiss   xmm1, xmm2
+    jb       .farok
+    movss    xmm1, [rel cl_proj+56]
+    divss    xmm1, xmm0
+    FCONST   xmm2, 0.92
+    mulss    xmm1, xmm2
+    FCONST   xmm2, 32.0
+    comiss   xmm1, xmm2
+    jb       .farok                     ; not a sane perspective matrix
+    minss    xmm1, [rel cl_rc]
+    movss    [rel cl_rc], xmm1
+.farok:
+
+    mov      ecx, GL_CULL_FACE
+    call     glDisable
+    mov      ecx, GL_BLEND
+    call     glEnable
+    mov      ecx, GL_SRC_ALPHA
+    mov      edx, GL_ONE_MINUS_SRC_ALPHA
+    call     glBlendFunc
+    xor      ecx, ecx
+    call     glDepthMask
+
+    cmp      r15d, 2
+    jae      .fancy
+    mov      dword [rel cl_inner], 0
+    call     clouds_flat
+    jmp      .restore
+.fancy:
+    movss    xmm0, [rel cl_yrel]
+    addss    xmm0, [rel c_two]
+    movss    [rel cl_yrel], xmm0
+    FCONST   xmm0, 144.0
+    movss    [rel cl_inner], xmm0
+    call     clouds_flat
+    movss    xmm0, [rel cl_yrel]
+    subss    xmm0, [rel c_two]
+    movss    [rel cl_yrel], xmm0
+    mov      ecx, GL_TEXTURE_2D
+    call     glDisable
+    call     clouds_fancy
+    mov      ecx, GL_TEXTURE_2D
+    call     glEnable
+.restore:
+    mov      ecx, 1
+    call     glDepthMask
+    mov      ecx, GL_BLEND
+    call     glDisable
+    mov      ecx, GL_CULL_FACE
+    call     glEnable
+    mov      ecx, GL_TEXTURE_2D
+    mov      edx, [rel g_tex_atlas]
+    call     glBindTexture
+.done:
+ENDPX
+
+section .rdata
+align 4
+c_inv_cperiod:  dd 0.000325520833
+c_cell:         dd CLOUD_CELL
+c_thick:        dd CLOUD_THICK
