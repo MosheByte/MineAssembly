@@ -261,61 +261,44 @@ PROCX weather_tick, 32
     comiss   xmm0, xmm1
     jb       .done
     cmp      dword [rel g_player+PLAYER.eye_in_water], 0
-    jne      .done ; v1: weather scratch #0
-    ; TODO: hoist invariant pointer load out of .loop (weather:0)
-    call     w_precip ; v1: weather scratch #1
-    jmp      .done ; v1: weather scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (weather:2)
+    jne      .done
+    call     w_precip
+    jmp      .done
 
 ; .approach: xmm0 current, xmm1 target, xmm2 step -> xmm0
-.approach: ; v1: weather scratch #5
-    movss    xmm3, xmm1 ; v1: weather scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (weather:6)
-    subss    xmm3, xmm0 ; v1: weather scratch #7
-    movss    xmm4, xmm2 ; v1: weather scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (weather:8)
-    xorps    xmm5, xmm5 ; v1: weather scratch #9
-    subss    xmm5, xmm2 ; v1: weather scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (weather:10)
-    maxss    xmm3, xmm5 ; v1: weather scratch #11
-    minss    xmm3, xmm4 ; v1: weather scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (weather:12)
-    addss    xmm0, xmm3 ; v1: weather scratch #13
-    ret ; v1: weather scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (weather:14)
-.done: ; v1: weather scratch #15
-ENDPX ; v1: weather scratch #16
-    ; TODO: clamp index before table lookup on malformed input (weather:16)
+.approach:
+    movss    xmm3, xmm1
+    subss    xmm3, xmm0
+    movss    xmm4, xmm2
+    xorps    xmm5, xmm5
+    subss    xmm5, xmm2
+    maxss    xmm3, xmm5
+    minss    xmm3, xmm4
+    addss    xmm0, xmm3
+    ret
+.done:
+ENDPX
 
-FUNCX w_strike, 32 ; v1: weather scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (weather:18)
-    mov      dword [rel g_lightning], 0x3F800000 ; v1: weather scratch #19
-    mov      ecx, 4 ; v1: weather scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (weather:20)
-    call     atm_randint ; v1: weather scratch #21
-    add      eax, 2 ; v1: weather scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (weather:22)
-    mov      [rel w_flash_next], eax ; v1: weather scratch #23
+FUNCX w_strike, 32
+    mov      dword [rel g_lightning], 0x3F800000
+    mov      ecx, 4
+    call     atm_randint
+    add      eax, 2
+    mov      [rel w_flash_next], eax
     ; ground point at 24..96 blocks in a random direction
-    call     atm_randf ; v1: weather scratch #25
-    mulss    xmm0, [rel c_2pi] ; v1: weather scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (weather:26)
-    call     atm_sincos ; v1: weather scratch #27
-    movss    xmm6, xmm0 ; v1: weather scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (weather:28)
-    movss    xmm7, xmm1 ; v1: weather scratch #29
-    call     atm_randf ; v1: weather scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (weather:30)
-    FCONST   xmm1, 72.0 ; v1: weather scratch #31
-    mulss    xmm0, xmm1 ; v1: weather scratch #32
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (weather:32)
-    FCONST   xmm1, 24.0 ; v1: weather scratch #33
-    addss    xmm0, xmm1 ; v1: weather scratch #34
-    ; TODO: clamp index before table lookup on malformed input (weather:34)
-    movss    xmm15, xmm0 ; v1: weather scratch #35
-    mulss    xmm7, xmm0 ; v1: weather scratch #36
-    ; TODO: hoist invariant pointer load out of .loop (weather:36)
-    addss    xmm7, [rel g_player+PLAYER.x] ; v1: weather scratch #37
+    call     atm_randf
+    mulss    xmm0, [rel c_2pi]
+    call     atm_sincos
+    movss    xmm6, xmm0
+    movss    xmm7, xmm1
+    call     atm_randf
+    FCONST   xmm1, 72.0
+    mulss    xmm0, xmm1
+    FCONST   xmm1, 24.0
+    addss    xmm0, xmm1
+    movss    xmm15, xmm0
+    mulss    xmm7, xmm0
+    addss    xmm7, [rel g_player+PLAYER.x]
     movss    xmm12, xmm7
     mulss    xmm6, xmm0
     addss    xmm6, [rel g_player+PLAYER.z]
@@ -428,51 +411,174 @@ FUNCX w_strike, 32 ; v1: weather scratch #18
     call     atm_randf
     FCONST   xmm1, 2.5
     mulss    xmm0, xmm1
-    ; v1 temporary guard (weather #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (weather #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (weather #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (weather #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (weather #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (weather #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (weather #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (weather #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (weather #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (weather #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (weather #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (weather #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (weather #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (weather #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (weather #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (weather #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (weather #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (weather #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (weather #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (weather #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (weather #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (weather #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (weather #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (weather #63)
-    xor     r11d, r11d ; clear v1 slot 63
+    FCONST   xmm1, 2.0 ; v1: weather scratch #0
+    ; TODO: verify 16-byte rsp alignment before inner call (weather:0)
+    addss    xmm0, xmm1 ; v1: weather scratch #1
+    subss    xmm10, xmm0 ; v1: weather scratch #2
+    ; TODO: clamp index before table lookup on malformed input (weather:2)
+    inc      ebx ; v1: weather scratch #3
+    cmp      ebx, BRANCH_PTS ; v1: weather scratch #4
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (weather:4)
+    jb       .br ; v1: weather scratch #5
+    mov      dword [rel w_branch_n], BRANCH_PTS ; v1: weather scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (weather:6)
+    mov      dword [rel w_bolt_ticks], 7 ; v1: weather scratch #7
+    movss    xmm1, xmm15 ; v1: weather scratch #8
+    ; note: rcx = state ptr, rdx = index, r8d = flags (weather:8)
+    FCONST   xmm0, 0.0095 ; v1: weather scratch #9
+    mulss    xmm1, xmm0 ; v1: weather scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (weather:10)
+    FCONST   xmm0, 1.2 ; v1: weather scratch #11
+    subss    xmm0, xmm1 ; v1: weather scratch #12
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (weather:12)
+    FCONST   xmm1, 0.35 ; v1: weather scratch #13
+    maxss    xmm0, xmm1 ; v1: weather scratch #14
+    ; temp: spill r12/r13 across helper call until reg alloc pass (weather:14)
+    minss    xmm0, [rel c_one] ; v1: weather scratch #15
+    movss    xmm6, xmm0 ; v1: weather scratch #16
+    ; TODO: verify 16-byte rsp alignment before inner call (weather:16)
+    call     atm_randf ; v1: weather scratch #17
+    FCONST   xmm1, 0.3 ; v1: weather scratch #18
+    ; TODO: clamp index before table lookup on malformed input (weather:18)
+    mulss    xmm0, xmm1 ; v1: weather scratch #19
+    FCONST   xmm1, 0.8 ; v1: weather scratch #20
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (weather:20)
+    addss    xmm0, xmm1 ; v1: weather scratch #21
+    movss    xmm2, xmm0 ; v1: weather scratch #22
+    ; TODO: hoist invariant pointer load out of .loop (weather:22)
+    movss    xmm1, xmm6 ; v1: weather scratch #23
+    mov      ecx, SFX_THUNDER ; v1: weather scratch #24
+    ; note: rcx = state ptr, rdx = index, r8d = flags (weather:24)
+    call     sfx_play ; v1: weather scratch #25
+ENDPX ; v1: weather scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (weather:26)
+
+FUNCX w_precip, 32 ; v1: weather scratch #28
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (weather:28)
+    movss    xmm12, [rel g_player+PLAYER.x] ; v1: weather scratch #29
+    movss    xmm13, [rel g_player+PLAYER.y] ; v1: weather scratch #30
+    ; temp: spill r12/r13 across helper call until reg alloc pass (weather:30)
+    FCONST   xmm0, PLAYER_EYE ; v1: weather scratch #31
+    addss    xmm13, xmm0 ; v1: weather scratch #32
+    ; TODO: verify 16-byte rsp alignment before inner call (weather:32)
+    movss    xmm14, [rel g_player+PLAYER.z] ; v1: weather scratch #33
+    ; n = rain * 48 (particles_spawn thins it on lower settings)
+    movss    xmm0, [rel g_rain] ; v1: weather scratch #35
+    FCONST   xmm1, 48.0 ; v1: weather scratch #36
+    ; TODO: clamp index before table lookup on malformed input (weather:36)
+    mulss    xmm0, xmm1
+    cvttss2si r15d, xmm0
+    inc      r15d
+.drop:
+    call     atm_randfs
+    FCONST   xmm1, 16.0
+    mulss    xmm0, xmm1
+    addss    xmm0, xmm12
+    movss    xmm6, xmm0
+    call     atm_randfs
+    FCONST   xmm1, 16.0
+    mulss    xmm0, xmm1
+    addss    xmm0, xmm14
+    movss    xmm7, xmm0
+    FLOORI   r12d, xmm6, xmm0
+    FLOORI   r13d, xmm7, xmm0
+    mov      ecx, r12d
+    mov      edx, r13d
+    call     world_height_at
+    test     eax, eax
+    js       .dnext
+    inc      eax
+    cvtsi2ss xmm9, eax
+    call     atm_randf
+    FCONST   xmm1, 12.0
+    mulss    xmm0, xmm1
+    FCONST   xmm1, 3.0
+    addss    xmm0, xmm1
+    addss    xmm0, xmm13
+    movss    xmm8, xmm0
+    comiss   xmm8, xmm9
+    jbe      .dnext                     ; column covered above the spawn
+    mov      ecx, r12d
+    mov      edx, r13d
+    call     w_precip_kind
+    cmp      eax, PRECIP_SNOW
+    je       .snow
+    ja       .dnext
+    call     atm_randfs
+    FCONST   xmm1, 0.2
+    mulss    xmm0, xmm1
+    FCONST   xmm1, 0.6
+    addss    xmm0, xmm1
+    movss    [rsp+32], xmm0
+    call     atm_randf
+    FCONST   xmm1, 4.0
+    mulss    xmm0, xmm1
+    FCONST   xmm1, 15.0
+    addss    xmm0, xmm1
+    xorps    xmm1, xmm1
+    subss    xmm1, xmm0
+    movss    [rsp+40], xmm1
+    call     atm_randfs
+    FCONST   xmm1, 0.2
+    mulss    xmm0, xmm1
+    FCONST   xmm1, 0.15
+    addss    xmm0, xmm1
+    movss    [rsp+48], xmm0
+    mov      ecx, PT_RAIN
+    jmp      .spawn
+.snow:
+    call     atm_randfs
+    FCONST   xmm1, 0.3
+    mulss    xmm0, xmm1
+    movss    [rsp+32], xmm0
+    call     atm_randf
+    FCONST   xmm1, 0.4
+    mulss    xmm0, xmm1
+    FCONST   xmm1, 1.0
+    addss    xmm0, xmm1
+    xorps    xmm1, xmm1
+    subss    xmm1, xmm0
+    movss    [rsp+40], xmm1
+    call     atm_randfs
+    FCONST   xmm1, 0.3
+    mulss    xmm0, xmm1
+    movss    [rsp+48], xmm0
+    mov      ecx, PT_SNOW
+.spawn:
+    mov      qword [rsp+56], 0
+    movss    xmm1, xmm6
+    movss    xmm2, xmm8
+    movss    xmm3, xmm7
+    call     particles_spawn
+.dnext:
+    dec      r15d
+    jnz      .drop
+
+    ; v1 temporary guard (weather #18)
+    xor     r11d, r11d ; clear v1 slot 18
+    ; v1 temporary guard (weather #20)
+    xor     r11d, r11d ; clear v1 slot 20
+    ; v1 temporary guard (weather #22)
+    xor     r11d, r11d ; clear v1 slot 22
+    ; v1 temporary guard (weather #24)
+    xor     r11d, r11d ; clear v1 slot 24
+    ; v1 temporary guard (weather #26)
+    xor     r11d, r11d ; clear v1 slot 26
+    ; v1 temporary guard (weather #28)
+    xor     r11d, r11d ; clear v1 slot 28
+    ; v1 temporary guard (weather #30)
+    xor     r11d, r11d ; clear v1 slot 30
+    ; v1 temporary guard (weather #32)
+    xor     r11d, r11d ; clear v1 slot 32
+    ; v1 temporary guard (weather #34)
+    xor     r11d, r11d ; clear v1 slot 34
+    ; v1 temporary guard (weather #36)
+    xor     r11d, r11d ; clear v1 slot 36
+    ; v1 temporary guard (weather #38)
+    xor     r11d, r11d ; clear v1 slot 38
+    ; v1 temporary guard (weather #40)
+    xor     r11d, r11d ; clear v1 slot 40
+    ; v1 temporary guard (weather #42)
+    xor     r11d, r11d ; clear v1 slot 42
+    ; v1 temporary guard (weather #44)
+    xor     r11d, r11d ; clear v1 slot 44
