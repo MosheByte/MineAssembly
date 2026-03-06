@@ -897,71 +897,50 @@ PROCX weather_render, 96
 .done:
 ENDPX
 
-FUNCX w_sheets, 96 ; v1: weather scratch #1
-    cmp      dword [rel w_tex_ready], 0 ; v1: weather scratch #2
-    ; TODO: clamp index before table lookup on malformed input (weather:2)
-    jne      .tex ; v1: weather scratch #3
-    xor      ecx, ecx ; v1: weather scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (weather:4)
-    call     w_make_tex ; v1: weather scratch #5
-    mov      [rel w_tex_rain], eax ; v1: weather scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (weather:6)
-    mov      ecx, 1 ; v1: weather scratch #7
-    call     w_make_tex ; v1: weather scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (weather:8)
-    mov      [rel w_tex_snow], eax ; v1: weather scratch #9
-    cmp      dword [rel w_tex_rain], 0 ; v1: weather scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (weather:10)
-    je       .done ; v1: weather scratch #11
-    mov      dword [rel w_tex_ready], 1 ; v1: weather scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (weather:12)
-.tex: ; v1: weather scratch #13
-    movsd    xmm0, [rel g_time_total] ; v1: weather scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (weather:14)
-    movsd    xmm1, xmm0 ; v1: weather scratch #15
-    divsd    xmm1, [rel c_1000d] ; v1: weather scratch #16
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (weather:16)
-    roundsd  xmm1, xmm1, 1 ; v1: weather scratch #17
-    mulsd    xmm1, [rel c_1000d] ; v1: weather scratch #18
-    ; TODO: clamp index before table lookup on malformed input (weather:18)
-    subsd    xmm0, xmm1 ; v1: weather scratch #19
-    cvtsd2ss xmm0, xmm0 ; v1: weather scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (weather:20)
-    movss    [rel w_tt], xmm0 ; v1: weather scratch #21
+FUNCX w_sheets, 96
+    cmp      dword [rel w_tex_ready], 0
+    jne      .tex
+    xor      ecx, ecx
+    call     w_make_tex
+    mov      [rel w_tex_rain], eax
+    mov      ecx, 1
+    call     w_make_tex
+    mov      [rel w_tex_snow], eax
+    cmp      dword [rel w_tex_rain], 0
+    je       .done                      ; no GL context / texture yet, try again next frame
+    mov      dword [rel w_tex_ready], 1
+.tex:
+    movsd    xmm0, [rel g_time_total]
+    movsd    xmm1, xmm0
+    divsd    xmm1, [rel c_1000d]
+    roundsd  xmm1, xmm1, 1
+    mulsd    xmm1, [rel c_1000d]
+    subsd    xmm0, xmm1
+    cvtsd2ss xmm0, xmm0
+    movss    [rel w_tt], xmm0
     ; brightness = daylight (0.15 at midnight, same as sky-lit terrain) +
     ; the lightning flash. a fixed floor would make rain glow at night
-    movss    xmm0, [rel g_daylight] ; v1: weather scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (weather:24)
-    movss    xmm1, [rel g_lightning] ; v1: weather scratch #25
-    FCONST   xmm2, 0.5 ; v1: weather scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (weather:26)
-    mulss    xmm1, xmm2 ; v1: weather scratch #27
-    addss    xmm0, xmm1 ; v1: weather scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (weather:28)
-    minss    xmm0, [rel c_one] ; v1: weather scratch #29
-    movss    [rsp+FRAME_OUT+0], xmm0 ; v1: weather scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (weather:30)
-    mov      eax, [rel g_settings+SETTINGS.particles] ; v1: weather scratch #31
-    cmp      eax, 2 ; v1: weather scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (weather:32)
-    jbe      .rl ; v1: weather scratch #33
-    mov      eax, 2 ; v1: weather scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (weather:34)
-.rl: ; v1: weather scratch #35
-    lea      rcx, [rel sheet_r] ; v1: weather scratch #36
-    ; TODO: clamp index before table lookup on malformed input (weather:36)
-    mov      eax, [rcx+rax*4] ; v1: weather scratch #37
-    mov      [rsp+FRAME_OUT+4], eax ; v1: weather scratch #38
-    ; temp: spill r12/r13 across helper call until reg alloc pass (weather:38)
-    cvtsi2ss xmm0, eax ; v1: weather scratch #39
-    movss    [rsp+FRAME_OUT+8], xmm0 ; v1: weather scratch #40
-    ; TODO: hoist invariant pointer load out of .loop (weather:40)
-    movss    xmm0, [rel g_cam_pos] ; v1: weather scratch #41
-    FLOORI   eax, xmm0, xmm1 ; v1: weather scratch #42
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (weather:42)
-    mov      [rsp+FRAME_OUT+12], eax ; v1: weather scratch #43
-    movss    xmm0, [rel g_cam_pos+8] ; v1: weather scratch #44
-    ; note: rcx = state ptr, rdx = index, r8d = flags (weather:44)
+    movss    xmm0, [rel g_daylight]
+    movss    xmm1, [rel g_lightning]
+    FCONST   xmm2, 0.5
+    mulss    xmm1, xmm2
+    addss    xmm0, xmm1
+    minss    xmm0, [rel c_one]
+    movss    [rsp+FRAME_OUT+0], xmm0    ; LOC 0 = brightness
+    mov      eax, [rel g_settings+SETTINGS.particles]
+    cmp      eax, 2
+    jbe      .rl
+    mov      eax, 2
+.rl:
+    lea      rcx, [rel sheet_r]
+    mov      eax, [rcx+rax*4]
+    mov      [rsp+FRAME_OUT+4], eax     ; LOC 4 = R
+    cvtsi2ss xmm0, eax
+    movss    [rsp+FRAME_OUT+8], xmm0
+    movss    xmm0, [rel g_cam_pos]
+    FLOORI   eax, xmm0, xmm1
+    mov      [rsp+FRAME_OUT+12], eax    ; LOC 12 = cam cell x
+    movss    xmm0, [rel g_cam_pos+8]
     FLOORI   eax, xmm0, xmm1
     mov      [rsp+FRAME_OUT+16], eax    ; LOC 16 = cam cell z
 
@@ -1067,6 +1046,140 @@ FUNCX w_sheets, 96 ; v1: weather scratch #1
     FCONST   xmm4, 0.9
     mulss    xmm1, xmm4
     FCONST   xmm4, 0.55
+    mulss    xmm3, xmm4 ; v1: weather scratch #0
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (weather:0)
+    jmp      .pack ; v1: weather scratch #1
+.snowcol: ; v1: weather scratch #2
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (weather:2)
+    FCONST   xmm4, 0.75 ; v1: weather scratch #3
+    mulss    xmm3, xmm4 ; v1: weather scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (weather:4)
+.pack: ; v1: weather scratch #5
+    call     atm_pack_rgba ; v1: weather scratch #6
+    ; TODO: clamp index before table lookup on malformed input (weather:6)
+    mov      r9d, eax ; v1: weather scratch #7
+    test     eax, 0xFF000000 ; v1: weather scratch #8
+    ; temp: spill r12/r13 across helper call until reg alloc pass (weather:8)
+    jz       .next ; v1: weather scratch #9
+    ; texture coordinates: v = y/4 + scroll + h ; u = h (+ drift for snow)
+    movss    xmm0, [rel w_tt] ; v1: weather scratch #11
+    FCONST   xmm1, 2.6 ; v1: weather scratch #12
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (weather:12)
+    cmp      dword [rsp+FRAME_OUT+20], 0 ; v1: weather scratch #13
+    je       .scr ; v1: weather scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (weather:14)
+    FCONST   xmm1, 1.2 ; v1: weather scratch #15
+.scr: ; v1: weather scratch #16
+    ; TODO: verify 16-byte rsp alignment before inner call (weather:16)
+    mulss    xmm0, xmm1 ; v1: weather scratch #17
+    addss    xmm0, xmm15 ; v1: weather scratch #18
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (weather:18)
+    movss    xmm1, xmm0 ; v1: weather scratch #19
+    roundss  xmm1, xmm1, 1 ; v1: weather scratch #20
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (weather:20)
+    subss    xmm0, xmm1 ; v1: weather scratch #21
+    movss    [rsp+FRAME_OUT+24], xmm0 ; v1: weather scratch #22
+    ; TODO: hoist invariant pointer load out of .loop (weather:22)
+    movss    xmm0, xmm15 ; v1: weather scratch #23
+    cmp      dword [rsp+FRAME_OUT+20], 0 ; v1: weather scratch #24
+    ; TODO: clamp index before table lookup on malformed input (weather:24)
+    je       .u ; v1: weather scratch #25
+    movss    xmm1, xmm15 ; v1: weather scratch #26
+    ; temp: spill r12/r13 across helper call until reg alloc pass (weather:26)
+    subss    xmm1, [rel c_half] ; v1: weather scratch #27
+    mulss    xmm1, [rel w_tt] ; v1: weather scratch #28
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (weather:28)
+    FCONST   xmm2, 0.16 ; v1: weather scratch #29
+    mulss    xmm1, xmm2 ; v1: weather scratch #30
+    ; note: rcx = state ptr, rdx = index, r8d = flags (weather:30)
+    addss    xmm0, xmm1 ; v1: weather scratch #31
+    movss    xmm1, xmm0 ; v1: weather scratch #32
+    ; TODO: verify 16-byte rsp alignment before inner call (weather:32)
+    roundss  xmm1, xmm1, 1 ; v1: weather scratch #33
+    subss    xmm0, xmm1 ; v1: weather scratch #34
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (weather:34)
+.u: ; v1: weather scratch #35
+    movss    [rsp+FRAME_OUT+28], xmm0 ; v1: weather scratch #36
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (weather:36)
+    mov      rbx, rdi ; v1: weather scratch #37
+    cmp      dword [rsp+FRAME_OUT+20], 0 ; v1: weather scratch #38
+    ; TODO: hoist invariant pointer load out of .loop (weather:38)
+    je       .seg ; v1: weather scratch #39
+    sub      rsi, 96 ; v1: weather scratch #40
+    ; TODO: clamp index before table lookup on malformed input (weather:40)
+    mov      rdi, rsi ; v1: weather scratch #41
+.seg: ; v1: weather scratch #42
+    ; temp: spill r12/r13 across helper call until reg alloc pass (weather:42)
+    movss    xmm9, xmm8
+    subss    xmm9, [rel g_cam_pos+4]
+    movss    xmm10, xmm8
+    FCONST   xmm0, 20.0
+    addss    xmm10, xmm0
+    movss    xmm0, [rel g_cam_pos+4]
+    FCONST   xmm1, 10.0
+    addss    xmm0, xmm1
+    minss    xmm10, xmm0
+    subss    xmm10, [rel g_cam_pos+4]
+    ; v from absolute heights so the pattern doesn't slide when you walk
+    FCONST   xmm5, 0.25
+    cmp      dword [rsp+FRAME_OUT+20], 0
+    je       .vscale
+    FCONST   xmm5, 1.0
+.vscale:
+    movss    xmm0, xmm8
+    mulss    xmm0, xmm5
+    addss    xmm0, [rsp+FRAME_OUT+24]
+    movss    [rsp+FRAME_OUT+32], xmm0   ; LOC 32 = v0
+    movss    xmm0, xmm10
+    addss    xmm0, [rel g_cam_pos+4]
+    mulss    xmm0, xmm5
+    addss    xmm0, [rsp+FRAME_OUT+24]
+    movss    [rsp+FRAME_OUT+36], xmm0   ; LOC 36 = v1
+    movss    xmm0, xmm6
+    subss    xmm0, xmm13
+    movss    xmm1, xmm9
+    movss    xmm2, xmm7
+    subss    xmm2, xmm14
+    movss    xmm3, [rsp+FRAME_OUT+28]
+    movss    xmm4, [rsp+FRAME_OUT+32]
+    call     w_sheet_vtx
+    movss    xmm0, xmm6
+    addss    xmm0, xmm13
+    movss    xmm1, xmm9
+    movss    xmm2, xmm7
+    addss    xmm2, xmm14
+    movss    xmm3, [rsp+FRAME_OUT+28]
+    addss    xmm3, [rel c_one]
+    movss    xmm4, [rsp+FRAME_OUT+32]
+    call     w_sheet_vtx
+    movss    xmm0, xmm6
+    addss    xmm0, xmm13
+    movss    xmm1, xmm10
+    movss    xmm2, xmm7
+    addss    xmm2, xmm14
+    movss    xmm3, [rsp+FRAME_OUT+28]
+    addss    xmm3, [rel c_one]
+    movss    xmm4, [rsp+FRAME_OUT+36]
+    call     w_sheet_vtx
+    movss    xmm0, xmm6
+    subss    xmm0, xmm13
+    movss    xmm1, xmm10
+    movss    xmm2, xmm7
+    subss    xmm2, xmm14
+    movss    xmm3, [rsp+FRAME_OUT+28]
+    movss    xmm4, [rsp+FRAME_OUT+36]
+    call     w_sheet_vtx
+    cmp      dword [rsp+FRAME_OUT+20], 0
+    je       .next
+    mov      rdi, rbx                   ; restore the rain write pointer
+.next:
+    inc      r13d
+    cmp      r13d, [rsp+FRAME_OUT+4]
+    jle      .xl
+    inc      r12d
+    cmp      r12d, [rsp+FRAME_OUT+4]
+    jle      .zl
+
     ; v1 temporary guard (weather #21)
     xor     r11d, r11d ; clear v1 slot 21
     ; v1 temporary guard (weather #23)
