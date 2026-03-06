@@ -1046,70 +1046,49 @@ FUNCX w_sheets, 96
     FCONST   xmm4, 0.9
     mulss    xmm1, xmm4
     FCONST   xmm4, 0.55
-    mulss    xmm3, xmm4 ; v1: weather scratch #0
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (weather:0)
-    jmp      .pack ; v1: weather scratch #1
-.snowcol: ; v1: weather scratch #2
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (weather:2)
-    FCONST   xmm4, 0.75 ; v1: weather scratch #3
-    mulss    xmm3, xmm4 ; v1: weather scratch #4
-    ; TODO: hoist invariant pointer load out of .loop (weather:4)
-.pack: ; v1: weather scratch #5
-    call     atm_pack_rgba ; v1: weather scratch #6
-    ; TODO: clamp index before table lookup on malformed input (weather:6)
-    mov      r9d, eax ; v1: weather scratch #7
-    test     eax, 0xFF000000 ; v1: weather scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (weather:8)
-    jz       .next ; v1: weather scratch #9
+    mulss    xmm3, xmm4
+    jmp      .pack
+.snowcol:
+    FCONST   xmm4, 0.75
+    mulss    xmm3, xmm4
+.pack:
+    call     atm_pack_rgba
+    mov      r9d, eax
+    test     eax, 0xFF000000
+    jz       .next
     ; texture coordinates: v = y/4 + scroll + h ; u = h (+ drift for snow)
-    movss    xmm0, [rel w_tt] ; v1: weather scratch #11
-    FCONST   xmm1, 2.6 ; v1: weather scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (weather:12)
-    cmp      dword [rsp+FRAME_OUT+20], 0 ; v1: weather scratch #13
-    je       .scr ; v1: weather scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (weather:14)
-    FCONST   xmm1, 1.2 ; v1: weather scratch #15
-.scr: ; v1: weather scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (weather:16)
-    mulss    xmm0, xmm1 ; v1: weather scratch #17
-    addss    xmm0, xmm15 ; v1: weather scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (weather:18)
-    movss    xmm1, xmm0 ; v1: weather scratch #19
-    roundss  xmm1, xmm1, 1 ; v1: weather scratch #20
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (weather:20)
-    subss    xmm0, xmm1 ; v1: weather scratch #21
-    movss    [rsp+FRAME_OUT+24], xmm0 ; v1: weather scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (weather:22)
-    movss    xmm0, xmm15 ; v1: weather scratch #23
-    cmp      dword [rsp+FRAME_OUT+20], 0 ; v1: weather scratch #24
-    ; TODO: clamp index before table lookup on malformed input (weather:24)
-    je       .u ; v1: weather scratch #25
-    movss    xmm1, xmm15 ; v1: weather scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (weather:26)
-    subss    xmm1, [rel c_half] ; v1: weather scratch #27
-    mulss    xmm1, [rel w_tt] ; v1: weather scratch #28
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (weather:28)
-    FCONST   xmm2, 0.16 ; v1: weather scratch #29
-    mulss    xmm1, xmm2 ; v1: weather scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (weather:30)
-    addss    xmm0, xmm1 ; v1: weather scratch #31
-    movss    xmm1, xmm0 ; v1: weather scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (weather:32)
-    roundss  xmm1, xmm1, 1 ; v1: weather scratch #33
-    subss    xmm0, xmm1 ; v1: weather scratch #34
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (weather:34)
-.u: ; v1: weather scratch #35
-    movss    [rsp+FRAME_OUT+28], xmm0 ; v1: weather scratch #36
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (weather:36)
-    mov      rbx, rdi ; v1: weather scratch #37
-    cmp      dword [rsp+FRAME_OUT+20], 0 ; v1: weather scratch #38
-    ; TODO: hoist invariant pointer load out of .loop (weather:38)
-    je       .seg ; v1: weather scratch #39
-    sub      rsi, 96 ; v1: weather scratch #40
-    ; TODO: clamp index before table lookup on malformed input (weather:40)
-    mov      rdi, rsi ; v1: weather scratch #41
-.seg: ; v1: weather scratch #42
-    ; temp: spill r12/r13 across helper call until reg alloc pass (weather:42)
+    movss    xmm0, [rel w_tt]
+    FCONST   xmm1, 2.6                  ; rain scroll (tiles / s)
+    cmp      dword [rsp+FRAME_OUT+20], 0
+    je       .scr
+    FCONST   xmm1, 1.2                  ; snow: ~1.2 blocks / s
+.scr:
+    mulss    xmm0, xmm1
+    addss    xmm0, xmm15
+    movss    xmm1, xmm0
+    roundss  xmm1, xmm1, 1
+    subss    xmm0, xmm1
+    movss    [rsp+FRAME_OUT+24], xmm0   ; LOC 24 = v offset
+    movss    xmm0, xmm15
+    cmp      dword [rsp+FRAME_OUT+20], 0
+    je       .u
+    movss    xmm1, xmm15                ; snow drifts sideways
+    subss    xmm1, [rel c_half]
+    mulss    xmm1, [rel w_tt]
+    FCONST   xmm2, 0.16
+    mulss    xmm1, xmm2
+    addss    xmm0, xmm1
+    movss    xmm1, xmm0
+    roundss  xmm1, xmm1, 1
+    subss    xmm0, xmm1
+.u:
+    movss    [rsp+FRAME_OUT+28], xmm0   ; LOC 28 = u0
+    mov      rbx, rdi
+    cmp      dword [rsp+FRAME_OUT+20], 0
+    je       .seg
+    sub      rsi, 96
+    mov      rdi, rsi
+.seg:
     movss    xmm9, xmm8
     subss    xmm9, [rel g_cam_pos+4]
     movss    xmm10, xmm8
@@ -1180,29 +1159,179 @@ FUNCX w_sheets, 96
     cmp      r12d, [rsp+FRAME_OUT+4]
     jle      .zl
 
-    ; v1 temporary guard (weather #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (weather #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (weather #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (weather #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (weather #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (weather #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (weather #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (weather #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (weather #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (weather #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (weather #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (weather #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (weather #45)
-    xor     r11d, r11d ; clear v1 slot 45
+    lea      rcx, [rel w_vbuf]
+    mov      rax, rdi
+    sub      rax, rcx
+    xor      edx, edx
+    mov      ecx, 24
+    div      rcx
+    test     eax, eax
+    jz       .nrain
+    mov      ebx, eax
+    mov      ecx, GL_TEXTURE_2D
+    mov      edx, [rel w_tex_rain]
+    call     glBindTexture
+    lea      rcx, [rel w_vbuf]
+    mov      edx, ebx
+    mov      r8d, GL_QUADS
+    mov      r9d, 1
+    call     atm_draw
+.nrain:
+    lea      rax, [rel w_vbuf + SHEET_QMAX*4*24]
+    sub      rax, rsi
+    xor      edx, edx
+    mov      ecx, 24
+    div      rcx
+    test     eax, eax
+    jz       .nsnow
+    mov      ebx, eax
+    mov      ecx, GL_TEXTURE_2D
+    mov      edx, [rel w_tex_snow]
+    call     glBindTexture
+    mov      rcx, rsi
+    mov      edx, ebx
+    mov      r8d, GL_QUADS
+    mov      r9d, 1
+    call     atm_draw
+.nsnow:
+.done:
+ENDPX
+
+; w_ribbon (leaf): cam-facing quad a (xmm0) -> b (xmm1), cam-relative, half
+; width xmm2, r9d colour, rdi advanced. side = norm(cross(b - a, (a + b)/2)) * w
+w_ribbon:
+    movaps   xmm3, xmm1
+    subps    xmm3, xmm0
+    movaps   xmm4, xmm0
+    addps    xmm4, xmm1                 ; 2m (scale irrelevant)
+    movaps   xmm5, xmm3
+    shufps   xmm5, xmm5, 0xC9
+    shufps   xmm3, xmm3, 0xD2
+    shufps   xmm2, xmm2, 0
+    ; cross = d.yzx * m.zxy - d.zxy * m.yzx
+    movaps   [rel w_eye], xmm4
+    shufps   xmm4, xmm4, 0xD2
+    mulps    xmm5, xmm4
+    movaps   xmm4, [rel w_eye]
+    shufps   xmm4, xmm4, 0xC9
+    mulps    xmm3, xmm4
+    subps    xmm5, xmm3
+    andps    xmm5, [rel c_mask3]
+    movaps   xmm3, xmm5
+    dpps     xmm3, xmm3, 0x7F
+    sqrtps   xmm3, xmm3
+    xorps    xmm4, xmm4
+    comiss   xmm3, [rel c_eps4]
+    jb       .skip
+    divps    xmm5, xmm3
+    mulps    xmm5, xmm2
+    movaps   xmm3, xmm0
+    subps    xmm3, xmm5
+    movups   [rdi], xmm3
+    mov      qword [rdi+12], 0
+    mov      [rdi+20], r9d
+    movaps   xmm3, xmm0
+    addps    xmm3, xmm5
+    movups   [rdi+24], xmm3
+    mov      qword [rdi+36], 0
+    mov      [rdi+44], r9d
+    movaps   xmm3, xmm1
+    addps    xmm3, xmm5
+    movups   [rdi+48], xmm3
+    mov      qword [rdi+60], 0
+    mov      [rdi+68], r9d
+    movaps   xmm3, xmm1
+    subps    xmm3, xmm5
+    movups   [rdi+72], xmm3
+    mov      qword [rdi+84], 0
+    mov      [rdi+92], r9d
+    add      rdi, 96
+.skip:
+    ret
+
+FUNCX w_draw_bolt, 32
+    movss    xmm0, [rel g_cam_pos]
+    movss    [rel w_eye], xmm0
+    movss    xmm0, [rel g_cam_pos+4]
+    movss    [rel w_eye+4], xmm0
+    movss    xmm0, [rel g_cam_pos+8]
+    movss    [rel w_eye+8], xmm0
+    mov      dword [rel w_eye+12], 0
+    movaps   xmm6, [rel w_eye]
+    lea      rsi, [rel w_bolt]
+    lea      rdi, [rel w_rel]
+    mov      ecx, BOLT_PTS+BRANCH_PTS   ; w_branch directly follows w_bolt
+.rel:
+    movaps   xmm0, [rsi]
+    subps    xmm0, xmm6
+    andps    xmm0, [rel c_mask3]
+    movaps   [rdi], xmm0
+    add      rsi, 16
+    add      rdi, 16
+    dec      ecx
+    jnz      .rel
+    movss    xmm7, [rel g_lightning]
+    FCONST   xmm0, 1.4
+    mulss    xmm7, xmm0
+    minss    xmm7, [rel c_one]
+    movss    xmm0, [rel c_one]
+    movss    xmm1, xmm0
+    movss    xmm2, xmm0
+    movss    xmm3, xmm7
+    call     atm_pack_rgba
+    mov      r12d, eax
+    FCONST   xmm0, 0.60
+    FCONST   xmm1, 0.70
+    movss    xmm2, [rel c_one]
+    FCONST   xmm3, 0.35
+    mulss    xmm3, xmm7
+    call     atm_pack_rgba
+    mov      r13d, eax
+    lea      rdi, [rel w_bbuf]
+    lea      rsi, [rel w_rel]
+    mov      ebx, BOLT_PTS-1
+    call     .strip
+    lea      rsi, [rel w_rel + BOLT_PTS*16]
+    mov      ebx, BRANCH_PTS-1
+    call     .strip
+    mov      ecx, GL_TEXTURE_2D
+    call     glDisable
+    mov      ecx, GL_SRC_ALPHA
+    mov      edx, GL_ONE
+    call     glBlendFunc
+    lea      rcx, [rel w_bbuf]
+    mov      rax, rdi
+    sub      rax, rcx
+    xor      edx, edx
+    mov      ecx, 24
+    div      rcx
+    mov      edx, eax
+    lea      rcx, [rel w_bbuf]
+    mov      r8d, GL_QUADS
+    xor      r9d, r9d
+    call     atm_draw
+    mov      ecx, GL_TEXTURE_2D
+    call     glEnable
+    jmp      .done
+; .strip: rsi = points, ebx = segment count; emits glow + core per segment
+.strip:
+    movaps   xmm0, [rsi]
+    movaps   xmm1, [rsi+16]
+    FCONST   xmm2, 0.9
+    mov      r9d, r13d
+    call     w_ribbon
+    movaps   xmm0, [rsi]
+    movaps   xmm1, [rsi+16]
+    FCONST   xmm2, 0.16
+    mov      r9d, r12d
+    call     w_ribbon
+    add      rsi, 16
+    dec      ebx
+    jnz      .strip
+    ret
+.done:
+ENDPX
+
+section .rdata
+align 16
+c_eps4:     dd 0.0001, 0.0001, 0.0001, 0.0001
