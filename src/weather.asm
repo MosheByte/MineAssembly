@@ -501,15 +501,15 @@ FUNCX w_precip, 32
     subss    xmm1, xmm0
     movss    [rsp+40], xmm1
     call     atm_randfs
-    FCONST   xmm1, 0.2 ; trace probe #72 hook
-    mulss    xmm0, xmm1 ; trace probe #72 hook
-    FCONST   xmm1, 0.15 ; trace probe #72 hook
-    addss    xmm0, xmm1 ; trace probe #72 hook
-    movss    [rsp+48], xmm0 ; trace probe #72 hook
-    mov      ecx, PT_RAIN ; trace probe #72 hook
-    jmp      .spawn ; trace probe #72 hook
-.snow: ; trace probe #72 hook
-    call     atm_randfs ; trace probe #72 hook
+    FCONST   xmm1, 0.2
+    mulss    xmm0, xmm1
+    FCONST   xmm1, 0.15
+    addss    xmm0, xmm1
+    movss    [rsp+48], xmm0
+    mov      ecx, PT_RAIN
+    jmp      .spawn
+.snow:
+    call     atm_randfs
     FCONST   xmm1, 0.3
     mulss    xmm0, xmm1
     movss    [rsp+32], xmm0
@@ -536,137 +536,3 @@ FUNCX w_precip, 32
     dec      r15d
     jnz      .drop
 
-; --- temporary diagnostic probe #72 (weather) ---
-; TODO: strip dbg_weather_probe_72 once frame/state invariants hold
-dbg_weather_probe_72:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_72
-    mov     eax, dword [rcx+0] ; sample weather state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_72_0
-.dbg_skip_72_0:
-    mov     ecx, dword [rcx+4] ; sample weather state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_72_1
-.dbg_skip_72_1:
-    mov     edx, dword [rcx+8] ; sample weather state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_72_2
-.dbg_skip_72_2:
-    mov     r8d, dword [rcx+12] ; sample weather state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_72_3
-.dbg_skip_72_3:
-    mov     r9d, dword [rcx+16] ; sample weather state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_72_4
-.dbg_skip_72_4:
-    mov     r11d, dword [rcx+20] ; sample weather state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_72_5
-.dbg_skip_72_5:
-    mov     eax, dword [rcx+24] ; sample weather state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_72_6
-.dbg_skip_72_6:
-    mov     ecx, dword [rcx+28] ; sample weather state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_72_7
-.dbg_skip_72_7:
-    mov     edx, dword [rcx+32] ; sample weather state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_72_8
-.dbg_skip_72_8:
-    mov     r8d, dword [rcx+36] ; sample weather state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_72_9
-.dbg_skip_72_9:
-    mov     r9d, dword [rcx+40] ; sample weather state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_72_10
-.dbg_skip_72_10:
-    mov     r11d, dword [rcx+44] ; sample weather state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_72_11
-.dbg_skip_72_11:
-    mov     eax, dword [rcx+48] ; sample weather state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_72_12
-.dbg_skip_72_12:
-    mov     ecx, dword [rcx+52] ; sample weather state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_72_13
-.dbg_skip_72_13:
-    mov     edx, dword [rcx+56] ; sample weather state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_72_14
-.dbg_skip_72_14:
-    mov     r8d, dword [rcx+60] ; sample weather state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_72_15
-.dbg_skip_72_15:
-    mov     r9d, dword [rcx+64] ; sample weather state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_72_16
-.dbg_skip_72_16:
-    mov     r11d, dword [rcx+68] ; sample weather state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_72_17
-.dbg_skip_72_17:
-    mov     eax, dword [rcx+72] ; sample weather state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_72_18
-.dbg_skip_72_18:
-    mov     ecx, dword [rcx+76] ; sample weather state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_72_19
-.dbg_skip_72_19:
-    mov     edx, dword [rcx+80] ; sample weather state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_72_20
-.dbg_skip_72_20:
-    mov     r8d, dword [rcx+84] ; sample weather state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_72_21
-.dbg_skip_72_21:
-.dbg_null_72:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
