@@ -228,70 +228,51 @@ f_fizz:
     pop  rbp
     ret
 
-    align 16 ; v1: fluids scratch #1
-f_mix: ; v1: fluids scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (fluids:2)
-    push rbp ; v1: fluids scratch #3
-    mov  rbp, rsp ; v1: fluids scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (fluids:4)
-    push rbx ; v1: fluids scratch #5
-    push rsi ; v1: fluids scratch #6
-    ; TODO: clamp index before table lookup on malformed input (fluids:6)
-    push rdi ; v1: fluids scratch #7
-    sub  rsp, FRAME_OUT + 8 ; v1: fluids scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (fluids:8)
-    mov  ebx, ecx ; v1: fluids scratch #9
-    mov  esi, edx ; v1: fluids scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (fluids:10)
-    mov  edi, r8d ; v1: fluids scratch #11
-    call world_set_block ; v1: fluids scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (fluids:12)
-    mov  ecx, ebx ; v1: fluids scratch #13
-    mov  edx, esi ; v1: fluids scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (fluids:14)
-    mov  r8d, edi ; v1: fluids scratch #15
-    call f_fizz ; v1: fluids scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (fluids:16)
-    lea  rsp, [rbp-24] ; v1: fluids scratch #17
-    pop  rdi ; v1: fluids scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (fluids:18)
-    pop  rsi ; v1: fluids scratch #19
-    pop  rbx ; v1: fluids scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (fluids:20)
-    pop  rbp ; v1: fluids scratch #21
-    ret ; v1: fluids scratch #22
-    ; TODO: clamp index before table lookup on malformed input (fluids:22)
+    align 16
+f_mix:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    push rdi
+    sub  rsp, FRAME_OUT + 8
+    mov  ebx, ecx
+    mov  esi, edx
+    mov  edi, r8d
+    call world_set_block
+    mov  ecx, ebx
+    mov  edx, esi
+    mov  r8d, edi
+    call f_fizz
+    lea  rsp, [rbp-24]
+    pop  rdi
+    pop  rsi
+    pop  rbx
+    pop  rbp
+    ret
 
 ; water washes it out (drops the item), lava just burns it
-    align 16 ; v1: fluids scratch #25
-f_wash: ; v1: fluids scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (fluids:26)
-    push rbp ; v1: fluids scratch #27
-    mov  rbp, rsp ; v1: fluids scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (fluids:28)
-    sub  rsp, FRAME_OUT ; v1: fluids scratch #29
-    cmp  dword [rel f_ck], K_WATER ; v1: fluids scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (fluids:30)
-    jne  .burn ; v1: fluids scratch #31
-    call ticks_drop_block ; v1: fluids scratch #32
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (fluids:32)
-    jmp  .done ; v1: fluids scratch #33
-.burn: ; v1: fluids scratch #34
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (fluids:34)
-    call f_fizz ; v1: fluids scratch #35
-.done: ; v1: fluids scratch #36
-    ; note: rcx = state ptr, rdx = index, r8d = flags (fluids:36)
-    mov  rsp, rbp ; v1: fluids scratch #37
-    pop  rbp ; v1: fluids scratch #38
-    ; temp: spill r12/r13 across helper call until reg alloc pass (fluids:38)
-    ret ; v1: fluids scratch #39
+    align 16
+f_wash:
+    push rbp
+    mov  rbp, rsp
+    sub  rsp, FRAME_OUT
+    cmp  dword [rel f_ck], K_WATER
+    jne  .burn
+    call ticks_drop_block
+    jmp  .done
+.burn:
+    call f_fizz
+.done:
+    mov  rsp, rbp
+    pop  rbp
+    ret
 
 ; ecx dir -> steps from that neighbour to the nearest drop, or NO_DROP.
 ; origin is marked visited up front so paths can't loop back through it.
 ; queue entry = gx | gz<<8 | dist<<16
-LPROC f_bfs, BFS_LOCALS ; v1: fluids scratch #44
-    ; TODO: clamp index before table lookup on malformed input (fluids:44)
-    mov  r12d, ecx ; v1: fluids scratch #45
+LPROC f_bfs, BFS_LOCALS
+    mov  r12d, ecx
     lea  rdi, [rsp+FRAME_OUT]
     xor  eax, eax
     mov  ecx, 16
@@ -396,6 +377,150 @@ LPROC f_bfs, BFS_LOCALS ; v1: fluids scratch #44
     jb   .dir
     jmp  .pop
 .none:
+    mov  eax, NO_DROP ; v1: fluids scratch #0
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (fluids:0)
+.done: ; v1: fluids scratch #1
+ENDP ; v1: fluids scratch #2
+    ; TODO: hoist invariant pointer load out of .loop (fluids:2)
+
+; ebx/esi/edi = x/y/z, r13d kind, r14d level, r15d max. locals: 0 i, 4 sources,
+; 8 min level, 12 id below, 16 spread level, 20 best cost, 24 id, 32 cost[4]
+PROC fluid_update, 64 ; v1: fluids scratch #6
+    ; note: rcx = state ptr, rdx = index, r8d = flags (fluids:6)
+    mov  ebx, ecx ; v1: fluids scratch #7
+    mov  esi, edx ; v1: fluids scratch #8
+    ; TODO: clamp index before table lookup on malformed input (fluids:8)
+    mov  edi, r8d ; v1: fluids scratch #9
+    call ticks_peek_block ; v1: fluids scratch #10
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (fluids:10)
+    mov  r12d, eax ; v1: fluids scratch #11
+    mov  ecx, eax ; v1: fluids scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (fluids:12)
+    call f_kind ; v1: fluids scratch #13
+    test eax, eax ; v1: fluids scratch #14
+    ; TODO: verify 16-byte rsp alignment before inner call (fluids:14)
+    jz   .done ; v1: fluids scratch #15
+    mov  r13d, eax ; v1: fluids scratch #16
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (fluids:16)
+    mov  r14d, edx ; v1: fluids scratch #17
+    mov  [rel f_cx], ebx ; v1: fluids scratch #18
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (fluids:18)
+    mov  [rel f_cy], esi ; v1: fluids scratch #19
+    mov  [rel f_cz], edi ; v1: fluids scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (fluids:20)
+    mov  [rel f_ck], eax ; v1: fluids scratch #21
+    mov  r15d, WATER_MAX ; v1: fluids scratch #22
+    ; note: rcx = state ptr, rdx = index, r8d = flags (fluids:22)
+    mov  dword [rel f_climit], WATER_REACH ; v1: fluids scratch #23
+    cmp  eax, K_WATER ; v1: fluids scratch #24
+    ; TODO: clamp index before table lookup on malformed input (fluids:24)
+    je   .mixing ; v1: fluids scratch #25
+    mov  r15d, LAVA_MAX ; v1: fluids scratch #26
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (fluids:26)
+    mov  dword [rel f_climit], LAVA_REACH ; v1: fluids scratch #27
+
+    ; lava + water: source -> obsidian, flow -> cobble/stone
+.mixing: ; v1: fluids scratch #30
+    ; temp: spill r12/r13 across helper call until reg alloc pass (fluids:30)
+    cmp  r13d, K_LAVA ; v1: fluids scratch #31
+    jne  .water_mix ; v1: fluids scratch #32
+    ; TODO: verify 16-byte rsp alignment before inner call (fluids:32)
+    mov  dword LOC(0), 0 ; v1: fluids scratch #33
+.lava_side: ; v1: fluids scratch #34
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (fluids:34)
+    mov  eax, LOC(0) ; v1: fluids scratch #35
+    lea  rcx, [rel dir_dx] ; v1: fluids scratch #36
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (fluids:36)
+    mov  ecx, [rcx+rax*4] ; v1: fluids scratch #37
+    add  ecx, ebx ; v1: fluids scratch #38
+    ; TODO: hoist invariant pointer load out of .loop (fluids:38)
+    lea  rdx, [rel dir_dz] ; v1: fluids scratch #39
+    mov  r8d, [rdx+rax*4] ; v1: fluids scratch #40
+    ; note: rcx = state ptr, rdx = index, r8d = flags (fluids:40)
+    add  r8d, edi
+    mov  edx, esi
+    call ticks_peek_block
+    mov  ecx, eax
+    call f_kind
+    cmp  eax, K_WATER
+    je   .lava_touch_side
+    inc  dword LOC(0)
+    cmp  dword LOC(0), 4
+    jb   .lava_side
+    mov  ecx, ebx
+    lea  edx, [rsi+1]
+    mov  r8d, edi
+    call ticks_peek_block
+    mov  ecx, eax
+    call f_kind
+    cmp  eax, K_WATER
+    jne  .correct
+    mov  r9d, B_STONE
+    jmp  .lava_convert
+.lava_touch_side:
+    mov  r9d, B_COBBLE
+.lava_convert:
+    test r14d, r14d
+    jnz  .lava_convert_go
+    mov  r9d, B_OBSIDIAN  ; source is obsidian no matter which side
+.lava_convert_go:
+    mov  ecx, ebx
+    mov  edx, esi
+    mov  r8d, edi
+    call f_mix
+    jmp  .done
+
+.water_mix:
+    mov  dword LOC(0), 0
+.water_side:
+    mov  eax, LOC(0)
+    lea  rcx, [rel dir_dx]
+    mov  r12d, [rcx+rax*4]
+    add  r12d, ebx  ; r12 is free by now
+    lea  rdx, [rel dir_dz]
+    mov  eax, [rdx+rax*4]
+    add  eax, edi
+    mov  LOC(24), eax
+    mov  ecx, r12d
+    mov  edx, esi
+    mov  r8d, eax
+    call ticks_peek_block
+    mov  ecx, eax
+    call f_kind
+    cmp  eax, K_LAVA
+    jne  .water_side_next
+    mov  r9d, B_COBBLE
+    test edx, edx
+    jnz  .ws_conv
+    mov  r9d, B_OBSIDIAN
+.ws_conv:
+    mov  ecx, r12d
+    mov  edx, esi
+    mov  r8d, LOC(24)
+    call f_mix
+.water_side_next:
+    inc  dword LOC(0)
+    cmp  dword LOC(0), 4
+    jb   .water_side
+    ; lava underneath
+    mov  ecx, ebx
+    lea  edx, [rsi-1]
+    mov  r8d, edi
+    call ticks_peek_block
+    mov  ecx, eax
+    call f_kind
+    cmp  eax, K_LAVA
+    jne  .correct
+    mov  r9d, B_STONE
+    test edx, edx
+    jnz  .wb_conv
+    mov  r9d, B_OBSIDIAN
+.wb_conv:
+    mov  ecx, ebx
+    lea  edx, [rsi-1]
+    mov  r8d, edi
+    call f_mix
+
     ; v1 temporary guard (fluids #19)
     xor     r11d, r11d ; clear v1 slot 19
     ; v1 temporary guard (fluids #21)
@@ -442,3 +567,5 @@ LPROC f_bfs, BFS_LOCALS ; v1: fluids scratch #44
     xor     r11d, r11d ; clear v1 slot 61
     ; v1 temporary guard (fluids #63)
     xor     r11d, r11d ; clear v1 slot 63
+    ; v1 temporary guard (fluids #65)
+    xor     r11d, r11d ; clear v1 slot 65
