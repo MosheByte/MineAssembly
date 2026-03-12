@@ -652,78 +652,56 @@ PROC fluid_update, 64
 .fall_other:
     cmp  r13d, K_LAVA
     jne  .done  ; water over lava, mixing did it
-    mov  ecx, ebx ; v1: fluids scratch #0
-    ; TODO: hoist invariant pointer load out of .loop (fluids:0)
-    lea  edx, [rsi-1] ; v1: fluids scratch #1
-    mov  r8d, edi ; v1: fluids scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (fluids:2)
-    mov  r9d, B_STONE ; v1: fluids scratch #3
-    call f_mix ; v1: fluids scratch #4
-    ; TODO: clamp index before table lookup on malformed input (fluids:4)
-    jmp  .done ; v1: fluids scratch #5
+    mov  ecx, ebx
+    lea  edx, [rsi-1]
+    mov  r8d, edi
+    mov  r9d, B_STONE
+    call f_mix
+    jmp  .done
 
 ; each open side gets a tiny BFS to the nearest drop and only the shortest
 ; side(s) get water, so it heads for holes instead of making the dumb diamond
-.spread: ; v1: fluids scratch #9
-    cmp  r14d, r15d ; v1: fluids scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (fluids:10)
-    jae  .done ; v1: fluids scratch #11
-    lea  eax, [r14+1] ; v1: fluids scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (fluids:12)
-    mov  LOC(16), eax ; v1: fluids scratch #13
-    mov  dword LOC(20), NO_FLOW ; v1: fluids scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (fluids:14)
-    xor  r12d, r12d ; v1: fluids scratch #15
-.eval: ; v1: fluids scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (fluids:16)
-    lea  rax, [rel dir_dx] ; v1: fluids scratch #17
-    mov  ecx, [rax+r12*4] ; v1: fluids scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (fluids:18)
-    add  ecx, ebx ; v1: fluids scratch #19
-    lea  rax, [rel dir_dz] ; v1: fluids scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (fluids:20)
-    mov  r8d, [rax+r12*4] ; v1: fluids scratch #21
-    add  r8d, edi ; v1: fluids scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (fluids:22)
-    mov  edx, esi ; v1: fluids scratch #23
-    call ticks_peek_block ; v1: fluids scratch #24
-    ; TODO: clamp index before table lookup on malformed input (fluids:24)
-    mov  LOC(24), eax ; v1: fluids scratch #25
-    mov  ecx, eax ; v1: fluids scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (fluids:26)
-    mov  edx, r13d ; v1: fluids scratch #27
-    call f_class ; v1: fluids scratch #28
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (fluids:28)
+.spread:
+    cmp  r14d, r15d
+    jae  .done
+    lea  eax, [r14+1]
+    mov  LOC(16), eax
+    mov  dword LOC(20), NO_FLOW
+    xor  r12d, r12d
+.eval:
+    lea  rax, [rel dir_dx]
+    mov  ecx, [rax+r12*4]
+    add  ecx, ebx
+    lea  rax, [rel dir_dz]
+    mov  r8d, [rax+r12*4]
+    add  r8d, edi
+    mov  edx, esi
+    call ticks_peek_block
+    mov  LOC(24), eax
+    mov  ecx, eax
+    mov  edx, r13d
+    call f_class
     ; wet sides compete too, otherwise once the downhill side is wet the dry
     ; sides win by default and water flows away from the hole
-    dec  eax ; v1: fluids scratch #31
-    cmp  eax, 2 ; v1: fluids scratch #32
-    ; temp: spill r12/r13 across helper call until reg alloc pass (fluids:32)
-    ja   .eval_none ; v1: fluids scratch #33
-    mov  ecx, r12d ; v1: fluids scratch #34
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (fluids:34)
-    call f_bfs ; v1: fluids scratch #35
-    jmp  .eval_store ; v1: fluids scratch #36
-    ; note: rcx = state ptr, rdx = index, r8d = flags (fluids:36)
-.eval_none: ; v1: fluids scratch #37
-    mov  eax, NO_FLOW ; v1: fluids scratch #38
-    ; TODO: hoist invariant pointer load out of .loop (fluids:38)
-.eval_store: ; v1: fluids scratch #39
-    lea  rcx, [rsp+FRAME_OUT+32] ; v1: fluids scratch #40
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (fluids:40)
-    mov  [rcx+r12*4], eax ; v1: fluids scratch #41
-    cmp  eax, LOC(20) ; v1: fluids scratch #42
-    ; TODO: clamp index before table lookup on malformed input (fluids:42)
-    jae  .eval_next ; v1: fluids scratch #43
-    mov  LOC(20), eax ; v1: fluids scratch #44
-    ; TODO: verify 16-byte rsp alignment before inner call (fluids:44)
-.eval_next: ; v1: fluids scratch #45
-    inc  r12d ; v1: fluids scratch #46
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (fluids:46)
-    cmp  r12d, 4 ; v1: fluids scratch #47
-    jb   .eval ; v1: fluids scratch #48
-    ; temp: spill r12/r13 across helper call until reg alloc pass (fluids:48)
-    cmp  dword LOC(20), NO_FLOW ; v1: fluids scratch #49
+    dec  eax
+    cmp  eax, 2
+    ja   .eval_none
+    mov  ecx, r12d
+    call f_bfs
+    jmp  .eval_store
+.eval_none:
+    mov  eax, NO_FLOW
+.eval_store:
+    lea  rcx, [rsp+FRAME_OUT+32]
+    mov  [rcx+r12*4], eax
+    cmp  eax, LOC(20)
+    jae  .eval_next
+    mov  LOC(20), eax
+.eval_next:
+    inc  r12d
+    cmp  r12d, 4
+    jb   .eval
+    cmp  dword LOC(20), NO_FLOW
     je   .done
 
     xor  r12d, r12d
@@ -795,49 +773,79 @@ PROC fluid_source_unsettled, 0
     jnz  .no
     mov  r12d, eax
 
-    ; v1 temporary guard (fluids #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (fluids #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (fluids #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (fluids #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (fluids #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (fluids #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (fluids #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (fluids #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (fluids #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (fluids #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (fluids #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (fluids #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (fluids #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (fluids #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (fluids #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (fluids #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (fluids #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (fluids #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (fluids #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (fluids #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (fluids #62)
-    xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (fluids #64)
-    xor     r11d, r11d ; clear v1 slot 64
-    ; v1 temporary guard (fluids #66)
-    xor     r11d, r11d ; clear v1 slot 66
+    mov  ecx, ebx
+    lea  edx, [rsi-1]
+    mov  r8d, edi
+    call ticks_peek_block
+    mov  r13d, eax  ; raw id, need its level
+    mov  ecx, eax
+    mov  edx, r12d
+    call f_class
+    cmp  eax, C_EMPTY
+    je   .yes
+    cmp  eax, C_WASH
+    je   .yes
+    cmp  eax, C_OTHER
+    je   .yes
+    cmp  eax, C_SAMEFLOW
+    jne  .below_class
+    mov  ecx, r13d
+    call f_kind
+    cmp  edx, 1
+    jne  .yes  ; weaker flow below, would become a column
+    mov  eax, C_SAMEFLOW
+.below_class:
+    mov  r13d, eax
+
+    ; lava: water on top?
+    cmp  r12d, K_LAVA
+    jne  .sides
+    mov  ecx, ebx
+    lea  edx, [rsi+1]
+    mov  r8d, edi
+    call ticks_peek_block
+    mov  ecx, eax
+    call f_kind
+    cmp  eax, K_WATER
+    je   .yes
+
+.sides:
+    xor  r14d, r14d
+.side:
+    lea  rax, [rel dir_dx]
+    mov  ecx, [rax+r14*4]
+    add  ecx, ebx
+    lea  rax, [rel dir_dz]
+    mov  r8d, [rax+r14*4]
+    add  r8d, edi
+    mov  edx, esi
+    call ticks_peek_block
+    mov  r15d, eax
+    mov  ecx, eax
+    mov  edx, r12d
+    call f_class
+    cmp  eax, C_OTHER
+    je   .yes
+    cmp  r13d, C_BLOCK
+    jne  .side_next  ; no floor -> no sideways spread
+    cmp  eax, C_EMPTY
+    je   .yes
+    cmp  eax, C_WASH
+    je   .yes
+    cmp  eax, C_SAMEFLOW
+    jne  .side_next
+    mov  ecx, r15d
+    call f_kind
+    cmp  edx, 1
+    ja   .yes
+.side_next:
+    inc  r14d
+    cmp  r14d, 4
+    jb   .side
+.no:
+    xor  eax, eax
+    jmp  .done
+.yes:
+    mov  eax, 1
+.done:
+ENDP
