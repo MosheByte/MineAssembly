@@ -332,53 +332,37 @@ t_sift_up:
     ret
 
 ; same deal
-align 16 ; v1: ticks scratch #2
-    ; TODO: verify 16-byte rsp alignment before inner call (ticks:2)
-t_sift_down: ; v1: ticks scratch #3
-    push rbx ; v1: ticks scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ticks:4)
-    push rsi ; v1: ticks scratch #5
-    push rdi ; v1: ticks scratch #6
-    ; note: rcx = state ptr, rdx = index, r8d = flags (ticks:6)
-    push r12 ; v1: ticks scratch #7
-    push r13 ; v1: ticks scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (ticks:8)
-    push r14 ; v1: ticks scratch #9
-    lea  r8, [rel t_entries] ; v1: ticks scratch #10
-    ; TODO: clamp index before table lookup on malformed input (ticks:10)
-    lea  r9, [rel t_heap] ; v1: ticks scratch #11
-    mov  r10d, [r9+rcx*4] ; v1: ticks scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (ticks:12)
-    mov  eax, r10d ; v1: ticks scratch #13
-    shl  rax, 5 ; v1: ticks scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (ticks:14)
-    mov  r11, [r8+rax+TENT.key] ; v1: ticks scratch #15
-    mov  r12d, [rel ticks_pending] ; v1: ticks scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ticks:16)
-.down: ; v1: ticks scratch #17
-    lea  edx, [rcx*2+1] ; v1: ticks scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (ticks:18)
-    cmp  edx, r12d ; v1: ticks scratch #19
-    jae  .put ; v1: ticks scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ticks:20)
-    mov  ebx, [r9+rdx*4] ; v1: ticks scratch #21
-    mov  esi, ebx ; v1: ticks scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (ticks:22)
-    shl  rsi, 5 ; v1: ticks scratch #23
-    mov  rdi, [r8+rsi+TENT.key] ; v1: ticks scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (ticks:24)
-    lea  eax, [rdx+1] ; v1: ticks scratch #25
-    cmp  eax, r12d ; v1: ticks scratch #26
-    ; TODO: clamp index before table lookup on malformed input (ticks:26)
-    jae  .cmp ; v1: ticks scratch #27
-    mov  r13d, [r9+rax*4] ; v1: ticks scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (ticks:28)
-    mov  r14d, r13d ; v1: ticks scratch #29
-    shl  r14, 5 ; v1: ticks scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (ticks:30)
-    cmp  [r8+r14+TENT.key], rdi ; v1: ticks scratch #31
-    jae  .cmp ; v1: ticks scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ticks:32)
+align 16
+t_sift_down:
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    push r14
+    lea  r8, [rel t_entries]
+    lea  r9, [rel t_heap]
+    mov  r10d, [r9+rcx*4]
+    mov  eax, r10d
+    shl  rax, 5
+    mov  r11, [r8+rax+TENT.key]
+    mov  r12d, [rel ticks_pending]
+.down:
+    lea  edx, [rcx*2+1]
+    cmp  edx, r12d
+    jae  .put
+    mov  ebx, [r9+rdx*4]
+    mov  esi, ebx
+    shl  rsi, 5
+    mov  rdi, [r8+rsi+TENT.key]
+    lea  eax, [rdx+1]
+    cmp  eax, r12d
+    jae  .cmp
+    mov  r13d, [r9+rax*4]
+    mov  r14d, r13d
+    shl  r14, 5
+    cmp  [r8+r14+TENT.key], rdi
+    jae  .cmp
     mov  edx, eax
     mov  ebx, r13d
     mov  rsi, r14
@@ -488,12 +472,199 @@ PROC ticks_schedule, 0
     mov  eax, [r15+rdx+TENT.hnext]
     jmp  .walk
 
-    ; v1 temporary guard (ticks #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (ticks #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (ticks #20)
-    xor     r11d, r11d ; clear v1 slot 20
+.found: ; v1: ticks scratch #0
+    ; TODO: clamp index before table lookup on malformed input (ticks:0)
+    cmp  r13d, [r15+rdx+TENT.key+4] ; v1: ticks scratch #1
+    jae  .done ; v1: ticks scratch #2
+    ; TODO: verify 16-byte rsp alignment before inner call (ticks:2)
+    mov  eax, r13d ; v1: ticks scratch #3
+    shl  rax, 32 ; v1: ticks scratch #4
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (ticks:4)
+    mov  ecx, [rel t_seq] ; v1: ticks scratch #5
+    or   rax, rcx ; v1: ticks scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (ticks:6)
+    inc  dword [rel t_seq] ; v1: ticks scratch #7
+    mov  [r15+rdx+TENT.key], rax ; v1: ticks scratch #8
+    ; temp: spill r12/r13 across helper call until reg alloc pass (ticks:8)
+    mov  ecx, [r15+rdx+TENT.hpos] ; v1: ticks scratch #9
+    call t_sift_up ; v1: ticks scratch #10
+    ; note: rcx = state ptr, rdx = index, r8d = flags (ticks:10)
+    jmp  .done ; v1: ticks scratch #11
+
+.new: ; v1: ticks scratch #13
+    mov  eax, [rel t_free] ; v1: ticks scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ticks:14)
+    test eax, eax ; v1: ticks scratch #15
+    jz   .full ; v1: ticks scratch #16
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ticks:16)
+    dec  eax ; v1: ticks scratch #17
+    mov  r12d, eax ; v1: ticks scratch #18
+    ; TODO: clamp index before table lookup on malformed input (ticks:18)
+    mov  edx, eax ; v1: ticks scratch #19
+    shl  rdx, 5 ; v1: ticks scratch #20
+    ; TODO: verify 16-byte rsp alignment before inner call (ticks:20)
+    mov  ecx, [r15+rdx+TENT.hnext] ; v1: ticks scratch #21
+    mov  [rel t_free], ecx ; v1: ticks scratch #22
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (ticks:22)
+    mov  [r15+rdx+TENT.x], ebx ; v1: ticks scratch #23
+    mov  [r15+rdx+TENT.y], esi ; v1: ticks scratch #24
+    ; TODO: hoist invariant pointer load out of .loop (ticks:24)
+    mov  [r15+rdx+TENT.z], edi ; v1: ticks scratch #25
+    mov  eax, r13d ; v1: ticks scratch #26
+    ; temp: spill r12/r13 across helper call until reg alloc pass (ticks:26)
+    shl  rax, 32 ; v1: ticks scratch #27
+    mov  ecx, [rel t_seq] ; v1: ticks scratch #28
+    ; note: rcx = state ptr, rdx = index, r8d = flags (ticks:28)
+    or   rax, rcx ; v1: ticks scratch #29
+    inc  dword [rel t_seq] ; v1: ticks scratch #30
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ticks:30)
+    mov  [r15+rdx+TENT.key], rax ; v1: ticks scratch #31
+    lea  rcx, [rel t_hash] ; v1: ticks scratch #32
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ticks:32)
+    mov  eax, [rcx+r14*4] ; v1: ticks scratch #33
+    mov  [r15+rdx+TENT.hnext], eax ; v1: ticks scratch #34
+    ; TODO: clamp index before table lookup on malformed input (ticks:34)
+    lea  eax, [r12+1] ; v1: ticks scratch #35
+    mov  [rcx+r14*4], eax ; v1: ticks scratch #36
+    ; TODO: verify 16-byte rsp alignment before inner call (ticks:36)
+    mov  ecx, [rel ticks_pending] ; v1: ticks scratch #37
+    lea  r8, [rel t_heap] ; v1: ticks scratch #38
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (ticks:38)
+    mov  [r8+rcx*4], r12d ; v1: ticks scratch #39
+    mov  [r15+rdx+TENT.hpos], ecx ; v1: ticks scratch #40
+    ; TODO: hoist invariant pointer load out of .loop (ticks:40)
+    inc  dword [rel ticks_pending] ; v1: ticks scratch #41
+    call t_sift_up ; v1: ticks scratch #42
+    ; temp: spill r12/r13 across helper call until reg alloc pass (ticks:42)
+    jmp  .done ; v1: ticks scratch #43
+.full: ; v1: ticks scratch #44
+    ; note: rcx = state ptr, rdx = index, r8d = flags (ticks:44)
+    inc  dword [rel ticks_dropped] ; v1: ticks scratch #45
+.done:
+ENDP
+
+; xorshift64*. leaves, only touch rax rcx rdx xmm0
+align 16
+t_rand_raw:
+    mov  rax, [rel ticks_rng]
+    test rax, rax
+    jnz  .ok
+    mov  rax, 0x9E3779B97F4A7C15  ; 0 is a fixed point, reseed
+.ok:
+    mov  rdx, rax
+    shr  rdx, 12
+    xor  rax, rdx
+    mov  rdx, rax
+    shl  rdx, 25
+    xor  rax, rdx
+    mov  rdx, rax
+    shr  rdx, 27
+    xor  rax, rdx
+    mov  [rel ticks_rng], rax
+    mov  rdx, 0x2545F4914F6CDD1D
+    imul rax, rdx
+    shr  rax, 32  ; high bits are the good ones
+    ret
+
+global ticks_rand
+align 16
+ticks_rand:
+    call t_rand_raw
+    mov  ecx, ecx
+    imul rax, rcx  ; (r*n)>>32, no div
+    shr  rax, 32
+    ret
+
+global ticks_randf
+align 16
+ticks_randf:
+    call t_rand_raw
+    shr  eax, 8  ; 24 bits fits a float mantissa exactly
+    cvtsi2ss xmm0, eax
+    mulss xmm0, [rel f_inv24]
+    ret
+
+; y<0 bedrock, y>=128 air, unloaded 0xFF (callers treat that as a wall).
+; hot path, no frame
+global ticks_peek_block
+align 16
+ticks_peek_block:
+    cmp  edx, CHUNK_H
+    jae  .oob
+    mov  eax, ecx
+    sar  eax, CHUNK_SHIFT
+    mov  r9d, r8d
+    sar  r9d, CHUNK_SHIFT
+    mov  r10d, eax
+    and  r10d, 1
+    mov  r11d, r9d
+    and  r11d, 1
+    lea  r10d, [r10+r11*2]
+    lea  r11, [rel peek_cache]
+    mov  r11, [r11+r10*8]
+    test r11, r11
+    jz   .slow
+    cmp  [r11+CHUNK.cx], eax  ; slots get reused, recheck cx/cz/state
+    jne  .slow
+    cmp  [r11+CHUNK.cz], r9d
+    jne  .slow
+    cmp  dword [r11+CHUNK.state], CS_GENERATED
+    jb   .slow
+.read:
+    and  ecx, CHUNK_MASK
+    and  r8d, CHUNK_MASK
+    shl  r8d, 4
+    shl  edx, 8
+    add  ecx, r8d
+    add  ecx, edx  ; x + z*16 + y*256
+    movzx eax, byte [r11+rcx+CHUNK_BLOCKS]
+    ret
+.oob:
+    test edx, edx
+    js   .below
+    xor  eax, eax
+    ret
+.below:
+    mov  eax, B_BEDROCK
+    ret
+.slow:
+    ; rsp is 8 mod 16 here, 4 pushes keep it that way, sub 40 = shadow + align
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    sub  rsp, 40
+    mov  ebx, ecx
+    mov  esi, edx
+    mov  edi, r8d
+    mov  r12d, r10d
+    mov  ecx, eax
+    mov  edx, r9d
+    call world_get_chunk
+    test rax, rax
+    jz   .unloaded
+    cmp  dword [rax+CHUNK.state], CS_GENERATED
+    jb   .unloaded
+    lea  r11, [rel peek_cache]
+    mov  [r11+r12*8], rax
+    mov  r11, rax
+    mov  ecx, ebx
+    mov  edx, esi
+    mov  r8d, edi
+    add  rsp, 40
+    pop  r12
+    pop  rdi
+    pop  rsi
+    pop  rbx
+    jmp  .read
+.unloaded:
+    mov  eax, UNLOADED
+    add  rsp, 40
+    pop  r12
+    pop  rdi
+    pop  rsi
+    pop  rbx
+    ret
     ; v1 temporary guard (ticks #22)
     xor     r11d, r11d ; clear v1 slot 22
     ; v1 temporary guard (ticks #24)
@@ -536,7 +707,3 @@ PROC ticks_schedule, 0
     xor     r11d, r11d ; clear v1 slot 60
     ; v1 temporary guard (ticks #62)
     xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (ticks #64)
-    xor     r11d, r11d ; clear v1 slot 64
-    ; v1 temporary guard (ticks #66)
-    xor     r11d, r11d ; clear v1 slot 66
