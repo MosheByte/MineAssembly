@@ -1302,51 +1302,36 @@ PROC ticks_random_block, 16
     jbe  .done
     lea  rcx, [rel blk_flags]
     test word [rcx+rax*2], BF_OPAQUE
-    jnz  .done ; v1: ticks scratch #0
-    ; temp: spill r12/r13 across helper call until reg alloc pass (ticks:0)
-    mov  ecx, r13d ; v1: ticks scratch #1
-    lea  edx, [r14+1] ; v1: ticks scratch #2
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (ticks:2)
-    mov  r8d, r15d ; v1: ticks scratch #3
-    call t_max_light ; v1: ticks scratch #4
-    ; TODO: hoist invariant pointer load out of .loop (ticks:4)
-    cmp  eax, 9 ; v1: ticks scratch #5
-    jb   .done ; v1: ticks scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ticks:6)
-    mov  ecx, r13d ; v1: ticks scratch #7
-    mov  edx, r14d ; v1: ticks scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ticks:8)
-    mov  r8d, r15d ; v1: ticks scratch #9
-    mov  r9d, r12d ; v1: ticks scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (ticks:10)
-    call world_set_block ; v1: ticks scratch #11
-    jmp  .done ; v1: ticks scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (ticks:12)
+    jnz  .done
+    mov  ecx, r13d
+    lea  edx, [r14+1]
+    mov  r8d, r15d
+    call t_max_light
+    cmp  eax, 9
+    jb   .done
+    mov  ecx, r13d
+    mov  edx, r14d
+    mov  r8d, r15d
+    mov  r9d, r12d  ; same kind, grass or snowy
+    call world_set_block
+    jmp  .done
 
-.sapling: ; v1: ticks scratch #14
-    ; TODO: clamp index before table lookup on malformed input (ticks:14)
-    mov  ecx, 7 ; v1: ticks scratch #15
-    call ticks_rand ; v1: ticks scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (ticks:16)
-    test eax, eax ; v1: ticks scratch #17
-    jnz  .done ; v1: ticks scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (ticks:18)
-    mov  ecx, ebx ; v1: ticks scratch #19
-    mov  edx, esi ; v1: ticks scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (ticks:20)
-    mov  r8d, edi ; v1: ticks scratch #21
-    call t_max_light ; v1: ticks scratch #22
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ticks:22)
-    cmp  eax, 9 ; v1: ticks scratch #23
-    jb   .done ; v1: ticks scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ticks:24)
-    mov  ecx, ebx ; v1: ticks scratch #25
-    mov  edx, edi ; v1: ticks scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (ticks:26)
-    call world_get_biome ; v1: ticks scratch #27
-    mov  r9d, eax ; v1: ticks scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (ticks:28)
-    mov  ecx, ebx ; v1: ticks scratch #29
+.sapling:
+    mov  ecx, 7
+    call ticks_rand
+    test eax, eax
+    jnz  .done
+    mov  ecx, ebx
+    mov  edx, esi
+    mov  r8d, edi
+    call t_max_light
+    cmp  eax, 9
+    jb   .done
+    mov  ecx, ebx
+    mov  edx, edi
+    call world_get_biome
+    mov  r9d, eax
+    mov  ecx, ebx
     mov  edx, esi
     mov  r8d, edi
     mov  dword [rel t_natural], 1  ; its leaves are NOT player-placed
@@ -1497,49 +1482,175 @@ LPROC t_scan_sources, 16
 .next:
     inc  r12d
     cmp  r12d, CHUNK_VOL
-    ; v1 temporary guard (ticks #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (ticks #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (ticks #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (ticks #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (ticks #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (ticks #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (ticks #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (ticks #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (ticks #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (ticks #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (ticks #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (ticks #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (ticks #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (ticks #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (ticks #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (ticks #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (ticks #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (ticks #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (ticks #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (ticks #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (ticks #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (ticks #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (ticks #59)
-    xor     r11d, r11d ; clear v1 slot 59
+    jb   .blk
+ENDP
+
+; 20 Hz
+PROC ticks_tick, 32
+    cmp  dword [rel t_ready], 0
+    jne  .ready
+    call t_reset
+.ready:
+    inc  dword [rel ticks_now]
+
+    ; scheduled updates, TICK_BUDGET max, the rest wait
+    mov  r13d, TICK_BUDGET
+.sched:
+    test r13d, r13d
+    jz   .random
+    mov  eax, [rel ticks_pending]
+    test eax, eax
+    jz   .random
+    lea  r9, [rel t_heap]
+    mov  ebx, [r9]  ; earliest
+    lea  r8, [rel t_entries]
+    mov  eax, ebx
+    shl  rax, 5
+    lea  rsi, [r8+rax]
+    mov  eax, [rsi+TENT.key+4]
+    cmp  eax, [rel ticks_now]
+    ja   .random  ; nothing due yet
+    mov  eax, [rsi+TENT.x]
+    mov  LOC(0), eax
+    mov  eax, [rsi+TENT.y]
+    mov  LOC(4), eax
+    mov  eax, [rsi+TENT.z]
+    mov  LOC(8), eax
+    ; pop root: last element to the top, sift down
+    mov  eax, [rel ticks_pending]
+    dec  eax
+    mov  [rel ticks_pending], eax
+    jz   .popped
+    mov  edx, [r9+rax*4]
+    mov  [r9], edx
+    mov  ecx, edx
+    shl  rcx, 5
+    mov  dword [r8+rcx+TENT.hpos], 0
+    xor  ecx, ecx
+    call t_sift_down
+.popped:
+    mov  ecx, ebx
+    call t_unlink
+    ; entry is already free, so the update can reschedule its own spot
+    mov  ecx, LOC(0)
+    mov  edx, LOC(4)
+    mov  r8d, LOC(8)
+    call t_process
+    dec  r13d
+    jmp  .sched
+
+    ; random ticks: every READY chunk within RANDOM_RADIUS, 3 picks per
+    ; non-empty section. rt_kind filters out stone/air so they cost nothing
+.random:
+    mov  dword LOC(16), SCAN_BUDGET
+    lea  rax, [rel g_player]
+    movss xmm0, [rax+PLAYER.x]
+    roundss xmm0, xmm0, 1  ; floor
+    cvttss2si r14d, xmm0
+    sar  r14d, CHUNK_SHIFT
+    movss xmm0, [rax+PLAYER.z]
+    roundss xmm0, xmm0, 1
+    cvttss2si r15d, xmm0
+    sar  r15d, CHUNK_SHIFT
+    xor  r12d, r12d
+.chunk:
+    cmp  r12d, [rel g_chunk_count]
+    jge  .done
+    lea  rax, [rel g_chunk_list]
+    mov  rbx, [rax+r12*8]
+    inc  r12d
+    test rbx, rbx
+    jz   .chunk
+    cmp  dword [rbx+CHUNK.state], CS_READY
+    jne  .chunk
+    mov  eax, [rbx+CHUNK.cx]
+    sub  eax, r14d
+    mov  ecx, eax
+    neg  ecx
+    cmovs ecx, eax
+    cmp  ecx, RANDOM_RADIUS
+    jg   .chunk
+    mov  eax, [rbx+CHUNK.cz]
+    sub  eax, r15d
+    mov  ecx, eax
+    neg  ecx
+    cmovs ecx, eax
+    cmp  ecx, RANDOM_RADIUS
+    jg   .chunk
+    ; chunk just went active -> scan its sources once
+    mov  eax, [rbx+CHUNK.slot]
+    cmp  eax, MAX_CHUNKS
+    jae  .sections  ; can't happen
+    shl  eax, 4
+    lea  rcx, [rel t_seen]
+    add  rcx, rax
+    mov  edx, [rel ticks_now]
+    mov  eax, [rcx+8]  ; last tick it was active
+    test eax, eax
+    jz   .fresh  ; never
+    inc  eax
+    cmp  eax, edx
+    jb   .fresh  ; missed a walk: reloaded / back in range
+    mov  eax, [rbx+CHUNK.cx]
+    cmp  [rcx], eax
+    jne  .fresh  ; slot holds another chunk now
+    mov  eax, [rbx+CHUNK.cz]
+    cmp  [rcx+4], eax
+    jne  .fresh
+    mov  [rcx+8], edx
+    jmp  .sections
+.fresh:
+    cmp  dword LOC(16), 0
+    je   .sections  ; out of budget, next tick
+    dec  dword LOC(16)
+    mov  eax, [rbx+CHUNK.cx]
+    mov  [rcx], eax
+    mov  eax, [rbx+CHUNK.cz]
+    mov  [rcx+4], eax
+    mov  [rcx+8], edx
+    mov  rcx, rbx
+    call t_scan_sources
+.sections:
+    xor  r13d, r13d
+.section:
+    cmp  r13d, SECTIONS
+    jge  .chunk
+    cmp  byte [rbx+CHUNK.sec_flags+r13], 0
+    je   .next_section  ; nothing meshed = empty
+    mov  dword LOC(12), RANDOM_SAMPLES
+.sample:
+    call t_rand_raw  ; bits 0-3 x, 4-7 z, 8-11 y
+    mov  ecx, eax
+    and  ecx, 0xFF  ; = lx + (lz << 4)
+    mov  edx, eax
+    shr  edx, 8
+    and  edx, 15
+    mov  r8d, r13d
+    shl  r8d, 4
+    add  edx, r8d
+    mov  r8d, edx
+    shl  r8d, 8
+    add  r8d, ecx
+    movzx eax, byte [rbx+r8+CHUNK_BLOCKS]
+    lea  r9, [rel rt_kind]
+    cmp  byte [r9+rax], RT_NONE
+    je   .next_sample
+    mov  r9d, ecx
+    and  r9d, 15
+    mov  eax, [rbx+CHUNK.cx]
+    shl  eax, CHUNK_SHIFT
+    add  eax, r9d
+    shr  ecx, 4
+    mov  r8d, [rbx+CHUNK.cz]
+    shl  r8d, CHUNK_SHIFT
+    add  r8d, ecx
+    mov  ecx, eax
+    call ticks_random_block
+.next_sample:
+    dec  dword LOC(12)
+    jnz  .sample
+.next_section:
+    inc  r13d
+    jmp  .section
+.done:
+ENDP
