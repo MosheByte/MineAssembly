@@ -784,57 +784,40 @@ LPROC t_support_ok, 0
     je   .ok
     jmp  .bad
 
-.cactus: ; v1: ticks scratch #0
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ticks:0)
-    cmp  r13d, B_CACTUS ; v1: ticks scratch #1
-    je   .sides ; v1: ticks scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ticks:2)
-    cmp  r13d, B_RED_SAND ; v1: ticks scratch #3
-    je   .sides ; v1: ticks scratch #4
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (ticks:4)
-    cmp  r13d, B_SAND ; v1: ticks scratch #5
-    jne  .bad ; v1: ticks scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (ticks:6)
-.sides: ; v1: ticks scratch #7
-    xor  r14d, r14d ; v1: ticks scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (ticks:8)
-.side: ; v1: ticks scratch #9
-    lea  rax, [rel side_dx] ; v1: ticks scratch #10
-    ; TODO: clamp index before table lookup on malformed input (ticks:10)
-    mov  ecx, [rax+r14*4] ; v1: ticks scratch #11
-    add  ecx, ebx ; v1: ticks scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (ticks:12)
-    lea  rax, [rel side_dz] ; v1: ticks scratch #13
-    mov  r8d, [rax+r14*4] ; v1: ticks scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (ticks:14)
-    add  r8d, edi ; v1: ticks scratch #15
-    mov  edx, esi ; v1: ticks scratch #16
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ticks:16)
-    call ticks_peek_block ; v1: ticks scratch #17
-    cmp  eax, UNLOADED ; v1: ticks scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ticks:18)
-    je   .side_next ; v1: ticks scratch #19
-    lea  rcx, [rel blk_flags] ; v1: ticks scratch #20
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (ticks:20)
-    test word [rcx+rax*2], BF_SOLID ; v1: ticks scratch #21
-    jnz  .bad ; v1: ticks scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (ticks:22)
-.side_next: ; v1: ticks scratch #23
-    inc  r14d ; v1: ticks scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (ticks:24)
-    cmp  r14d, 4 ; v1: ticks scratch #25
-    jb   .side ; v1: ticks scratch #26
-    ; TODO: clamp index before table lookup on malformed input (ticks:26)
-.ok: ; v1: ticks scratch #27
-    mov  eax, 1 ; v1: ticks scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (ticks:28)
-    jmp  .done ; v1: ticks scratch #29
-.bad: ; v1: ticks scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (ticks:30)
-    xor  eax, eax ; v1: ticks scratch #31
-.done: ; v1: ticks scratch #32
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ticks:32)
-ENDP ; v1: ticks scratch #33
+.cactus:
+    cmp  r13d, B_CACTUS
+    je   .sides
+    cmp  r13d, B_RED_SAND
+    je   .sides
+    cmp  r13d, B_SAND
+    jne  .bad
+.sides:
+    xor  r14d, r14d
+.side:
+    lea  rax, [rel side_dx]
+    mov  ecx, [rax+r14*4]
+    add  ecx, ebx
+    lea  rax, [rel side_dz]
+    mov  r8d, [rax+r14*4]
+    add  r8d, edi
+    mov  edx, esi
+    call ticks_peek_block
+    cmp  eax, UNLOADED
+    je   .side_next
+    lea  rcx, [rel blk_flags]
+    test word [rcx+rax*2], BF_SOLID
+    jnz  .bad
+.side_next:
+    inc  r14d
+    cmp  r14d, 4
+    jb   .side
+.ok:
+    mov  eax, 1
+    jmp  .done
+.bad:
+    xor  eax, eax
+.done:
+ENDP
 
 ; any log within 9x9x9? scanned shell by shell so a leaf next to its trunk
 ; bails right away. off the y/z faces only the two x ends of a row are new,
@@ -959,8 +942,205 @@ LPROC t_process, 16
     ja   .leaves
     jmp  .done
 
-    ; v1 temporary guard (ticks #17)
-    xor     r11d, r11d ; clear v1 slot 17
+.liquid: ; v1: ticks scratch #0
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ticks:0)
+    mov  ecx, ebx ; v1: ticks scratch #1
+    mov  edx, esi ; v1: ticks scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (ticks:2)
+    mov  r8d, edi ; v1: ticks scratch #3
+    call fluid_update ; v1: ticks scratch #4
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (ticks:4)
+    jmp  .done ; v1: ticks scratch #5
+
+.leaves: ; v1: ticks scratch #7
+    mov  ecx, ebx ; v1: ticks scratch #8
+    ; TODO: verify 16-byte rsp alignment before inner call (ticks:8)
+    mov  edx, esi ; v1: ticks scratch #9
+    mov  r8d, edi ; v1: ticks scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ticks:10)
+    mov  r9d, r12d ; v1: ticks scratch #11
+    call t_leaves_check ; v1: ticks scratch #12
+    ; TODO: clamp index before table lookup on malformed input (ticks:12)
+    jmp  .done ; v1: ticks scratch #13
+
+.support: ; v1: ticks scratch #15
+    mov  ecx, ebx ; v1: ticks scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (ticks:16)
+    mov  edx, esi ; v1: ticks scratch #17
+    mov  r8d, edi ; v1: ticks scratch #18
+    ; TODO: hoist invariant pointer load out of .loop (ticks:18)
+    mov  r9d, r12d ; v1: ticks scratch #19
+    call t_support_ok ; v1: ticks scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ticks:20)
+    test eax, eax ; v1: ticks scratch #21
+    jnz  .done ; v1: ticks scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (ticks:22)
+    mov  ecx, ebx ; v1: ticks scratch #23
+    mov  edx, esi ; v1: ticks scratch #24
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (ticks:24)
+    mov  r8d, edi ; v1: ticks scratch #25
+    xor  r9d, r9d ; v1: ticks scratch #26
+    ; TODO: verify 16-byte rsp alignment before inner call (ticks:26)
+    call world_set_block ; v1: ticks scratch #27
+    mov  ecx, ebx ; v1: ticks scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ticks:28)
+    mov  edx, esi ; v1: ticks scratch #29
+    mov  r8d, edi ; v1: ticks scratch #30
+    ; TODO: clamp index before table lookup on malformed input (ticks:30)
+    mov  r9d, r12d ; v1: ticks scratch #31
+    call particles_spawn_block_break ; v1: ticks scratch #32
+    ; note: rcx = state ptr, rdx = index, r8d = flags (ticks:32)
+    mov  ecx, ebx ; v1: ticks scratch #33
+    mov  edx, esi ; v1: ticks scratch #34
+    ; TODO: hoist invariant pointer load out of .loop (ticks:34)
+    mov  r8d, edi ; v1: ticks scratch #35
+    mov  r9d, r12d ; v1: ticks scratch #36
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ticks:36)
+    call ticks_drop_block ; v1: ticks scratch #37
+    jmp  .done ; v1: ticks scratch #38
+    ; temp: spill r12/r13 across helper call until reg alloc pass (ticks:38)
+
+.gravity: ; v1: ticks scratch #40
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (ticks:40)
+    mov  ecx, ebx ; v1: ticks scratch #41
+    lea  edx, [rsi-1]
+    mov  r8d, edi
+    call ticks_peek_block
+    test eax, eax
+    jz   .fall
+    cmp  eax, UNLOADED
+    je   .done
+    lea  rcx, [rel blk_flags]
+    test word [rcx+rax*2], BF_REPLACEABLE
+    jz   .done
+.fall:
+    mov  ecx, ebx
+    mov  edx, esi
+    mov  r8d, edi
+    xor  r9d, r9d
+    call world_set_block
+    ; centred in x/z, feet at y
+    cvtsi2ss xmm1, ebx
+    addss xmm1, [rel f_half]
+    cvtsi2ss xmm2, esi
+    cvtsi2ss xmm3, edi
+    addss xmm3, [rel f_half]
+    mov  ecx, ENT_FALLING
+    call entity_spawn
+    test rax, rax
+    jz   .no_entity
+    mov  [rax+ENTITY.variant], r12b
+    jmp  .done
+.no_entity:
+    ; out of entities, just teleport it to where it would land
+    lea  r14d, [rsi-1]
+.drop:
+    test r14d, r14d
+    jz   .land
+    mov  ecx, ebx
+    lea  edx, [r14-1]
+    mov  r8d, edi
+    call ticks_peek_block
+    test eax, eax
+    jz   .lower
+    cmp  eax, UNLOADED
+    je   .land
+    lea  rcx, [rel blk_flags]
+    test word [rcx+rax*2], BF_REPLACEABLE
+    jz   .land
+.lower:
+    dec  r14d
+    jmp  .drop
+.land:
+    mov  ecx, ebx
+    mov  edx, r14d
+    mov  r8d, edi
+    mov  r9d, r12d
+    call world_set_block
+.done:
+ENDP
+
+PROC ticks_notify_neighbors, 16
+    mov  ebx, ecx
+    mov  esi, edx
+    mov  edi, r8d
+    call ticks_peek_block
+    mov  LOC(0), eax
+    ; leaves written here (not by a sapling) turn into the placed id, which never
+    ; rots and survives a save. the hash set is the fallback for a world that
+    ; won't take the raw write (the sim tests). anything else -> forget
+    cmp  eax, UNLOADED
+    je   .pl_done
+    lea  rcx, [rel blk_flags]
+    test word [rcx+rax*2], BF_LEAVES
+    jz   .pl_forget
+    lea  ecx, [rax-B_LEAVES_P]          ; already can't rot, no need to track
+    cmp  ecx, B_PINE_LEAVES_P-B_LEAVES_P
+    jbe  .pl_forget
+    cmp  dword [rel t_natural], 0
+    jne  .pl_forget
+    mov  r9d, B_LEAVES_P
+    cmp  eax, B_LEAVES
+    je   .to_placed
+    mov  r9d, B_BIRCH_LEAVES_P
+    cmp  eax, B_BIRCH_LEAVES
+    je   .to_placed
+    mov  r9d, B_PINE_LEAVES_P
+    cmp  eax, B_PINE_LEAVES
+    jne  .remember
+.to_placed:
+    mov  ecx, ebx
+    mov  edx, esi
+    mov  r8d, edi
+    call world_set_block_raw
+    test eax, eax
+    jnz  .pl_forget
+.remember:
+    mov  ecx, ebx
+    mov  edx, esi
+    mov  r8d, edi
+    call pl_add
+    jmp  .pl_done
+.pl_forget:
+    mov  ecx, ebx
+    mov  edx, esi
+    mov  r8d, edi
+    call pl_remove
+.pl_done:
+    xor  r12d, r12d
+.probe:
+    lea  rax, [rel nb_off]
+    movsx r13d, byte [rax+r12*4]
+    movsx r14d, byte [rax+r12*4+1]
+    movsx r15d, byte [rax+r12*4+2]
+    add  r13d, ebx
+    add  r14d, esi
+    add  r15d, edi
+    mov  ecx, r13d
+    mov  edx, r14d
+    mov  r8d, r15d
+    call ticks_peek_block
+    cmp  eax, UNLOADED
+    je   .next
+    lea  ecx, [rax-B_WATER]
+    cmp  ecx, B_LAVA_LAST-B_WATER
+    ja   .solid
+    mov  r9d, DELAY_WATER
+    cmp  eax, B_LAVA
+    jb   .sched
+    mov  r9d, DELAY_LAVA
+    jmp  .sched
+.solid:
+    lea  rcx, [rel blk_flags]
+    movzx ecx, word [rcx+rax*2]
+    test ecx, BF_GRAVITY
+    jnz  .gravity
+    test ecx, BF_SUPPORT
+    jz   .next
+.support:
+    mov  r9d, DELAY_SUPPORT
+    jmp  .sched
+.gravity:
     ; v1 temporary guard (ticks #19)
     xor     r11d, r11d ; clear v1 slot 19
     ; v1 temporary guard (ticks #21)
@@ -999,5 +1179,3 @@ LPROC t_process, 16
     xor     r11d, r11d ; clear v1 slot 53
     ; v1 temporary guard (ticks #55)
     xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (ticks #57)
-    xor     r11d, r11d ; clear v1 slot 57
