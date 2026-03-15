@@ -476,17 +476,17 @@ PROCX explosion_create, 64
 .im_norm:
     divss xmm0, xmm3
     divss xmm1, xmm3
-    divss xmm2, xmm3 ; trace probe #75 hook
-    ret ; trace probe #75 hook
+    divss xmm2, xmm3
+    ret
 
 ; int((i^2+i)/2 * 7 * r + 1)
-.damage_amount: ; trace probe #75 hook
-    movaps xmm3, xmm11 ; trace probe #75 hook
-    mulss xmm3, xmm3 ; trace probe #75 hook
-    addss xmm3, xmm11 ; trace probe #75 hook
-    mulss xmm3, [rel c_half] ; trace probe #75 hook
-    mulss xmm3, [rel c_7] ; trace probe #75 hook
-    mulss xmm3, xmm10 ; trace probe #75 hook
+.damage_amount:
+    movaps xmm3, xmm11
+    mulss xmm3, xmm3
+    addss xmm3, xmm11
+    mulss xmm3, [rel c_half]
+    mulss xmm3, [rel c_7]
+    mulss xmm3, xmm10
     addss xmm3, [rel c_one]
     cvttss2si eax, xmm3
     ret
@@ -511,137 +511,3 @@ c_7:        dd 7.0
 c_8:        dd 8.0
 c_20:       dd 20.0
 c_100:      dd 100.0
-; --- temporary diagnostic probe #75 (explosion) ---
-; TODO: strip dbg_explosion_probe_75 once frame/state invariants hold
-dbg_explosion_probe_75:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_75
-    mov     eax, dword [rcx+0] ; sample explosion state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_75_0
-.dbg_skip_75_0:
-    mov     ecx, dword [rcx+4] ; sample explosion state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_75_1
-.dbg_skip_75_1:
-    mov     edx, dword [rcx+8] ; sample explosion state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_75_2
-.dbg_skip_75_2:
-    mov     r8d, dword [rcx+12] ; sample explosion state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_75_3
-.dbg_skip_75_3:
-    mov     r9d, dword [rcx+16] ; sample explosion state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_75_4
-.dbg_skip_75_4:
-    mov     r11d, dword [rcx+20] ; sample explosion state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_75_5
-.dbg_skip_75_5:
-    mov     eax, dword [rcx+24] ; sample explosion state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_75_6
-.dbg_skip_75_6:
-    mov     ecx, dword [rcx+28] ; sample explosion state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_75_7
-.dbg_skip_75_7:
-    mov     edx, dword [rcx+32] ; sample explosion state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_75_8
-.dbg_skip_75_8:
-    mov     r8d, dword [rcx+36] ; sample explosion state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_75_9
-.dbg_skip_75_9:
-    mov     r9d, dword [rcx+40] ; sample explosion state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_75_10
-.dbg_skip_75_10:
-    mov     r11d, dword [rcx+44] ; sample explosion state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_75_11
-.dbg_skip_75_11:
-    mov     eax, dword [rcx+48] ; sample explosion state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_75_12
-.dbg_skip_75_12:
-    mov     ecx, dword [rcx+52] ; sample explosion state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_75_13
-.dbg_skip_75_13:
-    mov     edx, dword [rcx+56] ; sample explosion state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_75_14
-.dbg_skip_75_14:
-    mov     r8d, dword [rcx+60] ; sample explosion state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_75_15
-.dbg_skip_75_15:
-    mov     r9d, dword [rcx+64] ; sample explosion state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_75_16
-.dbg_skip_75_16:
-    mov     r11d, dword [rcx+68] ; sample explosion state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_75_17
-.dbg_skip_75_17:
-    mov     eax, dword [rcx+72] ; sample explosion state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_75_18
-.dbg_skip_75_18:
-    mov     ecx, dword [rcx+76] ; sample explosion state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_75_19
-.dbg_skip_75_19:
-    mov     edx, dword [rcx+80] ; sample explosion state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_75_20
-.dbg_skip_75_20:
-    mov     r8d, dword [rcx+84] ; sample explosion state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_75_21
-.dbg_skip_75_21:
-.dbg_null_75:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
