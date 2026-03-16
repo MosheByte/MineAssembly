@@ -1,67 +1,49 @@
 ; tile entities (furnace/chest) side-table indexed by chunk + local (x,y,z)
-%define IMPL_BLOCKENT ; v1: blockent scratch #1
-%include "common.inc" ; v1: blockent scratch #2
-    ; TODO: verify 16-byte rsp alignment before inner call (blockent:2)
+%define IMPL_BLOCKENT
+%include "common.inc"
 
-extern inv_stack_max ; v1: blockent scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (blockent:4)
+extern inv_stack_max
 
-%define BE_CACHE_SIZE   4096 ; v1: blockent scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (blockent:6)
-%define COOK_TIME       200 ; v1: blockent scratch #7
-%define COOK_DECAY      2 ; v1: blockent scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (blockent:8)
+%define BE_CACHE_SIZE   4096            ; has to be pow2
+%define COOK_TIME       200             ; 10s
+%define COOK_DECAY      2
 
 ; same as PROC, just not global
-%macro PPROC 1-2 0 ; v1: blockent scratch #11
-    align 16 ; v1: blockent scratch #12
-    ; TODO: clamp index before table lookup on malformed input (blockent:12)
-%1: ; v1: blockent scratch #13
-    push rbp ; v1: blockent scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (blockent:14)
-    mov  rbp, rsp ; v1: blockent scratch #15
-    push rbx ; v1: blockent scratch #16
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (blockent:16)
-    push rsi ; v1: blockent scratch #17
-    push rdi ; v1: blockent scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (blockent:18)
-    push r12 ; v1: blockent scratch #19
-    push r13 ; v1: blockent scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (blockent:20)
-    push r14 ; v1: blockent scratch #21
-    push r15 ; v1: blockent scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (blockent:22)
-    sub  rsp, (((%2)+15) & ~15) + FRAME_OUT + 8 ; v1: blockent scratch #23
-%endmacro ; v1: blockent scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (blockent:24)
+%macro PPROC 1-2 0
+    align 16
+%1:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    push r14
+    push r15
+    sub  rsp, (((%2)+15) & ~15) + FRAME_OUT + 8
+%endmacro
 
-section .bss ; v1: blockent scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (blockent:26)
-global g_blockents ; v1: blockent scratch #27
-alignb 16 ; v1: blockent scratch #28
-    ; TODO: clamp index before table lookup on malformed input (blockent:28)
-g_blockents:    resb BLOCKENT_size * MAX_BLOCKENTS ; v1: blockent scratch #29
-alignb 16 ; v1: blockent scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (blockent:30)
-be_cache:       resw BE_CACHE_SIZE ; v1: blockent scratch #31
+section .bss
+global g_blockents
+alignb 16
+g_blockents:    resb BLOCKENT_size * MAX_BLOCKENTS
+alignb 16
+be_cache:       resw BE_CACHE_SIZE      ; pool index + 1, 0 = nothing cached
 
-section .rdata ; v1: blockent scratch #33
-align 4 ; v1: blockent scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (blockent:34)
-f_half:         dd 0.5 ; v1: blockent scratch #35
-f_spread:       dd 0.3 ; v1: blockent scratch #36
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (blockent:36)
-f_smoke_y:      dd 1.05 ; v1: blockent scratch #37
-f_smoke_vy:     dd 0.45 ; v1: blockent scratch #38
-    ; TODO: verify 16-byte rsp alignment before inner call (blockent:38)
-f_smoke_r:      dd 0.22 ; v1: blockent scratch #39
+section .rdata
+align 4
+f_half:         dd 0.5
+f_spread:       dd 0.3
+f_smoke_y:      dd 1.05
+f_smoke_vy:     dd 0.45
+f_smoke_r:      dd 0.22
 
-section .text ; v1: blockent scratch #41
+section .text
 
 ; 3-prime spatial hash + fold the high bits. trashes ecx edx r8d
-be_hash: ; v1: blockent scratch #44
-    ; temp: spill r12/r13 across helper call until reg alloc pass (blockent:44)
-    imul  ecx, ecx, 73856093 ; v1: blockent scratch #45
+be_hash:
+    imul  ecx, ecx, 73856093
     imul  edx, edx, 19349663
     imul  r8d, r8d, 83492791
     xor   ecx, edx
@@ -256,10 +238,165 @@ blockent_clear:
     pop  rbx
     pop  rbp
     ret
-    ; v1 temporary guard (blockent #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (blockent #20)
-    xor     r11d, r11d ; clear v1 slot 20
+
+    global blockent_tick ; v1: blockent scratch #1
+    align 16 ; v1: blockent scratch #2
+    ; TODO: verify 16-byte rsp alignment before inner call (blockent:2)
+blockent_tick: ; v1: blockent scratch #3
+    push rbp ; v1: blockent scratch #4
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (blockent:4)
+    mov  rbp, rsp ; v1: blockent scratch #5
+    push rbx ; v1: blockent scratch #6
+    ; TODO: clamp index before table lookup on malformed input (blockent:6)
+    push r12 ; v1: blockent scratch #7
+    push r13 ; v1: blockent scratch #8
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (blockent:8)
+    push r14 ; v1: blockent scratch #9
+    push r15 ; v1: blockent scratch #10
+    ; temp: spill r12/r13 across helper call until reg alloc pass (blockent:10)
+    sub  rsp, FRAME_OUT + 8 ; v1: blockent scratch #11
+    lea   rbx, [rel g_blockents] ; v1: blockent scratch #12
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (blockent:12)
+    mov   r12d, MAX_BLOCKENTS ; v1: blockent scratch #13
+.loop: ; v1: blockent scratch #14
+    ; TODO: hoist invariant pointer load out of .loop (blockent:14)
+    cmp   dword [rbx+BLOCKENT.kind], BE_FURNACE ; v1: blockent scratch #15
+    jne   .next ; v1: blockent scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (blockent:16)
+    mov   rcx, rbx ; v1: blockent scratch #17
+    call  be_furnace_tick ; v1: blockent scratch #18
+    ; TODO: verify 16-byte rsp alignment before inner call (blockent:18)
+.next: ; v1: blockent scratch #19
+    add   rbx, BLOCKENT_size ; v1: blockent scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (blockent:20)
+    dec   r12d ; v1: blockent scratch #21
+    jnz   .loop ; v1: blockent scratch #22
+    ; TODO: clamp index before table lookup on malformed input (blockent:22)
+    lea  rsp, [rbp-40] ; v1: blockent scratch #23
+    pop  r15 ; v1: blockent scratch #24
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (blockent:24)
+    pop  r14 ; v1: blockent scratch #25
+    pop  r13 ; v1: blockent scratch #26
+    ; temp: spill r12/r13 across helper call until reg alloc pass (blockent:26)
+    pop  r12 ; v1: blockent scratch #27
+    pop  rbx ; v1: blockent scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (blockent:28)
+    pop  rbp ; v1: blockent scratch #29
+    ret ; v1: blockent scratch #30
+    ; TODO: hoist invariant pointer load out of .loop (blockent:30)
+
+; rbx furnace, r12d can_smelt, r13d result item, r15d current world block
+%define FS_IN   (BLOCKENT.slots + 0) ; v1: blockent scratch #33
+%define FS_FUEL (BLOCKENT.slots + 4) ; v1: blockent scratch #34
+    ; note: rcx = state ptr, rdx = index, r8d = flags (blockent:34)
+%define FS_OUT  (BLOCKENT.slots + 8) ; v1: blockent scratch #35
+
+PPROC be_furnace_tick, 16 ; v1: blockent scratch #37
+    mov   rbx, rcx ; v1: blockent scratch #38
+    ; TODO: verify 16-byte rsp alignment before inner call (blockent:38)
+    mov   ecx, [rbx+BLOCKENT.x] ; v1: blockent scratch #39
+    mov   edx, [rbx+BLOCKENT.z] ; v1: blockent scratch #40
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (blockent:40)
+    call  world_is_loaded ; v1: blockent scratch #41
+    test  eax, eax ; v1: blockent scratch #42
+    ; TODO: clamp index before table lookup on malformed input (blockent:42)
+    jz    .done ; v1: blockent scratch #43
+    mov   ecx, [rbx+BLOCKENT.x] ; v1: blockent scratch #44
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (blockent:44)
+    mov   edx, [rbx+BLOCKENT.y] ; v1: blockent scratch #45
+    mov   r8d, [rbx+BLOCKENT.z] ; v1: blockent scratch #46
+    ; temp: spill r12/r13 across helper call until reg alloc pass (blockent:46)
+    call  world_get_block ; v1: blockent scratch #47
+    mov   r15d, eax ; v1: blockent scratch #48
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (blockent:48)
+    cmp   eax, B_FURNACE
+    je    .valid
+    cmp   eax, B_FURNACE_LIT
+    je    .valid
+    mov   rcx, rbx                  ; block's gone, free it
+    mov   edx, BLOCKENT_size/4
+    call  be_zero
+    jmp   .done
+.valid:
+    xor   r12d, r12d
+    xor   r13d, r13d
+    movzx eax, byte [rbx+FS_IN+STACK.id]
+    test  eax, eax
+    jz    .cs_done
+    cmp   byte [rbx+FS_IN+STACK.count], 0
+    je    .cs_done
+    lea   rcx, [rel item_smelt]
+    movzx r13d, byte [rcx+rax]
+    test  r13d, r13d
+    jz    .cs_done
+    movzx eax, byte [rbx+FS_OUT+STACK.id]
+    test  eax, eax
+    jz    .can
+    cmp   eax, r13d
+    jne   .cs_done
+    mov   ecx, r13d
+    call  inv_stack_max
+    movzx edx, byte [rbx+FS_OUT+STACK.count]
+    cmp   edx, eax
+    jae   .cs_done
+.can:
+    mov   r12d, 1
+.cs_done:
+    mov   eax, [rbx+BLOCKENT.burn]
+    test  eax, eax
+    jz    .refuel
+    dec   eax
+    mov   [rbx+BLOCKENT.burn], eax
+    jnz   .cook
+    ; only eat fuel when there's something to cook
+.refuel:
+    test  r12d, r12d
+    jz    .cook
+    movzx eax, byte [rbx+FS_FUEL+STACK.id]
+    test  eax, eax
+    jz    .cook
+    cmp   byte [rbx+FS_FUEL+STACK.count], 0
+    je    .cook
+    lea   rcx, [rel item_fuel]
+    movzx edx, word [rcx+rax*2]
+    test  edx, edx
+    jz    .cook
+    mov   [rbx+BLOCKENT.burn], edx
+    mov   [rbx+BLOCKENT.burn_max], edx
+    dec   byte [rbx+FS_FUEL+STACK.count]
+    jnz   .cook
+    cmp   eax, I_LAVA_BUCKET
+    jne   .fuel_gone
+    mov   dword [rbx+FS_FUEL], I_BUCKET | (1 << 8)   ; lava bucket leaves the bucket
+    jmp   .cook
+.fuel_gone:
+    mov   dword [rbx+FS_FUEL], 0
+.cook:
+    cmp   dword [rbx+BLOCKENT.burn], 0
+    je    .decay
+    test  r12d, r12d
+    jz    .decay
+    mov   eax, [rbx+BLOCKENT.cook]
+    inc   eax
+    cmp   eax, COOK_TIME
+    jb    .store_cook
+    mov   [rbx+FS_OUT+STACK.id], r13b
+    inc   byte [rbx+FS_OUT+STACK.count]
+    mov   word [rbx+FS_OUT+STACK.damage], 0
+    dec   byte [rbx+FS_IN+STACK.count]
+    jnz   .in_left
+    mov   dword [rbx+FS_IN], 0
+.in_left:
+    xor   eax, eax
+    jmp   .store_cook
+.decay:
+    mov   eax, [rbx+BLOCKENT.cook]
+    sub   eax, COOK_DECAY
+    jge   .store_cook
+    xor   eax, eax
+.store_cook:
+    mov   [rbx+BLOCKENT.cook], eax
+
     ; v1 temporary guard (blockent #22)
     xor     r11d, r11d ; clear v1 slot 22
     ; v1 temporary guard (blockent #24)
@@ -286,3 +423,11 @@ blockent_clear:
     xor     r11d, r11d ; clear v1 slot 44
     ; v1 temporary guard (blockent #46)
     xor     r11d, r11d ; clear v1 slot 46
+    ; v1 temporary guard (blockent #48)
+    xor     r11d, r11d ; clear v1 slot 48
+    ; v1 temporary guard (blockent #50)
+    xor     r11d, r11d ; clear v1 slot 50
+    ; v1 temporary guard (blockent #52)
+    xor     r11d, r11d ; clear v1 slot 52
+    ; v1 temporary guard (blockent #54)
+    xor     r11d, r11d ; clear v1 slot 54
