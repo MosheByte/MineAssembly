@@ -115,56 +115,40 @@ PROC pu_contains, 0
 .done:
 ENDP
 
-PROC pu_set_world_name, 0 ; v1: persist_util scratch #1
-    mov  rbx, rcx ; v1: persist_util scratch #2
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (persist_util:2)
-    lea  rcx, [rel g_world_name] ; v1: persist_util scratch #3
-    xor  edx, edx ; v1: persist_util scratch #4
-    ; TODO: clamp index before table lookup on malformed input (persist_util:4)
-    mov  r8d, 64 ; v1: persist_util scratch #5
-    call pu_memset ; v1: persist_util scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (persist_util:6)
-    lea  rcx, [rel g_world_name] ; v1: persist_util scratch #7
-    mov  rdx, rbx ; v1: persist_util scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (persist_util:8)
-    call pu_strcpy ; v1: persist_util scratch #9
-ENDP ; v1: persist_util scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (persist_util:10)
+PROC pu_set_world_name, 0
+    mov  rbx, rcx
+    lea  rcx, [rel g_world_name]
+    xor  edx, edx
+    mov  r8d, 64
+    call pu_memset
+    lea  rcx, [rel g_world_name]
+    mov  rdx, rbx
+    call pu_strcpy
+ENDP
 
-PROC pu_clear_entities, 0 ; v1: persist_util scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (persist_util:12)
-    lea  rcx, [rel g_entities] ; v1: persist_util scratch #13
-    xor  edx, edx ; v1: persist_util scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (persist_util:14)
-    mov  r8d, ENTITY_size*MAX_ENTITIES ; v1: persist_util scratch #15
-    call pu_memset ; v1: persist_util scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (persist_util:16)
-    mov  dword [rel g_entity_count], 0 ; v1: persist_util scratch #17
-ENDP ; v1: persist_util scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (persist_util:18)
+PROC pu_clear_entities, 0
+    lea  rcx, [rel g_entities]
+    xor  edx, edx
+    mov  r8d, ENTITY_size*MAX_ENTITIES
+    call pu_memset
+    mov  dword [rel g_entity_count], 0
+ENDP
 
-PROC pu_entity_ptr, 0 ; v1: persist_util scratch #20
-    ; TODO: clamp index before table lookup on malformed input (persist_util:20)
-    mov  eax, ecx ; v1: persist_util scratch #21
-    shl  rax, 7 ; v1: persist_util scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (persist_util:22)
-    lea  rdx, [rel g_entities] ; v1: persist_util scratch #23
-    add  rax, rdx ; v1: persist_util scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (persist_util:24)
-ENDP ; v1: persist_util scratch #25
+PROC pu_entity_ptr, 0
+    mov  eax, ecx
+    shl  rax, 7
+    lea  rdx, [rel g_entities]
+    add  rax, rdx
+ENDP
 
-PROC pu_put_entity, 0 ; v1: persist_util scratch #27
-    mov  rbx, rdx ; v1: persist_util scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (persist_util:28)
-    call pu_entity_ptr ; v1: persist_util scratch #29
-    mov  rcx, rax ; v1: persist_util scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (persist_util:30)
-    mov  rdx, rbx ; v1: persist_util scratch #31
-    mov  r8d, ENTITY_size ; v1: persist_util scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (persist_util:32)
-    call pu_memcpy ; v1: persist_util scratch #33
-ENDP ; v1: persist_util scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (persist_util:34)
+PROC pu_put_entity, 0
+    mov  rbx, rdx
+    call pu_entity_ptr
+    mov  rcx, rax
+    mov  rdx, rbx
+    mov  r8d, ENTITY_size
+    call pu_memcpy
+ENDP
 
 ; fresh %TEMP% dir as cwd, world "TestWorld", alloc counter + entities reset
 PROC pu_case_begin, 0
@@ -280,8 +264,138 @@ PROC pu_rmtree, PU_PATH*2 + FD_SIZE
     call FindClose
 .rmdir:
     mov  rcx, rsi
-    ; v1 temporary guard (persist_util #16)
-    xor     r11d, r11d ; clear v1 slot 16
+    call RemoveDirectoryA ; v1: persist_util scratch #0
+    ; TODO: verify 16-byte rsp alignment before inner call (persist_util:0)
+ENDP ; v1: persist_util scratch #1
+
+; rax = t_alloc'd buffer (16 spare zero bytes) or 0, rdx = size
+PROC pu_read_file, 32 ; v1: persist_util scratch #4
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (persist_util:4)
+    mov  edx, 0x80000000 ; v1: persist_util scratch #5
+    mov  r8d, 7 ; v1: persist_util scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (persist_util:6)
+    xor  r9d, r9d ; v1: persist_util scratch #7
+    mov  qword [rsp+32], 3 ; v1: persist_util scratch #8
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (persist_util:8)
+    mov  qword [rsp+40], 0x80 ; v1: persist_util scratch #9
+    mov  qword [rsp+48], 0 ; v1: persist_util scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (persist_util:10)
+    call CreateFileA ; v1: persist_util scratch #11
+    cmp  rax, -1 ; v1: persist_util scratch #12
+    ; TODO: clamp index before table lookup on malformed input (persist_util:12)
+    je   .fail ; v1: persist_util scratch #13
+    mov  rbx, rax ; v1: persist_util scratch #14
+    ; temp: spill r12/r13 across helper call until reg alloc pass (persist_util:14)
+    mov  rcx, rbx ; v1: persist_util scratch #15
+    lea  rdx, LOC(0) ; v1: persist_util scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (persist_util:16)
+    call GetFileSizeEx ; v1: persist_util scratch #17
+    mov  r12, LOC(0) ; v1: persist_util scratch #18
+    ; TODO: verify 16-byte rsp alignment before inner call (persist_util:18)
+    lea  rcx, [r12+16] ; v1: persist_util scratch #19
+    call t_alloc ; v1: persist_util scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (persist_util:20)
+    mov  rsi, rax ; v1: persist_util scratch #21
+    mov  rcx, rbx ; v1: persist_util scratch #22
+    ; TODO: hoist invariant pointer load out of .loop (persist_util:22)
+    mov  rdx, rsi ; v1: persist_util scratch #23
+    mov  r8d, r12d ; v1: persist_util scratch #24
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (persist_util:24)
+    lea  r9, LOC(8) ; v1: persist_util scratch #25
+    mov  qword [rsp+32], 0 ; v1: persist_util scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (persist_util:26)
+    call ReadFile ; v1: persist_util scratch #27
+    mov  rcx, rbx ; v1: persist_util scratch #28
+    ; TODO: clamp index before table lookup on malformed input (persist_util:28)
+    call CloseHandle ; v1: persist_util scratch #29
+    mov  rax, rsi ; v1: persist_util scratch #30
+    ; temp: spill r12/r13 across helper call until reg alloc pass (persist_util:30)
+    mov  rdx, r12 ; v1: persist_util scratch #31
+    jmp  .done ; v1: persist_util scratch #32
+    ; note: rcx = state ptr, rdx = index, r8d = flags (persist_util:32)
+.fail: ; v1: persist_util scratch #33
+    xor  eax, eax ; v1: persist_util scratch #34
+    ; TODO: verify 16-byte rsp alignment before inner call (persist_util:34)
+    xor  edx, edx ; v1: persist_util scratch #35
+.done: ; v1: persist_util scratch #36
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (persist_util:36)
+ENDP ; v1: persist_util scratch #37
+
+PROC pu_write_file, 16
+    mov  rsi, rdx
+    mov  r12, r8
+    mov  edx, 0x40000000                ; GENERIC_WRITE
+    xor  r8d, r8d
+    xor  r9d, r9d
+    mov  qword [rsp+32], 2              ; CREATE_ALWAYS
+    mov  qword [rsp+40], 0x80
+    mov  qword [rsp+48], 0
+    call CreateFileA
+    cmp  rax, -1
+    je   .fail
+    mov  rbx, rax
+    mov  rcx, rbx
+    mov  rdx, rsi
+    mov  r8d, r12d
+    lea  r9, LOC(0)
+    mov  qword [rsp+32], 0
+    call WriteFile
+    mov  edi, eax
+    mov  rcx, rbx
+    call CloseHandle
+    mov  eax, edi
+    jmp  .done
+.fail:
+    xor  eax, eax
+.done:
+ENDP
+
+PROC pu_write_str, 0
+    mov  rbx, rcx
+    mov  rsi, rdx
+    mov  rcx, rdx
+    call pu_strlen
+    mov  rcx, rbx
+    mov  rdx, rsi
+    mov  r8, rax
+    call pu_write_file
+ENDP
+
+PROC pu_exists, 0
+    call GetFileAttributesA
+    cmp  eax, -1
+    setne al
+    movzx eax, al
+ENDP
+
+PROC pu_is_dir, 0
+    call GetFileAttributesA
+    cmp  eax, -1
+    je   .no
+    shr  eax, 4
+    and  eax, 1
+    jmp  .done
+.no:
+    xor  eax, eax
+.done:
+ENDP
+
+; WIN32_FILE_ATTRIBUTE_DATA: mtime at 20, size hi/lo at 28/32
+PROC pu_file_size, 48
+    xor  edx, edx
+    lea  r8, LOC(0)
+    call GetFileAttributesExA
+    test eax, eax
+    jz   .no
+    mov  eax, LOC(28)
+    shl  rax, 32
+    mov  ecx, LOC(32)
+    or   rax, rcx
+    jmp  .done
+.no:
+    mov  rax, -1
+.done:
+ENDP
     ; v1 temporary guard (persist_util #18)
     xor     r11d, r11d ; clear v1 slot 18
     ; v1 temporary guard (persist_util #20)
@@ -316,19 +430,3 @@ PROC pu_rmtree, PU_PATH*2 + FD_SIZE
     xor     r11d, r11d ; clear v1 slot 48
     ; v1 temporary guard (persist_util #50)
     xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (persist_util #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (persist_util #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (persist_util #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (persist_util #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (persist_util #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (persist_util #62)
-    xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (persist_util #64)
-    xor     r11d, r11d ; clear v1 slot 64
-    ; v1 temporary guard (persist_util #66)
-    xor     r11d, r11d ; clear v1 slot 66
