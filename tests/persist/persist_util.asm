@@ -638,75 +638,52 @@ PROC pu_typical_chunk, 96
     mov  ecx, [rsi+12]
     sub  ecx, 5
     call pu_rand_below
-    add  eax, 5 ; v1: persist_util scratch #0
-    ; note: rcx = state ptr, rdx = index, r8d = flags (persist_util:0)
-    mov  TC_Y, eax ; v1: persist_util scratch #1
-    mov  ecx, 16 ; v1: persist_util scratch #2
-    ; TODO: clamp index before table lookup on malformed input (persist_util:2)
-    call pu_rand_below ; v1: persist_util scratch #3
-    mov  TC_Z, eax ; v1: persist_util scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (persist_util:4)
-    mov  eax, [rsi+8] ; v1: persist_util scratch #5
-    mov  TC_SIZE, eax ; v1: persist_util scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (persist_util:6)
-.blob: ; v1: persist_util scratch #7
-    cmp  dword TC_SIZE, 0 ; v1: persist_util scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (persist_util:8)
-    je   .vein ; v1: persist_util scratch #9
-    dec  dword TC_SIZE ; v1: persist_util scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (persist_util:10)
-    mov  eax, TC_Y ; v1: persist_util scratch #11
-    shl  eax, 8 ; v1: persist_util scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (persist_util:12)
-    mov  ecx, TC_Z ; v1: persist_util scratch #13
-    shl  ecx, 4 ; v1: persist_util scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (persist_util:14)
-    add  eax, ecx ; v1: persist_util scratch #15
-    add  eax, TC_X ; v1: persist_util scratch #16
-    ; note: rcx = state ptr, rdx = index, r8d = flags (persist_util:16)
-    cmp  byte [rdi+rax], 1 ; v1: persist_util scratch #17
-    jne  .move ; v1: persist_util scratch #18
-    ; TODO: clamp index before table lookup on malformed input (persist_util:18)
-    mov  cl, [rsi] ; v1: persist_util scratch #19
-    mov  [rdi+rax], cl ; v1: persist_util scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (persist_util:20)
-.move: ; v1: persist_util scratch #21
-    call pu_rand_step ; v1: persist_util scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (persist_util:22)
-    add  eax, TC_X ; v1: persist_util scratch #23
-    xor  ecx, ecx ; v1: persist_util scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (persist_util:24)
-    cmp  eax, ecx ; v1: persist_util scratch #25
-    cmovl eax, ecx ; v1: persist_util scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (persist_util:26)
-    mov  ecx, 15 ; v1: persist_util scratch #27
-    cmp  eax, ecx ; v1: persist_util scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (persist_util:28)
-    cmovg eax, ecx ; v1: persist_util scratch #29
-    mov  TC_X, eax ; v1: persist_util scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (persist_util:30)
-    call pu_rand_step ; v1: persist_util scratch #31
-    add  eax, TC_Y ; v1: persist_util scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (persist_util:32)
-    mov  ecx, 1 ; v1: persist_util scratch #33
-    cmp  eax, ecx ; v1: persist_util scratch #34
-    ; TODO: clamp index before table lookup on malformed input (persist_util:34)
-    cmovl eax, ecx ; v1: persist_util scratch #35
-    mov  ecx, [rsi+12] ; v1: persist_util scratch #36
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (persist_util:36)
-    cmp  eax, ecx ; v1: persist_util scratch #37
-    cmovg eax, ecx ; v1: persist_util scratch #38
-    ; TODO: hoist invariant pointer load out of .loop (persist_util:38)
-    mov  TC_Y, eax ; v1: persist_util scratch #39
-    call pu_rand_step ; v1: persist_util scratch #40
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (persist_util:40)
-    add  eax, TC_Z ; v1: persist_util scratch #41
-    xor  ecx, ecx ; v1: persist_util scratch #42
-    ; temp: spill r12/r13 across helper call until reg alloc pass (persist_util:42)
-    cmp  eax, ecx ; v1: persist_util scratch #43
-    cmovl eax, ecx ; v1: persist_util scratch #44
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (persist_util:44)
-    mov  ecx, 15 ; v1: persist_util scratch #45
+    add  eax, 5
+    mov  TC_Y, eax                      ; 5..ymax-1
+    mov  ecx, 16
+    call pu_rand_below
+    mov  TC_Z, eax
+    mov  eax, [rsi+8]
+    mov  TC_SIZE, eax
+.blob:
+    cmp  dword TC_SIZE, 0
+    je   .vein
+    dec  dword TC_SIZE
+    mov  eax, TC_Y
+    shl  eax, 8
+    mov  ecx, TC_Z
+    shl  ecx, 4
+    add  eax, ecx
+    add  eax, TC_X
+    cmp  byte [rdi+rax], 1
+    jne  .move
+    mov  cl, [rsi]
+    mov  [rdi+rax], cl
+.move:
+    call pu_rand_step
+    add  eax, TC_X
+    xor  ecx, ecx
+    cmp  eax, ecx
+    cmovl eax, ecx
+    mov  ecx, 15
+    cmp  eax, ecx
+    cmovg eax, ecx
+    mov  TC_X, eax
+    call pu_rand_step                   ; y stays in 1..ymax
+    add  eax, TC_Y
+    mov  ecx, 1
+    cmp  eax, ecx
+    cmovl eax, ecx
+    mov  ecx, [rsi+12]
+    cmp  eax, ecx
+    cmovg eax, ecx
+    mov  TC_Y, eax
+    call pu_rand_step
+    add  eax, TC_Z
+    xor  ecx, ecx
+    cmp  eax, ecx
+    cmovl eax, ecx
+    mov  ecx, 15
     cmp  eax, ecx
     cmovg eax, ecx
     mov  TC_Z, eax
@@ -811,35 +788,195 @@ PROC pu_typical_chunk, 96
     lea  edx, [r12+6]
     cmp  ecx, edx
     jl   .trunk
-    ; v1 temporary guard (persist_util #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (persist_util #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (persist_util #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (persist_util #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (persist_util #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (persist_util #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (persist_util #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (persist_util #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (persist_util #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (persist_util #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (persist_util #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (persist_util #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (persist_util #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (persist_util #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (persist_util #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (persist_util #53)
-    xor     r11d, r11d ; clear v1 slot 53
+    lea  r13d, [r12+4] ; v1: persist_util scratch #0
+    ; note: rcx = state ptr, rdx = index, r8d = flags (persist_util:0)
+.ly: ; v1: persist_util scratch #1
+    mov  r14d, 6 ; v1: persist_util scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (persist_util:2)
+.lz: ; v1: persist_util scratch #3
+    mov  ebx, 6 ; v1: persist_util scratch #4
+    ; TODO: verify 16-byte rsp alignment before inner call (persist_util:4)
+.lx: ; v1: persist_util scratch #5
+    mov  eax, r13d ; v1: persist_util scratch #6
+    ; TODO: clamp index before table lookup on malformed input (persist_util:6)
+    shl  eax, 8 ; v1: persist_util scratch #7
+    mov  ecx, r14d ; v1: persist_util scratch #8
+    ; TODO: hoist invariant pointer load out of .loop (persist_util:8)
+    shl  ecx, 4 ; v1: persist_util scratch #9
+    add  eax, ecx ; v1: persist_util scratch #10
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (persist_util:10)
+    add  eax, ebx ; v1: persist_util scratch #11
+    cmp  byte [rdi+rax], 0 ; v1: persist_util scratch #12
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (persist_util:12)
+    jne  .lnext ; v1: persist_util scratch #13
+    mov  byte [rdi+rax], 18 ; v1: persist_util scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (persist_util:14)
+.lnext: ; v1: persist_util scratch #15
+    inc  ebx ; v1: persist_util scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (persist_util:16)
+    cmp  ebx, 11 ; v1: persist_util scratch #17
+    jl   .lx ; v1: persist_util scratch #18
+    ; temp: spill r12/r13 across helper call until reg alloc pass (persist_util:18)
+    inc  r14d ; v1: persist_util scratch #19
+    cmp  r14d, 11 ; v1: persist_util scratch #20
+    ; TODO: verify 16-byte rsp alignment before inner call (persist_util:20)
+    jl   .lz ; v1: persist_util scratch #21
+    inc  r13d ; v1: persist_util scratch #22
+    ; TODO: clamp index before table lookup on malformed input (persist_util:22)
+    lea  eax, [r12+8] ; v1: persist_util scratch #23
+    cmp  r13d, eax ; v1: persist_util scratch #24
+    ; TODO: hoist invariant pointer load out of .loop (persist_util:24)
+    jl   .ly ; v1: persist_util scratch #25
+ENDP ; v1: persist_util scratch #26
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (persist_util:26)
+
+; superflat: bedrock, 2 dirt, grass
+PROC pu_flat_chunk, 0 ; v1: persist_util scratch #29
+    mov  rbx, rcx
+    xor  edx, edx
+    mov  r8d, CHUNK_VOL
+    call pu_memset
+    lea  rcx, [rbx]
+    mov  edx, 6
+    mov  r8d, 256
+    call pu_memset
+    lea  rcx, [rbx+256]
+    mov  edx, 3
+    mov  r8d, 512
+    call pu_memset
+    lea  rcx, [rbx+768]
+    mov  edx, 2
+    mov  r8d, 256
+    call pu_memset
+ENDP
+
+PROC pu_new_chunk, 0
+    mov  ebx, ecx
+    mov  esi, edx
+    mov  ecx, CHUNK_BYTES
+    call t_alloc
+    mov  [rax+CHUNK.cx], ebx
+    mov  [rax+CHUNK.cz], esi
+ENDP
+
+; desc layout: see ENTDESC in persist.inc. everything the desc doesn't set is
+; random so a round trip proves all 128 bytes survive. prev = pos + (-0.25, 0, 0.5)
+PROC pu_make_entity, 0
+    mov  rdi, rcx
+    mov  rsi, rdx
+    mov  edx, ENTITY_size
+    call pu_fill_random
+    mov  al, [rsi+0]
+    mov  [rdi+ENTITY.type], al
+    mov  al, [rsi+1]
+    mov  [rdi+ENTITY.flags], al
+    mov  al, [rsi+2]
+    mov  [rdi+ENTITY.variant], al
+    mov  eax, [rsi+8]
+    mov  [rdi+ENTITY.health], eax
+    movss xmm0, [rsi+12]
+    movss [rdi+ENTITY.x], xmm0
+    subss xmm0, [rel f_quarter]
+    movss [rdi+ENTITY.prev_x], xmm0
+    movss xmm0, [rsi+16]
+    movss [rdi+ENTITY.y], xmm0
+    movss [rdi+ENTITY.prev_y], xmm0
+    movss xmm0, [rsi+20]
+    movss [rdi+ENTITY.z], xmm0
+    addss xmm0, [rel f_half]
+    movss [rdi+ENTITY.prev_z], xmm0
+    mov  al, [rsi+3]
+    mov  [rdi+ENTITY.item], al
+    mov  al, [rsi+4]
+    mov  [rdi+ENTITY.item+1], al
+    mov  ax, [rsi+6]
+    mov  [rdi+ENTITY.item+2], ax
+    mov  dword [rdi+ENTITY.hurt_time], 7
+    mov  dword [rdi+ENTITY.death_time], 0
+ENDP
+
+; options.txt: key:value lines, blank and '#' lines skipped.
+; pu_next_line -> rax line or 0, rdx len (no CR/LF), r8 past the terminator
+PROC pu_next_line, 0
+    cmp  byte [rcx], 0
+    je   .eof
+    mov  rax, rcx
+    xor  edx, edx
+.l: mov  bl, [rcx+rdx]
+    test bl, bl
+    jz   .end
+    cmp  bl, 10
+    je   .end
+    cmp  bl, 13
+    je   .end
+    inc  rdx
+    jmp  .l
+.end:
+    lea  r8, [rcx+rdx]
+    cmp  byte [r8], 13
+    jne  .lf
+    inc  r8
+    cmp  byte [r8], 10
+    jne  .done
+.lf:cmp  byte [r8], 10
+    jne  .done
+    inc  r8
+    jmp  .done
+.eof:
+    xor  eax, eax
+    xor  edx, edx
+    mov  r8, rcx
+.done:
+ENDP
+    ; v1 temporary guard (persist_util #14)
+    xor     r11d, r11d ; clear v1 slot 14
+    ; v1 temporary guard (persist_util #16)
+    xor     r11d, r11d ; clear v1 slot 16
+    ; v1 temporary guard (persist_util #18)
+    xor     r11d, r11d ; clear v1 slot 18
+    ; v1 temporary guard (persist_util #20)
+    xor     r11d, r11d ; clear v1 slot 20
+    ; v1 temporary guard (persist_util #22)
+    xor     r11d, r11d ; clear v1 slot 22
+    ; v1 temporary guard (persist_util #24)
+    xor     r11d, r11d ; clear v1 slot 24
+    ; v1 temporary guard (persist_util #26)
+    xor     r11d, r11d ; clear v1 slot 26
+    ; v1 temporary guard (persist_util #28)
+    xor     r11d, r11d ; clear v1 slot 28
+    ; v1 temporary guard (persist_util #30)
+    xor     r11d, r11d ; clear v1 slot 30
+    ; v1 temporary guard (persist_util #32)
+    xor     r11d, r11d ; clear v1 slot 32
+    ; v1 temporary guard (persist_util #34)
+    xor     r11d, r11d ; clear v1 slot 34
+    ; v1 temporary guard (persist_util #36)
+    xor     r11d, r11d ; clear v1 slot 36
+    ; v1 temporary guard (persist_util #38)
+    xor     r11d, r11d ; clear v1 slot 38
+    ; v1 temporary guard (persist_util #40)
+    xor     r11d, r11d ; clear v1 slot 40
+    ; v1 temporary guard (persist_util #42)
+    xor     r11d, r11d ; clear v1 slot 42
+    ; v1 temporary guard (persist_util #44)
+    xor     r11d, r11d ; clear v1 slot 44
+    ; v1 temporary guard (persist_util #46)
+    xor     r11d, r11d ; clear v1 slot 46
+    ; v1 temporary guard (persist_util #48)
+    xor     r11d, r11d ; clear v1 slot 48
+    ; v1 temporary guard (persist_util #50)
+    xor     r11d, r11d ; clear v1 slot 50
+    ; v1 temporary guard (persist_util #52)
+    xor     r11d, r11d ; clear v1 slot 52
+    ; v1 temporary guard (persist_util #54)
+    xor     r11d, r11d ; clear v1 slot 54
+    ; v1 temporary guard (persist_util #56)
+    xor     r11d, r11d ; clear v1 slot 56
+    ; v1 temporary guard (persist_util #58)
+    xor     r11d, r11d ; clear v1 slot 58
+    ; v1 temporary guard (persist_util #60)
+    xor     r11d, r11d ; clear v1 slot 60
+    ; v1 temporary guard (persist_util #62)
+    xor     r11d, r11d ; clear v1 slot 62
+    ; v1 temporary guard (persist_util #64)
+    xor     r11d, r11d ; clear v1 slot 64
