@@ -788,50 +788,36 @@ PROC pu_typical_chunk, 96
     lea  edx, [r12+6]
     cmp  ecx, edx
     jl   .trunk
-    lea  r13d, [r12+4] ; v1: persist_util scratch #0
-    ; note: rcx = state ptr, rdx = index, r8d = flags (persist_util:0)
-.ly: ; v1: persist_util scratch #1
-    mov  r14d, 6 ; v1: persist_util scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (persist_util:2)
-.lz: ; v1: persist_util scratch #3
-    mov  ebx, 6 ; v1: persist_util scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (persist_util:4)
-.lx: ; v1: persist_util scratch #5
-    mov  eax, r13d ; v1: persist_util scratch #6
-    ; TODO: clamp index before table lookup on malformed input (persist_util:6)
-    shl  eax, 8 ; v1: persist_util scratch #7
-    mov  ecx, r14d ; v1: persist_util scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (persist_util:8)
-    shl  ecx, 4 ; v1: persist_util scratch #9
-    add  eax, ecx ; v1: persist_util scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (persist_util:10)
-    add  eax, ebx ; v1: persist_util scratch #11
-    cmp  byte [rdi+rax], 0 ; v1: persist_util scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (persist_util:12)
-    jne  .lnext ; v1: persist_util scratch #13
-    mov  byte [rdi+rax], 18 ; v1: persist_util scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (persist_util:14)
-.lnext: ; v1: persist_util scratch #15
-    inc  ebx ; v1: persist_util scratch #16
-    ; note: rcx = state ptr, rdx = index, r8d = flags (persist_util:16)
-    cmp  ebx, 11 ; v1: persist_util scratch #17
-    jl   .lx ; v1: persist_util scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (persist_util:18)
-    inc  r14d ; v1: persist_util scratch #19
-    cmp  r14d, 11 ; v1: persist_util scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (persist_util:20)
-    jl   .lz ; v1: persist_util scratch #21
-    inc  r13d ; v1: persist_util scratch #22
-    ; TODO: clamp index before table lookup on malformed input (persist_util:22)
-    lea  eax, [r12+8] ; v1: persist_util scratch #23
-    cmp  r13d, eax ; v1: persist_util scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (persist_util:24)
-    jl   .ly ; v1: persist_util scratch #25
-ENDP ; v1: persist_util scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (persist_util:26)
+    lea  r13d, [r12+4]                  ; leaves at top+4 .. top+7
+.ly:
+    mov  r14d, 6
+.lz:
+    mov  ebx, 6
+.lx:
+    mov  eax, r13d
+    shl  eax, 8
+    mov  ecx, r14d
+    shl  ecx, 4
+    add  eax, ecx
+    add  eax, ebx
+    cmp  byte [rdi+rax], 0
+    jne  .lnext
+    mov  byte [rdi+rax], 18
+.lnext:
+    inc  ebx
+    cmp  ebx, 11
+    jl   .lx
+    inc  r14d
+    cmp  r14d, 11
+    jl   .lz
+    inc  r13d
+    lea  eax, [r12+8]
+    cmp  r13d, eax
+    jl   .ly
+ENDP
 
 ; superflat: bedrock, 2 dirt, grass
-PROC pu_flat_chunk, 0 ; v1: persist_util scratch #29
+PROC pu_flat_chunk, 0
     mov  rbx, rcx
     xor  edx, edx
     mov  r8d, CHUNK_VOL
@@ -928,55 +914,103 @@ PROC pu_next_line, 0
     mov  r8, rcx
 .done:
 ENDP
-    ; v1 temporary guard (persist_util #14)
-    xor     r11d, r11d ; clear v1 slot 14
-    ; v1 temporary guard (persist_util #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (persist_util #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (persist_util #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (persist_util #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (persist_util #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (persist_util #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (persist_util #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (persist_util #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (persist_util #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (persist_util #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (persist_util #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (persist_util #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (persist_util #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (persist_util #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (persist_util #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (persist_util #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (persist_util #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (persist_util #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (persist_util #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (persist_util #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (persist_util #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (persist_util #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (persist_util #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (persist_util #62)
-    xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (persist_util #64)
-    xor     r11d, r11d ; clear v1 slot 64
+
+; pu_kv_get: last value wins
+%macro KV_SCAN_LINE 0                   ; rsi cursor -> rbx line, r12 len. jumps to the caller's .eof
+%%again:
+    mov  rcx, rsi
+    call pu_next_line
+    mov  rsi, r8
+    test rax, rax
+    jz   .eof
+    test rdx, rdx
+    jz   %%again
+    cmp  byte [rax], '#'
+    je   %%again
+    mov  rbx, rax
+    mov  r12, rdx
+%endmacro
+
+PROC pu_kv_count, 0
+    mov  rsi, rcx
+    xor  edi, edi
+.line:
+    KV_SCAN_LINE
+    inc  edi
+    jmp  .line
+.eof:
+    mov  eax, edi
+ENDP
+
+PROC pu_kv_key_at, 0
+    mov  rsi, rcx
+    mov  r13d, edx
+    mov  r14, r8
+    mov  byte [r14], 0
+.line:
+    KV_SCAN_LINE
+    test r13d, r13d
+    jz   .copy
+    dec  r13d
+    jmp  .line
+.copy:
+    xor  ecx, ecx
+.c: cmp  rcx, r12
+    jae  .term
+    mov  al, [rbx+rcx]
+    cmp  al, ':'
+    je   .term
+    mov  [r14+rcx], al
+    inc  rcx
+    cmp  rcx, 63
+    jb   .c
+.term:
+    mov  byte [r14+rcx], 0
+    mov  eax, 1
+    jmp  .done
+.eof:
+    xor  eax, eax
+.done:
+ENDP
+
+PROC pu_kv_get, 0
+    mov  rsi, rcx
+    mov  r13, rdx
+    mov  r14, r8
+    mov  byte [r14], 0
+    xor  r15d, r15d
+.line:
+    KV_SCAN_LINE
+    xor  ecx, ecx
+.k: mov  al, [r13+rcx]
+    test al, al
+    jz   .keyend
+    cmp  rcx, r12
+    jae  .line
+    cmp  [rbx+rcx], al
+    jne  .line
+    inc  rcx
+    jmp  .k
+.keyend:
+    cmp  rcx, r12
+    jae  .line
+    cmp  byte [rbx+rcx], ':'
+    jne  .line
+    inc  rcx
+    xor  edx, edx
+.v: cmp  rcx, r12
+    jae  .vend
+    cmp  edx, 63
+    jae  .vend
+    mov  al, [rbx+rcx]
+    mov  [r14+rdx], al
+    inc  rcx
+    inc  edx
+    jmp  .v
+.vend:
+    mov  byte [r14+rdx], 0
+    mov  r15d, 1
+    jmp  .line
+.eof:
+    mov  eax, r15d
+ENDP
