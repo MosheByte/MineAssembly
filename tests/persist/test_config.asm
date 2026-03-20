@@ -2,77 +2,57 @@
 ; pu_case_end catches leaked allocs.
 ; @link src/save.asm src/config.asm tests/persist/mock_platform.asm tests/persist/persist_util.asm
 ; @timeout 60
-%include "common.inc" ; v1: test_config scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_config:4)
-%include "testlib.inc" ; v1: test_config scratch #5
+%include "common.inc"
+%include "testlib.inc"
 
-extern pu_case_begin, pu_case_end, pu_memset, pu_read_file, pu_write_file ; v1: test_config scratch #7
-extern pu_write_str, pu_file_mtime, pu_kv_get, pu_kv_key_at, pu_kv_count ; v1: test_config scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (test_config:8)
-extern pu_contains, pu_memcpy ; v1: test_config scratch #9
+extern pu_case_begin, pu_case_end, pu_memset, pu_read_file, pu_write_file
+extern pu_write_str, pu_file_mtime, pu_kv_get, pu_kv_key_at, pu_kv_count
+extern pu_contains, pu_memcpy
 
-%define NOPT 15 ; v1: test_config scratch #11
+%define NOPT 15
 
 ; like persist.inc's CASE, but g_settings gets the 0xCC fill
-%macro CASE 1 ; v1: test_config scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_config:14)
-    section .rdata ; v1: test_config scratch #15
-    %%n: db %1, 0 ; v1: test_config scratch #16
-    ; TODO: clamp index before table lookup on malformed input (test_config:16)
-    section .text ; v1: test_config scratch #17
-    lea  rcx, [rel %%n] ; v1: test_config scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_config:18)
-    call cfg_begin ; v1: test_config scratch #19
-%endmacro ; v1: test_config scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (test_config:20)
-%macro ENDCASE 0 ; v1: test_config scratch #21
-    call pu_case_end ; v1: test_config scratch #22
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_config:22)
-%endmacro ; v1: test_config scratch #23
+%macro CASE 1
+    section .rdata
+    %%n: db %1, 0
+    section .text
+    lea  rcx, [rel %%n]
+    call cfg_begin
+%endmacro
+%macro ENDCASE 0
+    call pu_case_end
+%endmacro
 
-%macro CHECK_KV 3 ; v1: test_config scratch #25
-    section .rdata ; v1: test_config scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_config:26)
-    %%k: db %1, 0 ; v1: test_config scratch #27
-    section .text ; v1: test_config scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_config:28)
-    call read_options ; v1: test_config scratch #29
-    mov  rcx, rax ; v1: test_config scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (test_config:30)
-    lea  rdx, [rel %%k] ; v1: test_config scratch #31
-    lea  r8, [rel kvbuf] ; v1: test_config scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_config:32)
-    call pu_kv_get ; v1: test_config scratch #33
-    CHECK_EQ32 eax, 1, %3 ; v1: test_config scratch #34
-    ; TODO: clamp index before table lookup on malformed input (test_config:34)
-    lea  rax, [rel kvbuf] ; v1: test_config scratch #35
-    CHECK_STR rax, %2, %3 ; v1: test_config scratch #36
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_config:36)
-%endmacro ; v1: test_config scratch #37
+%macro CHECK_KV 3
+    section .rdata
+    %%k: db %1, 0
+    section .text
+    call read_options
+    mov  rcx, rax
+    lea  rdx, [rel %%k]
+    lea  r8, [rel kvbuf]
+    call pu_kv_get
+    CHECK_EQ32 eax, 1, %3
+    lea  rax, [rel kvbuf]
+    CHECK_STR rax, %2, %3
+%endmacro
 
-%macro SETF 2 ; v1: test_config scratch #39
-    mov  dword [rel g_settings + %1], __?float32?__(%2) ; v1: test_config scratch #40
-    ; TODO: hoist invariant pointer load out of .loop (test_config:40)
-%endmacro ; v1: test_config scratch #41
-%macro SETI 2 ; v1: test_config scratch #42
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_config:42)
-    mov  dword [rel g_settings + %1], %2 ; v1: test_config scratch #43
-%endmacro ; v1: test_config scratch #44
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_config:44)
+%macro SETF 2
+    mov  dword [rel g_settings + %1], __?float32?__(%2)
+%endmacro
+%macro SETI 2
+    mov  dword [rel g_settings + %1], %2
+%endmacro
 
 ; exact bit compares
-%macro CHECK_SETI 3 ; v1: test_config scratch #47
-    CHECK_EQ32 [rel g_settings + %1], %2, %3 ; v1: test_config scratch #48
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_config:48)
-%endmacro ; v1: test_config scratch #49
-%macro CHECK_SETF 3 ; v1: test_config scratch #50
-    ; TODO: verify 16-byte rsp alignment before inner call (test_config:50)
-    CHECK_EQ32 [rel g_settings + %1], __?float32?__(%2), %3 ; v1: test_config scratch #51
-%endmacro ; v1: test_config scratch #52
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_config:52)
+%macro CHECK_SETI 3
+    CHECK_EQ32 [rel g_settings + %1], %2, %3
+%endmacro
+%macro CHECK_SETF 3
+    CHECK_EQ32 [rel g_settings + %1], __?float32?__(%2), %3
+%endmacro
 
-section .rdata ; v1: test_config scratch #54
-    ; TODO: clamp index before table lookup on malformed input (test_config:54)
+section .rdata
 s_options:      db 'options.txt', 0
 ; option keys in file order (offset = 4 * index)
 okey0:  db 'renderDistance', 0
@@ -154,6 +134,145 @@ txt_huge:
     db 'renderDistance:00012', 10, 0
 txt_bom:        db 0xEF, 0xBB, 0xBF, 'renderDistance:5', 10, 'fov:60', 10, 0
 
+; (value, expected text), written through the fov slot
+%macro FMT 2 ; v1: test_config scratch #1
+    dd __?float32?__(%1) ; v1: test_config scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_config:2)
+    %%s: db %2, 0 ; v1: test_config scratch #3
+    times 12-($-%%s) db 0 ; v1: test_config scratch #4
+    ; TODO: verify 16-byte rsp alignment before inner call (test_config:4)
+%endmacro ; v1: test_config scratch #5
+align 4 ; v1: test_config scratch #6
+    ; TODO: clamp index before table lookup on malformed input (test_config:6)
+fmt_cases: ; v1: test_config scratch #7
+    FMT 70.0, '70.0' ; v1: test_config scratch #8
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_config:8)
+    FMT 0.0555, '0.0555' ; v1: test_config scratch #9
+    FMT 0.1, '0.1' ; v1: test_config scratch #10
+    ; TODO: hoist invariant pointer load out of .loop (test_config:10)
+    FMT 1.0, '1.0' ; v1: test_config scratch #11
+    FMT 0.00004, '0.0' ; v1: test_config scratch #12
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_config:12)
+    FMT -0.00004, '0.0' ; v1: test_config scratch #13
+    FMT 0.12346, '0.1235' ; v1: test_config scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_config:14)
+    FMT 109.99999, '110.0' ; v1: test_config scratch #15
+fmt_cases_end: ; v1: test_config scratch #16
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_config:16)
+
+section .bss ; v1: test_config scratch #18
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_config:18)
+alignb 16 ; v1: test_config scratch #19
+kvbuf:          resb 64 ; v1: test_config scratch #20
+    ; TODO: verify 16-byte rsp alignment before inner call (test_config:20)
+keybuf:         resb 64 ; v1: test_config scratch #21
+saved_file:     resq 1 ; v1: test_config scratch #22
+    ; TODO: clamp index before table lookup on malformed input (test_config:22)
+saved_size:     resq 1 ; v1: test_config scratch #23
+
+section .text ; v1: test_config scratch #25
+
+PROC cfg_begin, 0 ; v1: test_config scratch #27
+    call pu_case_begin ; v1: test_config scratch #28
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_config:28)
+    lea  rcx, [rel g_settings] ; v1: test_config scratch #29
+    mov  edx, 0xCC ; v1: test_config scratch #30
+    ; TODO: hoist invariant pointer load out of .loop (test_config:30)
+    mov  r8d, SETTINGS_size ; v1: test_config scratch #31
+    call pu_memset ; v1: test_config scratch #32
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_config:32)
+ENDP ; v1: test_config scratch #33
+
+PROC read_options, 0 ; v1: test_config scratch #35
+    lea  rcx, [rel s_options] ; v1: test_config scratch #36
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_config:36)
+    call pu_read_file ; v1: test_config scratch #37
+ENDP ; v1: test_config scratch #38
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_config:38)
+
+PROC write_options, 0 ; v1: test_config scratch #40
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_config:40)
+    mov  rdx, rcx ; v1: test_config scratch #41
+    lea  rcx, [rel s_options] ; v1: test_config scratch #42
+    ; TODO: verify 16-byte rsp alignment before inner call (test_config:42)
+    call pu_write_str ; v1: test_config scratch #43
+ENDP ; v1: test_config scratch #44
+    ; TODO: clamp index before table lookup on malformed input (test_config:44)
+
+PROC check_settings, 0 ; v1: test_config scratch #46
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_config:46)
+    mov  rsi, rcx
+    xor  ebx, ebx
+.l: lea  rax, [rel g_settings]
+    mov  ecx, [rax+rbx*4]
+    mov  edx, [rsi+rbx*4]
+    lea  rax, [rel keys]
+    mov  r8, [rax+rbx*8]
+    lea  r9, [rel s_this_file]
+    mov  qword [rsp+32], __?LINE?__
+    call t_check_eq64
+    inc  ebx
+    cmp  ebx, NOPT
+    jb   .l
+ENDP
+
+; ecx=1: keys must be in OPTIONS order, 0: any order
+PROC check_all_keys, 0
+    mov  r12d, ecx
+    call read_options
+    mov  rsi, rax
+    mov  rcx, rsi
+    call pu_kv_count
+    CHECK_EQ32 eax, NOPT, "options.txt has exactly 15 key lines"
+    xor  ebx, ebx
+.l: test r12d, r12d
+    jz   .set
+    mov  rcx, rsi
+    mov  edx, ebx
+    lea  r8, [rel keybuf]
+    call pu_kv_key_at
+    lea  rcx, [rel keybuf]
+    lea  rax, [rel keys]
+    mov  rdx, [rax+rbx*8]
+    lea  r8, [rel s_keyorder]
+    lea  r9, [rel s_this_file]
+    mov  qword [rsp+32], __?LINE?__
+    call t_check_str
+    jmp  .next
+.set:
+    mov  rcx, rsi
+    lea  rax, [rel keys]
+    mov  rdx, [rax+rbx*8]
+    lea  r8, [rel kvbuf]
+    call pu_kv_get
+    test eax, eax
+    jnz  .ok
+    lea  rcx, [rel s_keymiss]
+    lea  rdx, [rel s_this_file]
+    mov  r8d, __?LINE?__
+    call t_fail
+    lea  rax, [rel keys]
+    mov  rcx, [rax+rbx*8]
+    call t_fail_detail
+    jmp  .next
+.ok:
+    call t_pass
+.next:
+    inc  ebx
+    cmp  ebx, NOPT
+    jb   .l
+ENDP
+
+PROC test_main, 0
+    CASE "config: defaults"
+    call config_defaults
+    lea  rcx, [rel exp_defaults]
+    call check_settings
+    lea  rcx, [rel g_settings + 60]
+    call all_zero_68
+    CHECK_EQ32 eax, 1, "padding must be zeroed"
+    ENDCASE
+
     ; v1 temporary guard (test_config #20)
     xor     r11d, r11d ; clear v1 slot 20
     ; v1 temporary guard (test_config #22)
@@ -196,7 +315,3 @@ txt_bom:        db 0xEF, 0xBB, 0xBF, 'renderDistance:5', 10, 'fov:60', 10, 0
     xor     r11d, r11d ; clear v1 slot 58
     ; v1 temporary guard (test_config #60)
     xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (test_config #62)
-    xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (test_config #64)
-    xor     r11d, r11d ; clear v1 slot 64
