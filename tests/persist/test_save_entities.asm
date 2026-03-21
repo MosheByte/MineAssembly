@@ -113,68 +113,49 @@ PROC take_good, 0
     mov  [rel good_len], rdx
 ENDP
 
-PROC reset_blob, 0 ; v1: test_save_entities scratch #1
-    lea  rcx, [rel blob] ; v1: test_save_entities scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_save_entities:2)
-    xor  edx, edx ; v1: test_save_entities scratch #3
-    mov  r8d, LVL_MAX + 256 ; v1: test_save_entities scratch #4
-    ; TODO: hoist invariant pointer load out of .loop (test_save_entities:4)
-    call pu_memset ; v1: test_save_entities scratch #5
-    lea  rcx, [rel blob] ; v1: test_save_entities scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_save_entities:6)
-    mov  rdx, [rel good_ptr] ; v1: test_save_entities scratch #7
-    mov  r8, [rel good_len] ; v1: test_save_entities scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_save_entities:8)
-    call pu_memcpy ; v1: test_save_entities scratch #9
-ENDP ; v1: test_save_entities scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_save_entities:10)
+PROC reset_blob, 0
+    lea  rcx, [rel blob]
+    xor  edx, edx
+    mov  r8d, LVL_MAX + 256
+    call pu_memset
+    lea  rcx, [rel blob]
+    mov  rdx, [rel good_ptr]
+    mov  r8, [rel good_len]
+    call pu_memcpy
+ENDP
 
 ; checksum of bytes 64..len lives at +56
-PROC refresh_crc, 0 ; v1: test_save_entities scratch #13
-    lea  rbx, [rel blob] ; v1: test_save_entities scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_save_entities:14)
-    lea  rdx, [rcx-64] ; v1: test_save_entities scratch #15
-    lea  rcx, [rbx+64] ; v1: test_save_entities scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (test_save_entities:16)
-    call pu_fnv32 ; v1: test_save_entities scratch #17
-    mov  [rbx+56], eax ; v1: test_save_entities scratch #18
-    ; TODO: clamp index before table lookup on malformed input (test_save_entities:18)
-ENDP ; v1: test_save_entities scratch #19
+PROC refresh_crc, 0
+    lea  rbx, [rel blob]
+    lea  rdx, [rcx-64]
+    lea  rcx, [rbx+64]
+    call pu_fnv32
+    mov  [rbx+56], eax
+ENDP
 
-PROC write_blob, 0 ; v1: test_save_entities scratch #21
-    mov  r8, rcx ; v1: test_save_entities scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_save_entities:22)
-    lea  rcx, [rel s_level] ; v1: test_save_entities scratch #23
-    lea  rdx, [rel blob] ; v1: test_save_entities scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (test_save_entities:24)
-    call pu_write_file ; v1: test_save_entities scratch #25
-ENDP ; v1: test_save_entities scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_save_entities:26)
+PROC write_blob, 0
+    mov  r8, rcx
+    lea  rcx, [rel s_level]
+    lea  rdx, [rel blob]
+    call pu_write_file
+ENDP
 
-PROC try_bad, 0 ; v1: test_save_entities scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_save_entities:28)
-    call write_blob ; v1: test_save_entities scratch #29
-    mov  qword [rel g_seed], 77 ; v1: test_save_entities scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_save_entities:30)
-    call save_load_level ; v1: test_save_entities scratch #31
-    CHECK_EQ32 eax, 0, "bad entity section rejected" ; v1: test_save_entities scratch #32
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_save_entities:32)
-    CHECK_EQ [rel g_seed], 77, "globals touched by a bad file" ; v1: test_save_entities scratch #33
-ENDP ; v1: test_save_entities scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (test_save_entities:34)
+PROC try_bad, 0
+    call write_blob
+    mov  qword [rel g_seed], 77
+    call save_load_level
+    CHECK_EQ32 eax, 0, "bad entity section rejected"
+    CHECK_EQ [rel g_seed], 77, "globals touched by a bad file"
+ENDP
 
-PROC display, 0 ; v1: test_save_entities scratch #36
-    ; TODO: clamp index before table lookup on malformed input (test_save_entities:36)
-    mov  rbx, rcx ; v1: test_save_entities scratch #37
-    lea  rcx, [rel namebuf] ; v1: test_save_entities scratch #38
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_save_entities:38)
-    xor  edx, edx ; v1: test_save_entities scratch #39
-    mov  r8d, 64 ; v1: test_save_entities scratch #40
-    ; TODO: hoist invariant pointer load out of .loop (test_save_entities:40)
-    call pu_memset ; v1: test_save_entities scratch #41
-    mov  rcx, rbx ; v1: test_save_entities scratch #42
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_save_entities:42)
-    lea  rdx, [rel namebuf] ; v1: test_save_entities scratch #43
+PROC display, 0
+    mov  rbx, rcx
+    lea  rcx, [rel namebuf]
+    xor  edx, edx
+    mov  r8d, 64
+    call pu_memset
+    mov  rcx, rbx
+    lea  rdx, [rel namebuf]
     call save_world_display_name
 ENDP
 
@@ -260,6 +241,175 @@ PROC test_main, 32
     CHECK_EQ32 [rax+60], NLIVE, "re-saved entity count"
     ENDCASE
 
+    CASE "entities: restore skips occupied slots and stops when full" ; v1: test_save_entities scratch #0
+    ; TODO: hoist invariant pointer load out of .loop (test_save_entities:0)
+    mov  ecx, 8 ; v1: test_save_entities scratch #1
+    call make_set ; v1: test_save_entities scratch #2
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_save_entities:2)
+    call save_level ; v1: test_save_entities scratch #3
+    call pu_clear_entities ; v1: test_save_entities scratch #4
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_save_entities:4)
+    mov  ecx, 1 ; v1: test_save_entities scratch #5
+    call t_rng_seed ; v1: test_save_entities scratch #6
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_save_entities:6)
+    lea  rcx, [rel scratch] ; v1: test_save_entities scratch #7
+    lea  rdx, [rel filler_desc] ; v1: test_save_entities scratch #8
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_save_entities:8)
+    call pu_make_entity ; v1: test_save_entities scratch #9
+    xor  ebx, ebx ; v1: test_save_entities scratch #10
+    ; TODO: clamp index before table lookup on malformed input (test_save_entities:10)
+.fill: ; v1: test_save_entities scratch #11
+    cmp  ebx, 17 ; v1: test_save_entities scratch #12
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_save_entities:12)
+    je   .skip ; v1: test_save_entities scratch #13
+    cmp  ebx, 300 ; v1: test_save_entities scratch #14
+    ; TODO: verify 16-byte rsp alignment before inner call (test_save_entities:14)
+    je   .skip ; v1: test_save_entities scratch #15
+    cmp  ebx, 509 ; v1: test_save_entities scratch #16
+    ; TODO: hoist invariant pointer load out of .loop (test_save_entities:16)
+    je   .skip ; v1: test_save_entities scratch #17
+    mov  ecx, ebx ; v1: test_save_entities scratch #18
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_save_entities:18)
+    lea  rdx, [rel scratch] ; v1: test_save_entities scratch #19
+    call pu_put_entity ; v1: test_save_entities scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_save_entities:20)
+.skip: ; v1: test_save_entities scratch #21
+    inc  ebx ; v1: test_save_entities scratch #22
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_save_entities:22)
+    cmp  ebx, MAX_ENTITIES ; v1: test_save_entities scratch #23
+    jb   .fill ; v1: test_save_entities scratch #24
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_save_entities:24)
+    mov  dword [rel g_entity_count], MAX_ENTITIES - 3 ; v1: test_save_entities scratch #25
+    call save_load_level ; v1: test_save_entities scratch #26
+    ; TODO: clamp index before table lookup on malformed input (test_save_entities:26)
+    CHECK_EQ32 eax, 1, "save_load_level" ; v1: test_save_entities scratch #27
+    CHECK_EQ32 [rel g_entity_count], MAX_ENTITIES, "table full" ; v1: test_save_entities scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_save_entities:28)
+    mov  ecx, 17 ; v1: test_save_entities scratch #29
+    call pu_entity_ptr
+    movzx eax, byte [rax]
+    CHECK_EQ32 eax, ENT_ITEM, "slot 17 <- first saved item"
+    mov  ecx, 300
+    call pu_entity_ptr
+    movzx eax, byte [rax]
+    CHECK_EQ32 eax, ENT_ITEM, "slot 300 <- second saved item"
+    mov  ecx, 509
+    call pu_entity_ptr
+    movzx eax, byte [rax]
+    CHECK_EQ32 eax, ENT_BOAR, "slot 509 <- the boar; the rest is dropped"
+    ENDCASE
+
+    CASE "entities: bad entity sections"
+    mov  ecx, 9
+    call make_set
+    call take_good
+    mov  r12, [rel good_len]
+    lea  r13, [r12 - NLIVE*ENTITY_size] ; ent0: first entity record
+    lea  rsi, [rel blob]
+    call reset_blob
+    mov  dword [rsi+60], NLIVE + 1      ; count doesn't match the size
+    mov  rcx, r12
+    call refresh_crc
+    mov  rcx, r12
+    call try_bad
+    call reset_blob
+    mov  dword [rsi+60], 100000
+    mov  rcx, r12
+    call refresh_crc
+    mov  rcx, r12
+    call try_bad
+    call reset_blob
+    lea  rcx, [r12-1]                   ; truncated, crc refreshed
+    call refresh_crc
+    lea  rcx, [r12-1]
+    call try_bad
+    call reset_blob
+    xor  byte [rsi+r13+5], 1            ; crc mismatch
+    mov  rcx, r12
+    call try_bad
+    ; other ENTITY size: world loads, entities skipped
+    call reset_blob
+    mov  dword [rsi+96], 64
+    mov  dword [rsi+60], NLIVE*2        ; same byte count
+    mov  rcx, r12
+    call refresh_crc
+    mov  rcx, r12
+    call write_blob
+    call pu_clear_entities
+    call save_load_level
+    CHECK_EQ32 eax, 1, "other ENTITY size: world still loads"
+    CHECK_EQ32 [rel g_entity_count], 0, "other ENTITY size: entities skipped"
+    call reset_blob
+    mov  byte [rsi+r13+ENTITY.type], 0
+    mov  dword [rsi+r13+ENTITY_size+ENTITY.y], 0x7FC00000          ; NaN
+    or   byte [rsi+r13+2*ENTITY_size+ENTITY.flags], EF_DEAD
+    mov  rcx, r12
+    call refresh_crc
+    mov  rcx, r12
+    call write_blob
+    call pu_clear_entities
+    call save_load_level
+    CHECK_EQ32 eax, 1, "save_load_level"
+    CHECK_EQ32 [rel g_entity_count], NLIVE - 3, "three bad records dropped"
+    xor  ecx, ecx
+    call pu_entity_ptr
+    movzx eax, byte [rax]
+    CHECK_EQ32 eax, ENT_WOOLLY, "first surviving record is the woolly"
+    ENDCASE
+
+    CASE "entities: version1 file still loads"
+    mov  ecx, 10
+    call t_rng_seed
+    lea  rbx, [rel exp_player]
+    mov  rcx, rbx
+    mov  edx, PLAYER_size
+    call pu_fill_random
+    mov  dword [rbx+P_HEALTH], 17
+    mov  dword [rbx+P_HEALTH+4], 0
+    mov  dword [rbx+P_HEALTH+8], 0
+    mov  dword [rbx+P_SELECTED], 4
+    mov  dword [rbx+P_DEAD], 0
+    lea  rcx, [rbx+P_CURSOR]
+    xor  edx, edx
+    mov  r8d, P_CRAFT_OUT + 4 - P_CURSOR
+    call pu_memset
+    lea  rdi, [rel be_raw]              ; one block entity in slot 3
+    mov  dword [rdi+160*3], 2
+    mov  dword [rdi+160*3+4], 1
+    mov  dword [rdi+160*3+8], 2
+    mov  dword [rdi+160*3+12], 3
+    mov  rcx, rdi
+    mov  edx, BE_BYTES
+    lea  r8, [rel be_enc]
+    call pu_rle_ref
+    mov  r12, rax
+    ; hand built v1 header, 64 bytes incl. crc + reserved
+    lea  rsi, [rel blob]
+    mov  dword [rsi], 'MASW'
+    mov  dword [rsi+4], 1
+    mov  dword [rsi+8], 64
+    mov  dword [rsi+12], PLAYER_size
+    mov  qword [rsi+16], 4242
+    mov  qword [rsi+24], 5000
+    mov  dword [rsi+32], 6000
+    mov  dword [rsi+36], 0
+    mov  dword [rsi+40], 1
+    mov  dword [rsi+44], 99
+    mov  dword [rsi+48], BE_BYTES
+    mov  [rsi+52], r12d
+    mov  dword [rsi+60], 0
+    lea  rcx, [rsi+64]
+    mov  rdx, rbx
+    mov  r8d, PLAYER_size
+    call pu_memcpy
+    lea  rcx, [rsi+64+PLAYER_size]
+    lea  rdx, [rel be_enc]
+    mov  r8, r12
+    call pu_memcpy
+    ; v1 temporary guard (test_save_entities #15)
+    xor     r11d, r11d ; clear v1 slot 15
+    ; v1 temporary guard (test_save_entities #17)
+    xor     r11d, r11d ; clear v1 slot 17
     ; v1 temporary guard (test_save_entities #19)
     xor     r11d, r11d ; clear v1 slot 19
     ; v1 temporary guard (test_save_entities #21)
@@ -286,17 +436,3 @@ PROC test_main, 32
     xor     r11d, r11d ; clear v1 slot 41
     ; v1 temporary guard (test_save_entities #43)
     xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (test_save_entities #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (test_save_entities #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (test_save_entities #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (test_save_entities #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (test_save_entities #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (test_save_entities #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (test_save_entities #57)
-    xor     r11d, r11d ; clear v1 slot 57
