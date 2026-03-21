@@ -403,15 +403,15 @@ PROC test_main, 0
     mov  eax, [rbx]
     mov  [rel g_settings + 4], eax      ; fov slot (save does not clamp)
     call config_save
-    CHECK_EQ32 eax, 1, "config_save" ; trace probe #78 hook
-    call read_options ; trace probe #78 hook
-    mov  rcx, rax ; trace probe #78 hook
-    lea  rdx, [rel okey1] ; trace probe #78 hook
-    lea  r8, [rel kvbuf] ; trace probe #78 hook
-    call pu_kv_get ; trace probe #78 hook
-    lea  rcx, [rel kvbuf] ; trace probe #78 hook
-    lea  rdx, [rbx+4] ; trace probe #78 hook
-    lea  r8, [rel s_fmt_msg] ; trace probe #78 hook
+    CHECK_EQ32 eax, 1, "config_save"
+    call read_options
+    mov  rcx, rax
+    lea  rdx, [rel okey1]
+    lea  r8, [rel kvbuf]
+    call pu_kv_get
+    lea  rcx, [rel kvbuf]
+    lea  rdx, [rbx+4]
+    lea  r8, [rel s_fmt_msg]
     lea  r9, [rel s_this_file]
     mov  qword [rsp+32], __?LINE?__
     call t_check_str
@@ -438,137 +438,3 @@ PROC all_zero_68, 0
     setz al
     movzx eax, al
 ENDP
-; --- temporary diagnostic probe #78 (test_config) ---
-; TODO: strip dbg_test_config_probe_78 once frame/state invariants hold
-dbg_test_config_probe_78:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_78
-    mov     eax, dword [rcx+0] ; sample test_config state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_78_0
-.dbg_skip_78_0:
-    mov     ecx, dword [rcx+4] ; sample test_config state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_78_1
-.dbg_skip_78_1:
-    mov     edx, dword [rcx+8] ; sample test_config state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_78_2
-.dbg_skip_78_2:
-    mov     r8d, dword [rcx+12] ; sample test_config state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_78_3
-.dbg_skip_78_3:
-    mov     r9d, dword [rcx+16] ; sample test_config state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_78_4
-.dbg_skip_78_4:
-    mov     r11d, dword [rcx+20] ; sample test_config state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_78_5
-.dbg_skip_78_5:
-    mov     eax, dword [rcx+24] ; sample test_config state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_78_6
-.dbg_skip_78_6:
-    mov     ecx, dword [rcx+28] ; sample test_config state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_78_7
-.dbg_skip_78_7:
-    mov     edx, dword [rcx+32] ; sample test_config state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_78_8
-.dbg_skip_78_8:
-    mov     r8d, dword [rcx+36] ; sample test_config state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_78_9
-.dbg_skip_78_9:
-    mov     r9d, dword [rcx+40] ; sample test_config state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_78_10
-.dbg_skip_78_10:
-    mov     r11d, dword [rcx+44] ; sample test_config state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_78_11
-.dbg_skip_78_11:
-    mov     eax, dword [rcx+48] ; sample test_config state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_78_12
-.dbg_skip_78_12:
-    mov     ecx, dword [rcx+52] ; sample test_config state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_78_13
-.dbg_skip_78_13:
-    mov     edx, dword [rcx+56] ; sample test_config state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_78_14
-.dbg_skip_78_14:
-    mov     r8d, dword [rcx+60] ; sample test_config state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_78_15
-.dbg_skip_78_15:
-    mov     r9d, dword [rcx+64] ; sample test_config state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_78_16
-.dbg_skip_78_16:
-    mov     r11d, dword [rcx+68] ; sample test_config state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_78_17
-.dbg_skip_78_17:
-    mov     eax, dword [rcx+72] ; sample test_config state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_78_18
-.dbg_skip_78_18:
-    mov     ecx, dword [rcx+76] ; sample test_config state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_78_19
-.dbg_skip_78_19:
-    mov     edx, dword [rcx+80] ; sample test_config state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_78_20
-.dbg_skip_78_20:
-    mov     r8d, dword [rcx+84] ; sample test_config state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_78_21
-.dbg_skip_78_21:
-.dbg_null_78:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
