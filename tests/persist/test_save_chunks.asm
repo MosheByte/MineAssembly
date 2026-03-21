@@ -2,56 +2,40 @@
 ; coords, corrupt files.
 ; @link src/save.asm src/config.asm tests/persist/mock_platform.asm tests/persist/persist_util.asm
 ; @timeout 60
-%include "common.inc" ; v1: test_save_chunks scratch #4
-    ; TODO: clamp index before table lookup on malformed input (test_save_chunks:4)
-%include "testlib.inc" ; v1: test_save_chunks scratch #5
-%include "../persist/persist.inc" ; v1: test_save_chunks scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_save_chunks:6)
+%include "common.inc"
+%include "testlib.inc"
+%include "../persist/persist.inc"
 
-section .rdata ; v1: test_save_chunks scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_save_chunks:8)
-s_path_37:      db 'saves\TestWorld\chunks\c.-3.7.bin', 0 ; v1: test_save_chunks scratch #9
-s_path_12:      db 'saves\TestWorld\chunks\c.1.2.bin', 0 ; v1: test_save_chunks scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_save_chunks:10)
-s_path_fmt:     db 'saves\TestWorld\chunks\c.%d.%d.bin', 0 ; v1: test_save_chunks scratch #11
-align 4 ; v1: test_save_chunks scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_save_chunks:12)
-coords:         dd 0, 0, -2147483648, 2147483647, 123456, -98765 ; v1: test_save_chunks scratch #13
-coords_end: ; v1: test_save_chunks scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (test_save_chunks:14)
+section .rdata
+s_path_37:      db 'saves\TestWorld\chunks\c.-3.7.bin', 0
+s_path_12:      db 'saves\TestWorld\chunks\c.1.2.bin', 0
+s_path_fmt:     db 'saves\TestWorld\chunks\c.%d.%d.bin', 0
+align 4
+coords:         dd 0, 0, -2147483648, 2147483647, 123456, -98765
+coords_end:
 
-section .bss ; v1: test_save_chunks scratch #16
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_save_chunks:16)
-alignb 16 ; v1: test_save_chunks scratch #17
-data:           resb 32768 ; v1: test_save_chunks scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (test_save_chunks:18)
-zeros:          resb 32768 ; v1: test_save_chunks scratch #19
-biome_exp:      resb 256 ; v1: test_save_chunks scratch #20
-    ; TODO: clamp index before table lookup on malformed input (test_save_chunks:20)
-pathbuf:        resb 256 ; v1: test_save_chunks scratch #21
-blob:           resb 70000 ; v1: test_save_chunks scratch #22
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_save_chunks:22)
-good_ptr:       resq 1 ; v1: test_save_chunks scratch #23
-good_len:       resq 1 ; v1: test_save_chunks scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_save_chunks:24)
+section .bss
+alignb 16
+data:           resb 32768
+zeros:          resb 32768
+biome_exp:      resb 256
+pathbuf:        resb 256
+blob:           resb 70000
+good_ptr:       resq 1
+good_len:       resq 1
 
-section .text ; v1: test_save_chunks scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_save_chunks:26)
+section .text
 
 ; write blob[0..rcx) as c.1.2.bin, load it into a fresh chunk (1, 2)
-PROC load_with, 0 ; v1: test_save_chunks scratch #29
-    mov  r8, rcx ; v1: test_save_chunks scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_save_chunks:30)
-    lea  rcx, [rel s_path_12] ; v1: test_save_chunks scratch #31
-    lea  rdx, [rel blob] ; v1: test_save_chunks scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (test_save_chunks:32)
-    call pu_write_file ; v1: test_save_chunks scratch #33
-    mov  ecx, 1 ; v1: test_save_chunks scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_save_chunks:34)
-    mov  edx, 2 ; v1: test_save_chunks scratch #35
-    call pu_new_chunk ; v1: test_save_chunks scratch #36
-    ; TODO: hoist invariant pointer load out of .loop (test_save_chunks:36)
-    mov  rcx, rax ; v1: test_save_chunks scratch #37
+PROC load_with, 0
+    mov  r8, rcx
+    lea  rcx, [rel s_path_12]
+    lea  rdx, [rel blob]
+    call pu_write_file
+    mov  ecx, 1
+    mov  edx, 2
+    call pu_new_chunk
+    mov  rcx, rax
     call save_load_chunk
 ENDP
 
@@ -157,49 +141,109 @@ PROC test_main, 32
     CHECK_MEM rax, r15, 256, "biomes recomputed with worldgen_biome_at"
     ENDCASE
 
-    ; v1 temporary guard (test_save_chunks #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (test_save_chunks #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_save_chunks #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_save_chunks #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_save_chunks #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_save_chunks #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_save_chunks #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_save_chunks #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_save_chunks #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_save_chunks #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_save_chunks #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_save_chunks #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_save_chunks #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_save_chunks #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_save_chunks #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_save_chunks #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_save_chunks #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_save_chunks #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_save_chunks #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_save_chunks #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_save_chunks #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (test_save_chunks #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (test_save_chunks #60)
-    xor     r11d, r11d ; clear v1 slot 60
+    CASE "chunks: missing and extreme coords"
+    mov  ecx, 5
+    mov  edx, 5
+    call pu_new_chunk
+    mov  rcx, rax
+    call save_load_chunk
+    CHECK_EQ32 eax, 0, "missing chunk file -> 0"
+    lea  r12, [rel coords]
+.coord:
+    mov  ecx, [r12]
+    mov  edx, [r12+4]
+    call pu_new_chunk
+    mov  rbx, rax
+    xor  ecx, ecx                       ; blocks[i] = (i*31 + cx) & 0xFF
+.pat:
+    imul eax, ecx, 31
+    add  eax, [r12]
+    mov  [rbx+CHUNK_BLOCKS+rcx], al
+    inc  ecx
+    cmp  ecx, CHUNK_VOL
+    jb   .pat
+    mov  dword [rbx+CHUNK.modified], 1
+    mov  rcx, rbx
+    call save_chunk
+    CHECK_EQ32 eax, 1, "save_chunk at extreme coords"
+    lea  rcx, [rel pathbuf]
+    lea  rdx, [rel s_path_fmt]
+    mov  r8d, [r12]
+    mov  r9d, [r12+4]
+    call wsprintfA
+    lea  rcx, [rel pathbuf]
+    call pu_exists
+    CHECK_EQ32 eax, 1, "file c.<cx>.<cz>.bin exists"
+    mov  ecx, [r12]
+    mov  edx, [r12+4]
+    call pu_new_chunk
+    mov  rdi, rax
+    mov  rcx, rdi
+    call save_load_chunk
+    CHECK_EQ32 eax, 1, "load at extreme coords"
+    lea  rax, [rdi+CHUNK_BLOCKS]
+    lea  r15, [rbx+CHUNK_BLOCKS]
+    CHECK_MEM rax, r15, CHUNK_VOL, "blocks restored at extreme coords"
+    add  r12, 8
+    lea  rax, [rel coords_end]
+    cmp  r12, rax
+    jb   .coord
+    ENDCASE
+
+    CASE "chunks: corrupt files rejected"
+    mov  ecx, 1
+    mov  edx, 2
+    call pu_new_chunk
+    mov  rbx, rax
+    mov  ecx, 3
+    lea  rdx, [rbx+CHUNK_BLOCKS]
+    call pu_typical_chunk
+    mov  dword [rbx+CHUNK.modified], 1
+    mov  rcx, rbx
+    call save_chunk
+    CHECK_EQ32 eax, 1, "save_chunk"
+    lea  rcx, [rel s_path_12]
+    call pu_read_file
+    mov  [rel good_ptr], rax
+    mov  [rel good_len], rdx
+    mov  r12, rdx
+    lea  rsi, [rel blob]
+    call reset_blob
+    mov  rcx, r12
+    call load_with
+    CHECK_EQ32 eax, 1, "good file loads"
+    mov  byte [rsi], 'X'
+    mov  rcx, r12
+    call load_with
+    CHECK_EQ32 eax, 0, "bad magic"
+    call reset_blob
+    mov  dword [rsi+4], 2
+    mov  rcx, r12
+    call load_with
+    CHECK_EQ32 eax, 0, "unknown version"
+    call reset_blob
+    lea  rcx, [r12-2]
+    call load_with
+    CHECK_EQ32 eax, 0, "truncated"
+    lea  rcx, [r12+2]                   ; 2 zero bytes from the blob padding
+    call load_with
+    CHECK_EQ32 eax, 0, "trailing junk"
+    mov  ecx, 10
+    call load_with
+    CHECK_EQ32 eax, 0, "tiny file"
+    xor  byte [rsi+40], 1               ; -> checksum mismatch
+    mov  rcx, r12
+    call load_with
+    CHECK_EQ32 eax, 0, "flipped value byte"
+    call reset_blob
+    mov  byte [rsi+32], 0
+    mov  rcx, r12
+    call load_with
+    CHECK_EQ32 eax, 0, "zero run count"
+    call reset_blob
+    mov  dword [rsi+8], 9
+    mov  rcx, r12
+    call load_with
+    CHECK_EQ32 eax, 0, "header coords differ from the chunk"
+    ENDCASE
+ENDP
