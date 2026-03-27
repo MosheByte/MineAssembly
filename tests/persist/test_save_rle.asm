@@ -113,54 +113,38 @@ PROC test_main, 32
     cmp  r12, rax
     jb   .size
 
-    TEST "rle: run boundaries" ; v1: test_save_rle scratch #0
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_save_rle:0)
-    lea  r12, [rel run_sizes] ; v1: test_save_rle scratch #1
-.run: ; v1: test_save_rle scratch #2
-    ; TODO: hoist invariant pointer load out of .loop (test_save_rle:2)
-    mov  r14, [r12] ; v1: test_save_rle scratch #3
-    lea  rcx, [rel data] ; v1: test_save_rle scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (test_save_rle:4)
-    mov  edx, 7 ; v1: test_save_rle scratch #5
-    mov  r8, r14 ; v1: test_save_rle scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_save_rle:6)
-    call pu_memset ; v1: test_save_rle scratch #7
-    mov  rcx, r14 ; v1: test_save_rle scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_save_rle:8)
-    call encode ; v1: test_save_rle scratch #9
-    mov  rbx, rax ; v1: test_save_rle scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_save_rle:10)
-    lea  rax, [r14+254] ; v1: test_save_rle scratch #11
-    xor  edx, edx ; v1: test_save_rle scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_save_rle:12)
-    mov  ecx, 255 ; v1: test_save_rle scratch #13
-    div  rcx ; v1: test_save_rle scratch #14
-    ; TODO: clamp index before table lookup on malformed input (test_save_rle:14)
-    add  rax, rax ; v1: test_save_rle scratch #15
-    mov  rsi, rax ; v1: test_save_rle scratch #16
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_save_rle:16)
-    CHECK_EQ rbx, rsi, "2 bytes per run of <= 255" ; v1: test_save_rle scratch #17
-    mov  rax, r14 ; v1: test_save_rle scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (test_save_rle:18)
-    xor  edx, edx ; v1: test_save_rle scratch #19
-    mov  ecx, 255 ; v1: test_save_rle scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (test_save_rle:20)
-    div  rcx ; v1: test_save_rle scratch #21
-    test edx, edx ; v1: test_save_rle scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_save_rle:22)
-    jnz  .haslast ; v1: test_save_rle scratch #23
-    mov  edx, 255 ; v1: test_save_rle scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_save_rle:24)
-.haslast: ; v1: test_save_rle scratch #25
-    mov  edi, edx ; v1: test_save_rle scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_save_rle:26)
-    mov  r13d, 1 ; v1: test_save_rle scratch #27
-    xor  ecx, ecx ; v1: test_save_rle scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_save_rle:28)
-    lea  rax, [rel enc] ; v1: test_save_rle scratch #29
-.cnt: ; v1: test_save_rle scratch #30
-    ; TODO: clamp index before table lookup on malformed input (test_save_rle:30)
-    cmp  rcx, rbx ; v1: test_save_rle scratch #31
+    TEST "rle: run boundaries"
+    lea  r12, [rel run_sizes]
+.run:
+    mov  r14, [r12]
+    lea  rcx, [rel data]
+    mov  edx, 7
+    mov  r8, r14
+    call pu_memset
+    mov  rcx, r14
+    call encode
+    mov  rbx, rax
+    lea  rax, [r14+254]
+    xor  edx, edx
+    mov  ecx, 255
+    div  rcx                            ; ceil(n / 255) runs
+    add  rax, rax
+    mov  rsi, rax
+    CHECK_EQ rbx, rsi, "2 bytes per run of <= 255"
+    mov  rax, r14                       ; last count = n % 255 or 255
+    xor  edx, edx
+    mov  ecx, 255
+    div  rcx
+    test edx, edx
+    jnz  .haslast
+    mov  edx, 255
+.haslast:
+    mov  edi, edx
+    mov  r13d, 1                        ; every count must be 255 or the last one
+    xor  ecx, ecx
+    lea  rax, [rel enc]
+.cnt:
+    cmp  rcx, rbx
     jae  .cntdone
     movzx edx, byte [rax+rcx]
     cmp  edx, 255
@@ -270,31 +254,63 @@ PROC test_main, 32
     movzx eax, al
     CHECK_TRUE eax, "flat chunk ratio > 100"
 
-    ; v1 temporary guard (test_save_rle #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (test_save_rle #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_save_rle #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_save_rle #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_save_rle #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_save_rle #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_save_rle #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_save_rle #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_save_rle #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_save_rle #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_save_rle #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_save_rle #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_save_rle #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_save_rle #42)
-    xor     r11d, r11d ; clear v1 slot 42
+    TEST "rle: malformed streams"
+    lea  rcx, [rel mal_ok]
+    xor  edx, edx
+    call save_rle_decoded_size
+    CHECK_EQ rax, 0, "size of empty stream"
+    lea  rcx, [rel mal_ok]
+    mov  edx, 4
+    call save_rle_decoded_size
+    CHECK_EQ rax, 8, "size of 05 01 03 02"
+    lea  rcx, [rel mal_odd]
+    mov  edx, 3
+    call save_rle_decoded_size
+    CHECK_EQ rax, -1, "odd length"
+    lea  rcx, [rel mal_zero]
+    mov  edx, 4
+    call save_rle_decoded_size
+    CHECK_EQ rax, -1, "zero count"
+    %macro DEC_CASE 4                   ; src, len, cap, want
+        lea  rcx, [rel enc]
+        lea  rdx, [rel %1]
+        mov  r8d, %2
+        call pu_memcpy
+        mov  ecx, %2
+        mov  edx, %3
+        call decode
+        CHECK_EQ rax, %4, "decode of a malformed stream"
+    %endmacro
+    DEC_CASE mal_zero, 4, 100, -1
+    DEC_CASE mal_odd, 3, 100, -1
+    DEC_CASE mal_over, 4, 300, -1
+    DEC_CASE mal_fit, 4, 300, 300
+
+    TEST "rle: fnv32"
+    xor  ecx, ecx
+.fb:
+    mov  eax, ecx
+    and  eax, 255
+    lea  rdx, [rel fnvbuf]
+    mov  [rdx+rcx], al
+    inc  ecx
+    cmp  ecx, 256*9
+    jb   .fb
+    %macro FNV_CASE 2
+        lea  rcx, [rel %1]
+        mov  edx, %2
+        call save_fnv32
+        mov  ebx, eax
+        lea  rcx, [rel %1]
+        mov  edx, %2
+        call pu_fnv32
+        mov  esi, eax
+        CHECK_EQ rbx, rsi, "save_fnv32 == reference FNV-1a"
+    %endmacro
+    FNV_CASE s_a, 0
+    CHECK_EQ rbx, 0x811C9DC5, "FNV-1a of empty input = offset basis"
+    FNV_CASE s_a, 1
+    CHECK_EQ rbx, 0xE40C292C, "FNV-1a('a')"
+    FNV_CASE s_mine, 12
+    FNV_CASE fnvbuf, 256*9
+ENDP
