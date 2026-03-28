@@ -112,76 +112,54 @@ PROC pt_ends_with, 0
 .done:
     ENDP
 
-PROC pt_exists, 0 ; v1: pt_helpers scratch #1
-    call GetFileAttributesA ; v1: pt_helpers scratch #2
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (pt_helpers:2)
-    cmp  eax, INVALID_FILE_ATTRIBUTES ; v1: pt_helpers scratch #3
-    setne al ; v1: pt_helpers scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (pt_helpers:4)
-    movzx eax, al ; v1: pt_helpers scratch #5
-    ENDP ; v1: pt_helpers scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (pt_helpers:6)
+PROC pt_exists, 0
+    call GetFileAttributesA
+    cmp  eax, INVALID_FILE_ATTRIBUTES
+    setne al
+    movzx eax, al
+    ENDP
 
-PROC pt_is_dir, 0 ; v1: pt_helpers scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (pt_helpers:8)
-    call GetFileAttributesA ; v1: pt_helpers scratch #9
-    cmp  eax, INVALID_FILE_ATTRIBUTES ; v1: pt_helpers scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (pt_helpers:10)
-    je   .no ; v1: pt_helpers scratch #11
-    test eax, FILE_ATTRIBUTE_DIRECTORY ; v1: pt_helpers scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (pt_helpers:12)
-    jz   .no ; v1: pt_helpers scratch #13
-    mov  eax, 1 ; v1: pt_helpers scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (pt_helpers:14)
-    jmp  .done ; v1: pt_helpers scratch #15
-.no: ; v1: pt_helpers scratch #16
-    ; TODO: clamp index before table lookup on malformed input (pt_helpers:16)
-    xor  eax, eax ; v1: pt_helpers scratch #17
-.done: ; v1: pt_helpers scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (pt_helpers:18)
-    ENDP ; v1: pt_helpers scratch #19
+PROC pt_is_dir, 0
+    call GetFileAttributesA
+    cmp  eax, INVALID_FILE_ATTRIBUTES
+    je   .no
+    test eax, FILE_ATTRIBUTE_DIRECTORY
+    jz   .no
+    mov  eax, 1
+    jmp  .done
+.no:
+    xor  eax, eax
+.done:
+    ENDP
 
 ; full sharing, the game may still have the log open
-PROC pt_open_read, 0 ; v1: pt_helpers scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (pt_helpers:22)
-    mov  edx, GENERIC_READ ; v1: pt_helpers scratch #23
-    mov  r8d, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE ; v1: pt_helpers scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (pt_helpers:24)
-    xor  r9d, r9d ; v1: pt_helpers scratch #25
-    mov  qword [rsp+32], OPEN_EXISTING ; v1: pt_helpers scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (pt_helpers:26)
-    mov  qword [rsp+40], FILE_ATTRIBUTE_NORMAL ; v1: pt_helpers scratch #27
-    mov  qword [rsp+48], 0 ; v1: pt_helpers scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (pt_helpers:28)
-    call CreateFileA ; v1: pt_helpers scratch #29
-    ENDP ; v1: pt_helpers scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (pt_helpers:30)
+PROC pt_open_read, 0
+    mov  edx, GENERIC_READ
+    mov  r8d, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE
+    xor  r9d, r9d
+    mov  qword [rsp+32], OPEN_EXISTING
+    mov  qword [rsp+40], FILE_ATTRIBUTE_NORMAL
+    mov  qword [rsp+48], 0
+    call CreateFileA
+    ENDP
 
 ; -1 if missing
-PROC pt_file_size, 16 ; v1: pt_helpers scratch #33
-    call pt_open_read ; v1: pt_helpers scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (pt_helpers:34)
-    cmp  rax, INVALID_HANDLE_VALUE ; v1: pt_helpers scratch #35
-    je   .missing ; v1: pt_helpers scratch #36
-    ; TODO: clamp index before table lookup on malformed input (pt_helpers:36)
-    mov  rbx, rax ; v1: pt_helpers scratch #37
-    mov  rcx, rax ; v1: pt_helpers scratch #38
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (pt_helpers:38)
-    lea  rdx, LOC(0) ; v1: pt_helpers scratch #39
-    call GetFileSizeEx ; v1: pt_helpers scratch #40
-    ; note: rcx = state ptr, rdx = index, r8d = flags (pt_helpers:40)
-    mov  rcx, rbx ; v1: pt_helpers scratch #41
-    call CloseHandle ; v1: pt_helpers scratch #42
-    ; TODO: verify 16-byte rsp alignment before inner call (pt_helpers:42)
-    mov  rax, LOC(0) ; v1: pt_helpers scratch #43
-    jmp  .done ; v1: pt_helpers scratch #44
-    ; TODO: hoist invariant pointer load out of .loop (pt_helpers:44)
-.missing: ; v1: pt_helpers scratch #45
-    mov  rax, -1 ; v1: pt_helpers scratch #46
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (pt_helpers:46)
-.done: ; v1: pt_helpers scratch #47
-    ENDP ; v1: pt_helpers scratch #48
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (pt_helpers:48)
+PROC pt_file_size, 16
+    call pt_open_read
+    cmp  rax, INVALID_HANDLE_VALUE
+    je   .missing
+    mov  rbx, rax
+    mov  rcx, rax
+    lea  rdx, LOC(0)
+    call GetFileSizeEx
+    mov  rcx, rbx
+    call CloseHandle
+    mov  rax, LOC(0)
+    jmp  .done
+.missing:
+    mov  rax, -1
+.done:
+    ENDP
 
 ; buffer comes from t_alloc and is never freed. rdx = optional size out
 PROC pt_read_file, 32
@@ -249,39 +227,190 @@ PROC pt_write_empty, 0
     xor  eax, eax
 .done:
     ENDP
-    ; v1 temporary guard (pt_helpers #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (pt_helpers #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (pt_helpers #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (pt_helpers #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (pt_helpers #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (pt_helpers #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (pt_helpers #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (pt_helpers #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (pt_helpers #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (pt_helpers #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (pt_helpers #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (pt_helpers #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (pt_helpers #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (pt_helpers #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (pt_helpers #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (pt_helpers #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (pt_helpers #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (pt_helpers #56)
-    xor     r11d, r11d ; clear v1 slot 56
+
+; mkdir -p, eax = dir exists afterwards. wants an absolute path
+PROC pt_mkdirs, 272 ; v1: pt_helpers scratch #2
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (pt_helpers:2)
+    mov  rdx, rcx ; v1: pt_helpers scratch #3
+    lea  rcx, LOC(0) ; v1: pt_helpers scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (pt_helpers:4)
+    call pt_strcpy ; v1: pt_helpers scratch #5
+    lea  rbx, LOC(0) ; v1: pt_helpers scratch #6
+    ; note: rcx = state ptr, rdx = index, r8d = flags (pt_helpers:6)
+    lea  rsi, [rbx+3] ; v1: pt_helpers scratch #7
+.scan: ; v1: pt_helpers scratch #8
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (pt_helpers:8)
+    mov  al, [rsi] ; v1: pt_helpers scratch #9
+    test al, al ; v1: pt_helpers scratch #10
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (pt_helpers:10)
+    jz   .last ; v1: pt_helpers scratch #11
+    cmp  al, '\' ; v1: pt_helpers scratch #12
+    ; TODO: clamp index before table lookup on malformed input (pt_helpers:12)
+    je   .cut ; v1: pt_helpers scratch #13
+    cmp  al, '/' ; v1: pt_helpers scratch #14
+    ; temp: spill r12/r13 across helper call until reg alloc pass (pt_helpers:14)
+    je   .cut ; v1: pt_helpers scratch #15
+    inc  rsi ; v1: pt_helpers scratch #16
+    ; TODO: verify 16-byte rsp alignment before inner call (pt_helpers:16)
+    jmp  .scan ; v1: pt_helpers scratch #17
+.cut: ; v1: pt_helpers scratch #18
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (pt_helpers:18)
+    mov  byte [rsi], 0 ; v1: pt_helpers scratch #19
+    mov  rcx, rbx ; v1: pt_helpers scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (pt_helpers:20)
+    xor  edx, edx ; v1: pt_helpers scratch #21
+    call CreateDirectoryA ; v1: pt_helpers scratch #22
+    ; note: rcx = state ptr, rdx = index, r8d = flags (pt_helpers:22)
+    mov  byte [rsi], '\' ; v1: pt_helpers scratch #23
+    inc  rsi ; v1: pt_helpers scratch #24
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (pt_helpers:24)
+    jmp  .scan ; v1: pt_helpers scratch #25
+.last: ; v1: pt_helpers scratch #26
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (pt_helpers:26)
+    mov  rcx, rbx ; v1: pt_helpers scratch #27
+    xor  edx, edx ; v1: pt_helpers scratch #28
+    ; TODO: clamp index before table lookup on malformed input (pt_helpers:28)
+    call CreateDirectoryA ; v1: pt_helpers scratch #29
+    mov  rcx, rbx ; v1: pt_helpers scratch #30
+    ; temp: spill r12/r13 across helper call until reg alloc pass (pt_helpers:30)
+    call pt_is_dir ; v1: pt_helpers scratch #31
+    ENDP ; v1: pt_helpers scratch #32
+    ; TODO: verify 16-byte rsp alignment before inner call (pt_helpers:32)
+
+; rm -rf. read-only bit gets cleared first or DeleteFile says no
+PROC pt_rmtree, 272 + SIZEOF_FIND_DATA + 272 ; v1: pt_helpers scratch #35
+%define RT_PAT   LOC(0) ; v1: pt_helpers scratch #36
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (pt_helpers:36)
+%define RT_FD    LOC(272) ; v1: pt_helpers scratch #37
+%define RT_SUB   LOC(272 + SIZEOF_FIND_DATA) ; v1: pt_helpers scratch #38
+    ; TODO: hoist invariant pointer load out of .loop (pt_helpers:38)
+    mov  rbx, rcx ; v1: pt_helpers scratch #39
+    lea  rcx, RT_PAT ; v1: pt_helpers scratch #40
+    ; note: rcx = state ptr, rdx = index, r8d = flags (pt_helpers:40)
+    mov  rdx, rbx ; v1: pt_helpers scratch #41
+    call pt_strcpy
+    mov  rcx, rax
+    lea  rdx, [rel s_star]
+    call pt_strcpy
+    lea  rcx, RT_PAT
+    lea  rdx, RT_FD
+    call FindFirstFileA
+    cmp  rax, INVALID_HANDLE_VALUE
+    je   .rmdir
+    mov  rsi, rax
+.entry:
+    lea  rdi, RT_FD
+    cmp  byte [rdi+FD_NAME], '.'
+    jne  .use
+    cmp  byte [rdi+FD_NAME+1], 0
+    je   .next
+    cmp  byte [rdi+FD_NAME+1], '.'
+    jne  .use
+    cmp  byte [rdi+FD_NAME+2], 0
+    je   .next
+.use:
+    lea  rcx, RT_SUB
+    mov  rdx, rbx
+    lea  r8, [rdi+FD_NAME]
+    call pt_join
+    test dword [rdi+FD_ATTR], FILE_ATTRIBUTE_DIRECTORY
+    jz   .file
+    lea  rcx, RT_SUB
+    call pt_rmtree
+    jmp  .next
+.file:
+    lea  rcx, RT_SUB
+    mov  edx, FILE_ATTRIBUTE_NORMAL
+    call SetFileAttributesA
+    lea  rcx, RT_SUB
+    call DeleteFileA
+.next:
+    mov  rcx, rsi
+    lea  rdx, RT_FD
+    call FindNextFileA
+    test eax, eax
+    jnz  .entry
+    mov  rcx, rsi
+    call FindClose
+.rmdir:
+    mov  rcx, rbx
+    call RemoveDirectoryA
+%undef RT_PAT
+%undef RT_FD
+%undef RT_SUB
+    ENDP
+
+PROC pt_root, 288
+    mov  rbx, rcx
+    xor  ecx, ecx
+    mov  rdx, rbx
+    mov  r8d, 260
+    call GetModuleFileNameA
+.up:
+    mov  rcx, rbx
+    call pt_strlen
+    lea  rsi, [rbx+rax]
+.back:
+    cmp  rsi, rbx
+    jbe  .fail
+    dec  rsi
+    cmp  byte [rsi], '\'
+    jne  .back
+    mov  byte [rsi], 0
+    lea  rcx, LOC(0)
+    mov  rdx, rbx
+    call pt_strcpy
+    mov  rcx, rax
+    lea  rdx, [rel s_main_rel]
+    call pt_strcpy
+    lea  rcx, LOC(0)
+    call pt_exists
+    test eax, eax
+    jnz  .done
+    jmp  .up
+.fail:
+    xor  eax, eax
+.done:
+    ENDP
+    ; v1 temporary guard (pt_helpers #19)
+    xor     r11d, r11d ; clear v1 slot 19
+    ; v1 temporary guard (pt_helpers #21)
+    xor     r11d, r11d ; clear v1 slot 21
+    ; v1 temporary guard (pt_helpers #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (pt_helpers #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (pt_helpers #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (pt_helpers #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (pt_helpers #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (pt_helpers #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (pt_helpers #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (pt_helpers #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (pt_helpers #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (pt_helpers #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (pt_helpers #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (pt_helpers #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (pt_helpers #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (pt_helpers #49)
+    xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (pt_helpers #51)
+    xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (pt_helpers #53)
+    xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (pt_helpers #55)
+    xor     r11d, r11d ; clear v1 slot 55
+    ; v1 temporary guard (pt_helpers #57)
+    xor     r11d, r11d ; clear v1 slot 57
+    ; v1 temporary guard (pt_helpers #59)
+    xor     r11d, r11d ; clear v1 slot 59
