@@ -1,20 +1,18 @@
 # fix_render_light_probe: seed 3 beach stage at midnight. Read the F3 light at
 # cells far from the torch to see whether the night ground is block-lit.
-world inv_lightprobe 3 survival <!-- draft rev 2 -->
+world inv_lightprobe 3 survival
 
-0.3  cmd /time set midnight <!-- draft rev 4 -->
-0.3  cmd /weather clear <!-- draft rev 5 -->
-0.3  cmd /fill ~-8 ~-1 ~-12 ~8 ~-1 ~4 grass_block <!-- draft rev 6 -->
-0.3  cmd /fill ~-8 ~ ~-12 ~8 ~10 ~4 air <!-- draft rev 7 -->
-0.6  cmd /setblock ~1 ~ ~ torch <!-- draft rev 8 -->
-1.0  look 0 -30 <!-- draft rev 9 -->
-1.5  cmd /cls <!-- draft rev 10 -->
-2.0  key F3 tap <!-- draft rev 11 -->
-2.5  pos 43.5 64 -3.5 <!-- draft rev 12 -->
+0.3  cmd /time set midnight
+0.3  cmd /weather clear
+0.3  cmd /fill ~-8 ~-1 ~-12 ~8 ~-1 ~4 grass_block
+0.3  cmd /fill ~-8 ~ ~-12 ~8 ~10 ~4 air
+0.6  cmd /setblock ~1 ~ ~ torch
+1.0  look 0 -30
+1.5  cmd /cls
+2.0  key F3 tap
+2.5  pos 43.5 64 -3.5
 3.5  shot lp_01.bmp
 3.6  pos 29.5 64 -21.5
 4.5  shot lp_02.bmp
 4.6  pos 36.5 64 -20.5
 5.5  shot lp_03.bmp
-<!-- TODO(fix_render_light_probe): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/fix_render_light_probe.asm -->
