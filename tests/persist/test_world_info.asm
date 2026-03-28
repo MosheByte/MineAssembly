@@ -2,83 +2,59 @@
 ; save_list_worlds hands back in rdx.
 ; @link src/save.asm src/config.asm tests/persist/mock_platform.asm tests/persist/persist_util.asm
 ; @timeout 60
-%include "common.inc" ; v1: test_world_info scratch #4
-    ; TODO: clamp index before table lookup on malformed input (test_world_info:4)
-%include "testlib.inc" ; v1: test_world_info scratch #5
-%include "../persist/persist.inc" ; v1: test_world_info scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (test_world_info:6)
+%include "common.inc"
+%include "testlib.inc"
+%include "../persist/persist.inc"
 
-extern save_world_info ; v1: test_world_info scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_world_info:8)
+extern save_world_info
 
-%define WI_SEED         0 ; v1: test_world_info scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (test_world_info:10)
-%define WI_FTIME        8 ; v1: test_world_info scratch #11
-%define WI_WTIME        16 ; v1: test_world_info scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_world_info:12)
-%define WI_MODE         24 ; v1: test_world_info scratch #13
-%define WI_OK           28 ; v1: test_world_info scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_world_info:14)
-%define WI_NAME         32 ; v1: test_world_info scratch #15
-%define WI_SIZE         64 ; v1: test_world_info scratch #16
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_world_info:16)
+%define WI_SEED         0               ; save.asm
+%define WI_FTIME        8
+%define WI_WTIME        16
+%define WI_MODE         24
+%define WI_OK           28
+%define WI_NAME         32
+%define WI_SIZE         64
 
 ; STRP reg, "text" -> reg = ptr to the literal
-%macro STRP 2 ; v1: test_world_info scratch #19
-    section .rdata ; v1: test_world_info scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_world_info:20)
-    %%s: db %2, 0 ; v1: test_world_info scratch #21
-    section .text ; v1: test_world_info scratch #22
-    ; TODO: clamp index before table lookup on malformed input (test_world_info:22)
-    lea  %1, [rel %%s] ; v1: test_world_info scratch #23
-%endmacro ; v1: test_world_info scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (test_world_info:24)
+%macro STRP 2
+    section .rdata
+    %%s: db %2, 0
+    section .text
+    lea  %1, [rel %%s]
+%endmacro
 
-section .rdata ; v1: test_world_info scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_world_info:26)
-s_info_one:     db 'saves\InfoOne\level.dat', 0 ; v1: test_world_info scratch #27
-s_trunc:        db 'saves\Trunc\level.dat', 0 ; v1: test_world_info scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (test_world_info:28)
-s_magic:        db 'saves\Magic\level.dat', 0 ; v1: test_world_info scratch #29
-s_old:          db 'saves\Old\level.dat', 0 ; v1: test_world_info scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_world_info:30)
-s_old_dir:      db 'saves\Old', 0 ; v1: test_world_info scratch #31
-s_a_level:      db 'saves\WorldA\level.dat', 0 ; v1: test_world_info scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_world_info:32)
-s_b_level:      db 'saves\WorldB\level.dat', 0 ; v1: test_world_info scratch #33
-align 8 ; v1: test_world_info scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_world_info:34)
+section .rdata
+s_info_one:     db 'saves\InfoOne\level.dat', 0
+s_trunc:        db 'saves\Trunc\level.dat', 0
+s_magic:        db 'saves\Magic\level.dat', 0
+s_old:          db 'saves\Old\level.dat', 0
+s_old_dir:      db 'saves\Old', 0
+s_a_level:      db 'saves\WorldA\level.dat', 0
+s_b_level:      db 'saves\WorldB\level.dat', 0
+align 8
 ; a v1 header and nothing else: no player, no block entities
-v1_hdr:         dd 'MASW', 1, 64, 0 ; v1: test_world_info scratch #36
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_world_info:36)
-                dq 99 ; v1: test_world_info scratch #37
-                dq 48000 ; v1: test_world_info scratch #38
-    ; TODO: clamp index before table lookup on malformed input (test_world_info:38)
-                dd 0, GM_SURVIVAL, 0, 0, 0, 0, 0, 0 ; v1: test_world_info scratch #39
-v1_hdr_len      equ $ - v1_hdr ; v1: test_world_info scratch #40
-    ; TODO: verify 16-byte rsp alignment before inner call (test_world_info:40)
+v1_hdr:         dd 'MASW', 1, 64, 0
+                dq 99                   ; seed
+                dq 48000                ; world time, day 3
+                dd 0, GM_SURVIVAL, 0, 0, 0, 0, 0, 0
+v1_hdr_len      equ $ - v1_hdr
 
-section .bss ; v1: test_world_info scratch #42
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_world_info:42)
-alignb 16 ; v1: test_world_info scratch #43
-info:           resb WI_SIZE ; v1: test_world_info scratch #44
-    ; TODO: hoist invariant pointer load out of .loop (test_world_info:44)
-listbuf:        resb 32*8 ; v1: test_world_info scratch #45
+section .bss
+alignb 16
+info:           resb WI_SIZE
+listbuf:        resb 32*8
 
-section .text ; v1: test_world_info scratch #47
+section .text
 
 ; (rcx folder) -> eax, info filled. info gets junk first so "always filled" shows
-PROC get_info, 0 ; v1: test_world_info scratch #50
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_world_info:50)
-    mov  rbx, rcx ; v1: test_world_info scratch #51
-    lea  rcx, [rel info] ; v1: test_world_info scratch #52
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_world_info:52)
-    mov  edx, 0xAB ; v1: test_world_info scratch #53
-    mov  r8d, WI_SIZE ; v1: test_world_info scratch #54
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_world_info:54)
-    call pu_memset ; v1: test_world_info scratch #55
-    mov  rcx, rbx ; v1: test_world_info scratch #56
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_world_info:56)
+PROC get_info, 0
+    mov  rbx, rcx
+    lea  rcx, [rel info]
+    mov  edx, 0xAB
+    mov  r8d, WI_SIZE
+    call pu_memset
+    mov  rcx, rbx
     lea  rdx, [rel info]
     call save_world_info
 ENDP
@@ -152,27 +128,100 @@ PROC test_main, 32
     CHECK_TRUE ebx, "file time still there"
     ENDCASE
 
-    ; v1 temporary guard (test_world_info #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_world_info #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_world_info #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_world_info #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_world_info #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_world_info #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_world_info #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_world_info #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_world_info #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_world_info #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_world_info #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_world_info #46)
-    xor     r11d, r11d ; clear v1 slot 46
+    CASE "info: bad magic"
+    CALL_STR pu_set_world_name, "Magic"
+    call save_world
+    lea  rcx, [rel s_magic]
+    call pu_read_file
+    mov  rsi, rax
+    mov  rdi, rdx
+    mov  byte [rsi], 'X'
+    lea  rcx, [rel s_magic]
+    mov  rdx, rsi
+    mov  r8, rdi
+    call pu_write_file
+    INFO "Magic"
+    CHECK_EQ32 r12d, 0, "rejected"
+    ENDCASE
+
+    CASE "info: v1 header"
+    STRP rcx, "saves"
+    xor  edx, edx
+    call CreateDirectoryA
+    lea  rcx, [rel s_old_dir]
+    xor  edx, edx
+    call CreateDirectoryA
+    lea  rcx, [rel s_old]
+    lea  rdx, [rel v1_hdr]
+    mov  r8d, v1_hdr_len
+    call pu_write_file
+    INFO "Old"
+    CHECK_EQ32 r12d, 1, "v1 accepted"
+    CHECK_EQ [rel info+WI_SEED], 99, "seed"
+    CHECK_EQ [rel info+WI_WTIME], 48000, "world time"
+    lea  rbx, [rel info+WI_NAME]
+    CHECK_STR rbx, "Old", "v1 has no typed name"
+    ENDCASE
+
+    CASE "info: missing and bad names"
+    INFO "Nope"
+    CHECK_EQ32 r12d, 0, "no level.dat"
+    CHECK_EQ [rel info+WI_FTIME], 0, "no file time"
+    lea  rbx, [rel info+WI_NAME]
+    CHECK_STR rbx, "Nope", "name still filled"
+    INFO ".."
+    CHECK_EQ32 r12d, 0, "'..' refused"
+    STRP rcx, "x"
+    xor  edx, edx
+    call save_world_info
+    CHECK_EQ32 eax, 0, "null out"
+    xor  ecx, ecx
+    lea  rdx, [rel info]
+    call save_world_info
+    CHECK_EQ32 eax, 0, "null name"
+    ENDCASE
+
+    CASE "info: save_list_worlds hands it back"
+    mov  qword [rel g_seed], 111
+    mov  dword [rel g_gamemode], GM_SURVIVAL
+    CALL_STR pu_set_world_name, "WorldA"
+    call save_world
+    lea  rcx, [rel s_a_level]
+    mov  edx, 500
+    call pu_set_mtime_ago
+    mov  qword [rel g_seed], 222
+    mov  dword [rel g_gamemode], GM_CREATIVE
+    CALL_STR pu_set_world_name, "WorldB"
+    call save_world
+    lea  rcx, [rel s_b_level]
+    mov  edx, 100
+    call pu_set_mtime_ago
+    lea  rcx, [rel listbuf]
+    mov  edx, 8
+    call save_list_worlds
+    mov  ebx, eax
+    mov  rsi, rdx
+    CHECK_EQ32 ebx, 2, "two worlds"
+    lea  rbx, [rel listbuf]
+    CHECK_STR rbx, "WorldB", "newest first"
+    CHECK_EQ [rsi+WI_SEED], 222, "info 0 is WorldB"
+    CHECK_EQ32 [rsi+WI_MODE], GM_CREATIVE, "info 0 mode"
+    CHECK_EQ32 [rsi+WI_OK], 1, "info 0 ok"
+    lea  rbx, [rsi+WI_NAME]
+    CHECK_STR rbx, "WorldB", "info 0 name"
+    CHECK_EQ [rsi+WI_SIZE+WI_SEED], 111, "info 1 is WorldA"
+    mov  rax, [rsi+WI_FTIME]
+    mov  rbx, [rsi+WI_SIZE+WI_FTIME]
+    xor  edi, edi
+    cmp  rax, rbx
+    seta dil
+    CHECK_TRUE edi, "info 0 played later than info 1"
+    lea  rcx, [rel listbuf]
+    mov  edx, 1
+    call save_list_worlds
+    mov  ebx, eax
+    mov  rsi, rdx
+    CHECK_EQ32 ebx, 1, "max 1"
+    CHECK_EQ [rsi+WI_SEED], 222, "max 1 keeps the newest"
+    ENDCASE
+ENDP
