@@ -1,0 +1,22 @@
+# fix_simulation_leaves_natural: a natural (worldgen) oak next to a /fill
+# block of oak leaves. Seed 1 has an oak with its trunk at x=-2, z=-2,
+# y=70..74 and no other log within 8 blocks. At t=2.5 the trunk is removed:
+# the natural canopy must crumble within a few seconds (wake cascade), while
+# the 3x2x3 /fill leaves east of it (player-placed, hence persistent) must
+# survive the cascade reaching them.
+#
+# Run:  mabuild scenario tests/scenarios/fix_simulation_leaves_natural.txt --tag fix_simulation
+world fix_simulation_leaves_natural 1 creative
+
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fly
+0.5  cmd /fill 2 73 -3 4 74 -1 oak_leaves
+1.0  pos -0.5 90 10
+1.0  look 0 -55
+1.5  hidehud on
+2.0  shot fleavesnat_0_before.bmp
+2.5  cmd /fill -2 70 -2 -2 74 -2 air
+5.0  shot fleavesnat_1_t5.bmp
+10.0 shot fleavesnat_2_t10.bmp
+30.0 shot fleavesnat_3_t30.bmp
