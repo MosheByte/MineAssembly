@@ -108,73 +108,52 @@ PROC test_main, 32
     CALL_STR pu_mkdir_rel, "saves\NotAWorld"     ; no level.dat
     section .rdata
     s_stray: db 'saves\stray.txt', 0
-    section .text ; v1: test_save_worlds scratch #0
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_save_worlds:0)
-    lea  rcx, [rel s_stray] ; v1: test_save_worlds scratch #1
-    lea  rdx, [rel s_x] ; v1: test_save_worlds scratch #2
-    ; TODO: clamp index before table lookup on malformed input (test_save_worlds:2)
-    mov  r8d, 1 ; v1: test_save_worlds scratch #3
-    call pu_write_file ; v1: test_save_worlds scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_save_worlds:4)
-    lea  rcx, [rel name40] ; v1: test_save_worlds scratch #5
-    xor  edx, edx ; v1: test_save_worlds scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (test_save_worlds:6)
-    call make_world ; v1: test_save_worlds scratch #7
-    mov  ecx, 10 ; v1: test_save_worlds scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (test_save_worlds:8)
-    call list_worlds ; v1: test_save_worlds scratch #9
-    CHECK_EQ32 eax, 4, "four listable worlds" ; v1: test_save_worlds scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_save_worlds:10)
-    CHECK_ENTRY 0, "Bravo" ; v1: test_save_worlds scratch #11
-    CHECK_ENTRY 1, "Charlie" ; v1: test_save_worlds scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_save_worlds:12)
-    CHECK_ENTRY 2, "delta" ; v1: test_save_worlds scratch #13
-    CHECK_ENTRY 3, "Alpha" ; v1: test_save_worlds scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_save_worlds:14)
-    mov  ecx, 2 ; v1: test_save_worlds scratch #15
-    call list_worlds ; v1: test_save_worlds scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_save_worlds:16)
-    CHECK_EQ32 eax, 2, "max 2" ; v1: test_save_worlds scratch #17
-    CHECK_ENTRY 0, "Bravo" ; v1: test_save_worlds scratch #18
-    ; TODO: clamp index before table lookup on malformed input (test_save_worlds:18)
-    CHECK_ENTRY 1, "Charlie" ; v1: test_save_worlds scratch #19
-    xor  ecx, ecx ; v1: test_save_worlds scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_save_worlds:20)
-    call list_worlds ; v1: test_save_worlds scratch #21
-    CHECK_EQ32 eax, 0, "max 0" ; v1: test_save_worlds scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (test_save_worlds:22)
-    ENDCASE ; v1: test_save_worlds scratch #23
+    section .text
+    lea  rcx, [rel s_stray]             ; plain file
+    lea  rdx, [rel s_x]
+    mov  r8d, 1
+    call pu_write_file
+    lea  rcx, [rel name40]              ; too long for 32-byte entries
+    xor  edx, edx
+    call make_world
+    mov  ecx, 10
+    call list_worlds
+    CHECK_EQ32 eax, 4, "four listable worlds"
+    CHECK_ENTRY 0, "Bravo"
+    CHECK_ENTRY 1, "Charlie"
+    CHECK_ENTRY 2, "delta"
+    CHECK_ENTRY 3, "Alpha"
+    mov  ecx, 2
+    call list_worlds
+    CHECK_EQ32 eax, 2, "max 2"
+    CHECK_ENTRY 0, "Bravo"
+    CHECK_ENTRY 1, "Charlie"
+    xor  ecx, ecx
+    call list_worlds
+    CHECK_EQ32 eax, 0, "max 0"
+    ENDCASE
 
-    CASE "worlds: list without saves dir" ; v1: test_save_worlds scratch #25
-    mov  ecx, 8 ; v1: test_save_worlds scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (test_save_worlds:26)
-    call list_worlds ; v1: test_save_worlds scratch #27
-    CHECK_EQ32 eax, 0, "no saves folder -> empty list" ; v1: test_save_worlds scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_save_worlds:28)
-    ENDCASE ; v1: test_save_worlds scratch #29
+    CASE "worlds: list without saves dir"
+    mov  ecx, 8
+    call list_worlds
+    CHECK_EQ32 eax, 0, "no saves folder -> empty list"
+    ENDCASE
 
-    CASE "worlds: exists and delete" ; v1: test_save_worlds scratch #31
-    MAKE "Doomed", -1 ; v1: test_save_worlds scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_save_worlds:32)
-    mov  ecx, 4 ; v1: test_save_worlds scratch #33
-    mov  edx, -4 ; v1: test_save_worlds scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_save_worlds:34)
-    call pu_new_chunk ; v1: test_save_worlds scratch #35
-    mov  rbx, rax ; v1: test_save_worlds scratch #36
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_save_worlds:36)
-    mov  dword [rbx+CHUNK.modified], 1 ; v1: test_save_worlds scratch #37
-    mov  byte [rbx+CHUNK_BLOCKS+5], 1 ; v1: test_save_worlds scratch #38
-    ; TODO: clamp index before table lookup on malformed input (test_save_worlds:38)
-    mov  rcx, rbx ; v1: test_save_worlds scratch #39
-    call save_chunk ; v1: test_save_worlds scratch #40
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_save_worlds:40)
-    CHECK_EQ32 eax, 1, "chunk saved into Doomed" ; v1: test_save_worlds scratch #41
-    MAKE "Keeper", -1 ; v1: test_save_worlds scratch #42
-    ; TODO: hoist invariant pointer load out of .loop (test_save_worlds:42)
-    CALL_STR save_world_exists, "Doomed" ; v1: test_save_worlds scratch #43
-    CHECK_EQ32 eax, 1, "Doomed exists" ; v1: test_save_worlds scratch #44
-    ; TODO: verify 16-byte rsp alignment before inner call (test_save_worlds:44)
-    CALL_STR save_world_exists, "Nope" ; v1: test_save_worlds scratch #45
+    CASE "worlds: exists and delete"
+    MAKE "Doomed", -1
+    mov  ecx, 4
+    mov  edx, -4
+    call pu_new_chunk
+    mov  rbx, rax
+    mov  dword [rbx+CHUNK.modified], 1
+    mov  byte [rbx+CHUNK_BLOCKS+5], 1
+    mov  rcx, rbx
+    call save_chunk
+    CHECK_EQ32 eax, 1, "chunk saved into Doomed"
+    MAKE "Keeper", -1
+    CALL_STR save_world_exists, "Doomed"
+    CHECK_EQ32 eax, 1, "Doomed exists"
+    CALL_STR save_world_exists, "Nope"
     CHECK_EQ32 eax, 0, "Nope does not exist"
     CALL_STR save_world_exists, "Doomed\chunks"
     CHECK_EQ32 eax, 0, "a sub-path is not a world"
@@ -265,29 +244,79 @@ PROC test_main, 32
     CHECK_EQ32 eax, 0, "world folder gone"
     ENDCASE
 
-    ; v1 temporary guard (test_save_worlds #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (test_save_worlds #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (test_save_worlds #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (test_save_worlds #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (test_save_worlds #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (test_save_worlds #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (test_save_worlds #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (test_save_worlds #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (test_save_worlds #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (test_save_worlds #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (test_save_worlds #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (test_save_worlds #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (test_save_worlds #45)
-    xor     r11d, r11d ; clear v1 slot 45
+    CASE "autosave: every 6000 ticks"
+    mov  qword [rel g_world_time], 0
+    mov  dword [rel g_world_active], 0
+    mov  r12d, [rel mock_chat_calls]
+    mov  ecx, 7000                      ; no world: nothing happens
+    call tick
+    CHECK_EQ32 [rel mock_chat_calls], r12d, "no world: no autosave"
+    CHECK_EXISTS "saves", 0, "no world: nothing written"
+    mov  dword [rel g_world_active], 1
+    call save_world                     ; manual save restarts the countdown
+    CHECK_EQ32 eax, 1, "manual save"
+    mov  ecx, 5999
+    call tick
+    CHECK_EQ32 [rel mock_chat_calls], r12d, "5999 ticks after a save: nothing"
+    lea  rcx, [rel s_tw_level]
+    call DeleteFileA
+    mov  ecx, 1
+    call tick
+    lea  r13d, [r12+1]
+    CHECK_EQ32 [rel mock_chat_calls], r13d, "autosave after 6000 ticks"
+    mov  rax, [rel mock_last_chat]
+    CHECK_STR rax, "Game saved", "chat message"
+    CHECK_EXISTS "saves\TestWorld\level.dat", 1, "level.dat rewritten"
+    mov  ecx, 6000
+    call tick
+    lea  r13d, [r12+2]
+    CHECK_EQ32 [rel mock_chat_calls], r13d, "next autosave 6000 ticks later"
+    ; a brand-new world starts at time 0: the countdown restarts, no instant save
+    mov  qword [rel g_world_time], 0
+    mov  ecx, 5999
+    call tick
+    CHECK_EQ32 [rel mock_chat_calls], r13d, "time reset: countdown restarted"
+    mov  ecx, 2
+    call tick
+    lea  r13d, [r12+3]
+    CHECK_EQ32 [rel mock_chat_calls], r13d, "autosave after the restarted countdown"
+    mov  dword [rel g_world_active], 0
+    ENDCASE
+ENDP
+
+PROC pu_mkdir_rel, 0
+    mov  rsi, rcx
+    lea  rdi, [rel pathbuf]
+    xor  ebx, ebx
+.l: mov  al, [rsi+rbx]
+    test al, al
+    jz   .last
+    cmp  al, '\'
+    jne  .copy
+    mov  byte [rdi+rbx], 0
+    mov  rcx, rdi
+    xor  edx, edx
+    call CreateDirectoryA
+    mov  al, '\'
+.copy:
+    mov  [rdi+rbx], al
+    inc  ebx
+    jmp  .l
+.last:
+    mov  byte [rdi+rbx], 0
+    mov  rcx, rdi
+    xor  edx, edx
+    call CreateDirectoryA
+ENDP
+
+; ascii -> utf-16
+PROC widen_path, 0
+    lea  rsi, [rel pathbuf]
+    lea  rdi, [rel widebuf]
+    xor  ecx, ecx
+.l: movzx eax, byte [rsi+rcx]
+    mov  [rdi+rcx*2], ax
+    inc  ecx
+    test eax, eax
+    jnz  .l
+ENDP
