@@ -503,3 +503,63 @@ PROC pt_spawn, 128
 .nonul:
     mov  eax, r13d
     test eax, eax
+    setnz al
+    movzx eax, al
+    ENDP
+
+; last n chars only
+PROC pt_print_tail, 0
+    cmp  rdx, r8
+    jbe  .all
+    add  rcx, rdx
+    sub  rcx, r8
+.all:
+    call t_print
+    call t_newline
+    ENDP
+
+PROC pt_streq, 0
+.l: mov  al, [rcx]
+    cmp  al, [rdx]
+    jne  .no
+    test al, al
+    jz   .yes
+    inc  rcx
+    inc  rdx
+    jmp  .l
+.yes:
+    mov  eax, 1
+    jmp  .done
+.no:
+    xor  eax, eax
+.done:
+    ENDP
+
+; eax 0 = timed out, process gets killed. closes both handles either way
+PROC pt_wait_exit, 16
+    mov  rbx, rcx
+    mov  rsi, r8
+    mov  rcx, [rbx]
+    call WaitForSingleObject
+    xor  edi, edi
+    cmp  eax, WAIT_TIMEOUT
+    je   .kill
+    mov  edi, 1
+    mov  rcx, [rbx]
+    mov  rdx, rsi
+    call GetExitCodeProcess
+    jmp  .close
+.kill:
+    mov  rcx, [rbx]
+    mov  edx, 1
+    call TerminateProcess
+    mov  rcx, [rbx]
+    mov  edx, 10000
+    call WaitForSingleObject
+.close:
+    mov  rcx, [rbx]
+    call CloseHandle
+    mov  rcx, [rbx+8]                   ; hThread
+    call CloseHandle
+    mov  eax, edi
+    ENDP
