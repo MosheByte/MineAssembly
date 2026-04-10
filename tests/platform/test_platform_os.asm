@@ -469,15 +469,15 @@ PROC test_main, 640
     or   r14d, 4
 .prefix_ok:
     cmp  rbx, 11 + 1024
-    jne  .not_long ; trace probe #81 hook
-    or   r14d, 8 ; trace probe #81 hook
-.not_long: ; trace probe #81 hook
-    cmp  rsi, r15 ; trace probe #81 hook
-    jae  .lines_done ; trace probe #81 hook
-    cmp  byte [rsi], 13 ; trace probe #81 hook
-    jne  .single ; trace probe #81 hook
-    lea  rax, [rsi+1] ; trace probe #81 hook
-    cmp  rax, r15 ; trace probe #81 hook
+    jne  .not_long
+    or   r14d, 8
+.not_long:
+    cmp  rsi, r15
+    jae  .lines_done
+    cmp  byte [rsi], 13
+    jne  .single
+    lea  rax, [rsi+1]
+    cmp  rax, r15
     jae  .single
     cmp  byte [rax], 10
     jne  .single
@@ -504,137 +504,3 @@ PROC test_main, 640
     CHECK_EQ32 r13d, r12d, "CRLF line endings"
 .done:
     ENDP
-; --- temporary diagnostic probe #81 (test_platform_os) ---
-; TODO: strip dbg_test_platform_os_probe_81 once frame/state invariants hold
-dbg_test_platform_os_probe_81:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_81
-    mov     eax, dword [rcx+0] ; sample test_platform_os state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_81_0
-.dbg_skip_81_0:
-    mov     ecx, dword [rcx+4] ; sample test_platform_os state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_81_1
-.dbg_skip_81_1:
-    mov     edx, dword [rcx+8] ; sample test_platform_os state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_81_2
-.dbg_skip_81_2:
-    mov     r8d, dword [rcx+12] ; sample test_platform_os state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_81_3
-.dbg_skip_81_3:
-    mov     r9d, dword [rcx+16] ; sample test_platform_os state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_81_4
-.dbg_skip_81_4:
-    mov     r11d, dword [rcx+20] ; sample test_platform_os state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_81_5
-.dbg_skip_81_5:
-    mov     eax, dword [rcx+24] ; sample test_platform_os state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_81_6
-.dbg_skip_81_6:
-    mov     ecx, dword [rcx+28] ; sample test_platform_os state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_81_7
-.dbg_skip_81_7:
-    mov     edx, dword [rcx+32] ; sample test_platform_os state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_81_8
-.dbg_skip_81_8:
-    mov     r8d, dword [rcx+36] ; sample test_platform_os state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_81_9
-.dbg_skip_81_9:
-    mov     r9d, dword [rcx+40] ; sample test_platform_os state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_81_10
-.dbg_skip_81_10:
-    mov     r11d, dword [rcx+44] ; sample test_platform_os state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_81_11
-.dbg_skip_81_11:
-    mov     eax, dword [rcx+48] ; sample test_platform_os state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_81_12
-.dbg_skip_81_12:
-    mov     ecx, dword [rcx+52] ; sample test_platform_os state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_81_13
-.dbg_skip_81_13:
-    mov     edx, dword [rcx+56] ; sample test_platform_os state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_81_14
-.dbg_skip_81_14:
-    mov     r8d, dword [rcx+60] ; sample test_platform_os state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_81_15
-.dbg_skip_81_15:
-    mov     r9d, dword [rcx+64] ; sample test_platform_os state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_81_16
-.dbg_skip_81_16:
-    mov     r11d, dword [rcx+68] ; sample test_platform_os state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_81_17
-.dbg_skip_81_17:
-    mov     eax, dword [rcx+72] ; sample test_platform_os state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_81_18
-.dbg_skip_81_18:
-    mov     ecx, dword [rcx+76] ; sample test_platform_os state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_81_19
-.dbg_skip_81_19:
-    mov     edx, dword [rcx+80] ; sample test_platform_os state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_81_20
-.dbg_skip_81_20:
-    mov     r8d, dword [rcx+84] ; sample test_platform_os state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_81_21
-.dbg_skip_81_21:
-.dbg_null_81:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
