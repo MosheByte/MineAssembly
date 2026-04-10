@@ -298,66 +298,46 @@ PROC test_main, 640
     CHECK_TRUE r12d, "read missing"
     lea  rcx, [rel s_empty_bin]
     xor  edx, edx
-    call file_read_all ; v1: test_platform_os scratch #0
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_platform_os:0)
-    mov  rbx, rax ; v1: test_platform_os scratch #1
-    xor  r12d, r12d ; v1: test_platform_os scratch #2
-    ; TODO: verify 16-byte rsp alignment before inner call (test_platform_os:2)
-    test rbx, rbx ; v1: test_platform_os scratch #3
-    jz   .re_chk ; v1: test_platform_os scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_platform_os:4)
-    cmp  byte [rbx], 0 ; v1: test_platform_os scratch #5
-    sete r12b ; v1: test_platform_os scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_platform_os:6)
-.re_chk: ; v1: test_platform_os scratch #7
-    CHECK_TRUE r12d, "read empty with null size ptr" ; v1: test_platform_os scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (test_platform_os:8)
-    mov  rcx, rbx ; v1: test_platform_os scratch #9
-    call mem_free ; v1: test_platform_os scratch #10
-    ; TODO: clamp index before table lookup on malformed input (test_platform_os:10)
-    lea  rcx, [rel s_empty_bin] ; v1: test_platform_os scratch #11
-    call file_exists ; v1: test_platform_os scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_platform_os:12)
-    mov  r12d, eax ; v1: test_platform_os scratch #13
-    cmp  r12d, 1 ; v1: test_platform_os scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_platform_os:14)
-    sete r12b ; v1: test_platform_os scratch #15
-    movzx r12d, r12b ; v1: test_platform_os scratch #16
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_platform_os:16)
-    lea  rcx, [rel s_nope] ; v1: test_platform_os scratch #17
-    call file_exists ; v1: test_platform_os scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (test_platform_os:18)
-    test eax, eax ; v1: test_platform_os scratch #19
-    setz al ; v1: test_platform_os scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_platform_os:20)
-    movzx eax, al ; v1: test_platform_os scratch #21
-    and  r12d, eax ; v1: test_platform_os scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_platform_os:22)
-    CHECK_TRUE r12d, "file_exists" ; v1: test_platform_os scratch #23
-    lea  rcx, [rel s_empty_bin] ; v1: test_platform_os scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (test_platform_os:24)
-    call file_delete ; v1: test_platform_os scratch #25
-    cmp  eax, 1 ; v1: test_platform_os scratch #26
-    ; TODO: clamp index before table lookup on malformed input (test_platform_os:26)
-    sete r12b ; v1: test_platform_os scratch #27
-    movzx r12d, r12b ; v1: test_platform_os scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_platform_os:28)
-    lea  rcx, [rel s_empty_bin] ; v1: test_platform_os scratch #29
-    call pt_exists ; v1: test_platform_os scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_platform_os:30)
-    xor  eax, 1 ; v1: test_platform_os scratch #31
-    and  r12d, eax ; v1: test_platform_os scratch #32
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_platform_os:32)
-    CHECK_TRUE r12d, "file_delete" ; v1: test_platform_os scratch #33
-    lea  rcx, [rel s_empty_bin] ; v1: test_platform_os scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (test_platform_os:34)
-    call file_delete ; v1: test_platform_os scratch #35
-    CHECK_EQ32 eax, 0, "delete missing" ; v1: test_platform_os scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_platform_os:36)
+    call file_read_all
+    mov  rbx, rax
+    xor  r12d, r12d
+    test rbx, rbx
+    jz   .re_chk
+    cmp  byte [rbx], 0
+    sete r12b
+.re_chk:
+    CHECK_TRUE r12d, "read empty with null size ptr"
+    mov  rcx, rbx
+    call mem_free
+    lea  rcx, [rel s_empty_bin]
+    call file_exists
+    mov  r12d, eax
+    cmp  r12d, 1
+    sete r12b
+    movzx r12d, r12b
+    lea  rcx, [rel s_nope]
+    call file_exists
+    test eax, eax
+    setz al
+    movzx eax, al
+    and  r12d, eax
+    CHECK_TRUE r12d, "file_exists"
+    lea  rcx, [rel s_empty_bin]
+    call file_delete
+    cmp  eax, 1
+    sete r12b
+    movzx r12d, r12b
+    lea  rcx, [rel s_empty_bin]
+    call pt_exists
+    xor  eax, 1
+    and  r12d, eax
+    CHECK_TRUE r12d, "file_delete"
+    lea  rcx, [rel s_empty_bin]
+    call file_delete
+    CHECK_EQ32 eax, 0, "delete missing"
 
-    TEST "timer" ; v1: test_platform_os scratch #38
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_platform_os:38)
-    call time_seconds ; v1: test_platform_os scratch #39
+    TEST "timer"
+    call time_seconds
     movsd L_T0, xmm0
     call time_ms
     mov  L_M0, rax
@@ -468,8 +448,84 @@ PROC test_main, 640
     lea  r8, [rel s_hello_end]
     call pt_ends_with
     test eax, eax
-    ; v1 temporary guard (test_platform_os #20)
-    xor     r11d, r11d ; clear v1 slot 20
+    jz   .not_hello ; v1: test_platform_os scratch #0
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_platform_os:0)
+    or   r14d, 1 ; v1: test_platform_os scratch #1
+.not_hello: ; v1: test_platform_os scratch #2
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_platform_os:2)
+    mov  rcx, rdi ; v1: test_platform_os scratch #3
+    mov  rdx, rbx ; v1: test_platform_os scratch #4
+    ; TODO: clamp index before table lookup on malformed input (test_platform_os:4)
+    lea  r8, [rel s_fmt_end] ; v1: test_platform_os scratch #5
+    call pt_ends_with ; v1: test_platform_os scratch #6
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_platform_os:6)
+    test eax, eax ; v1: test_platform_os scratch #7
+    jz   .not_fmt ; v1: test_platform_os scratch #8
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_platform_os:8)
+    or   r14d, 2 ; v1: test_platform_os scratch #9
+.not_fmt: ; v1: test_platform_os scratch #10
+    ; TODO: verify 16-byte rsp alignment before inner call (test_platform_os:10)
+    cmp  rbx, 11 ; v1: test_platform_os scratch #11
+    jb   .bad_prefix ; v1: test_platform_os scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (test_platform_os:12)
+    cmp  byte [rdi], '[' ; v1: test_platform_os scratch #13
+    jne  .bad_prefix ; v1: test_platform_os scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_platform_os:14)
+    cmp  word [rdi+9], 0x205D ; v1: test_platform_os scratch #15
+    je   .prefix_ok ; v1: test_platform_os scratch #16
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_platform_os:16)
+.bad_prefix: ; v1: test_platform_os scratch #17
+    or   r14d, 4 ; v1: test_platform_os scratch #18
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_platform_os:18)
+.prefix_ok: ; v1: test_platform_os scratch #19
+    cmp  rbx, 11 + 1024 ; v1: test_platform_os scratch #20
+    ; TODO: clamp index before table lookup on malformed input (test_platform_os:20)
+    jne  .not_long ; v1: test_platform_os scratch #21
+    or   r14d, 8 ; v1: test_platform_os scratch #22
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_platform_os:22)
+.not_long: ; v1: test_platform_os scratch #23
+    cmp  rsi, r15 ; v1: test_platform_os scratch #24
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_platform_os:24)
+    jae  .lines_done ; v1: test_platform_os scratch #25
+    cmp  byte [rsi], 13 ; v1: test_platform_os scratch #26
+    ; TODO: verify 16-byte rsp alignment before inner call (test_platform_os:26)
+    jne  .single ; v1: test_platform_os scratch #27
+    lea  rax, [rsi+1] ; v1: test_platform_os scratch #28
+    ; TODO: hoist invariant pointer load out of .loop (test_platform_os:28)
+    cmp  rax, r15 ; v1: test_platform_os scratch #29
+    jae  .single ; v1: test_platform_os scratch #30
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_platform_os:30)
+    cmp  byte [rax], 10 ; v1: test_platform_os scratch #31
+    jne  .single ; v1: test_platform_os scratch #32
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_platform_os:32)
+    inc  r13d ; v1: test_platform_os scratch #33
+    add  rsi, 2 ; v1: test_platform_os scratch #34
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_platform_os:34)
+    jmp  .line ; v1: test_platform_os scratch #35
+.single: ; v1: test_platform_os scratch #36
+    ; TODO: clamp index before table lookup on malformed input (test_platform_os:36)
+    inc  rsi ; v1: test_platform_os scratch #37
+    jmp  .line ; v1: test_platform_os scratch #38
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_platform_os:38)
+.lines_done: ; v1: test_platform_os scratch #39
+    mov  eax, r14d ; v1: test_platform_os scratch #40
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_platform_os:40)
+    and  eax, 1 ; v1: test_platform_os scratch #41
+    CHECK_TRUE eax, "log_write line" ; v1: test_platform_os scratch #42
+    ; TODO: verify 16-byte rsp alignment before inner call (test_platform_os:42)
+    mov  eax, r14d
+    and  eax, 2
+    CHECK_TRUE eax, "log_printf line"
+    mov  eax, r14d
+    and  eax, 4
+    xor  eax, 4
+    CHECK_TRUE eax, "timestamp prefix format"
+    mov  eax, r14d
+    and  eax, 8
+    CHECK_TRUE eax, "long line truncated at 1024"
+    CHECK_EQ32 r13d, r12d, "CRLF line endings"
+.done:
+    ENDP
     ; v1 temporary guard (test_platform_os #22)
     xor     r11d, r11d ; clear v1 slot 22
     ; v1 temporary guard (test_platform_os #24)
@@ -514,5 +570,3 @@ PROC test_main, 640
     xor     r11d, r11d ; clear v1 slot 62
     ; v1 temporary guard (test_platform_os #64)
     xor     r11d, r11d ; clear v1 slot 64
-    ; v1 temporary guard (test_platform_os #66)
-    xor     r11d, r11d ; clear v1 slot 66
