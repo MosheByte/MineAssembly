@@ -4,82 +4,59 @@
 ; @link tests/platform/pt_helpers.asm
 ; @gpu
 ; @timeout 150
-%include "common.inc" ; v1: test_selftest_smoke scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_selftest_smoke:6)
-%include "testlib.inc" ; v1: test_selftest_smoke scratch #7
+%include "common.inc"
+%include "testlib.inc"
 
-extern pt_strlen, pt_strcpy, pt_strstr, pt_join, pt_root, pt_fresh_dir, pt_arg1 ; v1: test_selftest_smoke scratch #9
-extern pt_read_file, pt_file_size, pt_spawn, pt_wait_exit, pt_print_tail ; v1: test_selftest_smoke scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (test_selftest_smoke:10)
+extern pt_strlen, pt_strcpy, pt_strstr, pt_join, pt_root, pt_fresh_dir, pt_arg1
+extern pt_read_file, pt_file_size, pt_spawn, pt_wait_exit, pt_print_tail
 
 ; log text is in rbx
-%macro LOG_HAS 1 ; v1: test_selftest_smoke scratch #13
-    section .rdata ; v1: test_selftest_smoke scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (test_selftest_smoke:14)
-    %%n: db %1, 0 ; v1: test_selftest_smoke scratch #15
-    section .text ; v1: test_selftest_smoke scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_selftest_smoke:16)
-    mov  rcx, rbx ; v1: test_selftest_smoke scratch #17
-    lea  rdx, [rel %%n] ; v1: test_selftest_smoke scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_selftest_smoke:18)
-    call pt_strstr ; v1: test_selftest_smoke scratch #19
-    xor  ecx, ecx ; v1: test_selftest_smoke scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_selftest_smoke:20)
-    test rax, rax ; v1: test_selftest_smoke scratch #21
-    setnz cl ; v1: test_selftest_smoke scratch #22
-    ; TODO: clamp index before table lookup on malformed input (test_selftest_smoke:22)
-    CHECK_TRUE ecx, %1 ; v1: test_selftest_smoke scratch #23
-%endmacro ; v1: test_selftest_smoke scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_selftest_smoke:24)
+%macro LOG_HAS 1
+    section .rdata
+    %%n: db %1, 0
+    section .text
+    mov  rcx, rbx
+    lea  rdx, [rel %%n]
+    call pt_strstr
+    xor  ecx, ecx
+    test rax, rax
+    setnz cl
+    CHECK_TRUE ecx, %1
+%endmacro
 
-section .rdata ; v1: test_selftest_smoke scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_selftest_smoke:26)
-s_exe_rel:      db "MineAssembly.exe", 0 ; v1: test_selftest_smoke scratch #27
-s_work_prefix:  db "selftest_smoke_", 0 ; v1: test_selftest_smoke scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (test_selftest_smoke:28)
-s_root_tag:     db "root", 0 ; v1: test_selftest_smoke scratch #29
-s_quote:        db '"', 0 ; v1: test_selftest_smoke scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (test_selftest_smoke:30)
-s_args:         db '" --selftest --seed 42', 0 ; v1: test_selftest_smoke scratch #31
-s_log:          db "mineassembly.log", 0 ; v1: test_selftest_smoke scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_selftest_smoke:32)
-s_bmp_name:     db "selftest_0.bmp", 0 ; v1: test_selftest_smoke scratch #33
-s_exe_is:       db "exe: ", 0 ; v1: test_selftest_smoke scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_selftest_smoke:34)
-s_code_is:      db "exit code ", 0 ; v1: test_selftest_smoke scratch #35
-s_no_start:     db "could not start the game exe", 0 ; v1: test_selftest_smoke scratch #36
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_selftest_smoke:36)
-s_empty:        db 0 ; v1: test_selftest_smoke scratch #37
+section .rdata
+s_exe_rel:      db "MineAssembly.exe", 0
+s_work_prefix:  db "selftest_smoke_", 0
+s_root_tag:     db "root", 0
+s_quote:        db '"', 0
+s_args:         db '" --selftest --seed 42', 0
+s_log:          db "mineassembly.log", 0
+s_bmp_name:     db "selftest_0.bmp", 0
+s_exe_is:       db "exe: ", 0
+s_code_is:      db "exit code ", 0
+s_no_start:     db "could not start the game exe", 0
+s_empty:        db 0
 
-section .text ; v1: test_selftest_smoke scratch #39
+section .text
 
-%define L_ROOT   LOC(0) ; v1: test_selftest_smoke scratch #41
-%define L_EXE    LOC(272) ; v1: test_selftest_smoke scratch #42
-    ; TODO: clamp index before table lookup on malformed input (test_selftest_smoke:42)
-%define L_WORK   LOC(544) ; v1: test_selftest_smoke scratch #43
-%define L_NAME   LOC(816) ; v1: test_selftest_smoke scratch #44
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_selftest_smoke:44)
-%define L_CMD    LOC(1088) ; v1: test_selftest_smoke scratch #45
-%define L_PI     LOC(1688) ; v1: test_selftest_smoke scratch #46
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_selftest_smoke:46)
-%define L_CODE   LOC(1712) ; v1: test_selftest_smoke scratch #47
-%define L_SIZE   LOC(1720) ; v1: test_selftest_smoke scratch #48
-    ; TODO: verify 16-byte rsp alignment before inner call (test_selftest_smoke:48)
-%define L_PATH   LOC(1728) ; v1: test_selftest_smoke scratch #49
-%define L_HDR    LOC(2000) ; v1: test_selftest_smoke scratch #50
-    ; TODO: hoist invariant pointer load out of .loop (test_selftest_smoke:50)
+%define L_ROOT   LOC(0)
+%define L_EXE    LOC(272)
+%define L_WORK   LOC(544)
+%define L_NAME   LOC(816)
+%define L_CMD    LOC(1088)
+%define L_PI     LOC(1688)              ; PROCESS_INFORMATION
+%define L_CODE   LOC(1712)
+%define L_SIZE   LOC(1720)
+%define L_PATH   LOC(1728)
+%define L_HDR    LOC(2000)
 
-PROC test_main, 2080 ; v1: test_selftest_smoke scratch #52
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_selftest_smoke:52)
-    TEST "selftest smoke" ; v1: test_selftest_smoke scratch #53
-    lea  rcx, L_ROOT ; v1: test_selftest_smoke scratch #54
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_selftest_smoke:54)
-    call pt_root ; v1: test_selftest_smoke scratch #55
-    lea  rcx, L_EXE ; v1: test_selftest_smoke scratch #56
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_selftest_smoke:56)
-    call pt_arg1 ; v1: test_selftest_smoke scratch #57
-    test eax, eax ; v1: test_selftest_smoke scratch #58
-    ; TODO: clamp index before table lookup on malformed input (test_selftest_smoke:58)
+PROC test_main, 2080
+    TEST "selftest smoke"
+    lea  rcx, L_ROOT
+    call pt_root
+    lea  rcx, L_EXE
+    call pt_arg1
+    test eax, eax
     jnz  .have_exe
     lea  rcx, L_EXE
     lea  rdx, L_ROOT
@@ -136,39 +113,127 @@ PROC test_main, 2080 ; v1: test_selftest_smoke scratch #52
     call pt_fresh_dir
     CHECK_TRUE eax, "work directory created"
 
-    ; v1 temporary guard (test_selftest_smoke #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (test_selftest_smoke #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (test_selftest_smoke #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (test_selftest_smoke #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (test_selftest_smoke #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (test_selftest_smoke #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (test_selftest_smoke #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (test_selftest_smoke #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (test_selftest_smoke #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (test_selftest_smoke #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (test_selftest_smoke #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (test_selftest_smoke #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (test_selftest_smoke #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (test_selftest_smoke #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (test_selftest_smoke #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (test_selftest_smoke #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (test_selftest_smoke #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (test_selftest_smoke #57)
-    xor     r11d, r11d ; clear v1 slot 57
+    lea  rcx, L_CMD
+    lea  rdx, [rel s_quote]
+    call pt_strcpy
+    mov  rcx, rax
+    lea  rdx, L_EXE
+    call pt_strcpy
+    mov  rcx, rax
+    lea  rdx, [rel s_args]
+    call pt_strcpy
+    lea  rcx, L_CMD
+    lea  rdx, L_WORK
+    lea  r8, L_PI
+    call pt_spawn
+    test eax, eax
+    jnz  .started
+    CHECK_TRUE 0, "game process started"
+    jmp  .done
+.started:
+    lea  rcx, L_PI
+    mov  edx, 110000
+    lea  r8, L_CODE
+    call pt_wait_exit
+    test eax, eax
+    jnz  .exited
+    CHECK_TRUE 0, "process exits within 110 s"
+    jmp  .done
+.exited:
+    lea  rcx, L_PATH
+    lea  rdx, L_WORK
+    lea  r8, [rel s_log]
+    call pt_join
+    lea  rcx, L_PATH
+    lea  rdx, L_SIZE
+    call pt_read_file
+    mov  rbx, rax
+    xor  ecx, ecx
+    test rbx, rbx
+    setnz cl
+    CHECK_TRUE ecx, "mineassembly.log written"
+    test rbx, rbx
+    jnz  .have_log
+    lea  rbx, [rel s_empty]
+    mov  qword L_SIZE, 0
+.have_log:
+    mov  rcx, rbx
+    mov  rdx, L_SIZE
+    mov  r8d, 3000
+    call pt_print_tail
+    lea  rcx, [rel s_code_is]
+    call t_print
+    mov  ecx, L_CODE
+    call t_print_int
+    call t_newline
+
+    mov  eax, L_CODE
+    xor  ecx, ecx
+    cmp  eax, 0
+    je   .code_ok
+    cmp  eax, 2
+    jne  .code_chk
+.code_ok:
+    mov  ecx, 1
+.code_chk:
+    CHECK_TRUE ecx, "exit code is 0 (full game) or 2 (stub build)"
+    LOG_HAS "run mode 1, seed 42"
+    LOG_HAS "platform: window"
+    LOG_HAS "OpenGL version"
+    LOG_HAS "game: ready in"
+    LOG_HAS "autopilot: selftest run started (seed 42)"
+    LOG_HAS "game: shutting down"
+    LOG_HAS "main: exit code"
+    cmp  dword L_CODE, 2
+    jne  .not_timeout
+    LOG_HAS "spawn area not ready"
+.not_timeout:
+    cmp  dword L_CODE, 0
+    jne  .done
+
+    mov  r12d, 1
+.bmp:
+    lea  rcx, L_NAME
+    lea  rdx, [rel s_bmp_name]
+    call pt_strcpy
+    lea  eax, [r12d+'0']
+    mov  byte LOC(816+9), al             ; the N in selftest_N.bmp
+    lea  rcx, L_PATH
+    lea  rdx, L_WORK
+    lea  r8, L_NAME
+    call pt_join
+    ; "BM", 24 bpp, size == 54 + ((w*3+3)&~3)*h
+    lea  rcx, L_PATH
+    lea  rdx, L_SIZE
+    call pt_read_file
+    xor  r13d, r13d
+    test rax, rax
+    jz   .bmp_chk
+    cmp  qword L_SIZE, 54
+    jb   .bmp_chk
+    cmp  word [rax], 'BM'
+    jne  .bmp_chk
+    cmp  word [rax+28], 24
+    jne  .bmp_chk
+    movsxd rcx, dword [rax+18]
+    movsxd rdx, dword [rax+22]
+    lea  rcx, [rcx+rcx*2+3]
+    and  rcx, ~3
+    imul rcx, rdx
+    add  rcx, 54
+    cmp  rcx, L_SIZE
+    jne  .bmp_chk
+    mov  r13d, 1
+.bmp_chk:
+    CHECK_TRUE r13d, "selftest_N.bmp exists and is a valid 24-bit BMP"
+    test r13d, r13d
+    jnz  .bmp_next
+    lea  rcx, L_PATH
+    call t_print
+    call t_newline
+.bmp_next:
+    inc  r12d
+    cmp  r12d, 5
+    jbe  .bmp
+.done:
+    ENDP
