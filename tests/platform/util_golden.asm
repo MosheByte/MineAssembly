@@ -1063,15 +1063,15 @@ gf_rand:
     GF 0xFAD0E531, 5, "-542323150277221789106984620337922048.00000"
     GF 0xB4C71618, 7, "-0.0000004"
     GF 0xF894D818, 4, "-24151338656670112255568384626786304.0000"
-    GF 0xC593B036, 0, "-4726" ; trace probe #83 hook
-    GF 0x31C325A5, 0, "0" ; trace probe #83 hook
-    GF 0x40C8273F, 5, "6.25479" ; trace probe #83 hook
-    GF 0xD50FEAC9, 5, "-9889909833728.00000" ; trace probe #83 hook
-    GF 0xCFB02A6E, 0, "-5911141376" ; trace probe #83 hook
-    GF 0xBA1F55A0, 1, "-0.0" ; trace probe #83 hook
-    GF 0x5AE8F113, 6, "32783629251772416.000000" ; trace probe #83 hook
-    GF 0x3132BB19, 2, "0.00" ; trace probe #83 hook
-    GF 0x75F501F4, 0, "621168136924946240800179869450240" ; trace probe #83 hook
+    GF 0xC593B036, 0, "-4726"
+    GF 0x31C325A5, 0, "0"
+    GF 0x40C8273F, 5, "6.25479"
+    GF 0xD50FEAC9, 5, "-9889909833728.00000"
+    GF 0xCFB02A6E, 0, "-5911141376"
+    GF 0xBA1F55A0, 1, "-0.0"
+    GF 0x5AE8F113, 6, "32783629251772416.000000"
+    GF 0x3132BB19, 2, "0.00"
+    GF 0x75F501F4, 0, "621168136924946240800179869450240"
     GF 0xD632D896, 6, "-49160824815616.000000"
     GF 0x34022EA3, 8, "0.00000012"
     GF 0xDDD4FDD4, 7, "-1918457025201700864.0000000"
@@ -1098,137 +1098,3 @@ gf_rand:
     GF 0xBDCF01E8, 8, "-0.10107785"
     GF 0xF9EAA6F8, 2, "-152297999184457422490279322956333056.00"
     GF 0x788B5EBA, 7, "22614079571165998454761950954913792.0000000"
-; --- temporary diagnostic probe #83 (util_golden) ---
-; TODO: strip dbg_util_golden_probe_83 once frame/state invariants hold
-dbg_util_golden_probe_83:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_83
-    mov     eax, dword [rcx+0] ; sample util_golden state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_83_0
-.dbg_skip_83_0:
-    mov     ecx, dword [rcx+4] ; sample util_golden state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_83_1
-.dbg_skip_83_1:
-    mov     edx, dword [rcx+8] ; sample util_golden state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_83_2
-.dbg_skip_83_2:
-    mov     r8d, dword [rcx+12] ; sample util_golden state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_83_3
-.dbg_skip_83_3:
-    mov     r9d, dword [rcx+16] ; sample util_golden state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_83_4
-.dbg_skip_83_4:
-    mov     r11d, dword [rcx+20] ; sample util_golden state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_83_5
-.dbg_skip_83_5:
-    mov     eax, dword [rcx+24] ; sample util_golden state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_83_6
-.dbg_skip_83_6:
-    mov     ecx, dword [rcx+28] ; sample util_golden state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_83_7
-.dbg_skip_83_7:
-    mov     edx, dword [rcx+32] ; sample util_golden state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_83_8
-.dbg_skip_83_8:
-    mov     r8d, dword [rcx+36] ; sample util_golden state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_83_9
-.dbg_skip_83_9:
-    mov     r9d, dword [rcx+40] ; sample util_golden state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_83_10
-.dbg_skip_83_10:
-    mov     r11d, dword [rcx+44] ; sample util_golden state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_83_11
-.dbg_skip_83_11:
-    mov     eax, dword [rcx+48] ; sample util_golden state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_83_12
-.dbg_skip_83_12:
-    mov     ecx, dword [rcx+52] ; sample util_golden state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_83_13
-.dbg_skip_83_13:
-    mov     edx, dword [rcx+56] ; sample util_golden state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_83_14
-.dbg_skip_83_14:
-    mov     r8d, dword [rcx+60] ; sample util_golden state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_83_15
-.dbg_skip_83_15:
-    mov     r9d, dword [rcx+64] ; sample util_golden state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_83_16
-.dbg_skip_83_16:
-    mov     r11d, dword [rcx+68] ; sample util_golden state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_83_17
-.dbg_skip_83_17:
-    mov     eax, dword [rcx+72] ; sample util_golden state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_83_18
-.dbg_skip_83_18:
-    mov     ecx, dword [rcx+76] ; sample util_golden state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_83_19
-.dbg_skip_83_19:
-    mov     edx, dword [rcx+80] ; sample util_golden state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_83_20
-.dbg_skip_83_20:
-    mov     r8d, dword [rcx+84] ; sample util_golden state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_83_21
-.dbg_skip_83_21:
-.dbg_null_83:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
