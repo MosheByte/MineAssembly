@@ -2198,86 +2198,59 @@ gf_rand:
     GF 0xF6742215, 1, "-1237902050000424704791938257125376.0"
     GF 0x61655635, 1, "264407266508782174208.0"
     GF 0xD38DC3DC, 2, "-1217752727552.00"
-    GF 0x3D24BE8F, 1, "0.0" ; v1: util_golden scratch #0
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (util_golden:0)
-    GF 0xC8C426CC, 0, "-401718" ; v1: util_golden scratch #1
-    GF 0xBF456035, 1, "-0.8" ; v1: util_golden scratch #2
-    ; TODO: clamp index before table lookup on malformed input (util_golden:2)
-    GF 0x2F88F48D, 7, "0.0000000" ; v1: util_golden scratch #3
-    GF 0xB394BFEA, 9, "-0.000000069" ; v1: util_golden scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util_golden:4)
-    GF 0xF3530392, 7, "-16718247248708903003303454965760.0000000" ; v1: util_golden scratch #5
-    GF 0x63103404, 8, "2660079267404054528000.00000000" ; v1: util_golden scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (util_golden:6)
-    GF 0x69616813, 1, "17031236625977962993287168.0" ; v1: util_golden scratch #7
-    GF 0x77B9DCF6, 4, "7539504211482226467175454906253312.0000" ; v1: util_golden scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (util_golden:8)
-    GF 0x5B3895EB, 3, "51956232264613888.000" ; v1: util_golden scratch #9
-    GF 0x61FFB317, 5, "589603065256648638464.00000" ; v1: util_golden scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util_golden:10)
-    GF 0xF6705EA9, 5, "-1218819513779850389199436981993472.00000" ; v1: util_golden scratch #11
-    GF 0xC20BC2D4, 3, "-34.940" ; v1: util_golden scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (util_golden:12)
-    GF 0x41D06BC8, 4, "26.0526" ; v1: util_golden scratch #13
-    GF 0xED6B8EA9, 5, "-4556340178396060841448308736.00000" ; v1: util_golden scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (util_golden:14)
-    GF 0x39C05EEA, 8, "0.00036692" ; v1: util_golden scratch #15
-    GF 0x59217BFA, 5, "2840861557653504.00000" ; v1: util_golden scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (util_golden:16)
-    GF 0x66D58D62, 1, "504236056704921597116416.0" ; v1: util_golden scratch #17
-    GF 0x77B37798, 1, "7280053024228678613021271754014720.0" ; v1: util_golden scratch #18
-    ; TODO: clamp index before table lookup on malformed input (util_golden:18)
-    GF 0xC206CEF9, 8, "-33.70212173" ; v1: util_golden scratch #19
-    GF 0x76BE4FE1, 3, "1929993241829827032930165396078592.000" ; v1: util_golden scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util_golden:20)
-    GF 0xD34F41F7, 1, "-890164936704.0" ; v1: util_golden scratch #21
-    GF 0xE2866971, 0, "-1239730779961715326976" ; v1: util_golden scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (util_golden:22)
-    GF 0xC12FBDAF, 5, "-10.98381" ; v1: util_golden scratch #23
-    GF 0x5911098D, 9, "2551523301130240.000000000" ; v1: util_golden scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (util_golden:24)
-    GF 0x46527D32, 6, "13471.298828" ; v1: util_golden scratch #25
-    GF 0x5D77E7E9, 4, "1116468914574852096.0000" ; v1: util_golden scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util_golden:26)
-    GF 0x33A132A9, 6, "0.000000" ; v1: util_golden scratch #27
-    GF 0x56AB66DF, 4, "94229158166528.0000" ; v1: util_golden scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (util_golden:28)
-    GF 0x46F88DB5, 5, "31814.85352" ; v1: util_golden scratch #29
-    GF 0xD6617277, 0, "-61970434752512" ; v1: util_golden scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (util_golden:30)
-    GF 0xE33F300A, 2, "-3526789697342112006144.00" ; v1: util_golden scratch #31
-    GF 0x4CA9687F, 5, "88818680.00000" ; v1: util_golden scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (util_golden:32)
-    GF 0xC2A2E7FF, 4, "-81.4531" ; v1: util_golden scratch #33
-    GF 0x407503C7, 0, "4" ; v1: util_golden scratch #34
-    ; TODO: clamp index before table lookup on malformed input (util_golden:34)
-    GF 0xBA667331, 4, "-0.0009" ; v1: util_golden scratch #35
-    GF 0x3CDBDD41, 2, "0.03" ; v1: util_golden scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util_golden:36)
-    GF 0x45404B36, 1, "3076.7" ; v1: util_golden scratch #37
-    GF 0x61D6F6DF, 7, "495674021103372599296.0000000" ; v1: util_golden scratch #38
-    ; TODO: hoist invariant pointer load out of .loop (util_golden:38)
-    GF 0xD7891FDA, 9, "-301539788849152.000000000" ; v1: util_golden scratch #39
-    GF 0x7A2C5F6B, 9, "223752591498431571770410716675178496.000000000" ; v1: util_golden scratch #40
-    ; note: rcx = state ptr, rdx = index, r8d = flags (util_golden:40)
-    GF 0xAB9352DF, 4, "-0.0000" ; v1: util_golden scratch #41
-    GF 0x3F4C2F43, 0, "1" ; v1: util_golden scratch #42
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util_golden:42)
-    GF 0x3E6ACDD3, 8, "0.22930078" ; v1: util_golden scratch #43
-    GF 0xFCD93B3B, 2, "-9023438039442091084336388882877644800.00" ; v1: util_golden scratch #44
-    ; TODO: verify 16-byte rsp alignment before inner call (util_golden:44)
-    GF 0xD895FE1E, 5, "-1319349260386304.00000" ; v1: util_golden scratch #45
-    GF 0xC20462E8, 4, "-33.0966" ; v1: util_golden scratch #46
-    ; temp: spill r12/r13 across helper call until reg alloc pass (util_golden:46)
-    GF 0x2E428B6C, 8, "0.00000000" ; v1: util_golden scratch #47
-    GF 0x614BA59E, 2, "234788938939101085696.00" ; v1: util_golden scratch #48
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (util_golden:48)
-    GF 0xAC4B25B7, 6, "-0.000000" ; v1: util_golden scratch #49
-    GF 0xEF290C23, 6, "-52317639052469592602166951936.000000" ; v1: util_golden scratch #50
-    ; TODO: clamp index before table lookup on malformed input (util_golden:50)
-    GF 0xCCCA16DD, 5, "-105953000.00000" ; v1: util_golden scratch #51
-    GF 0xD061A0DE, 1, "-15141664768.0" ; v1: util_golden scratch #52
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util_golden:52)
+    GF 0x3D24BE8F, 1, "0.0"
+    GF 0xC8C426CC, 0, "-401718"
+    GF 0xBF456035, 1, "-0.8"
+    GF 0x2F88F48D, 7, "0.0000000"
+    GF 0xB394BFEA, 9, "-0.000000069"
+    GF 0xF3530392, 7, "-16718247248708903003303454965760.0000000"
+    GF 0x63103404, 8, "2660079267404054528000.00000000"
+    GF 0x69616813, 1, "17031236625977962993287168.0"
+    GF 0x77B9DCF6, 4, "7539504211482226467175454906253312.0000"
+    GF 0x5B3895EB, 3, "51956232264613888.000"
+    GF 0x61FFB317, 5, "589603065256648638464.00000"
+    GF 0xF6705EA9, 5, "-1218819513779850389199436981993472.00000"
+    GF 0xC20BC2D4, 3, "-34.940"
+    GF 0x41D06BC8, 4, "26.0526"
+    GF 0xED6B8EA9, 5, "-4556340178396060841448308736.00000"
+    GF 0x39C05EEA, 8, "0.00036692"
+    GF 0x59217BFA, 5, "2840861557653504.00000"
+    GF 0x66D58D62, 1, "504236056704921597116416.0"
+    GF 0x77B37798, 1, "7280053024228678613021271754014720.0"
+    GF 0xC206CEF9, 8, "-33.70212173"
+    GF 0x76BE4FE1, 3, "1929993241829827032930165396078592.000"
+    GF 0xD34F41F7, 1, "-890164936704.0"
+    GF 0xE2866971, 0, "-1239730779961715326976"
+    GF 0xC12FBDAF, 5, "-10.98381"
+    GF 0x5911098D, 9, "2551523301130240.000000000"
+    GF 0x46527D32, 6, "13471.298828"
+    GF 0x5D77E7E9, 4, "1116468914574852096.0000"
+    GF 0x33A132A9, 6, "0.000000"
+    GF 0x56AB66DF, 4, "94229158166528.0000"
+    GF 0x46F88DB5, 5, "31814.85352"
+    GF 0xD6617277, 0, "-61970434752512"
+    GF 0xE33F300A, 2, "-3526789697342112006144.00"
+    GF 0x4CA9687F, 5, "88818680.00000"
+    GF 0xC2A2E7FF, 4, "-81.4531"
+    GF 0x407503C7, 0, "4"
+    GF 0xBA667331, 4, "-0.0009"
+    GF 0x3CDBDD41, 2, "0.03"
+    GF 0x45404B36, 1, "3076.7"
+    GF 0x61D6F6DF, 7, "495674021103372599296.0000000"
+    GF 0xD7891FDA, 9, "-301539788849152.000000000"
+    GF 0x7A2C5F6B, 9, "223752591498431571770410716675178496.000000000"
+    GF 0xAB9352DF, 4, "-0.0000"
+    GF 0x3F4C2F43, 0, "1"
+    GF 0x3E6ACDD3, 8, "0.22930078"
+    GF 0xFCD93B3B, 2, "-9023438039442091084336388882877644800.00"
+    GF 0xD895FE1E, 5, "-1319349260386304.00000"
+    GF 0xC20462E8, 4, "-33.0966"
+    GF 0x2E428B6C, 8, "0.00000000"
+    GF 0x614BA59E, 2, "234788938939101085696.00"
+    GF 0xAC4B25B7, 6, "-0.000000"
+    GF 0xEF290C23, 6, "-52317639052469592602166951936.000000"
+    GF 0xCCCA16DD, 5, "-105953000.00000"
+    GF 0xD061A0DE, 1, "-15141664768.0"
     GF 0xFC5E0D81, 7, "-4611855177410174181395324266092691456.0000000"
     GF 0x5C1EB30C, 1, "178679641765052416.0"
     GF 0xF502812D, 0, "-165434225516531200949425153245184"
@@ -2500,6 +2473,308 @@ gf_rand:
     GF 0x48DAB244, 9, "447890.125000000"
     GF 0x64CCBF2B, 5, "30215287159375930589184.00000"
     GF 0x37D87676, 5, "0.00003"
+    GF 0xD059827A, 7, "-14596827136.0000000" ; v1: util_golden scratch #0
+    ; TODO: verify 16-byte rsp alignment before inner call (util_golden:0)
+    GF 0xDEDE59EE, 1, "-8011049416557330432.0" ; v1: util_golden scratch #1
+    GF 0xB98C3625, 3, "-0.000" ; v1: util_golden scratch #2
+    ; TODO: hoist invariant pointer load out of .loop (util_golden:2)
+    GF 0xDB510A6A, 1, "-58839720515338240.0" ; v1: util_golden scratch #3
+    GF 0xCDF8944D, 4, "-521308576.0000" ; v1: util_golden scratch #4
+    ; note: rcx = state ptr, rdx = index, r8d = flags (util_golden:4)
+    GF 0xB36721AC, 0, "-0" ; v1: util_golden scratch #5
+    GF 0x68830837, 6, "4950252371009482283548672.000000" ; v1: util_golden scratch #6
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (util_golden:6)
+    GF 0xBCAEE156, 2, "-0.02" ; v1: util_golden scratch #7
+    GF 0x365134BF, 7, "0.0000031" ; v1: util_golden scratch #8
+    ; temp: spill r12/r13 across helper call until reg alloc pass (util_golden:8)
+    GF 0x47A4A80C, 3, "84304.094" ; v1: util_golden scratch #9
+    GF 0x44D41CAF, 3, "1696.896" ; v1: util_golden scratch #10
+    ; TODO: clamp index before table lookup on malformed input (util_golden:10)
+    GF 0xDA56109F, 1, "-15063480025481216.0" ; v1: util_golden scratch #11
+    GF 0xDA16B111, 6, "-10603983269789696.000000" ; v1: util_golden scratch #12
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util_golden:12)
+    GF 0x39DD2430, 4, "0.0004" ; v1: util_golden scratch #13
+    GF 0xD2EDCADC, 2, "-510655332352.00" ; v1: util_golden scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util_golden:14)
+    GF 0x39249807, 4, "0.0002" ; v1: util_golden scratch #15
+    GF 0x68EBD0F1, 0, "8908883296974890820698112" ; v1: util_golden scratch #16
+    ; TODO: verify 16-byte rsp alignment before inner call (util_golden:16)
+    GF 0x460FBDC5, 2, "9199.44" ; v1: util_golden scratch #17
+    GF 0xB8A1B9DD, 2, "-0.00" ; v1: util_golden scratch #18
+    ; TODO: hoist invariant pointer load out of .loop (util_golden:18)
+    GF 0x6A527B03, 3, "63613832134174328544559104.000" ; v1: util_golden scratch #19
+    GF 0x49CAC0EC, 5, "1660957.50000" ; v1: util_golden scratch #20
+    ; note: rcx = state ptr, rdx = index, r8d = flags (util_golden:20)
+    GF 0x69D1A513, 3, "31680629657158548681916416.000" ; v1: util_golden scratch #21
+    GF 0xD30CF43D, 3, "-605393059840.000" ; v1: util_golden scratch #22
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (util_golden:22)
+    GF 0x61D2D5F4, 3, "486154150362925236224.000" ; v1: util_golden scratch #23
+    GF 0xAB3C6FB3, 4, "-0.0000" ; v1: util_golden scratch #24
+    ; temp: spill r12/r13 across helper call until reg alloc pass (util_golden:24)
+    GF 0xB2D182E9, 0, "-0" ; v1: util_golden scratch #25
+    GF 0x45897962, 4, "4399.1729" ; v1: util_golden scratch #26
+    ; TODO: clamp index before table lookup on malformed input (util_golden:26)
+    GF 0xB6B46A0C, 2, "-0.00" ; v1: util_golden scratch #27
+    GF 0x3779473B, 3, "0.000" ; v1: util_golden scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util_golden:28)
+    GF 0x3C272543, 5, "0.01020" ; v1: util_golden scratch #29
+    GF 0x5D1E8429, 6, "713893727180947456.000000" ; v1: util_golden scratch #30
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util_golden:30)
+    GF 0x7AEFBCD2, 0, "622394340054719156384692675077472256" ; v1: util_golden scratch #31
+    GF 0x5DBF109A, 2, "1720959173207785472.00" ; v1: util_golden scratch #32
+    ; TODO: verify 16-byte rsp alignment before inner call (util_golden:32)
+    GF 0xC12C9128, 3, "-10.785" ; v1: util_golden scratch #33
+    GF 0x654E15A6, 5, "60825427416081569415168.00000" ; v1: util_golden scratch #34
+    ; TODO: hoist invariant pointer load out of .loop (util_golden:34)
+    GF 0x698CCD26, 2, "21277300106413895336329216.00" ; v1: util_golden scratch #35
+    GF 0xD9410984, 9, "-3395945815343104.000000000" ; v1: util_golden scratch #36
+    ; note: rcx = state ptr, rdx = index, r8d = flags (util_golden:36)
+    GF 0xCC2E8910, 4, "-45753408.0000" ; v1: util_golden scratch #37
+    GF 0x7075F1DF, 3, "304464926465929389598232805376.000" ; v1: util_golden scratch #38
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (util_golden:38)
+    GF 0x56AD2F53, 2, "95209383788544.00" ; v1: util_golden scratch #39
+    GF 0x7CEDC520, 6, "9876580203726991867952385855479349248.000000" ; v1: util_golden scratch #40
+    ; temp: spill r12/r13 across helper call until reg alloc pass (util_golden:40)
+    GF 0xDB93A0EC, 1, "-83107514098384896.0" ; v1: util_golden scratch #41
+    GF 0xC3EACFE5, 5, "-469.62418" ; v1: util_golden scratch #42
+    ; TODO: clamp index before table lookup on malformed input (util_golden:42)
+    GF 0xF7120430, 2, "-2961563570063672363809971653050368.00" ; v1: util_golden scratch #43
+    GF 0x37290882, 6, "0.000010" ; v1: util_golden scratch #44
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util_golden:44)
+    GF 0x4EC7789F, 3, "1673285504.000" ; v1: util_golden scratch #45
+    GF 0x6056AC49, 2, "61875276337838555136.00" ; v1: util_golden scratch #46
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util_golden:46)
+    GF 0xDB8F8E89, 3, "-80815281462575104.000" ; v1: util_golden scratch #47
+    GF 0x6545184D, 9, "58172154213614378549248.000000000" ; v1: util_golden scratch #48
+    ; TODO: verify 16-byte rsp alignment before inner call (util_golden:48)
+    GF 0xAE997A35, 6, "-0.000000" ; v1: util_golden scratch #49
+    GF 0x64701F0D, 0, "17717824089120661569536" ; v1: util_golden scratch #50
+    ; TODO: hoist invariant pointer load out of .loop (util_golden:50)
+    GF 0xD4F323F3, 4, "-8354241445888.0000" ; v1: util_golden scratch #51
+    GF 0x72B9D685, 9, "7361800322187339522596484939776.000000000" ; v1: util_golden scratch #52
+    ; note: rcx = state ptr, rdx = index, r8d = flags (util_golden:52)
+    GF 0xE48E2C09, 5, "-20980885807033724436480.00000"
+    GF 0xAF0FD57C, 6, "-0.000000"
+    GF 0xCCAB5A59, 0, "-89838280"
+    GF 0x3DADA936, 8, "0.08479540"
+    GF 0xDCDA7C73, 8, "-491987026288050176.00000000"
+    GF 0xEBADD798, 9, "-420324558984494049593917440.000000000"
+    GF 0x6E4CD0CD, 9, "15846841664790806291365756928.000000000"
+    GF 0xC9695151, 5, "-955669.06250"
+    GF 0x459AFBF4, 1, "4959.5"
+    GF 0xFB60C24B, 9, "-1167015225887098382678396460291063808.000000000"
+    GF 0xC9170268, 5, "-618534.50000"
+    GF 0xE2708B10, 6, "-1109309771715297935360.000000"
+    GF 0x5C38FF22, 7, "208287668834926592.0000000"
+    GF 0xB2976BAC, 5, "-0.00000"
+    GF 0x2F41440E, 8, "0.00000000"
+    GF 0x580C9C37, 7, "618410262134784.0000000"
+    GF 0x73DF3204, 2, "35366718653750585990626477604864.00"
+    GF 0xABB233F8, 2, "-0.00"
+    GF 0x367A30EA, 9, "0.000003728"
+    GF 0x4588A6D7, 1, "4372.9"
+    GF 0x6B315638, 6, "214387026606984281146261504.000000"
+    GF 0x526046B7, 4, "240814768128.0000"
+    GF 0xD01ADCD3, 2, "-10392652800.00"
+    GF 0x30E56912, 2, "0.00"
+    GF 0x5D97A533, 5, "1365899518247174144.00000"
+    GF 0x63A13929, 5, "5948089238402889678848.00000"
+    GF 0x4B91BB56, 1, "19101356.0"
+    GF 0xE315B27F, 7, "-2761426866043516616704.0000000"
+    GF 0xEDF64AE8, 7, "-9527983564465799402864246784.0000000"
+    GF 0x53B06786, 8, "1515302158336.00000000"
+    GF 0x34B88E20, 0, "0"
+    GF 0xE9AF44E3, 9, "-26485915845537496689541120.000000000"
+    GF 0xFA07428B, 9, "-175577431912658055710630756409671680.000000000"
+    GF 0xAE9AA4FB, 6, "-0.000000"
+    GF 0x31EEBB49, 7, "0.0000000"
+    GF 0xF2CA175B, 5, "-8005658497678436030865723097088.00000"
+    GF 0xEE9FBAB8, 0, "-24716922839737517484227428352"
+    GF 0xC6C30BEA, 7, "-24965.9570312"
+    GF 0xC6977B0D, 1, "-19389.5"
+    GF 0x4B3BE2DB, 9, "12313307.000000000"
+    GF 0xEE21FAFD, 3, "-12532628198715094844651339776.000"
+    GF 0x5B31B3F7, 4, "50018944316080128.0000"
+    GF 0x5AB5AA5F, 2, "25567147891621888.00"
+    GF 0xF89AF507, 8, "-25143233161387366059310208314769408.00000000"
+    GF 0x70487875, 9, "248170502318005059977643819008.000000000"
+    GF 0x39D50E65, 2, "0.00"
+    GF 0x3E0F3B98, 0, "0"
+    GF 0x378234C3, 2, "0.00"
+    GF 0x2DD59F15, 1, "0.0"
+    GF 0xD00B86C5, 8, "-9363461120.00000000"
+    GF 0x3B8254BC, 7, "0.0039774"
+    GF 0xE2FACBA6, 6, "-2313180217431610621952.000000"
+    GF 0x3781E93D, 0, "0"
+    GF 0xE577D237, 9, "-73143893793247091228672.000000000"
+    GF 0xC600C9C4, 6, "-8242.441406"
+    GF 0x6D652263, 4, "4432102390077295139049439232.0000"
+    GF 0xFA7E507D, 6, "-330118974589113158580715260179644416.000000"
+    GF 0x2FFEE535, 9, "0.000000000"
+    GF 0xB3C773C8, 9, "-0.000000093"
+    GF 0xBA0E67BB, 5, "-0.00054"
+    GF 0xF32E4E82, 7, "-13809997268604609558429892083712.0000000"
+    GF 0xB338F5FF, 2, "-0.00"
+    GF 0x763FDD6E, 1, "972870925391050454384914483642368.0"
+    GF 0xECC5F81E, 9, "-1914640694033246645733294080.000000000"
+    GF 0xF286B5C6, 6, "-5336414965500684195775333269504.000000"
+    GF 0x68D1EB06, 0, "7930480096981134574878720"
+    GF 0xCDB1733C, 7, "-372139904.0000000"
+    GF 0x606B44E1, 2, "67811689149782556672.00"
+    GF 0xE6036DF0, 1, "-155164499545631741706240.0"
+    GF 0x7DFE2A3E, 8, "42230405613352815110191444860826812416.00000000"
+    GF 0xCA871AC5, 7, "-4427106.5000000"
+    GF 0x440BB09F, 3, "558.760"
+    GF 0x77466145, 2, "4023623587752592057497871527706624.00"
+    GF 0x61D4DFAD, 0, "490853410283481726976"
+    GF 0x7BC3B1D1, 2, "2032208865200206428950084996722327552.00"
+    GF 0x554CF9E9, 6, "14085858000896.000000"
+    GF 0xD9BF2F71, 7, "-6726735366193152.0000000"
+    GF 0x7CFBA602, 9, "10453068399542183524641640075484987392.000000000"
+    GF 0x5F9B2940, 9, "22361075837336289280.000000000"
+    GF 0xF43260BB, 5, "-56530198230440676615616288784384.00000"
+    GF 0xC92BCA1A, 6, "-703649.625000"
+    GF 0xCF7E58B2, 9, "-4267225600.000000000"
+    GF 0xF5C484CE, 4, "-498234269209954186592520794800128.0000"
+    GF 0xB89ED0B9, 5, "-0.00008"
+    GF 0x4A8F6732, 6, "4699033.000000"
+    GF 0xED9A5313, 5, "-5970140260059791166046994432.00000"
+    GF 0xCBCDCFC1, 0, "-26976130"
+    GF 0xBC0E93FB, 4, "-0.0087"
+    GF 0x728E3215, 9, "5632949357479407549466074415104.000000000"
+    GF 0xC99731C9, 1, "-1238585.1"
+    GF 0x799739F0, 3, "98151492218146317570411548697952256.000"
+    GF 0xEE74F3A9, 1, "-18952227362627539157085323264.0"
+    GF 0xED385158, 6, "-3565223772922923133580607488.000000"
+    GF 0x2E5FE9EB, 3, "0.000"
+    GF 0x6D7641A5, 2, "4763291986549719455882018816.00"
+    GF 0xAEED128D, 7, "-0.0000000"
+    GF 0x32CFA7DE, 4, "0.0000"
+    GF 0xCA4D2CBF, 2, "-3361583.75"
+    GF 0x51A87A92, 8, "90451361792.00000000"
+    GF 0x4EEA65A6, 6, "1966265088.000000"
+    GF 0xEB639597, 3, "-275132579116823529937436672.000"
+    GF 0x5A0975CA, 4, "9672895563300864.0000"
+    GF 0x53EEA8DD, 4, "2050070544384.0000"
+    GF 0x59945FA5, 0, "5220432353427456"
+    GF 0x70A71BA9, 1, "413739485737838611478372941824.0"
+    GF 0x4599C40F, 6, "4920.507324"
+    GF 0x7CF5EE2C, 7, "10215547438926819953453801299190480896.0000000"
+    GF 0xC6F60F88, 2, "-31495.77"
+    GF 0xFB7A63D2, 2, "-1300098811098596418015489504411910144.00"
+    GF 0xA9F86386, 5, "-0.00000"
+    GF 0x6BCC0B5D, 6, "493349057559789545451421696.000000"
+    GF 0xCB360F7B, 6, "-11931515.000000"
+    GF 0xD43FB8CF, 8, "-3293757308928.00000000"
+    GF 0xC151E61C, 7, "-13.1186790"
+    GF 0x33BC21C9, 4, "0.0000"
+    GF 0x3385DD7E, 2, "0.00"
+    GF 0x4C11158A, 7, "38032936.0000000"
+    GF 0x563C19B2, 9, "51704636637184.000000000"
+    GF 0xD8D4CA1C, 3, "-1871716145954816.000"
+    GF 0x2B052AD3, 3, "0.000"
+    GF 0x418BC485, 5, "17.47096"
+    GF 0x6F8E33D4, 7, "88019055506251428423228456960.0000000"
+    GF 0xDC5CCB4B, 2, "-248592071437320192.00"
+    GF 0x42EC6946, 9, "118.205612183"
+    GF 0x702FD04A, 8, "217646730977339848995685531648.00000000"
+    GF 0xC76B9A4D, 4, "-60314.3008"
+    GF 0xE59A3D6F, 3, "-91047211017919981944832.000"
+    GF 0xF9D33FA9, 6, "-137108227314417949441212088903008256.000000"
+    GF 0xCA8E7EDC, 8, "-4669294.00000000"
+    GF 0xF3B21166, 2, "-28215994966279231299989928935424.00"
+    GF 0x3B4D8DC2, 4, "0.0031"
+    GF 0x3078D843, 7, "0.0000000"
+    GF 0xEF786017, 6, "-76868447928805687446357409792.000000"
+    GF 0xE6D05B8C, 4, "-491970485105379541778432.0000"
+    GF 0x3E329F53, 3, "0.174"
+    GF 0x5383D992, 0, "1132581879808"
+    GF 0xCA42F142, 6, "-3193936.500000"
+    GF 0x2CD15A1D, 9, "0.000000000"
+    GF 0x4D60BD2D, 4, "235655888.0000"
+    GF 0xBC97D4DB, 8, "-0.01853411"
+    GF 0xB803450C, 4, "-0.0000"
+    GF 0xBC5C7ECD, 5, "-0.01346"
+    GF 0xC99AE06A, 6, "-1268749.250000"
+    GF 0x53CDB0AD, 6, "1766864846848.000000"
+    GF 0xAB3F2A0D, 2, "-0.00"
+    GF 0x60D808CF, 0, "124535357687304552448"
+    GF 0x4E331A2C, 7, "751209216.0000000"
+    GF 0xFD8B0A8F, 6, "-23102189345907747099848138849899249664.000000"
+    GF 0xE5BDF15A, 3, "-112122426970948795105280.000"
+    GF 0xE6381F14, 9, "-217372180766545118494720.000000000"
+    GF 0xB26D5AAF, 4, "-0.0000"
+    GF 0x6575B287, 8, "72517064782711156113408.00000000"
+    GF 0x7A06B6F9, 7, "174869726350999389515076425073295360.0000000"
+    GF 0x6B3A0C08, 0, "224917018420068051914326016"
+    GF 0x60450566, 0, "56787462202165559296"
+    GF 0x6B3B20BF, 7, "226223767323505562841251840.0000000"
+    GF 0xE3A811E6, 6, "-6200685445452985794560.000000"
+    GF 0xC4DF682C, 1, "-1787.3"
+    GF 0xBDC9A1E9, 5, "-0.09845"
+    GF 0x29B4BBA4, 5, "0.00000"
+    GF 0xC6C2A9F5, 8, "-24916.97851562"
+    GF 0xD13CEB42, 1, "-50712551424.0"
+    GF 0xFB9636D4, 8, "-1559913150538548717044074864539860992.00000000"
+    GF 0x44306980, 0, "706"
+    GF 0xCB0DDB0C, 9, "-9296652.000000000"
+    GF 0x75970F07, 0, "382979304873023118561927397113856"
+    GF 0xDD539C4A, 3, "-953008987639382016.000"
+    GF 0x5BFECB39, 5, "143436179516162048.00000"
+    GF 0xBFA1A896, 9, "-1.262957335"
+    GF 0xDF3CB0DF, 8, "-13596612466124521472.00000000"
+    GF 0xF7618F68, 1, "-4574903974502187065551155701481472.0"
+    GF 0xD39AFF63, 9, "-1331419283456.000000000"
+    GF 0xD7B68B3A, 5, "-401418179575808.00000"
+    GF 0xECBE4DED, 5, "-1840511198594447800314888192.00000"
+    GF 0x73BC8AA6, 2, "29875608331446194231026567348224.00"
+    GF 0x42F48B7D, 8, "122.27243805"
+    GF 0xED1C657E, 1, "-3025147378630484365188005888.0"
+    GF 0xBDA5148E, 8, "-0.08060561"
+    GF 0x2CB2503D, 6, "0.000000"
+    GF 0x6AB84C32, 7, "111401086499496773329879040.0000000"
+    GF 0x3841D6B1, 2, "0.00"
+    GF 0x4554295A, 3, "3394.584"
+    GF 0xB5E48B71, 5, "-0.00000"
+    GF 0xD77A3990, 3, "-275125135998976.000"
+    GF 0xF1A1305D, 0, "-1596337734421150884546576646144"
+    GF 0x2CBD2827, 1, "0.0"
+    GF 0x6898FD35, 0, "5779764405594548793769984"
+    GF 0xCE0280C6, 7, "-547369344.0000000"
+    GF 0x62407256, 6, "887503408680138702848.000000"
+    GF 0x62134FDF, 8, "679356674421026717696.00000000"
+    GF 0x64065788, 2, "9912683988620849184768.00"
+    GF 0x51DC45BB, 8, "118257836032.00000000"
+    GF 0xED6F9C1F, 7, "-4634728510532645158467403776.0000000"
+    GF 0xB999884D, 2, "-0.00"
+    GF 0xD9562632, 9, "-3767352575393792.000000000"
+    GF 0xE53C3C79, 3, "-55557526399549653909504.000"
+    GF 0x777D2989, 4, "5134740383833302979374405172330496.0000"
+    GF 0xB15EC122, 5, "-0.00000"
+    GF 0x72184413, 7, "3015937163106650864211571245056.0000000"
+    GF 0xC277AAFE, 6, "-61.916985"
+    GF 0xCB8ED6EB, 0, "-18722262"
+    GF 0x5CBFAB83, 5, "431602397446406144.00000"
+    GF 0xD61CDA1D, 1, "-43115150835712.0"
+    GF 0xB4030B31, 9, "-0.000000122"
+    GF 0xACBD9C74, 1, "-0.0"
+    GF 0xEBB8C319, 8, "-446727346883706383402795008.00000000"
+    GF 0xF8BACAC9, 9, "-30308755852752529483255186385272832.000000000"
+    GF 0xD0040037, 3, "-8858426368.000"
+    GF 0xDB1C317D, 8, "-43964509307535360.00000000"
+    GF 0x6877C796, 7, "4680424927914305030979584.0000000"
+    GF 0xBDA74199, 7, "-0.0816681"
+    GF 0xD80598D2, 1, "-587565618954240.0"
+    GF 0x7382928E, 7, "20690035211509331089074679709696.0000000"
+    GF 0xD73C66D3, 9, "-207149812678656.000000000"
+    GF 0x3724EBAA, 6, "0.000010"
+    GF 0xCC8DF784, 1, "-74431520.0"
+    GF 0xFA911F19, 2, "-376756889944663032264252085562769408.00"
+    GF 0x44B9971A, 6, "1484.721924"
+    GF 0xED56DE51, 8, "-4156159759087962801571889152.00000000"
+    GF 0xEC90E020, 1, "-1401149747299838083129671680.0"
+    GF 0xDAEB682F, 4, "-33130585299877888.0000"
+    GF 0xAAF8360C, 4, "-0.0000"
     ; v1 temporary guard (util_golden #27)
     xor     r11d, r11d ; clear v1 slot 27
     ; v1 temporary guard (util_golden #29)
@@ -2546,17 +2821,3 @@ gf_rand:
     xor     r11d, r11d ; clear v1 slot 69
     ; v1 temporary guard (util_golden #71)
     xor     r11d, r11d ; clear v1 slot 71
-    ; v1 temporary guard (util_golden #73)
-    xor     r11d, r11d ; clear v1 slot 73
-    ; v1 temporary guard (util_golden #75)
-    xor     r11d, r11d ; clear v1 slot 75
-    ; v1 temporary guard (util_golden #77)
-    xor     r11d, r11d ; clear v1 slot 77
-    ; v1 temporary guard (util_golden #79)
-    xor     r11d, r11d ; clear v1 slot 79
-    ; v1 temporary guard (util_golden #81)
-    xor     r11d, r11d ; clear v1 slot 81
-    ; v1 temporary guard (util_golden #83)
-    xor     r11d, r11d ; clear v1 slot 83
-    ; v1 temporary guard (util_golden #85)
-    xor     r11d, r11d ; clear v1 slot 85
