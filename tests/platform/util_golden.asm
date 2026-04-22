@@ -5223,69 +5223,48 @@ gf_tie:
     GF 0x41D89300, 6, "27.071777"
     GF 0x449E4D80, 6, "1266.421875"
     GF 0xC2124B80, 2, "-36.57"
-    GF 0x40169000, 4, "2.3525" ; v1: util_golden scratch #0
-    ; TODO: hoist invariant pointer load out of .loop (util_golden:0)
-    GF 0x45748500, 2, "3912.31" ; v1: util_golden scratch #1
-    GF 0xC4122500, 5, "-584.57812" ; v1: util_golden scratch #2
-    ; TODO: verify 16-byte rsp alignment before inner call (util_golden:2)
-    GF 0xC584E380, 3, "-4252.438" ; v1: util_golden scratch #3
-    GF 0xC4404880, 5, "-769.13281" ; v1: util_golden scratch #4
-    ; TODO: clamp index before table lookup on malformed input (util_golden:4)
-    GF 0x44856C00, 0, "1067" ; v1: util_golden scratch #5
-    GF 0xC4861F00, 3, "-1072.969" ; v1: util_golden scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (util_golden:6)
-    GF 0xC1535F00, 1, "-13.2" ; v1: util_golden scratch #7
-    GF 0xC2DF7400, 0, "-112" ; v1: util_golden scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util_golden:8)
-    GF 0xC49A6600, 2, "-1235.19" ; v1: util_golden scratch #9
-    GF 0x41FF1300, 0, "32" ; v1: util_golden scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (util_golden:10)
-    GF 0xC6983180, 1, "-19480.8" ; v1: util_golden scratch #11
-    GF 0x4686D300, 0, "17258" ; v1: util_golden scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (util_golden:12)
-    GF 0xC53C6400, 6, "-3014.250000" ; v1: util_golden scratch #13
-    GF 0xC510AB80, 3, "-2314.719" ; v1: util_golden scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util_golden:14)
-    GF 0x4364C000, 0, "229" ; v1: util_golden scratch #15
-    GF 0xC19C2D00, 2, "-19.52" ; v1: util_golden scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (util_golden:16)
-    GF 0xC536A080, 2, "-2922.03" ; v1: util_golden scratch #17
-    GF 0xC6324F00, 5, "-11411.75000" ; v1: util_golden scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (util_golden:18)
-    GF 0xC1F76000, 6, "-30.921875" ; v1: util_golden scratch #19
-    GF 0xC3582000, 3, "-216.125" ; v1: util_golden scratch #20
-    ; TODO: clamp index before table lookup on malformed input (util_golden:20)
-    GF 0xC2AF3300, 4, "-87.5996" ; v1: util_golden scratch #21
-    GF 0xC698E100, 3, "-19568.500" ; v1: util_golden scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (util_golden:22)
-    GF 0x414A4F00, 2, "12.64" ; v1: util_golden scratch #23
-    GF 0x46070900, 3, "8642.250" ; v1: util_golden scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util_golden:24)
-    GF 0x43905280, 2, "288.64" ; v1: util_golden scratch #25
-    GF 0x46AB7C80, 2, "21950.25" ; v1: util_golden scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (util_golden:26)
-    GF 0xC3F8C200, 3, "-497.516" ; v1: util_golden scratch #27
-    GF 0x45C4DC00, 6, "6299.500000" ; v1: util_golden scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (util_golden:28)
-    GF 0xC35B8C00, 0, "-220" ; v1: util_golden scratch #29
-    GF 0xC4EB9400, 1, "-1884.6" ; v1: util_golden scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util_golden:30)
-    GF 0xC4DE9100, 0, "-1781" ; v1: util_golden scratch #31
-    GF 0xC4FA2000, 6, "-2001.000000" ; v1: util_golden scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (util_golden:32)
-    GF 0x41175C00, 6, "9.459961" ; v1: util_golden scratch #33
-    GF 0xC2379C00, 4, "-45.9023" ; v1: util_golden scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (util_golden:34)
-    GF 0x4387AF00, 6, "271.367188" ; v1: util_golden scratch #35
-    GF 0x45B76B00, 6, "5869.375000" ; v1: util_golden scratch #36
-    ; TODO: clamp index before table lookup on malformed input (util_golden:36)
-    GF 0xC0F1E000, 4, "-7.5586" ; v1: util_golden scratch #37
-    GF 0x467EF700, 5, "16317.75000" ; v1: util_golden scratch #38
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (util_golden:38)
-    GF 0xC36CD000, 0, "-237" ; v1: util_golden scratch #39
-    GF 0xC4B6A600, 5, "-1461.18750" ; v1: util_golden scratch #40
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util_golden:40)
-    GF 0xC6BBF400, 1, "-24058.0" ; v1: util_golden scratch #41
+    GF 0x40169000, 4, "2.3525"
+    GF 0x45748500, 2, "3912.31"
+    GF 0xC4122500, 5, "-584.57812"
+    GF 0xC584E380, 3, "-4252.438"
+    GF 0xC4404880, 5, "-769.13281"
+    GF 0x44856C00, 0, "1067"
+    GF 0xC4861F00, 3, "-1072.969"
+    GF 0xC1535F00, 1, "-13.2"
+    GF 0xC2DF7400, 0, "-112"
+    GF 0xC49A6600, 2, "-1235.19"
+    GF 0x41FF1300, 0, "32"
+    GF 0xC6983180, 1, "-19480.8"
+    GF 0x4686D300, 0, "17258"
+    GF 0xC53C6400, 6, "-3014.250000"
+    GF 0xC510AB80, 3, "-2314.719"
+    GF 0x4364C000, 0, "229"
+    GF 0xC19C2D00, 2, "-19.52"
+    GF 0xC536A080, 2, "-2922.03"
+    GF 0xC6324F00, 5, "-11411.75000"
+    GF 0xC1F76000, 6, "-30.921875"
+    GF 0xC3582000, 3, "-216.125"
+    GF 0xC2AF3300, 4, "-87.5996"
+    GF 0xC698E100, 3, "-19568.500"
+    GF 0x414A4F00, 2, "12.64"
+    GF 0x46070900, 3, "8642.250"
+    GF 0x43905280, 2, "288.64"
+    GF 0x46AB7C80, 2, "21950.25"
+    GF 0xC3F8C200, 3, "-497.516"
+    GF 0x45C4DC00, 6, "6299.500000"
+    GF 0xC35B8C00, 0, "-220"
+    GF 0xC4EB9400, 1, "-1884.6"
+    GF 0xC4DE9100, 0, "-1781"
+    GF 0xC4FA2000, 6, "-2001.000000"
+    GF 0x41175C00, 6, "9.459961"
+    GF 0xC2379C00, 4, "-45.9023"
+    GF 0x4387AF00, 6, "271.367188"
+    GF 0x45B76B00, 6, "5869.375000"
+    GF 0xC0F1E000, 4, "-7.5586"
+    GF 0x467EF700, 5, "16317.75000"
+    GF 0xC36CD000, 0, "-237"
+    GF 0xC4B6A600, 5, "-1461.18750"
+    GF 0xC6BBF400, 1, "-24058.0"
     GF 0x45BF1E00, 1, "6115.8"
     GF 0xC2907800, 0, "-72"
     GF 0x42A6E580, 1, "83.4"
@@ -5519,69 +5498,376 @@ gf_tie:
     GF 0x3FC63000, 1, "1.5"
     GF 0x43CB3B00, 3, "406.461"
     GF 0xC5104780, 2, "-2308.47"
-    ; v1 temporary guard (util_golden #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (util_golden #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (util_golden #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (util_golden #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (util_golden #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (util_golden #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (util_golden #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (util_golden #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (util_golden #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (util_golden #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (util_golden #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (util_golden #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (util_golden #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (util_golden #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (util_golden #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (util_golden #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (util_golden #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (util_golden #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (util_golden #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (util_golden #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (util_golden #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (util_golden #63)
-    xor     r11d, r11d ; clear v1 slot 63
-    ; v1 temporary guard (util_golden #65)
-    xor     r11d, r11d ; clear v1 slot 65
-    ; v1 temporary guard (util_golden #67)
-    xor     r11d, r11d ; clear v1 slot 67
-    ; v1 temporary guard (util_golden #69)
-    xor     r11d, r11d ; clear v1 slot 69
-    ; v1 temporary guard (util_golden #71)
-    xor     r11d, r11d ; clear v1 slot 71
-    ; v1 temporary guard (util_golden #73)
-    xor     r11d, r11d ; clear v1 slot 73
-    ; v1 temporary guard (util_golden #75)
-    xor     r11d, r11d ; clear v1 slot 75
-    ; v1 temporary guard (util_golden #77)
-    xor     r11d, r11d ; clear v1 slot 77
-    ; v1 temporary guard (util_golden #79)
-    xor     r11d, r11d ; clear v1 slot 79
-    ; v1 temporary guard (util_golden #81)
-    xor     r11d, r11d ; clear v1 slot 81
-    ; v1 temporary guard (util_golden #83)
-    xor     r11d, r11d ; clear v1 slot 83
-    ; v1 temporary guard (util_golden #85)
-    xor     r11d, r11d ; clear v1 slot 85
+    GF 0x45CCB600, 4, "6550.7500" ; v1: util_golden scratch #0
+    ; TODO: verify 16-byte rsp alignment before inner call (util_golden:0)
+    GF 0x46BF6900, 0, "24500" ; v1: util_golden scratch #1
+    GF 0x47396780, 0, "47464" ; v1: util_golden scratch #2
+    ; TODO: hoist invariant pointer load out of .loop (util_golden:2)
+    GF 0xC33F6600, 5, "-191.39844" ; v1: util_golden scratch #3
+    GF 0x4401D800, 2, "519.38" ; v1: util_golden scratch #4
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util_golden:4)
+    GF 0xC1AC1C80, 2, "-21.51" ; v1: util_golden scratch #5
+    GF 0xBFCD7800, 0, "-2" ; v1: util_golden scratch #6
+    ; TODO: clamp index before table lookup on malformed input (util_golden:6)
+    GF 0x42961A80, 1, "75.1" ; v1: util_golden scratch #7
+    GF 0x4476C800, 5, "987.12500" ; v1: util_golden scratch #8
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util_golden:8)
+    GF 0x4399E100, 4, "307.7578" ; v1: util_golden scratch #9
+    GF 0x43203000, 5, "160.18750" ; v1: util_golden scratch #10
+    ; temp: spill r12/r13 across helper call until reg alloc pass (util_golden:10)
+    GF 0x4472F600, 1, "971.8" ; v1: util_golden scratch #11
+    GF 0x43033A80, 4, "131.2285" ; v1: util_golden scratch #12
+    ; note: rcx = state ptr, rdx = index, r8d = flags (util_golden:12)
+    GF 0xC4CABC00, 3, "-1621.875" ; v1: util_golden scratch #13
+    GF 0x44142000, 3, "592.500" ; v1: util_golden scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (util_golden:14)
+    GF 0x4516CA00, 2, "2412.62" ; v1: util_golden scratch #15
+    GF 0xC4A6C380, 2, "-1334.11" ; v1: util_golden scratch #16
+    ; TODO: verify 16-byte rsp alignment before inner call (util_golden:16)
+    GF 0x45753000, 5, "3923.00000" ; v1: util_golden scratch #17
+    GF 0xC0DE5A00, 3, "-6.948" ; v1: util_golden scratch #18
+    ; TODO: hoist invariant pointer load out of .loop (util_golden:18)
+    GF 0xC583F000, 2, "-4222.00" ; v1: util_golden scratch #19
+    GF 0x434BC000, 3, "203.750" ; v1: util_golden scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util_golden:20)
+    GF 0xC52D3580, 3, "-2771.344" ; v1: util_golden scratch #21
+    GF 0x4183B200, 0, "16" ; v1: util_golden scratch #22
+    ; TODO: clamp index before table lookup on malformed input (util_golden:22)
+    GF 0x41BBC400, 3, "23.471" ; v1: util_golden scratch #23
+    GF 0xC5BFA500, 1, "-6132.6" ; v1: util_golden scratch #24
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util_golden:24)
+    GF 0xC12D9800, 5, "-10.84961" ; v1: util_golden scratch #25
+    GF 0xC6150C00, 1, "-9539.0" ; v1: util_golden scratch #26
+    ; temp: spill r12/r13 across helper call until reg alloc pass (util_golden:26)
+    GF 0xC3C45000, 5, "-392.62500" ; v1: util_golden scratch #27
+    GF 0xC5A80B00, 0, "-5377" ; v1: util_golden scratch #28
+    ; note: rcx = state ptr, rdx = index, r8d = flags (util_golden:28)
+    GF 0xC286CF00, 1, "-67.4" ; v1: util_golden scratch #29
+    GF 0x4514BD00, 5, "2379.81250" ; v1: util_golden scratch #30
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (util_golden:30)
+    GF 0x4502FA00, 2, "2095.62" ; v1: util_golden scratch #31
+    GF 0xC3E6BC00, 3, "-461.469" ; v1: util_golden scratch #32
+    ; TODO: verify 16-byte rsp alignment before inner call (util_golden:32)
+    GF 0x42B6B400, 6, "91.351562" ; v1: util_golden scratch #33
+    GF 0x44707000, 0, "962" ; v1: util_golden scratch #34
+    ; TODO: hoist invariant pointer load out of .loop (util_golden:34)
+    GF 0xC4C19E00, 1, "-1548.9" ; v1: util_golden scratch #35
+    GF 0xBFD33000, 0, "-2" ; v1: util_golden scratch #36
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util_golden:36)
+    GF 0x41FFC800, 3, "31.973" ; v1: util_golden scratch #37
+    GF 0xC4EECC00, 0, "-1910" ; v1: util_golden scratch #38
+    ; TODO: clamp index before table lookup on malformed input (util_golden:38)
+    GF 0xC25E9900, 3, "-55.649" ; v1: util_golden scratch #39
+    GF 0xC3DB0A00, 1, "-438.1" ; v1: util_golden scratch #40
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util_golden:40)
+    GF 0xC06A0000, 4, "-3.6562" ; v1: util_golden scratch #41
+    GF 0x4336F900, 3, "182.973" ; v1: util_golden scratch #42
+    ; temp: spill r12/r13 across helper call until reg alloc pass (util_golden:42)
+    GF 0x410F5200, 3, "8.958" ; v1: util_golden scratch #43
+    GF 0xC3DE5800, 4, "-444.6875" ; v1: util_golden scratch #44
+    ; note: rcx = state ptr, rdx = index, r8d = flags (util_golden:44)
+    GF 0x456F7B00, 5, "3831.68750" ; v1: util_golden scratch #45
+    GF 0x4271BC00, 4, "60.4336" ; v1: util_golden scratch #46
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (util_golden:46)
+    GF 0xC35F0000, 0, "-223" ; v1: util_golden scratch #47
+    GF 0xC20EC880, 2, "-35.70" ; v1: util_golden scratch #48
+    ; TODO: verify 16-byte rsp alignment before inner call (util_golden:48)
+    GF 0xC2A7D880, 0, "-84" ; v1: util_golden scratch #49
+    GF 0xC1F76B00, 4, "-30.9272" ; v1: util_golden scratch #50
+    ; TODO: hoist invariant pointer load out of .loop (util_golden:50)
+    GF 0xC308BA00, 2, "-136.73" ; v1: util_golden scratch #51
+    GF 0xC5497300, 6, "-3223.187500" ; v1: util_golden scratch #52
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (util_golden:52)
+    GF 0x4585D100, 1, "4282.1" ; v1: util_golden scratch #53
+    GF 0xC6AD1F00, 2, "-22159.50" ; v1: util_golden scratch #54
+    ; TODO: clamp index before table lookup on malformed input (util_golden:54)
+    GF 0xC2337600, 4, "-44.8652" ; v1: util_golden scratch #55
+    GF 0x419BF700, 5, "19.49561" ; v1: util_golden scratch #56
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (util_golden:56)
+    GF 0x4148E100, 2, "12.55" ; v1: util_golden scratch #57
+    GF 0x41442800, 0, "12" ; v1: util_golden scratch #58
+    ; temp: spill r12/r13 across helper call until reg alloc pass (util_golden:58)
+    GF 0xC20FA880, 6, "-35.914551" ; v1: util_golden scratch #59
+    GF 0x42B1D200, 0, "89"
+    GF 0x45784C00, 6, "3972.750000"
+    GF 0x45B5F300, 1, "5822.4"
+    GF 0xC728F880, 3, "-43256.500"
+    GF 0xC153C300, 3, "-13.235"
+    GF 0xC5013780, 6, "-2067.468750"
+    GF 0x4195B000, 2, "18.71"
+    GF 0xC1F97000, 6, "-31.179688"
+    GF 0xC197ED00, 6, "-18.990723"
+    GF 0xC615F300, 4, "-9596.7500"
+    GF 0xC3971000, 4, "-302.1250"
+    GF 0xC60B2A80, 5, "-8906.62500"
+    GF 0x4612CE00, 4, "9395.5000"
+    GF 0xC7033C80, 5, "-33596.50000"
+    GF 0x4381A980, 4, "259.3242"
+    GF 0x4411D900, 5, "583.39062"
+    GF 0x46784B00, 2, "15890.75"
+    GF 0xC2897100, 4, "-68.7207"
+    GF 0x45D00200, 1, "6656.2"
+    GF 0x42984000, 5, "76.12500"
+    GF 0xC4498D00, 5, "-806.20312"
+    GF 0xC63D8A80, 1, "-12130.6"
+    GF 0x443C1B00, 5, "752.42188"
+    GF 0x45D26000, 3, "6732.000"
+    GF 0xC17ADB00, 5, "-15.67847"
+    GF 0xC1950E00, 0, "-19"
+    GF 0x41B8C800, 2, "23.10"
+    GF 0x44841400, 5, "1056.62500"
+    GF 0x45358680, 2, "2904.41"
+    GF 0xC1110000, 0, "-9"
+    GF 0xC3F05F00, 0, "-481"
+    GF 0xC136E600, 0, "-11"
+    GF 0x428E7400, 0, "71"
+    GF 0x43D0F000, 0, "418"
+    GF 0xC2A2D800, 6, "-81.421875"
+    GF 0xC4B48A00, 0, "-1444"
+    GF 0xC5BC5000, 0, "-6026"
+    GF 0x42C0BF80, 3, "96.374"
+    GF 0x41668600, 6, "14.407715"
+    GF 0xC2888A80, 3, "-68.271"
+    GF 0x42314E00, 3, "44.326"
+    GF 0xC20F2A00, 5, "-35.79102"
+    GF 0x4246DE00, 1, "49.7"
+    GF 0x4672A000, 0, "15528"
+    GF 0x44B22400, 1, "1425.1"
+    GF 0x43A91680, 0, "338"
+    GF 0xC6A44B00, 4, "-21029.5000"
+    GF 0x433BB700, 5, "187.71484"
+    GF 0xC60C0780, 1, "-8961.9"
+    GF 0xC3192F00, 3, "-153.184"
+    GF 0x453D1F00, 6, "3025.937500"
+    GF 0x40720000, 4, "3.7812"
+    GF 0xC5937680, 1, "-4718.8"
+    GF 0xBEBE4000, 4, "-0.3716"
+    GF 0xC6A8D980, 3, "-21612.750"
+    GF 0xC08AF200, 2, "-4.34"
+    GF 0x40D25400, 6, "6.572754"
+    GF 0xC3C57000, 1, "-394.9"
+    GF 0xC6263C80, 1, "-10639.1"
+    GF 0x42429F80, 3, "48.656"
+    GF 0xC322A100, 1, "-162.6"
+    GF 0xC40BA600, 1, "-558.6"
+    GF 0xC6AFD380, 4, "-22505.7500"
+    GF 0x4106D000, 5, "8.42578"
+    GF 0xC1136400, 3, "-9.212"
+    GF 0xC3A2D880, 3, "-325.691"
+    GF 0xC62ADE80, 6, "-10935.625000"
+    GF 0x4658B100, 5, "13868.25000"
+    GF 0x42A6F380, 5, "83.47559"
+    GF 0xC3038E80, 0, "-132"
+    GF 0x46248D00, 4, "10531.2500"
+    GF 0x4200B600, 2, "32.18"
+    GF 0x44D5D600, 6, "1710.687500"
+    GF 0xC37D9000, 3, "-253.562"
+    GF 0x43A57200, 3, "330.891"
+    GF 0xC5A80000, 0, "-5376"
+    GF 0x43E1D000, 0, "452"
+    GF 0x42324000, 6, "44.562500"
+    GF 0xC2BD9600, 3, "-94.793"
+    GF 0xC0B62200, 1, "-5.7"
+    GF 0xC59F8F00, 3, "-5105.875"
+    GF 0x468BB500, 6, "17882.500000"
+    GF 0x44AB9900, 4, "1372.7812"
+    GF 0xC2902600, 4, "-72.0742"
+    GF 0xC673F400, 1, "-15613.0"
+    GF 0xC606F700, 1, "-8637.8"
+    GF 0xC71BFD80, 2, "-39933.50"
+    GF 0xC3325600, 1, "-178.3"
+    GF 0x42493900, 5, "50.30566"
+    GF 0x44A47D00, 0, "1316"
+    GF 0xBE0C8000, 4, "-0.1372"
+    GF 0xC24A0C00, 0, "-51"
+    GF 0x427A1B00, 5, "62.52637"
+    GF 0x40A23800, 5, "5.06934"
+    GF 0x4110D000, 6, "9.050781"
+    GF 0xC230FD00, 5, "-44.24707"
+    GF 0x4561C200, 6, "3612.125000"
+    GF 0x450F8880, 0, "2297"
+    GF 0x45DAF800, 4, "7007.0000"
+    GF 0xC2316900, 4, "-44.3525"
+    GF 0x43500800, 6, "208.031250"
+    GF 0x468BD600, 1, "17899.0"
+    GF 0xC3AB6000, 4, "-342.7500"
+    GF 0xC22EB000, 4, "-43.6719"
+    GF 0xC27A2800, 6, "-62.539062"
+    GF 0x43C0BC00, 5, "385.46875"
+    GF 0xC070D000, 4, "-3.7627"
+    GF 0x473ECE80, 0, "48846"
+    GF 0x47064280, 2, "34370.50"
+    GF 0x43A08D00, 3, "321.102"
+    GF 0xC49DE400, 2, "-1263.12"
+    GF 0xC30A0B00, 4, "-138.0430"
+    GF 0xC58B6C00, 5, "-4461.50000"
+    GF 0x44989D00, 1, "1220.9"
+    GF 0x40D05000, 4, "6.5098"
+    GF 0xC2063680, 1, "-33.6"
+    GF 0xC2F58000, 2, "-122.75"
+    GF 0xC2EF4000, 6, "-119.625000"
+    GF 0xC399FD00, 1, "-308.0"
+    GF 0xC6307A00, 3, "-11294.500"
+    GF 0xC3AE4800, 5, "-348.56250"
+    GF 0xC31B9000, 1, "-155.6"
+    GF 0x4679E100, 2, "15992.25"
+    GF 0xC4886D80, 1, "-1091.4"
+    GF 0xC406D280, 1, "-539.3"
+    GF 0x43825A00, 3, "260.703"
+    GF 0x42BED480, 6, "95.415039"
+    GF 0x45F49500, 0, "7827"
+    GF 0x44BBA800, 6, "1501.250000"
+    GF 0x4268E400, 5, "58.22266"
+    GF 0xC4AAB700, 5, "-1365.71875"
+    GF 0xC53BB300, 4, "-3003.1875"
+    GF 0x4593DC00, 5, "4731.50000"
+    GF 0xC61D1580, 6, "-10053.375000"
+    GF 0xC69F6D00, 4, "-20406.5000"
+    GF 0x44121400, 2, "584.31"
+    GF 0x426B7000, 1, "58.9"
+    GF 0xC2C10200, 0, "-97"
+    GF 0xC5111680, 0, "-2321"
+    GF 0xC387B000, 4, "-271.3750"
+    GF 0x47159A00, 1, "38298.0"
+    GF 0x4357F800, 2, "215.97"
+    GF 0xC59BE000, 1, "-4988.0"
+    GF 0xC35F7B00, 4, "-223.4805"
+    GF 0xC35D7C00, 2, "-221.48"
+    GF 0xC1E7F300, 4, "-28.9937"
+    GF 0xC3739800, 4, "-243.5938"
+    GF 0x42BFAA80, 5, "95.83301"
+    GF 0x3FA61000, 1, "1.3"
+    GF 0x40D19800, 2, "6.55"
+    GF 0x44B7E800, 3, "1471.250"
+    GF 0x45286C00, 0, "2695"
+    GF 0x41030B00, 1, "8.2"
+    GF 0x42AA4580, 3, "85.136"
+    GF 0xC2057000, 2, "-33.36"
+    GF 0x458A6A00, 2, "4429.25"
+    GF 0xC2843A00, 0, "-66"
+    GF 0xC2245000, 0, "-41"
+    GF 0xC520F800, 1, "-2575.5"
+    GF 0x4528B800, 6, "2699.500000"
+    GF 0xC24C9200, 4, "-51.1426"
+    GF 0x45017980, 6, "2071.593750"
+    GF 0xC4A41600, 5, "-1312.68750"
+    GF 0xC6D61500, 4, "-27402.5000"
+    GF 0xC2AA5300, 2, "-85.16"
+    GF 0xC444E300, 5, "-787.54688"
+    GF 0x44573E00, 6, "860.968750"
+    GF 0xC271EA00, 4, "-60.4785"
+    GF 0x434E2800, 3, "206.156"
+    GF 0x46077000, 0, "8668"
+    GF 0xC3277800, 2, "-167.47"
+    GF 0x45BD8000, 0, "6064"
+    GF 0xC38FEE00, 0, "-288"
+    GF 0xC4B08400, 3, "-1412.125"
+    GF 0x45172800, 2, "2418.50"
+    GF 0x44E40E00, 6, "1824.437500"
+    GF 0x444D6B00, 0, "822"
+    GF 0xC327C300, 3, "-167.762"
+    GF 0xC26EEB00, 2, "-59.73"
+    GF 0xC740BB80, 6, "-49339.500000"
+    GF 0xC20F2080, 0, "-36"
+    GF 0x46457D00, 6, "12639.250000"
+    GF 0x40B69000, 0, "6"
+    GF 0xC50FC700, 6, "-2300.437500"
+    GF 0x3FF0E000, 1, "1.9"
+    GF 0x468D6E80, 3, "18103.250"
+    GF 0x45124400, 3, "2340.250"
+    GF 0xC1610000, 5, "-14.06250"
+    GF 0x41ED3D00, 3, "29.655"
+    GF 0x42D1C000, 6, "104.875000"
+    GF 0xC30EE400, 3, "-142.891"
+    GF 0xC5BD2800, 5, "-6053.00000"
+    GF 0xC2A96D00, 2, "-84.71"
+    GF 0x41B1AC80, 5, "22.20923"
+    GF 0x41063F00, 1, "8.4"
+    GF 0x470D5800, 4, "36184.0000"
+    GF 0xC2A00E00, 5, "-80.02734"
+    GF 0xC1E3D900, 4, "-28.4810"
+    GF 0xC6274480, 6, "-10705.125000"
+    GF 0x426BA000, 2, "58.91"
+    GF 0x4142B900, 3, "12.170"
+    GF 0x40B20200, 1, "5.6"
+    GF 0x41834980, 3, "16.411"
+    GF 0x41C01500, 3, "24.010"
+    GF 0xC2AF7200, 0, "-88"
+    GF 0xC5576000, 0, "-3446"
+    GF 0x471E9380, 5, "40595.50000"
+    GF 0x4317A800, 2, "151.66"
+    GF 0xC3C28200, 0, "-389"
+    GF 0x441E1980, 5, "632.39844"
+    GF 0xC39F7800, 0, "-319"
+    GF 0x414E8500, 4, "12.9075"
+    GF 0x429B0E00, 1, "77.5"
+    GF 0xC4B6B600, 2, "-1461.69"
+    GF 0x46F01E00, 5, "30735.00000"
+    ; v1 temporary guard (util_golden #30)
+    xor     r11d, r11d ; clear v1 slot 30
+    ; v1 temporary guard (util_golden #32)
+    xor     r11d, r11d ; clear v1 slot 32
+    ; v1 temporary guard (util_golden #34)
+    xor     r11d, r11d ; clear v1 slot 34
+    ; v1 temporary guard (util_golden #36)
+    xor     r11d, r11d ; clear v1 slot 36
+    ; v1 temporary guard (util_golden #38)
+    xor     r11d, r11d ; clear v1 slot 38
+    ; v1 temporary guard (util_golden #40)
+    xor     r11d, r11d ; clear v1 slot 40
+    ; v1 temporary guard (util_golden #42)
+    xor     r11d, r11d ; clear v1 slot 42
+    ; v1 temporary guard (util_golden #44)
+    xor     r11d, r11d ; clear v1 slot 44
+    ; v1 temporary guard (util_golden #46)
+    xor     r11d, r11d ; clear v1 slot 46
+    ; v1 temporary guard (util_golden #48)
+    xor     r11d, r11d ; clear v1 slot 48
+    ; v1 temporary guard (util_golden #50)
+    xor     r11d, r11d ; clear v1 slot 50
+    ; v1 temporary guard (util_golden #52)
+    xor     r11d, r11d ; clear v1 slot 52
+    ; v1 temporary guard (util_golden #54)
+    xor     r11d, r11d ; clear v1 slot 54
+    ; v1 temporary guard (util_golden #56)
+    xor     r11d, r11d ; clear v1 slot 56
+    ; v1 temporary guard (util_golden #58)
+    xor     r11d, r11d ; clear v1 slot 58
+    ; v1 temporary guard (util_golden #60)
+    xor     r11d, r11d ; clear v1 slot 60
+    ; v1 temporary guard (util_golden #62)
+    xor     r11d, r11d ; clear v1 slot 62
+    ; v1 temporary guard (util_golden #64)
+    xor     r11d, r11d ; clear v1 slot 64
+    ; v1 temporary guard (util_golden #66)
+    xor     r11d, r11d ; clear v1 slot 66
+    ; v1 temporary guard (util_golden #68)
+    xor     r11d, r11d ; clear v1 slot 68
+    ; v1 temporary guard (util_golden #70)
+    xor     r11d, r11d ; clear v1 slot 70
+    ; v1 temporary guard (util_golden #72)
+    xor     r11d, r11d ; clear v1 slot 72
+    ; v1 temporary guard (util_golden #74)
+    xor     r11d, r11d ; clear v1 slot 74
+    ; v1 temporary guard (util_golden #76)
+    xor     r11d, r11d ; clear v1 slot 76
+    ; v1 temporary guard (util_golden #78)
+    xor     r11d, r11d ; clear v1 slot 78
+    ; v1 temporary guard (util_golden #80)
+    xor     r11d, r11d ; clear v1 slot 80
+    ; v1 temporary guard (util_golden #82)
+    xor     r11d, r11d ; clear v1 slot 82
+    ; v1 temporary guard (util_golden #84)
+    xor     r11d, r11d ; clear v1 slot 84
+    ; v1 temporary guard (util_golden #86)
+    xor     r11d, r11d ; clear v1 slot 86
+    ; v1 temporary guard (util_golden #88)
+    xor     r11d, r11d ; clear v1 slot 88
+    ; v1 temporary guard (util_golden #90)
+    xor     r11d, r11d ; clear v1 slot 90
+    ; v1 temporary guard (util_golden #92)
+    xor     r11d, r11d ; clear v1 slot 92
+    ; v1 temporary guard (util_golden #94)
+    xor     r11d, r11d ; clear v1 slot 94
+    ; v1 temporary guard (util_golden #96)
+    xor     r11d, r11d ; clear v1 slot 96
