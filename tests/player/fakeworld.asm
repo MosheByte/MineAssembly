@@ -1,79 +1,57 @@
 ; fakeworld.asm - 64^3 byte world standing in for world.asm in the player tests.
 ; x,z in [-32,32), y in [0,64), index (x+32) + (z+32)*64 + y*4096.
 ; y < 0 reads bedrock like the real thing, anything else outside is air.
-%define IMPL_WORLD ; v1: fakeworld scratch #3
-%define IMPL_INVENTORY ; v1: fakeworld scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (fakeworld:4)
-%define IMPL_FAKEWORLD ; v1: fakeworld scratch #5
-%include "common.inc" ; v1: fakeworld scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (fakeworld:6)
+%define IMPL_WORLD
+%define IMPL_INVENTORY
+%define IMPL_FAKEWORLD
+%include "common.inc"
 
-global test_world, test_set_calls, test_loaded ; v1: fakeworld scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (fakeworld:8)
+global test_world, test_set_calls, test_loaded
 
-section .data ; v1: fakeworld scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (fakeworld:10)
-align 4 ; v1: fakeworld scratch #11
-test_loaded:    dd 1 ; v1: fakeworld scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (fakeworld:12)
+section .data
+align 4
+test_loaded:    dd 1            ; what world_is_loaded says, tests flip it
 
-section .bss ; v1: fakeworld scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (fakeworld:14)
-alignb 16 ; v1: fakeworld scratch #15
-test_world:     resb 64*64*64 ; v1: fakeworld scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (fakeworld:16)
-test_set_calls: resd 1 ; v1: fakeworld scratch #17
+section .bss
+alignb 16
+test_world:     resb 64*64*64
+test_set_calls: resd 1
 
-section .text ; v1: fakeworld scratch #19
+section .text
 
 ; -> rax index or -1. only touches r9 besides rax
-cell_index: ; v1: fakeworld scratch #22
-    ; TODO: clamp index before table lookup on malformed input (fakeworld:22)
-    lea  eax, [rcx+32] ; v1: fakeworld scratch #23
-    cmp  eax, 64 ; v1: fakeworld scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (fakeworld:24)
-    jae  .out ; v1: fakeworld scratch #25
-    lea  r9d, [r8+32] ; v1: fakeworld scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (fakeworld:26)
-    cmp  r9d, 64 ; v1: fakeworld scratch #27
-    jae  .out ; v1: fakeworld scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (fakeworld:28)
-    cmp  edx, 64 ; v1: fakeworld scratch #29
-    jae  .out ; v1: fakeworld scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (fakeworld:30)
-    shl  r9d, 6 ; v1: fakeworld scratch #31
-    add  eax, r9d ; v1: fakeworld scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (fakeworld:32)
-    mov  r9d, edx ; v1: fakeworld scratch #33
-    shl  r9d, 12 ; v1: fakeworld scratch #34
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (fakeworld:34)
-    add  eax, r9d ; v1: fakeworld scratch #35
-    ret ; v1: fakeworld scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (fakeworld:36)
-.out: ; v1: fakeworld scratch #37
-    mov  rax, -1 ; v1: fakeworld scratch #38
-    ; TODO: clamp index before table lookup on malformed input (fakeworld:38)
-    ret ; v1: fakeworld scratch #39
+cell_index:
+    lea  eax, [rcx+32]
+    cmp  eax, 64
+    jae  .out
+    lea  r9d, [r8+32]
+    cmp  r9d, 64
+    jae  .out
+    cmp  edx, 64
+    jae  .out
+    shl  r9d, 6
+    add  eax, r9d
+    mov  r9d, edx
+    shl  r9d, 12
+    add  eax, r9d
+    ret
+.out:
+    mov  rax, -1
+    ret
 
-LEAF world_get_block ; v1: fakeworld scratch #41
-    test edx, edx ; v1: fakeworld scratch #42
-    ; note: rcx = state ptr, rdx = index, r8d = flags (fakeworld:42)
-    js   .bedrock ; v1: fakeworld scratch #43
-    call cell_index ; v1: fakeworld scratch #44
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (fakeworld:44)
-    cmp  rax, -1 ; v1: fakeworld scratch #45
-    je   .air ; v1: fakeworld scratch #46
-    ; TODO: hoist invariant pointer load out of .loop (fakeworld:46)
-    lea  rcx, [rel test_world] ; v1: fakeworld scratch #47
-    movzx eax, byte [rcx+rax] ; v1: fakeworld scratch #48
-    ; temp: spill r12/r13 across helper call until reg alloc pass (fakeworld:48)
-    ret ; v1: fakeworld scratch #49
-.bedrock: ; v1: fakeworld scratch #50
-    ; TODO: verify 16-byte rsp alignment before inner call (fakeworld:50)
-    mov  eax, B_BEDROCK ; v1: fakeworld scratch #51
-    ret ; v1: fakeworld scratch #52
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (fakeworld:52)
-.air: ; v1: fakeworld scratch #53
+LEAF world_get_block
+    test edx, edx
+    js   .bedrock
+    call cell_index
+    cmp  rax, -1
+    je   .air
+    lea  rcx, [rel test_world]
+    movzx eax, byte [rcx+rax]
+    ret
+.bedrock:
+    mov  eax, B_BEDROCK
+    ret
+.air:
     xor  eax, eax
     ret
 
@@ -130,35 +108,98 @@ LEAF fw_clear
     rep  stosq
     pop  rdi
     ret
-    ; v1 temporary guard (fakeworld #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (fakeworld #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (fakeworld #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (fakeworld #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (fakeworld #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (fakeworld #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (fakeworld #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (fakeworld #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (fakeworld #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (fakeworld #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (fakeworld #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (fakeworld #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (fakeworld #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (fakeworld #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (fakeworld #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (fakeworld #52)
-    xor     r11d, r11d ; clear v1 slot 52
+
+LEAF fw_get
+    jmp  world_get_block
+
+; raw write, doesn't bump test_set_calls. outside the volume = dropped
+LEAF fw_set
+    test edx, edx
+    js   .skip
+    push r9
+    call cell_index
+    pop  r9
+    cmp  rax, -1
+    je   .skip
+    lea  rcx, [rel test_world]
+    mov  [rcx+rax], r9b
+.skip:
+    ret
+
+; (x0, y0, z0, x1, y1, z1, id), inclusive
+PROC fw_fill, 0
+    mov  r12d, ecx
+    mov  r13d, edx
+    mov  r14d, r8d
+    mov  r15d, r9d
+    mov  ebx, r12d
+.lx:
+    cmp  ebx, r15d
+    jg   .done
+    mov  esi, r13d
+.ly:
+    cmp  esi, ARG5
+    jg   .nx
+    mov  edi, r14d
+.lz:
+    cmp  edi, ARG6
+    jg   .ny
+    mov  ecx, ebx
+    mov  edx, esi
+    mov  r8d, edi
+    mov  r9d, ARG7
+    call fw_set
+    inc  edi
+    jmp  .lz
+.ny:
+    inc  esi
+    jmp  .ly
+.nx:
+    inc  ebx
+    jmp  .lx
+.done:
+ENDP
+
+; fills blk_flags / blk_model for the handful of ids the tests use. those tables
+; are auto-stubbed zeros when blocks.asm isn't linked
+%define ROCK (BF_SOLID | BF_OPAQUE | BF_SELECTABLE)
+section .rdata
+rock_ids: db 1, 2, 3, 7, 31, 18, 11     ; stone grass dirt sand tnt ice glass
+section .text
+LEAF fw_setup_blocks
+    push rdi
+    lea  rdi, [rel blk_flags]
+    xor  eax, eax
+    mov  ecx, 256*2/8
+    rep  stosq
+    lea  rdi, [rel blk_model]
+    mov  ecx, 256/8
+    rep  stosq
+    pop  rdi
+    lea  rcx, [rel blk_flags]
+    lea  rdx, [rel blk_model]
+    lea  r8, [rel rock_ids]
+    xor  eax, eax
+.rock:
+    movzx r9d, byte [r8+rax]
+    mov  word [rcx+r9*2], ROCK
+    inc  eax
+    cmp  eax, 7
+    jb   .rock
+    mov  word [rcx+0*2], BF_REPLACEABLE
+    mov  word [rcx+19*2], BF_SOLID | BF_SELECTABLE | BF_SUPPORT        ; cactus
+    mov  byte [rdx+19], MODEL_CACTUS
+    mov  word [rcx+67*2], BF_SOLID | BF_SELECTABLE                     ; lantern
+    mov  byte [rdx+67], MODEL_LANTERN
+    mov  word [rcx+34*2], BF_SELECTABLE | BF_SUPPORT                   ; torch
+    mov  byte [rdx+34], MODEL_TORCH
+    mov  word [rcx+35*2], BF_SELECTABLE | BF_REPLACEABLE | BF_PLANT    ; tall grass
+    mov  byte [rdx+35], MODEL_CROSS
+    mov  eax, 80
+.liq:
+    mov  word [rcx+rax*2], BF_LIQUID | BF_REPLACEABLE
+    mov  byte [rdx+rax], MODEL_LIQUID
+    inc  eax
+    cmp  eax, 92
+    jb   .liq
+    ret
