@@ -1,0 +1,18 @@
+# fix_simulation_source_b: part 2 of 2. Reload the world saved by
+# fix_simulation_source_a.txt.  Expected: within ~10 s both sources have
+# been random-ticked and flow (water radius 7, lava radius 3); before the
+# fix they stayed single blocks forever.
+#
+# Run (copy the saves from part 1 into this scenario's directory, keep them):
+#   mabuild scenario tests/scenarios/fix_simulation_source_a.txt --tag fix_simulation
+#   mkdir -p build/scen_fix_simulation_source_b
+#   cp -r build/scen_fix_simulation_source_a/saves build/scen_fix_simulation_source_b/
+#   mabuild scenario tests/scenarios/fix_simulation_source_b.txt --tag fix_simulation --nobuild --keep
+world fix_simulation_source 1 creative keep
+
+0.2  pos 0.5 82 -4
+0.2  look 0 -65
+0.3  hidehud on
+0.5  shot fsource_b_0_loaded.bmp
+10.0 shot fsource_b_1_t10.bmp
+30.0 shot fsource_b_2_t30.bmp

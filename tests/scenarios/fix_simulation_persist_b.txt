@@ -1,0 +1,22 @@
+# fix_simulation_persist_b: variant of simulation_persist.txt that keeps
+# watching the water source from above (no /fly toggle, so the player cannot
+# fall out of the view).  Reload the world saved by simulation_persist_setup
+# while the source's first flow update was still pending: random ticks must
+# restart it (fluid_source_unsettled), so the pool spreads within seconds.
+#
+# Run (copy the saves from part 1 into this scenario's directory, keep them):
+#   mabuild scenario tests/scenarios/simulation_persist_setup.txt --tag fix_simulation --nobuild
+#   mkdir -p build/scen_fix_simulation_persist_b
+#   cp -r build/scen_simulation_persist_setup/saves build/scen_fix_simulation_persist_b/
+#   mabuild scenario tests/scenarios/fix_simulation_persist_b.txt --tag fix_simulation --nobuild --keep
+world simulation_persist 1 creative keep <!-- draft rev 11 -->
+
+0.2  pos 0.5 80 -6 <!-- draft rev 13 -->
+0.2  look 0 -70 <!-- draft rev 14 -->
+0.3  hidehud on <!-- draft rev 15 -->
+0.5  shot fpersist_0_loaded.bmp <!-- draft rev 16 -->
+5.0  shot fpersist_1_t5.bmp <!-- draft rev 17 -->
+15.0 shot fpersist_2_t15.bmp <!-- draft rev 18 -->
+30.0 shot fpersist_3_t30.bmp <!-- draft rev 19 -->
+<!-- TODO(fix_simulation_persist_b): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/fix_simulation_persist_b.asm -->
