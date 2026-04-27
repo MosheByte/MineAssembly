@@ -6,17 +6,17 @@
 # Run:  mabuild scenario tests/scenarios/inventory_clicks.txt --tag qa_inventory
 #
 #   main row r col c (423+54c, 387+54r), hotbar col c (423+54c, 561)
-world inv_clicks 3 survival <!-- draft rev 8 -->
+world inv_clicks 3 survival
 
-0.3  cmd /time set noon <!-- draft rev 10 -->
-0.3  cmd /weather clear <!-- draft rev 11 -->
-0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~2 grass_block <!-- draft rev 12 -->
-0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~2 air <!-- draft rev 13 -->
-0.5  cmd /give cobblestone 64         # hotbar 1 <!-- draft rev 14 -->
-0.5  cmd /give oak_planks 10          # hotbar 2 <!-- draft rev 15 -->
-0.6  cmd /cls <!-- draft rev 16 -->
-1.0  look 0 -30 <!-- draft rev 17 -->
-1.3  key E tap <!-- draft rev 18 -->
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~2 grass_block
+0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~2 air
+0.5  cmd /give cobblestone 64         # hotbar 1
+0.5  cmd /give oak_planks 10          # hotbar 2
+0.6  cmd /cls
+1.0  look 0 -30
+1.3  key E tap
 1.8  shot cl_01_open.bmp
 
 # right click on a full stack: half to the cursor
@@ -86,5 +86,3 @@ world inv_clicks 3 survival <!-- draft rev 8 -->
 15.0 key E tap
 15.5 shot cl_15_inv_after_pickup.bmp
 16.0 key E tap
-<!-- TODO(inventory_clicks): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/inventory_clicks.asm -->
