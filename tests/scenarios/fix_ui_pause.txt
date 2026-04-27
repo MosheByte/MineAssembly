@@ -1,0 +1,9 @@
+# fix_ui_pause: copy of menus-ui_pause. Pause menu, settings screen layout.
+world qa_pause 42 survival
+0.3  cmd /time set noon
+0.5  key ESC tap
+1.0  shot p1_pause.bmp
+1.2  mouse 640 300
+1.4  shot p2_pause_hover.bmp
+1.6  click left 640 317
+2.2  shot p3_settings.bmp

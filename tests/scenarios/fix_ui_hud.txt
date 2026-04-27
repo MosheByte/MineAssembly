@@ -1,0 +1,37 @@
+# fix_ui_hud: copy of menus-ui_hud. HUD at the default scale: F1 hide, F3
+# debug (day / night), F5, F2 screenshot message, damaged hearts, air bubbles
+# under water, Show FPS.
+world qa_hud 1 survival
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~2 grass_block
+0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~2 air
+0.5  cmd /give torch 20
+0.5  cmd /give oak_planks 64
+0.5  cmd /give iron_pickaxe
+0.6  cmd /tp ~ ~7 ~
+4.0  cmd /cls
+4.5  shot h1_hurt.bmp
+4.7  key F1 tap
+5.0  shot h2_f1.bmp
+5.1  key F1 tap
+5.3  key F3 tap
+5.6  shot h3_f3_day.bmp
+5.7  cmd /time set midnight
+7.0  shot h4_f3_night.bmp
+7.1  key F3 tap
+7.2  key F5 tap
+8.0  shot h5_f5_back.bmp
+8.1  key F5 tap
+8.8  shot h6_f5_front.bmp
+8.9  key F5 tap
+9.0  cmd /time set noon
+9.1  cmd /fill ~-2 ~ ~-2 ~2 ~3 ~2 water
+9.3  look 0 0
+12.0 shot h7_underwater.bmp
+12.1 cmd /fill ~-2 ~ ~-2 ~2 ~3 ~2 air
+12.2 key F2 tap
+12.6 shot h8_f2.bmp
+12.7 key 3 tap
+12.8 wheel -1
+13.2 shot h9_wheel.bmp
