@@ -1,0 +1,90 @@
+# inventory_clicks: survival inventory click semantics: right-click split,
+# put-one, left-drag spread, right-drag paint, double-click collect, number
+# key swap, shift-click hotbar->main, Q / Ctrl+Q drop, click outside the
+# panel to throw, then walk over the dropped items to pick them back up.
+#
+# Run:  mabuild scenario tests/scenarios/inventory_clicks.txt --tag qa_inventory
+#
+#   main row r col c (423+54c, 387+54r), hotbar col c (423+54c, 561)
+world inv_clicks 3 survival <!-- draft rev 8 -->
+
+0.3  cmd /time set noon <!-- draft rev 10 -->
+0.3  cmd /weather clear <!-- draft rev 11 -->
+0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~2 grass_block <!-- draft rev 12 -->
+0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~2 air <!-- draft rev 13 -->
+0.5  cmd /give cobblestone 64         # hotbar 1 <!-- draft rev 14 -->
+0.5  cmd /give oak_planks 10          # hotbar 2 <!-- draft rev 15 -->
+0.6  cmd /cls <!-- draft rev 16 -->
+1.0  look 0 -30 <!-- draft rev 17 -->
+1.3  key E tap <!-- draft rev 18 -->
+1.8  shot cl_01_open.bmp
+
+# right click on a full stack: half to the cursor
+2.0  click right 423 561
+2.2  shot cl_02_half.bmp
+# right click on an empty slot: put exactly one
+2.4  click right 423 387
+2.5  shot cl_03_rclick_plus0.1.bmp
+2.9  shot cl_04_rclick_plus0.5.bmp
+
+# left-drag spread over main row 0, columns 1..4
+3.2  mouse 477 387
+3.2  hold left 1.0
+3.4  mouse 531 387
+3.6  mouse 585 387
+3.8  mouse 639 387
+3.9  shot cl_05_spreading.bmp
+4.4  shot cl_06_spread_done.bmp
+4.6  click left 423 561
+
+# right-drag paint with planks over main row 1, columns 0..3
+4.9  click left 477 561
+5.2  mouse 423 441
+5.2  hold right 1.0
+5.4  mouse 477 441
+5.6  mouse 531 441
+5.8  mouse 585 441
+6.4  shot cl_07_painted.bmp
+6.6  click left 477 561
+
+# double click a cobblestone stack: gather every cobblestone onto the cursor
+6.9  click left 477 387
+7.0  click left 477 387
+7.3  shot cl_08_collected.bmp
+7.5  click left 423 561
+
+# number key 5 over the plank in main row 1 col 0 -> hotbar slot 5
+7.8  mouse 423 441
+8.0  key 5 tap
+8.3  shot cl_09_numkey.bmp
+
+# shift-click the cobblestone in the hotbar -> main inventory
+8.5  key SHIFT down
+8.6  click left 423 561
+8.8  key SHIFT up
+9.0  mouse 640 650
+9.0  shot cl_10_shift.bmp
+
+# Q twice (one item each), Ctrl+Q (the rest) over main slot 0
+9.2  mouse 423 387
+9.3  key Q tap
+9.6  key Q tap
+9.9  key CTRL down
+10.0 key Q tap
+10.2 key CTRL up
+10.5 shot cl_11_dropped.bmp
+
+# take the plank in main row 1 col 1, click outside the panel: thrown
+10.7 click left 477 441
+11.0 click left 100 360
+11.3 shot cl_12_thrown.bmp
+11.5 key E tap
+12.0 shot cl_13_world_items.bmp
+12.5 key W down
+13.5 key W up
+14.5 shot cl_14_walked.bmp
+15.0 key E tap
+15.5 shot cl_15_inv_after_pickup.bmp
+16.0 key E tap
+<!-- TODO(inventory_clicks): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/inventory_clicks.asm -->
