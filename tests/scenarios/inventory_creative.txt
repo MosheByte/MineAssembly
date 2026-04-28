@@ -9,17 +9,17 @@
 #   cell r,c (396+54c, 267+54r), hotbar col c (396+54c, 549), destroy (891,549)
 #   search box (720,216), scrollbar x 885, y 240..510
 #   tabs: items (393,157), survival inventory (483,157)
-world inv_creative 5 creative <!-- draft rev 11 -->
+world inv_creative 5 creative
 
-0.3  cmd /time set noon <!-- draft rev 13 -->
-0.3  cmd /weather clear <!-- draft rev 14 -->
-0.6  cmd /cls <!-- draft rev 15 -->
-1.0  look 0 -10 <!-- draft rev 16 -->
-1.2  key E tap <!-- draft rev 17 -->
-1.7  mouse 640 650 <!-- draft rev 18 -->
-1.8  shot cr_01_open.bmp <!-- draft rev 19 -->
-2.0  mouse 450 321 <!-- draft rev 20 -->
-2.2  shot cr_02_tooltip.bmp <!-- draft rev 21 -->
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.6  cmd /cls
+1.0  look 0 -10
+1.2  key E tap
+1.7  mouse 640 650
+1.8  shot cr_01_open.bmp
+2.0  mouse 450 321
+2.2  shot cr_02_tooltip.bmp
 2.4  wheel -3
 2.7  shot cr_03_scrolled.bmp
 2.9  wheel -20
@@ -65,5 +65,3 @@ world inv_creative 5 creative <!-- draft rev 11 -->
 11.9 shot cr_13_back_to_items.bmp
 12.2 key ESC tap
 12.7 shot cr_14_world.bmp
-<!-- TODO(inventory_creative): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/inventory_creative.asm -->
