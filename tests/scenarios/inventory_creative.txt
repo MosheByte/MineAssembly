@@ -1,0 +1,69 @@
+# inventory_creative: creative item browser: tooltips, wheel scrolling,
+# scrollbar drag, search (typing an 'e' must not close the screen), right
+# click clears the search, click / shift-click / middle-click a cell, the
+# destroy slot, and the two tabs (item browser <-> survival inventory).
+#
+# Run:  mabuild scenario tests/scenarios/inventory_creative.txt --tag qa_inventory
+#
+# Creative panel 195x136 at UI (115,63) with tabs, scale 3:
+#   cell r,c (396+54c, 267+54r), hotbar col c (396+54c, 549), destroy (891,549)
+#   search box (720,216), scrollbar x 885, y 240..510
+#   tabs: items (393,157), survival inventory (483,157)
+world inv_creative 5 creative <!-- draft rev 11 -->
+
+0.3  cmd /time set noon <!-- draft rev 13 -->
+0.3  cmd /weather clear <!-- draft rev 14 -->
+0.6  cmd /cls <!-- draft rev 15 -->
+1.0  look 0 -10 <!-- draft rev 16 -->
+1.2  key E tap <!-- draft rev 17 -->
+1.7  mouse 640 650 <!-- draft rev 18 -->
+1.8  shot cr_01_open.bmp <!-- draft rev 19 -->
+2.0  mouse 450 321 <!-- draft rev 20 -->
+2.2  shot cr_02_tooltip.bmp <!-- draft rev 21 -->
+2.4  wheel -3
+2.7  shot cr_03_scrolled.bmp
+2.9  wheel -20
+3.2  mouse 558 375
+3.4  shot cr_04_bottom.bmp
+# scrollbar thumb drag
+3.6  mouse 885 500
+3.6  hold left 0.8
+3.8  mouse 885 330
+4.1  shot cr_05_sbdrag.bmp
+# search
+4.6  click left 720 216
+4.9  type pick
+5.3  mouse 640 650
+5.4  shot cr_06_search_pick.bmp
+5.6  click left 396 267                # first result: a full stack on the cursor
+5.9  click left 396 549                # -> hotbar 1
+6.2  click left 720 216
+6.5  type e
+6.9  shot cr_07_search_pick_e.bmp
+7.2  click right 720 216               # right click clears the search
+7.5  mouse 640 650
+7.6  shot cr_08_cleared.bmp
+# shift-click a cell (straight into the hotbar), middle-click clone
+7.9  key SHIFT down
+8.0  click left 450 267
+8.2  key SHIFT up
+8.5  click middle 504 267
+8.8  click left 504 549
+9.0  mouse 640 650
+9.1  shot cr_09_hotbar_filled.bmp
+# destroy slot
+9.3  click left 396 549
+9.6  click left 891 549
+9.9  mouse 640 650
+10.0 shot cr_10_after_destroy.bmp
+# tabs
+10.3 mouse 483 157
+10.5 shot cr_11_tab_hover.bmp
+10.6 click left 483 157
+11.1 shot cr_12_survival_tab.bmp
+11.4 click left 393 157
+11.9 shot cr_13_back_to_items.bmp
+12.2 key ESC tap
+12.7 shot cr_14_world.bmp
+<!-- TODO(inventory_creative): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/inventory_creative.asm -->
