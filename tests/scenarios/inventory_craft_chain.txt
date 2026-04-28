@@ -1,0 +1,86 @@
+# inventory_craft_chain: survival crafting chain through the GUI only:
+# logs -> planks (2x2, shift-click craft-all) -> sticks -> crafting table,
+# place the table by hand, right-click it, craft a wooden pickaxe on the 3x3.
+#
+# Run:  mabuild scenario tests/scenarios/inventory_craft_chain.txt --tag qa_inventory
+#
+# Coordinates (GUI scale 3, panel 176x166 at UI (125,37)):
+#   2x2 grid centres  (663,190) (717,190) (663,244) (717,244), result (858,216)
+#   main row 0 col c  (423+54c, 387), hotbar col c (423+54c, 561)
+#   3x3 grid r,c      (489+54c, 186+54r), result (771,240)
+world inv_craft 7 survival <!-- draft rev 10 -->
+
+0.3  cmd /time set noon <!-- draft rev 12 -->
+0.3  cmd /weather clear <!-- draft rev 13 -->
+0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~2 grass_block <!-- draft rev 14 -->
+0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~2 air <!-- draft rev 15 -->
+0.5  cmd /give oak_log 4              # hotbar slot 1 <!-- draft rev 16 -->
+0.7  cmd /cls <!-- draft rev 17 -->
+1.0  look 0 -30 <!-- draft rev 18 -->
+1.3  key E tap <!-- draft rev 19 -->
+1.8  shot cc_01_open.bmp <!-- draft rev 20 -->
+
+# 4 logs into the top-left cell -> 4 planks preview
+2.0  click left 423 561
+2.3  click left 663 190
+2.6  mouse 858 216
+2.7  shot cc_02_logs_in_grid.bmp
+# shift-click the result: craft all (16 planks)
+2.8  key SHIFT down
+2.9  click left 858 216
+3.1  key SHIFT up
+3.4  shot cc_03_planks.bmp
+
+# sticks: one plank in TL and BL
+3.6  click left 423 561
+3.9  click right 663 190
+4.2  click right 663 244
+4.5  mouse 858 216
+4.6  shot cc_04_sticks_cursor.bmp
+4.8  click left 423 387                # planks down into main slot 0
+5.1  click left 858 216                # take 4 sticks
+5.4  click left 477 387                # sticks into main slot 1
+
+# crafting table: 4 planks
+5.7  click left 423 387
+6.0  click right 663 190
+6.2  click right 717 190
+6.4  click right 663 244
+6.6  click right 717 244
+6.9  click left 423 387
+7.2  mouse 858 216
+7.4  shot cc_05_table_recipe.bmp
+7.6  click left 858 216
+7.9  click left 477 561                # hotbar slot 2
+8.2  mouse 477 561
+8.3  shot cc_06_table_in_hotbar.bmp
+8.5  key E tap
+
+# place it, then open it
+9.0  key 2 tap
+9.3  click right
+9.8  shot cc_07_table_placed.bmp
+10.0 click right
+10.6 shot cc_08_table_screen.bmp
+
+# wooden pickaxe: PPP / .S. / .S.
+11.0 click left 423 387
+11.3 click right 489 186
+11.5 click right 543 186
+11.7 click right 597 186
+12.0 click left 423 387
+12.3 click left 477 387
+12.6 click right 543 240
+12.8 click right 543 294
+13.1 click left 477 387
+13.4 mouse 771 240
+13.6 shot cc_09_pickaxe_recipe.bmp
+13.8 click left 771 240
+14.1 click left 531 561                # hotbar slot 3
+14.4 mouse 531 561
+14.5 shot cc_10_pickaxe_hotbar.bmp
+14.7 key ESC tap
+15.0 key 3 tap
+15.4 shot cc_11_closed.bmp
+<!-- TODO(inventory_craft_chain): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/inventory_craft_chain.asm -->
