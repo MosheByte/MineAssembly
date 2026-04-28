@@ -8,17 +8,17 @@
 #   2x2 grid centres  (663,190) (717,190) (663,244) (717,244), result (858,216)
 #   main row 0 col c  (423+54c, 387), hotbar col c (423+54c, 561)
 #   3x3 grid r,c      (489+54c, 186+54r), result (771,240)
-world inv_craft 7 survival <!-- draft rev 10 -->
+world inv_craft 7 survival
 
-0.3  cmd /time set noon <!-- draft rev 12 -->
-0.3  cmd /weather clear <!-- draft rev 13 -->
-0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~2 grass_block <!-- draft rev 14 -->
-0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~2 air <!-- draft rev 15 -->
-0.5  cmd /give oak_log 4              # hotbar slot 1 <!-- draft rev 16 -->
-0.7  cmd /cls <!-- draft rev 17 -->
-1.0  look 0 -30 <!-- draft rev 18 -->
-1.3  key E tap <!-- draft rev 19 -->
-1.8  shot cc_01_open.bmp <!-- draft rev 20 -->
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~2 grass_block
+0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~2 air
+0.5  cmd /give oak_log 4              # hotbar slot 1
+0.7  cmd /cls
+1.0  look 0 -30
+1.3  key E tap
+1.8  shot cc_01_open.bmp
 
 # 4 logs into the top-left cell -> 4 planks preview
 2.0  click left 423 561
@@ -82,5 +82,3 @@ world inv_craft 7 survival <!-- draft rev 10 -->
 14.7 key ESC tap
 15.0 key 3 tap
 15.4 shot cc_11_closed.bmp
-<!-- TODO(inventory_craft_chain): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/inventory_craft_chain.asm -->
