@@ -8,17 +8,17 @@
 #   output (747,240) arrow (648,240) flame (567,240); hotbar col c (423+54c,561)
 # Chest GUI (panel at UI 125,36): chest r,c (423+54c, 186+54r),
 #   main r,c (423+54c, 390+54r), hotbar col c (423+54c, 564)
-world inv_furnace 3 survival <!-- draft rev 10 -->
+world inv_furnace 3 survival
 
-0.3  cmd /time set noon <!-- draft rev 12 -->
-0.3  cmd /weather clear <!-- draft rev 13 -->
-0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~6 grass_block <!-- draft rev 14 -->
-0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~6 air <!-- draft rev 15 -->
-0.5  cmd /give iron_ore 8             # hotbar 1 <!-- draft rev 16 -->
-0.5  cmd /give coal 4                 # hotbar 2 <!-- draft rev 17 -->
-0.5  cmd /give oak_planks 16          # hotbar 3 <!-- draft rev 18 -->
-0.6  cmd /setblock ~ ~ ~-2 furnace    # north of the player <!-- draft rev 19 -->
-0.6  cmd /setblock ~ ~ ~2 chest       # south of the player <!-- draft rev 20 -->
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~6 grass_block
+0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~6 air
+0.5  cmd /give iron_ore 8             # hotbar 1
+0.5  cmd /give coal 4                 # hotbar 2
+0.5  cmd /give oak_planks 16          # hotbar 3
+0.6  cmd /setblock ~ ~ ~-2 furnace    # north of the player
+0.6  cmd /setblock ~ ~ ~2 chest       # south of the player
 0.7  cmd /cls
 1.0  look 0 -25
 1.3  shot fu_01_world.bmp
@@ -71,5 +71,3 @@ world inv_furnace 3 survival <!-- draft rev 10 -->
 20.0 click right
 20.5 shot ch_05_reopened.bmp
 20.8 key ESC tap
-<!-- TODO(inventory_furnace_chest): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/inventory_furnace_chest.asm -->
