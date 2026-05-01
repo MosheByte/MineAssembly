@@ -3,17 +3,17 @@
 # /setblock 4 blocks to the right is the reference light source.
 #
 # Run:  mabuild scenario tests/scenarios/inventory_furnace_light.txt --tag qa_inventory
-world inv_flight 3 survival <!-- draft rev 5 -->
+world inv_flight 3 survival
 
-0.3  cmd /time set midnight <!-- draft rev 7 -->
-0.3  cmd /weather clear <!-- draft rev 8 -->
-0.3  cmd /fill ~-8 ~-1 ~-12 ~8 ~-1 ~4 grass_block <!-- draft rev 9 -->
-0.3  cmd /fill ~-8 ~ ~-12 ~8 ~10 ~4 air <!-- draft rev 10 -->
-0.5  cmd /give iron_ore 8             # hotbar 1 <!-- draft rev 11 -->
-0.5  cmd /give coal 4                 # hotbar 2 <!-- draft rev 12 -->
-0.6  cmd /setblock ~ ~ ~-2 furnace <!-- draft rev 13 -->
-0.6  cmd /setblock ~4 ~ ~-2 torch <!-- draft rev 14 -->
-0.6  cmd /setblock ~-4 ~ ~-2 lit_furnace <!-- draft rev 15 -->
+0.3  cmd /time set midnight
+0.3  cmd /weather clear
+0.3  cmd /fill ~-8 ~-1 ~-12 ~8 ~-1 ~4 grass_block
+0.3  cmd /fill ~-8 ~ ~-12 ~8 ~10 ~4 air
+0.5  cmd /give iron_ore 8             # hotbar 1
+0.5  cmd /give coal 4                 # hotbar 2
+0.6  cmd /setblock ~ ~ ~-2 furnace
+0.6  cmd /setblock ~4 ~ ~-2 torch
+0.6  cmd /setblock ~-4 ~ ~-2 lit_furnace
 0.7  cmd /cls
 1.0  look 0 -25
 1.5  shot fl_01_before.bmp
@@ -30,5 +30,3 @@ world inv_flight 3 survival <!-- draft rev 5 -->
 7.5  shot fl_03_lit_wide.bmp
 8.0  cmd /time set noon
 8.6  shot fl_04_noon_wide.bmp
-<!-- TODO(inventory_furnace_light): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/inventory_furnace_light.asm -->
