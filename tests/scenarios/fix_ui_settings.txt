@@ -1,16 +1,16 @@
 # fix_ui_settings: copy of menus-ui_settings. Settings changed in game
 # actually apply (render distance, smooth lighting, clouds, show fps, FOV);
 # compare the before/after shots.
-world qa_settings 1 creative <!-- draft rev 3 -->
-0.3  cmd /time set noon <!-- draft rev 4 -->
-0.3  cmd /weather clear <!-- draft rev 5 -->
-0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~2 grass_block <!-- draft rev 6 -->
-0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~2 air <!-- draft rev 7 -->
-0.4  cmd /fill ~-3 ~ ~-7 ~3 ~3 ~-7 stone <!-- draft rev 8 -->
-0.4  cmd /fill ~-3 ~3 ~-7 ~3 ~3 ~-4 stone <!-- draft rev 9 -->
-0.5  look 0 -10 <!-- draft rev 10 -->
-2.5  shot s0_near_before.bmp <!-- draft rev 11 -->
-2.55 cmd /fly <!-- draft rev 12 -->
+world qa_settings 1 creative
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~2 grass_block
+0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~2 air
+0.4  cmd /fill ~-3 ~ ~-7 ~3 ~3 ~-7 stone
+0.4  cmd /fill ~-3 ~3 ~-7 ~3 ~3 ~-4 stone
+0.5  look 0 -10
+2.5  shot s0_near_before.bmp
+2.55 cmd /fly
 2.6  cmd /tp ~ ~40 ~
 2.7  look 0 -25
 5.0  shot s1_far_before.bmp
@@ -35,5 +35,3 @@ world qa_settings 1 creative <!-- draft rev 3 -->
 12.0 shot s5_near_after.bmp
 12.1 key F3 tap
 12.4 shot s6_f3.bmp
-<!-- TODO(fix_ui_settings): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/fix_ui_settings.asm -->
