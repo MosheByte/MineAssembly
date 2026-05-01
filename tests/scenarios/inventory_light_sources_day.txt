@@ -1,0 +1,27 @@
+# inventory_light_sources_day: variant of inventory_light_sources with every
+# light source placed at noon, then the clock set to midnight. Like the
+# original it compares light sources set at different moments, to isolate
+# why the lit furnace does not light the ground.
+#   A torch /setblock right after the stage /fill (t=0.6, left)
+#   B torch /setblock 4 s later (t=4, middle-left)
+#   C torch placed by the player with a right click (t=5, middle)
+#   D lit_furnace /setblock at t=4 (right)
+#
+# Run:  mabuild scenario tests/scenarios/inventory_light_sources_day.txt --tag qa_inventory
+world inv_lights2 3 survival
+
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-8 ~-1 ~-12 ~8 ~-1 ~4 grass_block
+0.3  cmd /fill ~-8 ~ ~-12 ~8 ~10 ~4 air
+0.5  cmd /give torch 4
+0.6  cmd /setblock ~-6 ~ ~-6 torch
+1.0  look 0 -30
+4.0  cmd /setblock ~-3 ~ ~-6 torch
+4.0  cmd /setblock ~5 ~ ~-6 lit_furnace
+4.5  key 1 tap
+5.0  click right
+6.0  look 0 -20
+6.0  cmd /cls
+6.5  cmd /time set midnight
+7.5  shot ls2_01_night.bmp

@@ -1,0 +1,34 @@
+# inventory_furnace_light: does a furnace that lights up (fuel + ore loaded
+# through the GUI) light its surroundings at night? A torch placed with
+# /setblock 4 blocks to the right is the reference light source.
+#
+# Run:  mabuild scenario tests/scenarios/inventory_furnace_light.txt --tag qa_inventory
+world inv_flight 3 survival <!-- draft rev 5 -->
+
+0.3  cmd /time set midnight <!-- draft rev 7 -->
+0.3  cmd /weather clear <!-- draft rev 8 -->
+0.3  cmd /fill ~-8 ~-1 ~-12 ~8 ~-1 ~4 grass_block <!-- draft rev 9 -->
+0.3  cmd /fill ~-8 ~ ~-12 ~8 ~10 ~4 air <!-- draft rev 10 -->
+0.5  cmd /give iron_ore 8             # hotbar 1 <!-- draft rev 11 -->
+0.5  cmd /give coal 4                 # hotbar 2 <!-- draft rev 12 -->
+0.6  cmd /setblock ~ ~ ~-2 furnace <!-- draft rev 13 -->
+0.6  cmd /setblock ~4 ~ ~-2 torch <!-- draft rev 14 -->
+0.6  cmd /setblock ~-4 ~ ~-2 lit_furnace <!-- draft rev 15 -->
+0.7  cmd /cls
+1.0  look 0 -25
+1.5  shot fl_01_before.bmp
+1.8  click right
+2.3  click left 423 561
+2.6  click left 567 186
+2.9  click left 477 561
+3.2  click left 567 294
+3.5  key E tap
+4.0  shot fl_02_lit_now.bmp
+5.0  key S down
+5.9  key S up
+6.0  look 0 -15
+7.5  shot fl_03_lit_wide.bmp
+8.0  cmd /time set noon
+8.6  shot fl_04_noon_wide.bmp
+<!-- TODO(inventory_furnace_light): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/inventory_furnace_light.asm -->
