@@ -1,0 +1,36 @@
+# inventory_pickup: drop items with Q (world) and Ctrl+Q / click-outside
+# (inventory), wait well past the 2 s pickup delay, walk over them and check
+# that every item comes back (counts in the hotbar).
+#
+# Run:  mabuild scenario tests/scenarios/inventory_pickup.txt --tag qa_inventory
+world inv_pickup 3 survival
+
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-6 ~-1 ~-14 ~6 ~-1 ~2 grass_block
+0.3  cmd /fill ~-6 ~ ~-14 ~6 ~10 ~2 air
+0.5  cmd /give cobblestone 10         # hotbar 1
+0.5  cmd /give oak_planks 5           # hotbar 2
+0.5  cmd /give torch 8                # hotbar 3
+0.6  cmd /cls
+1.0  look 0 -20
+1.2  key 1 tap
+1.5  key Q tap
+1.8  key Q tap
+2.1  key Q tap
+2.4  key 2 tap
+2.6  key CTRL down
+2.7  key Q tap
+2.9  key CTRL up
+3.2  key E tap
+3.7  click left 531 561                # torches on the cursor
+4.0  click right 100 360               # right click outside: throw one
+4.3  click left 100 360                # left click outside: throw the rest
+4.7  key E tap
+5.2  shot pk_01_dropped.bmp
+9.0  key W down
+11.0 key W up
+11.5 shot pk_02_after_walk.bmp
+12.0 key E tap
+12.5 shot pk_03_inventory.bmp
+13.0 key E tap
