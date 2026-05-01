@@ -1,0 +1,59 @@
+# inventory_edge: container edge cases: non-fuel refused by the fuel slot,
+# nothing can be put into the furnace output, F2 inside a screen, breaking a
+# chest full of items (spill + pick up), a container that disappears while
+# its screen is open, and walking away from an open container.
+#
+# Run:  mabuild scenario tests/scenarios/inventory_edge.txt --tag qa_inventory
+#
+# Seed 3 spawn is 36.5 64 -11.5 (used by the 'pos' lines).
+world inv_edge 3 survival
+
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~12 grass_block
+0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~12 air
+0.5  cmd /give iron_ore 4             # hotbar 1
+0.5  cmd /give oak_planks 12          # hotbar 2
+0.6  cmd /setblock ~ ~ ~-2 furnace
+0.6  cmd /setblock ~ ~ ~2 chest
+0.7  cmd /cls
+1.0  look 0 -25
+1.3  click right
+1.8  click left 423 561                # iron ore on the cursor
+2.1  click left 567 294                # fuel slot: must refuse ore
+2.4  click left 747 240                # output slot: must refuse anything
+2.7  mouse 700 300
+2.8  shot ed_01_refused.bmp
+3.0  click left 423 561
+3.3  key F2 tap                        # screenshot key inside a screen
+3.8  key E tap
+
+# chest: store the planks, close, break it by hand, pick everything up
+4.2  look 180 -25
+4.5  click right
+5.0  key SHIFT down
+5.1  click left 477 564
+5.3  key SHIFT up
+5.6  key ESC tap
+5.9  hold left 5.0
+11.5 shot ed_02_chest_broken.bmp
+12.0 key W down
+12.6 key W up
+14.0 key E tap
+14.5 mouse 640 690
+14.6 shot ed_03_inv_after_pickup.bmp
+15.0 key E tap
+
+# the furnace disappears while its screen is open -> the screen closes
+15.5 pos 36.5 64 -11.5
+15.6 look 0 -25
+16.0 click right
+16.5 shot ed_04_furnace_open.bmp
+16.8 cmd /setblock 36 64 -14 air
+17.3 shot ed_05_after_block_removed.bmp
+# walking away (teleport 10 blocks) from an open furnace -> closes
+17.6 cmd /setblock 36 64 -14 furnace
+18.0 click right
+18.4 shot ed_06_open_again.bmp
+18.6 pos 36.5 64 -1.5
+19.0 shot ed_07_after_teleport.bmp

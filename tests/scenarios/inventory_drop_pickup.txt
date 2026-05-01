@@ -1,0 +1,51 @@
+# inventory_drop_pickup: Q / Ctrl+Q inside the inventory, Q in the world,
+# walking over the dropped items to pick them back up, and a worn pickaxe
+# (durability bar in the hotbar + "(uses left/total)" tooltip).
+#
+# Run:  mabuild scenario tests/scenarios/inventory_drop_pickup.txt --tag qa_inventory
+#
+#   hotbar col c (423+54c, 561)
+world inv_drop 3 survival
+
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-6 ~-1 ~-14 ~6 ~-1 ~2 grass_block
+0.3  cmd /fill ~-6 ~ ~-14 ~6 ~10 ~2 air
+0.5  cmd /give cobblestone 10         # hotbar 1
+0.5  cmd /give oak_planks 5           # hotbar 2
+0.5  cmd /give stone_pickaxe          # hotbar 3
+0.6  cmd /cls
+1.0  look 0 -20
+1.3  key E tap
+1.8  mouse 423 561
+2.0  key Q tap
+2.4  key Q tap
+2.8  shot dp_01_q_twice.bmp
+3.0  mouse 477 561
+3.2  key CTRL down
+3.3  key Q tap
+3.5  key CTRL up
+3.9  shot dp_02_ctrl_q.bmp
+4.2  key E tap
+# Q in the world drops one of the held cobblestone
+4.6  key 1 tap
+4.9  key Q tap
+5.5  shot dp_03_items_on_ground.bmp
+# wait out the pickup delay, then walk over them
+7.0  key W down
+9.5  key W up
+10.5 shot dp_04_walked.bmp
+11.0 key E tap
+11.5 shot dp_05_inventory.bmp
+12.0 key E tap
+
+# wear the pickaxe: mine a little stone wall
+12.5 cmd /fill ~-1 ~ ~-3 ~1 ~1 ~-2 stone
+12.8 look 0 -10
+13.0 key 3 tap
+13.3 hold left 6
+19.6 shot dp_06_worn_hotbar.bmp
+20.0 key E tap
+20.4 mouse 531 561
+20.6 shot dp_07_worn_tooltip.bmp
+21.0 key E tap
