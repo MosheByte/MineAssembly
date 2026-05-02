@@ -1,0 +1,54 @@
+# media_showcase: screenshots + GIF frames for the README.
+# Run: mabuild scenario tests/scenarios/media_showcase.txt --tag media --nobuild
+world media 1 creative
+0.2  cmd /weather clear
+0.2  cmd /time set 1500
+0.2  cmd /fly
+0.3  hidehud on
+# aerial views in 4 directions (pick the best)
+0.5  pos 0 104 0
+0.6  look 0 -20
+2.5  shot a_n.bmp
+2.6  look 90 -20
+3.5  shot a_e.bmp
+3.6  look 180 -20
+4.5  shot a_s.bmp
+4.6  look 270 -20
+5.5  shot a_w.bmp
+# GIF: slow panorama
+5.6  frames 3 70 gif_fly
+5.6  turn 90 0 7.0
+# sunset (known good spot)
+13.0 cmd /time set 11800
+13.1 pos 0 90 0
+13.2 look 270 -10
+15.0 shot m2_sunset.bmp
+# night build with lights
+15.2 cmd /time set 18000
+15.3 pos 0 92 0
+15.6 cmd /fill ~-5 ~-2 ~-10 ~5 ~-2 ~-2 stone_bricks
+15.6 cmd /fill ~-5 ~-1 ~-10 ~5 ~6 ~-2 air
+15.7 cmd /setblock ~-4 ~-1 ~-6 torch
+15.7 cmd /setblock ~4 ~-1 ~-6 torch
+15.7 cmd /setblock ~ ~-1 ~-9 glowcrystal
+15.7 cmd /setblock ~-2 ~-1 ~-3 lantern
+15.7 cmd /setblock ~2 ~-1 ~-3 lantern
+15.8 look 0 -35
+17.5 shot m3_night.bmp
+# rain
+17.6 cmd /time set 6000
+17.6 cmd /weather rain
+17.7 pos 0 100 0
+17.7 look 270 -12
+21.0 shot m4_rain.bmp
+# TNT
+21.1 cmd /weather clear
+21.2 pos 0 95 0
+21.4 cmd /fill ~-3 ~-5 ~-14 ~3 ~-3 ~-10 tnt
+21.5 look 0 -25
+21.6 shot m5_tnt_before.bmp
+21.7 look 0 -23
+21.8 click right
+21.9 frames 3 90 gif_tnt
+28.0 shot m6_after.bmp
+28.5 wait
