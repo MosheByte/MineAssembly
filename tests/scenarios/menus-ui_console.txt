@@ -1,0 +1,152 @@
+# menus-ui_console: every console command with valid and invalid arguments,
+# the chat input line (T and /), suggestions, tab completion and history.
+world qa_console 7 survival <!-- draft rev 2 -->
+0.3  cmd /time set noon <!-- draft rev 3 -->
+0.3  cmd /weather clear <!-- draft rev 4 -->
+# ---- chat via the real input line ----
+0.5  key T tap <!-- draft rev 6 -->
+0.6  type hello world, this is a chat message <!-- draft rev 7 -->
+0.7  key ENTER tap <!-- draft rev 8 -->
+0.9  key SLASH tap <!-- draft rev 9 -->
+1.0  type ti <!-- draft rev 10 -->
+1.2  shot k1_suggest.bmp <!-- draft rev 11 -->
+1.3  key TAB tap <!-- draft rev 12 -->
+1.5  shot k2_tabcomplete.bmp
+1.6  type query
+1.7  key ENTER tap
+1.9  key SLASH tap
+2.0  key UP tap
+2.2  shot k3_history.bmp
+2.3  key ESC tap
+2.5  key SLASH tap
+2.6  type give stone 5
+2.7  key LEFT tap
+2.8  key LEFT tap
+2.9  key DELETE tap
+3.0  type 7
+3.1  key HOME tap
+3.2  shot k4_caret.bmp
+3.3  key ENTER tap
+3.5  key T tap
+3.6  type 0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789XYZ
+4.6  shot k5_longline.bmp
+4.7  key ENTER tap
+4.9  key SLASH tap
+5.1  key ENTER tap
+# ---- help / about / seed / pos ----
+5.3  cmd /help
+5.4  cmd /help 2
+5.5  cmd /help 3
+5.6  cmd /help 9
+5.7  cmd /help abc
+5.8  cmd /HELP
+5.9  key T tap
+6.2  shot k6_help.bmp
+6.3  key ESC tap
+6.4  cmd /cls
+6.5  cmd /about
+6.6  cmd /seed
+6.7  cmd /pos
+6.8  cmd /nosuchcmd foo
+6.9  cmd /
+7.0  key T tap
+7.3  shot k7_about.bmp
+7.4  key ESC tap
+7.5  cmd /cls
+# ---- time ----
+7.6  cmd /time set day
+7.6  cmd /time set noon
+7.6  cmd /time set sunset
+7.6  cmd /time set night
+7.6  cmd /time set midnight
+7.6  cmd /time set sunrise
+7.6  cmd /time set 1000
+7.6  cmd /time set -5
+7.6  cmd /time set 99999999999
+7.6  cmd /time set bogus
+7.6  cmd /time add 100
+7.6  cmd /time add abc
+7.6  cmd /time query
+7.6  cmd /time
+7.6  cmd /time foo
+7.6  cmd /time set
+8.0  key T tap
+8.3  shot k8_time.bmp
+8.4  key ESC tap
+8.5  cmd /cls
+# ---- weather / gamemode ----
+8.6  cmd /weather rain
+8.6  cmd /weather thunder
+8.6  cmd /weather storm
+8.6  cmd /weather clear
+8.6  cmd /weather
+8.6  cmd /weather snow
+8.6  cmd /gamemode creative
+8.6  cmd /gamemode survival
+8.6  cmd /gamemode c
+8.6  cmd /gamemode 0
+8.6  cmd /gm 1
+8.6  cmd /gm s
+8.6  cmd /gamemode adventure
+8.6  cmd /gamemode
+9.0  key T tap
+9.3  shot k9_weather_gm.bmp
+9.4  key ESC tap
+9.5  cmd /cls
+# ---- give / clear ----
+9.6  cmd /give stone
+9.6  cmd /give stone 5
+9.6  cmd /give stone 0
+9.6  cmd /give stone -1
+9.6  cmd /give stone 1000
+9.6  cmd /give stone abc
+9.6  cmd /give unobtainium
+9.6  cmd /give
+9.6  cmd /give diamond_sword 3
+9.6  cmd /give STONE 2
+10.0 key T tap
+10.3 shot k10_give.bmp
+10.4 key ESC tap
+10.5 key E tap
+10.8 shot k11_inv_after_give.bmp
+10.9 key ESC tap
+11.0 cmd /clear
+11.0 cmd /cls
+# ---- fill / setblock ----
+11.2 cmd /fill ~-2 ~-1 ~-4 ~2 ~-1 ~-2 stone
+11.2 cmd /fill ~-2 ~ ~-4 ~2 ~ ~-2 air
+11.2 cmd /fill 0 0 0 100 100 100 stone
+11.2 cmd /fill ~ ~ ~ ~1 ~1 ~1 nosuchblock
+11.2 cmd /fill ~ ~ ~ ~1 ~1
+11.2 cmd /fill a b c d e f stone
+11.2 cmd /fill ~ 200 ~ ~1 201 ~1 stone
+11.2 cmd /fill 100000 60 100000 100001 61 100001 stone
+11.2 cmd /setblock ~ ~ ~-3 glass
+11.2 cmd /setblock ~ 300 ~ stone
+11.2 cmd /setblock ~ -1 ~ stone
+11.2 cmd /setblock ~ ~ ~ nosuchblock
+11.2 cmd /setblock 1 2
+11.2 cmd /setblock 900000 60 900000 stone
+11.2 cmd /setblock ~ ~ ~-3 diamond_sword
+11.6 key T tap
+11.9 shot k12_fill.bmp
+12.0 key ESC tap
+12.1 cmd /cls
+# ---- tp / spawnpoint ----
+12.2 cmd /tp ~ ~ ~
+12.2 cmd /tp abc 1 2
+12.2 cmd /tp 1 2
+12.2 cmd /teleport ~ ~0.5 ~
+12.2 cmd /tp ~ 500 ~
+12.2 cmd /tp ~ -100 ~
+12.2 cmd /tp 99999999 80 0
+12.2 cmd /tp ~ ~ ~
+12.4 cmd /tp 0.5 90 0.5
+12.5 cmd /spawnpoint
+12.5 cmd /spawnpoint 1 2 3
+12.8 key T tap
+13.1 shot k13_tp.bmp
+13.2 key ESC tap
+13.3 cmd /cls
+<!-- TODO(menus-ui_console): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/menus-ui_console.asm -->
