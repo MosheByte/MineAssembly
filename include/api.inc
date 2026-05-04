@@ -525,5 +525,5 @@ extern mcplay_block_changed ; (ecx x, edx y, r8d z, r9d block)
 extern mcplay_chat ; (rcx zstr)
 extern mcplay_count ; -> eax java players in play
 %endif
- ; wire menus-ui_death_ok
-%endif ; extern check menus-ui_death_ok
+
+%endif
