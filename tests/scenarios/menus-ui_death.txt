@@ -1,15 +1,15 @@
 # menus-ui_death: death screen (/kill in survival), Respawn, fall death,
 # Title Screen, world list (select, delete confirm, double-click to play).
-world qa_death 3 survival <!-- draft rev 2 -->
-0.3  cmd /time set noon <!-- draft rev 3 -->
-0.3  cmd /weather clear <!-- draft rev 4 -->
-0.5  cmd /give stone 10 <!-- draft rev 5 -->
-0.6  cmd /kill <!-- draft rev 6 -->
-0.8  shot d1_dead_early.bmp <!-- draft rev 7 -->
-2.0  shot d2_dead_enabled.bmp <!-- draft rev 8 -->
-2.2  click left 640 354                 # Respawn <!-- draft rev 9 -->
-3.5  shot d3_respawned.bmp <!-- draft rev 10 -->
-3.6  cmd /tp ~ ~40 ~ <!-- draft rev 11 -->
+world qa_death 3 survival
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.5  cmd /give stone 10
+0.6  cmd /kill
+0.8  shot d1_dead_early.bmp
+2.0  shot d2_dead_enabled.bmp
+2.2  click left 640 354                 # Respawn
+3.5  shot d3_respawned.bmp
+3.6  cmd /tp ~ ~40 ~
 4.0  look 0 -60
 14.0 shot d4_fall_dead.bmp
 15.5 click left 640 425                 # Title Screen
@@ -25,5 +25,3 @@ world qa_death 3 survival <!-- draft rev 2 -->
 21.5 click left 640 120
 21.7 click left 640 120                 # double-click to play
 26.0 shot d9_rejoined.bmp
-<!-- TODO(menus-ui_death): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/menus-ui_death.asm -->
