@@ -1,0 +1,33 @@
+# menus-ui_nav: menu navigation. ESC/Back/Cancel on every screen, Enter on
+# the create screen, then Quit Game (expected exit code 1: game quit early).
+title
+0.5  click left 640 425                 # Settings...
+0.8  key ESC tap                        # -> title
+1.0  shot n1_title_after_settings_esc.bmp
+1.2  click left 640 354                 # Singleplayer
+1.5  key ESC tap                        # -> title
+1.7  shot n2_title_after_ws_esc.bmp
+1.9  click left 640 354
+2.2  click left 876 593                 # Create New World
+2.5  click left 876 665                 # Cancel -> world select
+2.8  shot n3_ws_after_cancel.bmp
+3.0  click left 876 665                 # Back -> title
+3.3  shot n4_title_after_back.bmp
+3.5  click left 640 354
+3.8  click left 876 593
+4.1  key ESC tap                        # create -> world select
+4.4  shot n5_ws_after_create_esc.bmp
+4.6  click left 876 593
+4.9  type Enter World
+5.1  key ENTER tap                      # create the world with Enter
+8.0  shot n6_enter_created.bmp
+8.2  key ESC tap
+8.5  click left 640 245                 # Back to Game
+8.8  shot n7_back_to_game.bmp
+9.0  key ESC tap
+9.3  key ESC tap                        # ESC on pause -> game
+9.6  shot n8_esc_resume.bmp
+9.8  key ESC tap
+10.0 click left 640 389                 # Save and Quit
+11.0 click left 640 497                 # Quit Game
+14.0 shot n9_never.bmp
