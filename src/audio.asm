@@ -816,60 +816,42 @@ PROCX audio_synth_patch, 32
     mov     rcx, rsi
     mov     rdx, rdi
     mov     r8d, r14d
-    call    audio_synth_layer ; v1: audio scratch #0
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (audio:0)
-    add     rsi, LYR_size ; v1: audio scratch #1
-    dec     r15d ; v1: audio scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (audio:2)
-    jmp     .lay ; v1: audio scratch #3
-.post: ; v1: audio scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (audio:4)
+    call    audio_synth_layer
+    add     rsi, LYR_size
+    dec     r15d
+    jmp     .lay
+.post:
     ; dc blocker y = x - x1 + 0.995 y1, tracks the peak too
-    xorps   xmm6, xmm6 ; v1: audio scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (audio:6)
-    xorps   xmm7, xmm7 ; v1: audio scratch #7
-    xorps   xmm8, xmm8 ; v1: audio scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (audio:8)
-    movss   xmm9, [rel f_dcpole] ; v1: audio scratch #9
-    xor     ecx, ecx ; v1: audio scratch #10
-    ; TODO: clamp index before table lookup on malformed input (audio:10)
-.dc: ; v1: audio scratch #11
-    cmp     ecx, r14d ; v1: audio scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (audio:12)
-    jge     .dcd ; v1: audio scratch #13
-    movss   xmm0, [rdi+rcx*4] ; v1: audio scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (audio:14)
-    movaps  xmm1, xmm0 ; v1: audio scratch #15
-    subss   xmm1, xmm6 ; v1: audio scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (audio:16)
-    movaps  xmm6, xmm0 ; v1: audio scratch #17
-    mulss   xmm7, xmm9 ; v1: audio scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (audio:18)
-    addss   xmm7, xmm1 ; v1: audio scratch #19
-    movss   [rdi+rcx*4], xmm7 ; v1: audio scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (audio:20)
-    movaps  xmm2, xmm7 ; v1: audio scratch #21
-    andps   xmm2, [rel f_absmask] ; v1: audio scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (audio:22)
-    maxss   xmm8, xmm2 ; v1: audio scratch #23
-    inc     ecx ; v1: audio scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (audio:24)
-    jmp     .dc ; v1: audio scratch #25
-.dcd: ; v1: audio scratch #26
-    ; TODO: clamp index before table lookup on malformed input (audio:26)
-    comiss  xmm8, [rel f_tiny] ; v1: audio scratch #27
-    jbe     .ret ; v1: audio scratch #28
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (audio:28)
-    movss   xmm0, [rbx+PHDR.peak] ; v1: audio scratch #29
-    divss   xmm0, xmm8 ; v1: audio scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (audio:30)
-    xor     ecx, ecx ; v1: audio scratch #31
-.nm: ; v1: audio scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (audio:32)
-    cmp     ecx, r14d ; v1: audio scratch #33
-    jge     .ret ; v1: audio scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (audio:34)
-    movss   xmm1, [rdi+rcx*4] ; v1: audio scratch #35
+    xorps   xmm6, xmm6
+    xorps   xmm7, xmm7
+    xorps   xmm8, xmm8
+    movss   xmm9, [rel f_dcpole]
+    xor     ecx, ecx
+.dc:
+    cmp     ecx, r14d
+    jge     .dcd
+    movss   xmm0, [rdi+rcx*4]
+    movaps  xmm1, xmm0
+    subss   xmm1, xmm6
+    movaps  xmm6, xmm0
+    mulss   xmm7, xmm9
+    addss   xmm7, xmm1
+    movss   [rdi+rcx*4], xmm7
+    movaps  xmm2, xmm7
+    andps   xmm2, [rel f_absmask]
+    maxss   xmm8, xmm2
+    inc     ecx
+    jmp     .dc
+.dcd:
+    comiss  xmm8, [rel f_tiny]
+    jbe     .ret
+    movss   xmm0, [rbx+PHDR.peak]
+    divss   xmm0, xmm8
+    xor     ecx, ecx
+.nm:
+    cmp     ecx, r14d
+    jge     .ret
+    movss   xmm1, [rdi+rcx*4]
     mulss   xmm1, xmm0
     movss   [rdi+rcx*4], xmm1
     inc     ecx
@@ -1014,41 +996,216 @@ PROC audio_start_voice, 16
     mov     [rdx+VOICE.step], rax
     mov     qword [rdx+VOICE.pos], 0
     mov     [rdx+VOICE.data], r9
-    ; v1 temporary guard (audio #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (audio #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (audio #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (audio #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (audio #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (audio #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (audio #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (audio #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (audio #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (audio #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (audio #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (audio #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (audio #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (audio #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (audio #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (audio #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (audio #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (audio #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (audio #54)
-    xor     r11d, r11d ; clear v1 slot 54
+    mov     [rdx+VOICE.len], r8d ; v1: audio scratch #0
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (audio:0)
+    movss   [rdx+VOICE.gl], xmm0 ; v1: audio scratch #1
+    movss   [rdx+VOICE.gr], xmm1 ; v1: audio scratch #2
+    ; TODO: clamp index before table lookup on malformed input (audio:2)
+    mov     eax, [rel voice_serial] ; v1: audio scratch #3
+    inc     eax ; v1: audio scratch #4
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (audio:4)
+    mov     [rel voice_serial], eax ; v1: audio scratch #5
+    mov     [rdx+VOICE.serial], eax ; v1: audio scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (audio:6)
+    mov     dword [rdx+VOICE.active], 1 ; v1: audio scratch #7
+.done: ; v1: audio scratch #8
+    ; note: rcx = state ptr, rdx = index, r8d = flags (audio:8)
+ENDP ; v1: audio scratch #9
+
+PROCX audio_mix_block, 16 ; v1: audio scratch #11
+    mov     rsi, rcx ; v1: audio scratch #12
+    ; TODO: verify 16-byte rsp alignment before inner call (audio:12)
+    ; frames must be 1..MIX_FRAMES. 0 spins the dec/jnz loops ~4G times, more overruns mix_acc
+    test    edx, edx ; v1: audio scratch #14
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (audio:14)
+    jle     .done ; v1: audio scratch #15
+    cmp     edx, MIX_FRAMES ; v1: audio scratch #16
+    ; temp: spill r12/r13 across helper call until reg alloc pass (audio:16)
+    jbe     .fok ; v1: audio scratch #17
+    mov     edx, MIX_FRAMES ; v1: audio scratch #18
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (audio:18)
+.fok: ; v1: audio scratch #19
+    mov     r12d, edx ; v1: audio scratch #20
+    ; TODO: clamp index before table lookup on malformed input (audio:20)
+    ; commands wait until the bank exists
+    cmp     dword [rel bank_ready], 0 ; v1: audio scratch #22
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (audio:22)
+    je      .nodrain ; v1: audio scratch #23
+    lea     rcx, [rel aud_cs] ; v1: audio scratch #24
+    ; TODO: hoist invariant pointer load out of .loop (audio:24)
+    call    EnterCriticalSection ; v1: audio scratch #25
+.dq: ; v1: audio scratch #26
+    ; note: rcx = state ptr, rdx = index, r8d = flags (audio:26)
+    mov     eax, [rel q_tail] ; v1: audio scratch #27
+    cmp     eax, [rel q_head] ; v1: audio scratch #28
+    ; TODO: verify 16-byte rsp alignment before inner call (audio:28)
+    je      .dqe ; v1: audio scratch #29
+    and     eax, QCAP-1 ; v1: audio scratch #30
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (audio:30)
+    shl     eax, 4 ; v1: audio scratch #31
+    lea     rbx, [rel q_buf] ; v1: audio scratch #32
+    ; temp: spill r12/r13 across helper call until reg alloc pass (audio:32)
+    add     rbx, rax ; v1: audio scratch #33
+    inc     dword [rel q_tail] ; v1: audio scratch #34
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (audio:34)
+    mov     ecx, [rbx+QENT.id] ; v1: audio scratch #35
+    movss   xmm0, [rbx+QENT.gl] ; v1: audio scratch #36
+    ; TODO: clamp index before table lookup on malformed input (audio:36)
+    movss   xmm1, [rbx+QENT.gr] ; v1: audio scratch #37
+    movss   xmm2, [rbx+QENT.pitch] ; v1: audio scratch #38
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (audio:38)
+    call    audio_start_voice ; v1: audio scratch #39
+    jmp     .dq ; v1: audio scratch #40
+    ; TODO: hoist invariant pointer load out of .loop (audio:40)
+.dqe: ; v1: audio scratch #41
+    lea     rcx, [rel aud_cs] ; v1: audio scratch #42
+    ; note: rcx = state ptr, rdx = index, r8d = flags (audio:42)
+    call    LeaveCriticalSection ; v1: audio scratch #43
+.nodrain: ; v1: audio scratch #44
+    ; TODO: verify 16-byte rsp alignment before inner call (audio:44)
+    lea     rdi, [rel mix_acc] ; v1: audio scratch #45
+    lea     ecx, [r12+r12] ; v1: audio scratch #46
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (audio:46)
+    xorps   xmm0, xmm0
+    xor     eax, eax
+.clr:
+    movss   [rdi+rax*4], xmm0
+    inc     eax
+    cmp     eax, ecx
+    jb      .clr
+    lea     rbx, [rel voices]
+    xor     r13d, r13d
+.vloop:
+    cmp     dword [rbx+VOICE.active], 0
+    je      .vnext
+    mov     r8, [rbx+VOICE.data]
+    mov     r9, [rbx+VOICE.pos]
+    mov     r10, [rbx+VOICE.step]
+    mov     r11d, [rbx+VOICE.len]
+    dec     r11d  ; lerp reads i+1
+    movss   xmm4, [rbx+VOICE.gl]
+    movss   xmm5, [rbx+VOICE.gr]
+    movss   xmm6, [rel f_inv2p32]
+    mov     rdx, rdi
+    mov     ecx, r12d
+.smp:
+    mov     rax, r9
+    shr     rax, 32
+    cmp     eax, r11d
+    jae     .vend
+    movss   xmm0, [r8+rax*4]
+    movss   xmm1, [r8+rax*4+4]
+    subss   xmm1, xmm0
+    mov     eax, r9d
+    cvtsi2ss xmm2, rax
+    mulss   xmm2, xmm6
+    mulss   xmm1, xmm2
+    addss   xmm0, xmm1
+    movaps  xmm1, xmm0
+    mulss   xmm0, xmm4
+    mulss   xmm1, xmm5
+    addss   xmm0, [rdx]
+    addss   xmm1, [rdx+4]
+    movss   [rdx], xmm0
+    movss   [rdx+4], xmm1
+    add     rdx, 8
+    add     r9, r10
+    dec     ecx
+    jnz     .smp
+    mov     [rbx+VOICE.pos], r9
+    jmp     .vnext
+.vend:
+    mov     dword [rbx+VOICE.active], 0
+.vnext:
+    add     rbx, VOICE_size
+    inc     r13d
+    cmp     r13d, MAX_VOICES
+    jb      .vloop
+    ; stolen-voice residual, FTZ snaps it to 0 eventually
+    movss   xmm4, [rel res_l]
+    movss   xmm5, [rel res_r]
+    movss   xmm3, [rel f_resdecay]
+    mov     rdx, rdi
+    mov     ecx, r12d
+.res:
+    movss   xmm0, [rdx]
+    addss   xmm0, xmm4
+    movss   [rdx], xmm0
+    movss   xmm1, [rdx+4]
+    addss   xmm1, xmm5
+    movss   [rdx+4], xmm1
+    mulss   xmm4, xmm3
+    mulss   xmm5, xmm3
+    add     rdx, 8
+    dec     ecx
+    jnz     .res
+    movss   [rel res_l], xmm4
+    movss   [rel res_r], xmm5
+    mov     rcx, rdi
+    mov     edx, r12d
+    call    music_render
+    ; soft knee limiter
+    lea     ecx, [r12+r12]
+    xor     ebx, ebx
+.cv:
+    movss   xmm0, [rdi+rbx*4]
+    movaps  xmm3, xmm0
+    andps   xmm0, [rel f_absmask]
+    comiss  xmm0, [rel f_knee]
+    jbe     .lin
+    subss   xmm0, [rel f_knee]  ; knee + (1-knee) tanh((|x|-knee)/(1-knee))
+    mulss   xmm0, [rel f_inv1mknee]
+    call    audio_softclip
+    mulss   xmm0, [rel f_1mknee]
+    addss   xmm0, [rel f_knee]
+.lin:
+    andps   xmm3, [rel f_signmask]
+    orps    xmm0, xmm3
+    mulss   xmm0, [rel f_32767]
+    cvtss2si eax, xmm0
+    cmp     eax, 32767
+    jle     .c1
+    mov     eax, 32767
+.c1:
+    cmp     eax, -32767
+    jge     .c2
+    mov     eax, -32767
+.c2:
+    mov     [rsi+rbx*2], ax
+    inc     ebx
+    cmp     ebx, ecx
+    jb      .cv
+.done:
+ENDPX
+    ; v1 temporary guard (audio #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (audio #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (audio #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (audio #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (audio #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (audio #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (audio #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (audio #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (audio #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (audio #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (audio #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (audio #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (audio #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (audio #49)
+    xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (audio #51)
+    xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (audio #53)
+    xor     r11d, r11d ; clear v1 slot 53
