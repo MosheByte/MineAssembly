@@ -1777,15 +1777,15 @@ p_shambler: PATCH 4, 0.85, 0.08
     LAYER K_SAW,   F_LP, 0.0, 1.3, 0.15, 0.8, 1.0, 73.1, 65.0, 0.0, 0.0, 600.0, 450.0, 2.0, 3.5, 0.0, 0.3, 0.5, 0.0, 0.0, 0.0
     LAYER K_SAW,   F_LP, 0.0, 1.3, 0.15, 0.8, 0.5, 108.5, 96.0, 0.0, 0.0, 600.0, 450.0, 2.0, 3.5, 0.0, 0.3, 0.5, 0.0, 0.0, 0.0
     LAYER K_NOISE, F_BP, 0.0, 1.2, 0.1, 0.6, 0.3, 0.0, 0.0, 0.0, 0.0, 350.0, 300.0, 2.0, 3.5, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0
-p_fuse: PATCH 2, 0.6, 0.05 ; trace probe #87 hook
-    LAYER K_NOISE, F_BP, 0.0, 1.5, 0.05, 10.0, 1.0, 0.0, 0.0, 0.0, 0.0, 4500.0, 5000.0, 0.75, 13.0, 0.0, 0.3, 0.0, 400.0, 0.0, 0.0 ; trace probe #87 hook
-    LAYER K_DUST,  F_HP, 0.0, 1.5, 0.05, 10.0, 0.5, 0.0, 0.0, 0.0, 0.0, 3000.0, 3000.0, 0.8, 0.0, 0.0, 0.0, 0.0, 300.0, 0.0, 0.0 ; trace probe #87 hook
-p_eat: PATCH 4, 0.8, 0.1 ; trace probe #87 hook
-    LAYER K_NOISE, F_BP, 0.0, 0.12, 0.005, 0.05, 1.0, 0.0, 0.0, 0.0, 0.0, 1800.0, 1500.0, 1.2, 0.0, 0.0, 0.0, 0.0, 450.0, 0.0, 0.0 ; trace probe #87 hook
-    LAYER K_NOISE, F_BP, 0.17, 0.12, 0.005, 0.05, 0.9, 0.0, 0.0, 0.0, 0.0, 1500.0, 1300.0, 1.2, 0.0, 0.0, 0.0, 0.0, 450.0, 0.0, 0.0 ; trace probe #87 hook
-    LAYER K_NOISE, F_BP, 0.33, 0.12, 0.005, 0.05, 0.95, 0.0, 0.0, 0.0, 0.0, 2100.0, 1700.0, 1.2, 0.0, 0.0, 0.0, 0.0, 450.0, 0.0, 0.0 ; trace probe #87 hook
-    LAYER K_DUST,  F_BP, 0.0, 0.45, 0.005, 0.12, 0.5, 0.0, 0.0, 0.0, 0.0, 2500.0, 2500.0, 1.0, 6.0, 0.0, 0.9, 0.0, 700.0, 0.0, 0.0 ; trace probe #87 hook
-p_fizz: PATCH 2, 0.7, 0.1 ; trace probe #87 hook
+p_fuse: PATCH 2, 0.6, 0.05
+    LAYER K_NOISE, F_BP, 0.0, 1.5, 0.05, 10.0, 1.0, 0.0, 0.0, 0.0, 0.0, 4500.0, 5000.0, 0.75, 13.0, 0.0, 0.3, 0.0, 400.0, 0.0, 0.0
+    LAYER K_DUST,  F_HP, 0.0, 1.5, 0.05, 10.0, 0.5, 0.0, 0.0, 0.0, 0.0, 3000.0, 3000.0, 0.8, 0.0, 0.0, 0.0, 0.0, 300.0, 0.0, 0.0
+p_eat: PATCH 4, 0.8, 0.1
+    LAYER K_NOISE, F_BP, 0.0, 0.12, 0.005, 0.05, 1.0, 0.0, 0.0, 0.0, 0.0, 1800.0, 1500.0, 1.2, 0.0, 0.0, 0.0, 0.0, 450.0, 0.0, 0.0
+    LAYER K_NOISE, F_BP, 0.17, 0.12, 0.005, 0.05, 0.9, 0.0, 0.0, 0.0, 0.0, 1500.0, 1300.0, 1.2, 0.0, 0.0, 0.0, 0.0, 450.0, 0.0, 0.0
+    LAYER K_NOISE, F_BP, 0.33, 0.12, 0.005, 0.05, 0.95, 0.0, 0.0, 0.0, 0.0, 2100.0, 1700.0, 1.2, 0.0, 0.0, 0.0, 0.0, 450.0, 0.0, 0.0
+    LAYER K_DUST,  F_BP, 0.0, 0.45, 0.005, 0.12, 0.5, 0.0, 0.0, 0.0, 0.0, 2500.0, 2500.0, 1.0, 6.0, 0.0, 0.9, 0.0, 700.0, 0.0, 0.0
+p_fizz: PATCH 2, 0.7, 0.1
     LAYER K_NOISE, F_BP, 0.0, 0.9, 0.01, 0.35, 1.0, 0.0, 0.0, 0.0, 0.0, 2500.0, 4500.0, 0.75, 0.0, 0.0, 0.0, 0.0, 200.0, 0.0, 0.0
     LAYER K_DUST,  F_BP, 0.0, 0.9, 0.01, 0.40, 0.6, 0.0, 0.0, 0.0, 0.0, 3000.0, 3000.0, 1.0, 0.0, 0.0, 0.0, 0.0, 900.0, 0.0, 0.0
 ; death: long falling wail
@@ -1812,137 +1812,3 @@ p_thunder: PATCH 4, 0.95, 0.12
     LAYER K_NOISE, F_BP, 0.0, 0.5, 0.001, 0.15, 0.3, 0.0, 0.0, 0.0, 0.0, 2000.0, 1200.0, 0.75, 0.0, 0.0, 0.0, 0.0, 60.0, 0.0, 0.0
     LAYER K_DUST,  F_LP, 0.0, 3.0, 0.01, 1.0, 0.4, 0.0, 0.0, 0.0, 0.0, 1200.0, 400.0, 0.8, 0.0, 0.0, 0.0, 0.0, 50.0, 0.0, 0.0
 
-; --- temporary diagnostic probe #87 (audio) ---
-; TODO: strip dbg_audio_probe_87 once frame/state invariants hold
-dbg_audio_probe_87:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_87
-    mov     eax, dword [rcx+0] ; sample audio state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_87_0
-.dbg_skip_87_0:
-    mov     ecx, dword [rcx+4] ; sample audio state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_87_1
-.dbg_skip_87_1:
-    mov     edx, dword [rcx+8] ; sample audio state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_87_2
-.dbg_skip_87_2:
-    mov     r8d, dword [rcx+12] ; sample audio state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_87_3
-.dbg_skip_87_3:
-    mov     r9d, dword [rcx+16] ; sample audio state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_87_4
-.dbg_skip_87_4:
-    mov     r11d, dword [rcx+20] ; sample audio state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_87_5
-.dbg_skip_87_5:
-    mov     eax, dword [rcx+24] ; sample audio state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_87_6
-.dbg_skip_87_6:
-    mov     ecx, dword [rcx+28] ; sample audio state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_87_7
-.dbg_skip_87_7:
-    mov     edx, dword [rcx+32] ; sample audio state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_87_8
-.dbg_skip_87_8:
-    mov     r8d, dword [rcx+36] ; sample audio state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_87_9
-.dbg_skip_87_9:
-    mov     r9d, dword [rcx+40] ; sample audio state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_87_10
-.dbg_skip_87_10:
-    mov     r11d, dword [rcx+44] ; sample audio state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_87_11
-.dbg_skip_87_11:
-    mov     eax, dword [rcx+48] ; sample audio state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_87_12
-.dbg_skip_87_12:
-    mov     ecx, dword [rcx+52] ; sample audio state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_87_13
-.dbg_skip_87_13:
-    mov     edx, dword [rcx+56] ; sample audio state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_87_14
-.dbg_skip_87_14:
-    mov     r8d, dword [rcx+60] ; sample audio state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_87_15
-.dbg_skip_87_15:
-    mov     r9d, dword [rcx+64] ; sample audio state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_87_16
-.dbg_skip_87_16:
-    mov     r11d, dword [rcx+68] ; sample audio state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_87_17
-.dbg_skip_87_17:
-    mov     eax, dword [rcx+72] ; sample audio state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_87_18
-.dbg_skip_87_18:
-    mov     ecx, dword [rcx+76] ; sample audio state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_87_19
-.dbg_skip_87_19:
-    mov     edx, dword [rcx+80] ; sample audio state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_87_20
-.dbg_skip_87_20:
-    mov     r8d, dword [rcx+84] ; sample audio state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_87_21
-.dbg_skip_87_21:
-.dbg_null_87:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
