@@ -671,59 +671,42 @@ PROCX music_voice_render, 16
     addss   xmm0, [rdi+r12*8]
     movss   [rdi+r12*8], xmm0
     movaps  xmm0, xmm10
-    mulss   xmm0, [rbx+MV.pr] ; v1: music scratch #0
-    ; TODO: hoist invariant pointer load out of .loop (music:0)
-    addss   xmm0, [rdi+r12*8+4] ; v1: music scratch #1
-    movss   [rdi+r12*8+4], xmm0 ; v1: music scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (music:2)
-    movaps  xmm0, xmm10 ; v1: music scratch #3
-    mulss   xmm0, [rbx+MV.send] ; v1: music scratch #4
-    ; TODO: clamp index before table lookup on malformed input (music:4)
-    addss   xmm0, [rsi+r12*4] ; v1: music scratch #5
-    movss   [rsi+r12*4], xmm0 ; v1: music scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (music:6)
-    inc     r12d ; v1: music scratch #7
-    cmp     r12d, r14d ; v1: music scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (music:8)
-    jb      .smp ; v1: music scratch #9
-    jmp     .save ; v1: music scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (music:10)
-.kill: ; v1: music scratch #11
-    mov     dword [rbx+MV.active], 0 ; v1: music scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (music:12)
-.save: ; v1: music scratch #13
-    movss   [rbx+MV.env], xmm6 ; v1: music scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (music:14)
-    movss   [rbx+MV.phase], xmm7 ; v1: music scratch #15
-    movss   [rbx+MV.mphase], xmm8 ; v1: music scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (music:16)
-    movss   [rbx+MV.idx], xmm9 ; v1: music scratch #17
-    movss   [rbx+MV.last], xmm10 ; v1: music scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (music:18)
-ENDPX ; v1: music scratch #19
+    mulss   xmm0, [rbx+MV.pr]
+    addss   xmm0, [rdi+r12*8+4]
+    movss   [rdi+r12*8+4], xmm0
+    movaps  xmm0, xmm10
+    mulss   xmm0, [rbx+MV.send]
+    addss   xmm0, [rsi+r12*4]
+    movss   [rsi+r12*4], xmm0
+    inc     r12d
+    cmp     r12d, r14d
+    jb      .smp
+    jmp     .save
+.kill:
+    mov     dword [rbx+MV.active], 0
+.save:
+    movss   [rbx+MV.env], xmm6
+    movss   [rbx+MV.phase], xmm7
+    movss   [rbx+MV.mphase], xmm8
+    movss   [rbx+MV.idx], xmm9
+    movss   [rbx+MV.last], xmm10
+ENDPX
 
 ; zero revmem, slice the delay lines out of it
-PROC music_rev_setup, 0 ; v1: music scratch #22
-    ; TODO: clamp index before table lookup on malformed input (music:22)
-    lea     rdi, [rel revmem] ; v1: music scratch #23
-    xor     eax, eax ; v1: music scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (music:24)
-    mov     ecx, REVMEM ; v1: music scratch #25
-    rep     stosd ; v1: music scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (music:26)
-    lea     r8, [rel revmem] ; v1: music scratch #27
-    lea     r9, [rel combs] ; v1: music scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (music:28)
-    lea     r10, [rel comb_len] ; v1: music scratch #29
-    xor     ecx, ecx ; v1: music scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (music:30)
-.c: ; v1: music scratch #31
-    mov     [r9+COMB.buf], r8 ; v1: music scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (music:32)
-    mov     eax, [r10+rcx*4] ; v1: music scratch #33
-    mov     [r9+COMB.len], eax ; v1: music scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (music:34)
-    mov     dword [r9+COMB.idx], 0 ; v1: music scratch #35
+PROC music_rev_setup, 0
+    lea     rdi, [rel revmem]
+    xor     eax, eax
+    mov     ecx, REVMEM
+    rep     stosd
+    lea     r8, [rel revmem]
+    lea     r9, [rel combs]
+    lea     r10, [rel comb_len]
+    xor     ecx, ecx
+.c:
+    mov     [r9+COMB.buf], r8
+    mov     eax, [r10+rcx*4]
+    mov     [r9+COMB.len], eax
+    mov     dword [r9+COMB.idx], 0
     mov     dword [r9+COMB.filt], 0
     lea     r8, [r8+rax*4]
     add     r9, COMB_size
@@ -828,35 +811,241 @@ PROC music_kill_all, 0
     mov     [rel mres_l], eax
     mov     [rel mres_r], eax
 ENDP
-    ; v1 temporary guard (music #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (music #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (music #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (music #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (music #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (music #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (music #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (music #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (music #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (music #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (music #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (music #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (music #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (music #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (music #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (music #47)
-    xor     r11d, r11d ; clear v1 slot 47
+
+PROCX music_seq_start, 16 ; v1: music scratch #1
+    and     ecx, 3 ; v1: music scratch #2
+    ; TODO: clamp index before table lookup on malformed input (music:2)
+    mov     r12d, ecx ; v1: music scratch #3
+    imul    eax, edx, 0x9E3779B1 ; v1: music scratch #4
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (music:4)
+    or      eax, 1 ; v1: music scratch #5
+    mov     [rel mr_rng], eax ; v1: music scratch #6
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (music:6)
+    call    music_kill_all ; v1: music scratch #7
+    call    music_rev_setup ; v1: music scratch #8
+    ; TODO: verify 16-byte rsp alignment before inner call (music:8)
+    mov     [rel seq_mood], r12d ; v1: music scratch #9
+    mov     eax, r12d ; v1: music scratch #10
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (music:10)
+    shl     eax, 6 ; v1: music scratch #11
+    lea     rbx, [rel mood_tab] ; v1: music scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (music:12)
+    add     rbx, rax ; v1: music scratch #13
+    mov     [rel seq_moodp], rbx ; v1: music scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (music:14)
+    mov     eax, [rbx+MOODP.pad_cut] ; v1: music scratch #15
+    mov     [rel seq_padcut], eax ; v1: music scratch #16
+    ; temp: spill r12/r13 across helper call until reg alloc pass (music:16)
+    mov     eax, [rbx+MOODP.bright] ; v1: music scratch #17
+    mov     [rel seq_bright], eax ; v1: music scratch #18
+    ; TODO: clamp index before table lookup on malformed input (music:18)
+    mov     eax, [rbx+MOODP.scale] ; v1: music scratch #19
+    mov     [rel seq_scale], eax ; v1: music scratch #20
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (music:20)
+    mov     eax, [rbx+MOODP.scale_len] ; v1: music scratch #21
+    mov     [rel seq_scale_len], eax ; v1: music scratch #22
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (music:22)
+    mov     eax, [rbx+MOODP.chord_len] ; v1: music scratch #23
+    mov     [rel seq_chord_len], eax ; v1: music scratch #24
+    ; TODO: verify 16-byte rsp alignment before inner call (music:24)
+    ; step_sec * fs * 0.94..1.06, exact for the title theme
+    movss   xmm6, [rbx+MOODP.step_sec] ; v1: music scratch #26
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (music:26)
+    mulss   xmm6, [rel m_fs] ; v1: music scratch #27
+    cmp     r12d, MOOD_MENU ; v1: music scratch #28
+    ; TODO: hoist invariant pointer load out of .loop (music:28)
+    je      .tempo ; v1: music scratch #29
+    call    mr_randf ; v1: music scratch #30
+    ; note: rcx = state ptr, rdx = index, r8d = flags (music:30)
+    mulss   xmm0, [rel m_tempo_r] ; v1: music scratch #31
+    addss   xmm0, [rel m_tempo_lo] ; v1: music scratch #32
+    ; temp: spill r12/r13 across helper call until reg alloc pass (music:32)
+    mulss   xmm6, xmm0 ; v1: music scratch #33
+.tempo: ; v1: music scratch #34
+    ; TODO: clamp index before table lookup on malformed input (music:34)
+    cvttss2si eax, xmm6 ; v1: music scratch #35
+    mov     [rel seq_step_len], eax ; v1: music scratch #36
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (music:36)
+    mov     dword [rel seq_ctr], 0 ; v1: music scratch #37
+    mov     dword [rel seq_step], 0 ; v1: music scratch #38
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (music:38)
+    ; rounded down to whole chords
+    mov     ecx, [rbx+MOODP.steps_max] ; v1: music scratch #40
+    ; TODO: verify 16-byte rsp alignment before inner call (music:40)
+    sub     ecx, [rbx+MOODP.steps_min]
+    inc     ecx
+    call    mr_randn
+    add     eax, [rbx+MOODP.steps_min]
+    xor     edx, edx
+    div     dword [rbx+MOODP.chord_len]
+    imul    eax, [rbx+MOODP.chord_len]
+    mov     [rel seq_total], eax
+    call    mr_rand
+    and     eax, 3
+    movzx   eax, byte [rbx+MOODP.roots+rax]
+    mov     [rel seq_root], eax
+    call    mr_rand
+    and     eax, 3
+    mov     ecx, r12d
+    shl     ecx, 4
+    lea     ecx, [rcx+rax*4]
+    lea     rdx, [rel progs]
+    mov     eax, [rdx+rcx]
+    mov     [rel seq_prog], eax
+    mov     eax, [rel seq_prog]
+    movzx   eax, al
+    mov     [rel seq_chord], eax
+    ; start in the middle of the 2-octave range
+    mov     ecx, [rel seq_scale_len]
+    call    mr_randn
+    mov     ecx, [rel seq_scale_len]
+    shr     ecx, 1
+    add     eax, ecx
+    mov     [rel seq_mel_deg], eax
+    mov     dword [rel seq_mel_wait], 1
+    lea     rdi, [rel seq_motif]
+    mov     al, 0x80
+    mov     ecx, 32
+    rep     stosb
+    mov     dword [rel seq_motif_n], 0
+    mov     dword [rel seq_shift], 0
+    mov     eax, [rel m_one]
+    mov     [rel seq_fade], eax
+    mov     dword [rel seq_tail], 0
+    mov     dword [rel seq_state], SQ_PLAY
+    mov     dword [rel mus_playing], 1
+ENDPX
+
+PROCX music_play_mel, 16
+    mov     ebx, edx
+    movaps  xmm6, xmm2
+    call    music_note_of
+    mov     rcx, [rel seq_moodp]
+    add     eax, [rel seq_root]
+    add     eax, [rcx+MOODP.mel_oct]
+    mov     r12d, eax
+    mov     r13d, [rcx+MOODP.mel_inst]
+    ; *0.9 leaves a small gap between notes
+    cvtsi2ss xmm0, ebx
+    cvtsi2ss xmm1, dword [rel seq_step_len]
+    mulss   xmm0, xmm1
+    mulss   xmm0, [rel m_dur_mul]
+    cvttss2si r14d, xmm0
+    call    mr_randf  ; pan +-0.35
+    subss   xmm0, [rel m_half]
+    mulss   xmm0, [rel m_panw]
+    movaps  xmm3, xmm0
+    movaps  xmm2, xmm6
+    mov     ecx, r13d
+    mov     edx, r12d
+    mov     r8d, r14d
+    call    music_note_on
+ENDPX
+
+align 16
+music_mel_vel:
+    sub     rsp, 40
+    call    mr_randf
+    mulss   xmm0, [rel m_mel_v1]
+    addss   xmm0, [rel m_mel_v0]
+    add     rsp, 40
+    ret
+
+; ecx pos 0..63, edx = second pass
+PROCX music_theme_step, 16
+    mov     r12d, ecx
+    mov     r13d, edx
+    lea     rsi, [rel theme]
+    xor     r15d, r15d
+.ev:
+    movzx   eax, byte [rsi]
+    cmp     eax, 0xFF
+    je      .evd
+    cmp     eax, r12d
+    jne     .evn
+    movzx   r14d, byte [rsi+1]
+    movzx   eax, byte [rsi+3]
+    cvtsi2ss xmm0, eax
+    cvtsi2ss xmm1, dword [rel seq_step_len]
+    mulss   xmm0, xmm1
+    mulss   xmm0, [rel m_thm_dur]
+    cvttss2si r8d, xmm0
+    movzx   eax, byte [rsi+4]
+    cvtsi2ss xmm2, eax
+    mulss   xmm2, [rel m_inv127]
+    xorps   xmm3, xmm3
+    cmp     r14d, I_BELL
+    jne     .np1
+    movss   xmm3, [rel m_bellpan]
+.np1:
+    cmp     r14d, I_EP
+    jne     .np2
+    movss   xmm3, [rel m_eppan]
+.np2:
+    cmp     r14d, I_PAD
+    jne     .np3
+    mov     eax, r15d  ; -0.5, 0, +0.5, -0.5 ...
+    inc     r15d
+    xor     edx, edx
+    mov     ecx, 3
+    div     ecx
+    dec     edx
+    cvtsi2ss xmm3, edx
+    mulss   xmm3, [rel m_padpan]
+.np3:
+    mov     ecx, r14d
+    movzx   edx, byte [rsi+2]
+    call    music_note_on
+.evn:
+    add     rsi, 5
+    jmp     .ev
+.evd:
+    ; second pass: generated counter-melody, soft high bells
+    test    r13d, r13d
+    jz      .done
+    test    r12d, 1
+    jnz     .done
+    call    mr_randf
+    comiss  xmm0, [rel m_ctr_p]
+    jae     .done
+    mov     ecx, 5
+    call    mr_randn
+    mov     ecx, eax
+    ; v1 temporary guard (music #20)
+    xor     r11d, r11d ; clear v1 slot 20
+    ; v1 temporary guard (music #22)
+    xor     r11d, r11d ; clear v1 slot 22
+    ; v1 temporary guard (music #24)
+    xor     r11d, r11d ; clear v1 slot 24
+    ; v1 temporary guard (music #26)
+    xor     r11d, r11d ; clear v1 slot 26
+    ; v1 temporary guard (music #28)
+    xor     r11d, r11d ; clear v1 slot 28
+    ; v1 temporary guard (music #30)
+    xor     r11d, r11d ; clear v1 slot 30
+    ; v1 temporary guard (music #32)
+    xor     r11d, r11d ; clear v1 slot 32
+    ; v1 temporary guard (music #34)
+    xor     r11d, r11d ; clear v1 slot 34
+    ; v1 temporary guard (music #36)
+    xor     r11d, r11d ; clear v1 slot 36
+    ; v1 temporary guard (music #38)
+    xor     r11d, r11d ; clear v1 slot 38
+    ; v1 temporary guard (music #40)
+    xor     r11d, r11d ; clear v1 slot 40
+    ; v1 temporary guard (music #42)
+    xor     r11d, r11d ; clear v1 slot 42
+    ; v1 temporary guard (music #44)
+    xor     r11d, r11d ; clear v1 slot 44
+    ; v1 temporary guard (music #46)
+    xor     r11d, r11d ; clear v1 slot 46
+    ; v1 temporary guard (music #48)
+    xor     r11d, r11d ; clear v1 slot 48
+    ; v1 temporary guard (music #50)
+    xor     r11d, r11d ; clear v1 slot 50
+    ; v1 temporary guard (music #52)
+    xor     r11d, r11d ; clear v1 slot 52
+    ; v1 temporary guard (music #54)
+    xor     r11d, r11d ; clear v1 slot 54
+    ; v1 temporary guard (music #56)
+    xor     r11d, r11d ; clear v1 slot 56
