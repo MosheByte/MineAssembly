@@ -1329,69 +1329,48 @@ PROCX music_render, 32
     cmp     esi, NMV
     jb      .vl
     ; music_vol * base * fade, smoothed
-    lea     rax, [rel g_settings] ; v1: music scratch #0
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (music:0)
-    movss   xmm0, [rax+SETTINGS.music_vol] ; v1: music scratch #1
-    maxss   xmm0, [rel m_zero] ; v1: music scratch #2
-    ; TODO: verify 16-byte rsp alignment before inner call (music:2)
-    minss   xmm0, [rel m_one] ; v1: music scratch #3
-    mulss   xmm0, [rel m_base_vol] ; v1: music scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (music:4)
-    mulss   xmm0, [rel seq_fade] ; v1: music scratch #5
-    subss   xmm0, [rel mr_level] ; v1: music scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (music:6)
-    mulss   xmm0, [rel m_lvl_k] ; v1: music scratch #7
-    addss   xmm0, [rel mr_level] ; v1: music scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (music:8)
-    movss   [rel mr_level], xmm0 ; v1: music scratch #9
-    movaps  xmm8, xmm0 ; v1: music scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (music:10)
-    movss   xmm9, [rel mres_l] ; v1: music scratch #11
-    movss   xmm11, [rel mres_r] ; v1: music scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (music:12)
-    movss   xmm12, [rel m_resdecay] ; v1: music scratch #13
-    xor     esi, esi ; v1: music scratch #14
-    ; TODO: clamp index before table lookup on malformed input (music:14)
-.rs: ; v1: music scratch #15
-    lea     rax, [rel mr_send] ; v1: music scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (music:16)
-    movss   xmm0, [rax+rsi*4] ; v1: music scratch #17
-    mulss   xmm0, [rel m_rev_in] ; v1: music scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (music:18)
-    movaps  xmm6, xmm0 ; v1: music scratch #19
-    lea     rcx, [rel combs] ; v1: music scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (music:20)
-    lea     rdx, [rel apfs] ; v1: music scratch #21
-    call    music_rev_channel ; v1: music scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (music:22)
-    movaps  xmm7, xmm0 ; v1: music scratch #23
-    movaps  xmm0, xmm6 ; v1: music scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (music:24)
-    lea     rcx, [rel combs + COMB_size*4] ; v1: music scratch #25
-    lea     rdx, [rel apfs + APF_size*2] ; v1: music scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (music:26)
-    call    music_rev_channel ; v1: music scratch #27
-    lea     rax, [rel mr_dry] ; v1: music scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (music:28)
-    mulss   xmm7, [rel m_rev_wet] ; v1: music scratch #29
-    mulss   xmm0, [rel m_rev_wet] ; v1: music scratch #30
-    ; TODO: clamp index before table lookup on malformed input (music:30)
-    addss   xmm7, [rax+rsi*8] ; v1: music scratch #31
-    addss   xmm0, [rax+rsi*8+4] ; v1: music scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (music:32)
-    addss   xmm7, xmm9 ; v1: music scratch #33
-    addss   xmm0, xmm11 ; v1: music scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (music:34)
-    mulss   xmm9, xmm12 ; v1: music scratch #35
-    mulss   xmm11, xmm12 ; v1: music scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (music:36)
-    mulss   xmm7, xmm8 ; v1: music scratch #37
-    mulss   xmm0, xmm8 ; v1: music scratch #38
-    ; temp: spill r12/r13 across helper call until reg alloc pass (music:38)
-    lea     eax, [r13+rsi] ; v1: music scratch #39
-    lea     rcx, [rdi+rax*8] ; v1: music scratch #40
-    ; TODO: hoist invariant pointer load out of .loop (music:40)
-    addss   xmm7, [rcx] ; v1: music scratch #41
+    lea     rax, [rel g_settings]
+    movss   xmm0, [rax+SETTINGS.music_vol]
+    maxss   xmm0, [rel m_zero]
+    minss   xmm0, [rel m_one]
+    mulss   xmm0, [rel m_base_vol]
+    mulss   xmm0, [rel seq_fade]
+    subss   xmm0, [rel mr_level]
+    mulss   xmm0, [rel m_lvl_k]
+    addss   xmm0, [rel mr_level]
+    movss   [rel mr_level], xmm0
+    movaps  xmm8, xmm0
+    movss   xmm9, [rel mres_l]
+    movss   xmm11, [rel mres_r]
+    movss   xmm12, [rel m_resdecay]
+    xor     esi, esi
+.rs:
+    lea     rax, [rel mr_send]
+    movss   xmm0, [rax+rsi*4]
+    mulss   xmm0, [rel m_rev_in]
+    movaps  xmm6, xmm0
+    lea     rcx, [rel combs]
+    lea     rdx, [rel apfs]
+    call    music_rev_channel
+    movaps  xmm7, xmm0
+    movaps  xmm0, xmm6
+    lea     rcx, [rel combs + COMB_size*4]
+    lea     rdx, [rel apfs + APF_size*2]
+    call    music_rev_channel
+    lea     rax, [rel mr_dry]
+    mulss   xmm7, [rel m_rev_wet]
+    mulss   xmm0, [rel m_rev_wet]
+    addss   xmm7, [rax+rsi*8]
+    addss   xmm0, [rax+rsi*8+4]
+    addss   xmm7, xmm9
+    addss   xmm0, xmm11
+    mulss   xmm9, xmm12
+    mulss   xmm11, xmm12
+    mulss   xmm7, xmm8
+    mulss   xmm0, xmm8
+    lea     eax, [r13+rsi]
+    lea     rcx, [rdi+rax*8]
+    addss   xmm7, [rcx]
     addss   xmm0, [rcx+4]
     movss   [rcx], xmm7
     movss   [rcx+4], xmm0
@@ -1521,29 +1500,175 @@ PROC music_apply_mood, 16
     mov     [rel mt_next_ms], rax
 .done:
 ENDP
-    ; v1 temporary guard (music #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (music #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (music #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (music #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (music #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (music #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (music #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (music #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (music #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (music #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (music #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (music #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (music #45)
-    xor     r11d, r11d ; clear v1 slot 45
+
+PROC music_init, 16
+    call    GetTickCount64
+    imul    eax, eax, 0x2C1B3C6D
+    or      eax, 1
+    mov     [rel mt_rng], eax
+    mov     dword [rel mt_waiting], 0
+    mov     dword [rel mt_override], 0
+    mov     dword [rel mt_stop_sent], 0
+    call    music_detect
+    mov     [rel mt_mood], eax
+    mov     [rel mt_last_det], eax
+    mov     ebx, 800  ; title theme almost right away
+    cmp     eax, MOOD_MENU
+    je      .t
+    mov     ebx, 10000
+.t:
+    call    GetTickCount64
+    add     rax, rbx
+    mov     [rel mt_next_ms], rax
+    mov     dword [rel mt_inited], 1
+ENDP
+
+; 0 day 1 night 2 menu 3 cave
+PROC music_set_mood, 16
+    mov     ebx, ecx
+    cmp     dword [rel mt_inited], 0
+    jne     .i
+    call    music_init
+.i:
+    cmp     ebx, 3
+    ja      .done
+    mov     ecx, ebx
+    call    music_apply_mood
+.done:
+ENDP
+
+PROC music_tick, 16
+    cmp     dword [rel mt_inited], 0
+    jne     .i
+    call    music_init
+.i:
+    ; only reacts when the detected mood changes
+    call    music_detect
+    cmp     eax, [rel mt_last_det]
+    je      .same
+    mov     [rel mt_last_det], eax
+    mov     ecx, eax
+    call    music_apply_mood
+.same:
+    call    GetTickCount64
+    mov     r12, rax
+    lea     rax, [rel g_settings]
+    movss   xmm0, [rax+SETTINGS.music_vol]
+    movss   LOC(0), xmm0
+    cmp     dword [rel mt_waiting], 0
+    je      .free
+    mov     eax, [rel mus_finished_serial]
+    sub     eax, [rel mt_wait_serial]
+    jl      .still
+    mov     dword [rel mt_waiting], 0
+    mov     ebx, [rel mt_override]
+    test    ebx, ebx
+    jnz     .sched
+    cmp     dword [rel mt_mood], MOOD_MENU
+    jne     .wgap
+    mov     ecx, 4000  ; title: 3-7 s
+    call    mt_randn
+    lea     ebx, [rax+3000]
+    jmp     .sched
+.wgap:
+    mov     ecx, 90000  ; world: 30-120 s of silence
+    call    mt_randn
+    lea     ebx, [rax+30000]
+.sched:
+    mov     dword [rel mt_override], 0
+    lea     rax, [r12+rbx]
+    mov     [rel mt_next_ms], rax
+    jmp     .done
+.still:
+    movss   xmm0, LOC(0)  ; muted while playing -> fade out
+    comiss  xmm0, [rel m_inv127]
+    jae     .done
+    call    music_request_stop
+    jmp     .done
+.free:
+    movss   xmm0, LOC(0)
+    comiss  xmm0, [rel m_inv127]
+    jb      .done
+    cmp     r12, [rel mt_next_ms]
+    jb      .done
+    mov     eax, [rel mt_mood]
+    mov     [rel mus_req_mood], eax
+    lea     rcx, [rel mt_rng]
+    call    xs_next
+    mov     [rel mus_req_seed], eax
+    mov     dword [rel mt_stop_sent], 0
+    mov     eax, 1
+    lock xadd [rel mus_start_serial], eax
+    inc     eax
+    mov     [rel mt_wait_serial], eax
+    mov     dword [rel mt_waiting], 1
+.done:
+ENDP
+
+; offline render through the real music_render, no device
+PROC music_dbg_render, 32
+    stmxcsr LOC(0)
+    mov     eax, LOC(0)
+    mov     LOC(4), eax
+    or      dword LOC(0), 0x8040
+    ldmxcsr LOC(0)
+    mov     r12d, ecx
+    mov     r13d, edx
+    mov     rsi, r8
+    mov     r14d, r9d
+    mov     rdi, rsi
+    mov     ecx, r14d
+    add     ecx, ecx
+    xor     eax, eax
+    rep     stosd
+    mov     eax, [rel mus_start_serial]
+    mov     [rel mr_seen_start], eax
+    mov     eax, [rel mus_stop_serial]
+    mov     [rel mr_seen_stop], eax
+    mov     dword [rel mr_cur_serial], 0
+    mov     dword [rel mr_level], 0
+    mov     ecx, r12d
+    mov     edx, r13d
+    call    music_seq_start
+    xor     ebx, ebx
+.l:
+    mov     edx, r14d
+    sub     edx, ebx
+    jle     .e
+    cmp     edx, 1024
+    jbe     .c
+    mov     edx, 1024
+.c:
+    mov     r15d, edx
+    lea     rcx, [rsi+rbx*8]
+    call    music_render
+    add     ebx, r15d
+    jmp     .l
+.e:
+    ldmxcsr LOC(4)
+    mov     eax, r14d
+ENDP
+
+; 0 idle 1 play 2 tail 3 fade
+PROC music_dbg_state, 0
+    mov     eax, [rel seq_state]
+ENDP
+
+PROC music_dbg_info, 0
+    mov     eax, [rel seq_mood]
+    mov     [rcx], eax
+    mov     eax, [rel seq_step]
+    mov     [rcx+4], eax
+    mov     eax, [rel seq_total]
+    mov     [rcx+8], eax
+    mov     eax, [rel seq_step_len]
+    mov     [rcx+12], eax
+    mov     eax, [rel seq_root]
+    mov     [rcx+16], eax
+    mov     eax, [rel mus_start_serial]
+    mov     [rcx+20], eax
+    mov     eax, [rel mus_finished_serial]
+    mov     [rcx+24], eax
+    mov     eax, [rel mt_mood]
+    mov     [rcx+28], eax
+ENDP
