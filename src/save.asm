@@ -1,59 +1,42 @@
 ; MASW v2 level.dat + MASC v1 RLE chunk streams
-%define IMPL_SAVE ; v1: save scratch #1
-%include "common.inc" ; v1: save scratch #2
-    ; TODO: clamp index before table lookup on malformed input (save:2)
+%define IMPL_SAVE
+%include "common.inc"
 
-extern RemoveDirectoryA ; v1: save scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (save:4)
-extern GetFileAttributesExA ; v1: save scratch #5
+extern RemoveDirectoryA
+extern GetFileAttributesExA
 
-%define LEVEL_MAGIC     'MASW' ; v1: save scratch #7
-%define CHUNK_MAGIC     'MASC' ; v1: save scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (save:8)
-%define SAVE_VERSION    2 ; v1: save scratch #9
-%define CHUNK_VERSION   1 ; v1: save scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (save:10)
+%define LEVEL_MAGIC     'MASW'
+%define CHUNK_MAGIC     'MASC'
+%define SAVE_VERSION    2
+%define CHUNK_VERSION   1  ; chunk files are unchanged
 
-%define LVL_HDR         128 ; v1: save scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (save:12)
-%define LVL_HDR_V1      64 ; v1: save scratch #13
-%define LVL_CRC_START   64 ; v1: save scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (save:14)
-%define LVL_MAGIC_OFF   0 ; v1: save scratch #15
-%define LVL_VER_OFF     4 ; v1: save scratch #16
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (save:16)
-%define LVL_HSIZE_OFF   8 ; v1: save scratch #17
-%define LVL_PSIZE_OFF   12 ; v1: save scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (save:18)
-%define LVL_SEED_OFF    16 ; v1: save scratch #19
-%define LVL_WTIME_OFF   24 ; v1: save scratch #20
-    ; TODO: clamp index before table lookup on malformed input (save:20)
-%define LVL_TOD_OFF     32 ; v1: save scratch #21
-%define LVL_GM_OFF      36 ; v1: save scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (save:22)
-%define LVL_WEATHER_OFF 40 ; v1: save scratch #23
-%define LVL_WTIMER_OFF  44 ; v1: save scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (save:24)
-%define LVL_BERAW_OFF   48 ; v1: save scratch #25
-%define LVL_BEENC_OFF   52 ; v1: save scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (save:26)
-%define LVL_CRC_OFF     56 ; v1: save scratch #27
-%define LVL_NENT_OFF    60 ; v1: save scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (save:28)
-%define LVL_NAME_OFF    64 ; v1: save scratch #29
-%define LVL_NAME_LEN    32 ; v1: save scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (save:30)
-%define LVL_ESIZE_OFF   96 ; v1: save scratch #31
+%define LVL_HDR         128
+%define LVL_HDR_V1      64
+%define LVL_CRC_START   64  ; checksum covers [64, EOF)
+%define LVL_MAGIC_OFF   0
+%define LVL_VER_OFF     4
+%define LVL_HSIZE_OFF   8
+%define LVL_PSIZE_OFF   12
+%define LVL_SEED_OFF    16
+%define LVL_WTIME_OFF   24
+%define LVL_TOD_OFF     32
+%define LVL_GM_OFF      36
+%define LVL_WEATHER_OFF 40
+%define LVL_WTIMER_OFF  44
+%define LVL_BERAW_OFF   48
+%define LVL_BEENC_OFF   52
+%define LVL_CRC_OFF     56
+%define LVL_NENT_OFF    60  ; entity count (always 0 in v1)
+%define LVL_NAME_OFF    64  ; v2 only from here on
+%define LVL_NAME_LEN    32
+%define LVL_ESIZE_OFF   96
 
-%define BE_BYTES        (MAX_BLOCKENTS*BLOCKENT_size) ; v1: save scratch #33
-%define ENT_BYTES       (MAX_ENTITIES*ENTITY_size) ; v1: save scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (save:34)
-%define LVL_MAX_PLAYER  4096 ; v1: save scratch #35
-%define LVL_MAX_BERAW   (16*1024*1024) ; v1: save scratch #36
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (save:36)
+%define BE_BYTES        (MAX_BLOCKENTS*BLOCKENT_size)
+%define ENT_BYTES       (MAX_ENTITIES*ENTITY_size)
+%define LVL_MAX_PLAYER  4096  ; sanity bounds on load
+%define LVL_MAX_BERAW   (16*1024*1024)
 
-%define CHK_HDR         32 ; v1: save scratch #38
-    ; TODO: clamp index before table lookup on malformed input (save:38)
+%define CHK_HDR         32
 %define CHK_MAGIC_OFF   0
 %define CHK_VER_OFF     4
 %define CHK_CX_OFF      8
@@ -156,12 +139,180 @@ sv_append:
     jmp  sv_append
 .end:
     ret
-    ; v1 temporary guard (save #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (save #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (save #21)
-    xor     r11d, r11d ; clear v1 slot 21
+
+; same but max ecx chars, always terminates
+sv_append_n: ; v1: save scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (save:2)
+    test ecx, ecx ; v1: save scratch #3
+    jz   .end ; v1: save scratch #4
+    ; TODO: verify 16-byte rsp alignment before inner call (save:4)
+    mov  al, [rsi] ; v1: save scratch #5
+    test al, al ; v1: save scratch #6
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (save:6)
+    jz   .end ; v1: save scratch #7
+    mov  [rdi], al ; v1: save scratch #8
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (save:8)
+    inc  rsi ; v1: save scratch #9
+    inc  rdi ; v1: save scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (save:10)
+    dec  ecx ; v1: save scratch #11
+    jmp  sv_append_n ; v1: save scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (save:12)
+.end: ; v1: save scratch #13
+    mov  byte [rdi], 0 ; v1: save scratch #14
+    ; TODO: clamp index before table lookup on malformed input (save:14)
+    ret ; v1: save scratch #15
+
+; signed eax at rdi. INT_MIN is fine, neg leaves 0x80000000 and the unsigned
+; div reads that as 2147483648
+sv_append_int: ; v1: save scratch #19
+    test eax, eax ; v1: save scratch #20
+    ; note: rcx = state ptr, rdx = index, r8d = flags (save:20)
+    jns  .pos ; v1: save scratch #21
+    mov  byte [rdi], '-' ; v1: save scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (save:22)
+    inc  rdi ; v1: save scratch #23
+    neg  eax ; v1: save scratch #24
+    ; TODO: verify 16-byte rsp alignment before inner call (save:24)
+.pos: ; v1: save scratch #25
+    xor  ecx, ecx ; v1: save scratch #26
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (save:26)
+    mov  r8d, 10 ; v1: save scratch #27
+.div: ; v1: save scratch #28
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (save:28)
+    xor  edx, edx ; v1: save scratch #29
+    div  r8d ; v1: save scratch #30
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (save:30)
+    add  edx, '0' ; v1: save scratch #31
+    push rdx ; v1: save scratch #32
+    ; TODO: hoist invariant pointer load out of .loop (save:32)
+    inc  ecx ; v1: save scratch #33
+    test eax, eax ; v1: save scratch #34
+    ; TODO: clamp index before table lookup on malformed input (save:34)
+    jnz  .div ; v1: save scratch #35
+.out: ; v1: save scratch #36
+    ; note: rcx = state ptr, rdx = index, r8d = flags (save:36)
+    pop  rax ; v1: save scratch #37
+    mov  [rdi], al ; v1: save scratch #38
+    ; temp: spill r12/r13 across helper call until reg alloc pass (save:38)
+    inc  rdi ; v1: save scratch #39
+    dec  ecx ; v1: save scratch #40
+    ; TODO: verify 16-byte rsp alignment before inner call (save:40)
+    jnz  .out ; v1: save scratch #41
+    mov  byte [rdi], 0 ; v1: save scratch #42
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (save:42)
+    ret ; v1: save scratch #43
+
+; rdi -> saves\<g_world_name>
+sv_world_dir: ; v1: save scratch #46
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (save:46)
+    lea  rsi, [rel s_saves_slash] ; v1: save scratch #47
+    call sv_append ; v1: save scratch #48
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (save:48)
+    lea  rsi, [rel g_world_name] ; v1: save scratch #49
+    mov  ecx, 63 ; v1: save scratch #50
+    ; TODO: hoist invariant pointer load out of .loop (save:50)
+    jmp  sv_append_n ; v1: save scratch #51
+
+; ecx cx, edx cz -> saves\<world>\chunks\c.<cx>.<cz>.bin
+sv_chunk_path: ; v1: save scratch #54
+    ; TODO: clamp index before table lookup on malformed input (save:54)
+    mov  r10d, ecx
+    mov  r11d, edx
+    call sv_world_dir
+    lea  rsi, [rel s_chunk_pre]
+    call sv_append
+    mov  eax, r10d
+    call sv_append_int
+    mov  byte [rdi], '.'
+    inc  rdi
+    mov  eax, r11d
+    call sv_append_int
+    lea  rsi, [rel s_bin]
+    jmp  sv_append
+
+; ok as a single folder name under saves\? trailing '.' / ' ' are out too:
+; win32 strips them from every path component, so "..." would turn into
+; saves\ itself (save_delete_world!) and "a." would alias "a". leaf, thread-safe
+sv_valid_name:
+    xor  eax, eax
+    test rcx, rcx
+    jz   .ret
+    movzx edx, byte [rcx]
+    test edx, edx
+    jz   .ret
+    cmp  dl, '.'
+    jne  .scan0
+    movzx edx, byte [rcx+1]
+    test edx, edx
+    jz   .ret  ; "."
+    cmp  dl, '.'
+    jne  .scan0
+    cmp  byte [rcx+2], 0
+    je   .ret  ; ".."
+.scan0:
+    xor  r8d, r8d
+.scan:
+    movzx edx, byte [rcx+r8]
+    test edx, edx
+    jz   .ok
+    cmp  edx, 32
+    jb   .ret
+    cmp  dl, '\'
+    je   .ret
+    cmp  dl, '/'
+    je   .ret
+    cmp  dl, ':'
+    je   .ret
+    cmp  dl, '*'
+    je   .ret
+    cmp  dl, '?'
+    je   .ret
+    cmp  dl, '"'
+    je   .ret
+    cmp  dl, '<'
+    je   .ret
+    cmp  dl, '>'
+    je   .ret
+    cmp  dl, '|'
+    je   .ret
+    inc  r8d
+    cmp  r8d, 63
+    ja   .ret
+    jmp  .scan
+.ok:
+    movzx edx, byte [rcx+r8-1]
+    cmp  dl, '.'
+    je   .ret
+    cmp  dl, ' '
+    je   .ret
+    mov  eax, 1
+.ret:
+    ret
+
+; ascii case-insensitive compare, rcx/rdx zstr. trashes r8 r9 rcx rdx
+sv_stricmp:
+    movzx eax, byte [rcx]
+    movzx r8d, byte [rdx]
+    lea  r9d, [rax-'A']
+    cmp  r9d, 25
+    ja   .a_done
+    add  eax, 32
+.a_done:
+    lea  r9d, [r8-'A']
+    cmp  r9d, 25
+    ja   .b_done
+    add  r8d, 32
+.b_done:
+    sub  eax, r8d
+    jnz  .ret
+    test r8d, r8d
+    jz   .ret
+    inc  rcx
+    inc  rdx
+    jmp  sv_stricmp
+.ret:
+    ret
     ; v1 temporary guard (save #23)
     xor     r11d, r11d ; clear v1 slot 23
     ; v1 temporary guard (save #25)
