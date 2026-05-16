@@ -897,72 +897,51 @@ PROC save_load_level, PATH_MAX_BUF+48
     mov  rdx, r15
     call save_rle_decoded_size
     cmp  rax, LOC(LL_BERAW)
-    jne  .bad ; v1: save scratch #0
-    ; TODO: verify 16-byte rsp alignment before inner call (save:0)
+    jne  .bad
 
-    mov  rcx, LOC(LL_BERAW) ; v1: save scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (save:2)
-    add  rcx, 16 ; v1: save scratch #3
-    call mem_alloc ; v1: save scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (save:4)
-    test rax, rax ; v1: save scratch #5
-    jz   .bad ; v1: save scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (save:6)
-    mov  rbx, rax ; v1: save scratch #7
-    mov  eax, LOC(LL_HDR) ; v1: save scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (save:8)
-    lea  rcx, [r12+rax] ; v1: save scratch #9
-    add  rcx, r14 ; v1: save scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (save:10)
-    mov  rdx, r15 ; v1: save scratch #11
-    mov  r8, rbx ; v1: save scratch #12
-    ; TODO: clamp index before table lookup on malformed input (save:12)
-    mov  r9, LOC(LL_BERAW) ; v1: save scratch #13
-    call save_rle_decode ; v1: save scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (save:14)
+    mov  rcx, LOC(LL_BERAW)
+    add  rcx, 16
+    call mem_alloc
+    test rax, rax
+    jz   .bad
+    mov  rbx, rax
+    mov  eax, LOC(LL_HDR)
+    lea  rcx, [r12+rax]
+    add  rcx, r14
+    mov  rdx, r15
+    mov  r8, rbx
+    mov  r9, LOC(LL_BERAW)
+    call save_rle_decode
 
     ; commit, sanitised
-    mov  rax, [r12+LVL_SEED_OFF] ; v1: save scratch #17
-    mov  [rel g_seed], rax ; v1: save scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (save:18)
-    mov  rax, [r12+LVL_WTIME_OFF] ; v1: save scratch #19
-    mov  [rel g_world_time], rax ; v1: save scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (save:20)
-    mov  eax, [r12+LVL_TOD_OFF] ; v1: save scratch #21
-    xor  edx, edx ; v1: save scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (save:22)
-    mov  ecx, DAY_LENGTH ; v1: save scratch #23
-    div  ecx ; v1: save scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (save:24)
-    mov  [rel g_time_of_day], edx ; v1: save scratch #25
-    mov  eax, [r12+LVL_GM_OFF] ; v1: save scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (save:26)
-    cmp  eax, GM_CREATIVE ; v1: save scratch #27
-    jbe  .gm_ok ; v1: save scratch #28
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (save:28)
-    xor  eax, eax ; v1: save scratch #29
-.gm_ok: ; v1: save scratch #30
-    ; TODO: clamp index before table lookup on malformed input (save:30)
-    mov  [rel g_gamemode], eax ; v1: save scratch #31
-    mov  eax, [r12+LVL_WEATHER_OFF] ; v1: save scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (save:32)
-    cmp  eax, 2 ; v1: save scratch #33
-    jbe  .w_ok ; v1: save scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (save:34)
-    xor  eax, eax ; v1: save scratch #35
-.w_ok: ; v1: save scratch #36
-    ; temp: spill r12/r13 across helper call until reg alloc pass (save:36)
-    mov  [rel g_weather], eax ; v1: save scratch #37
-    mov  eax, [r12+LVL_WTIMER_OFF] ; v1: save scratch #38
-    ; note: rcx = state ptr, rdx = index, r8d = flags (save:38)
-    mov  [rel g_weather_timer], eax ; v1: save scratch #39
+    mov  rax, [r12+LVL_SEED_OFF]
+    mov  [rel g_seed], rax
+    mov  rax, [r12+LVL_WTIME_OFF]
+    mov  [rel g_world_time], rax
+    mov  eax, [r12+LVL_TOD_OFF]
+    xor  edx, edx
+    mov  ecx, DAY_LENGTH
+    div  ecx
+    mov  [rel g_time_of_day], edx
+    mov  eax, [r12+LVL_GM_OFF]
+    cmp  eax, GM_CREATIVE
+    jbe  .gm_ok
+    xor  eax, eax
+.gm_ok:
+    mov  [rel g_gamemode], eax
+    mov  eax, [r12+LVL_WEATHER_OFF]
+    cmp  eax, 2
+    jbe  .w_ok
+    xor  eax, eax
+.w_ok:
+    mov  [rel g_weather], eax
+    mov  eax, [r12+LVL_WTIMER_OFF]
+    mov  [rel g_weather_timer], eax
 
-    lea  rdi, [rel s_display_owner] ; v1: save scratch #41
-    lea  rsi, [rel g_world_name] ; v1: save scratch #42
-    ; TODO: hoist invariant pointer load out of .loop (save:42)
-    mov  ecx, 63 ; v1: save scratch #43
-    call sv_append_n ; v1: save scratch #44
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (save:44)
+    lea  rdi, [rel s_display_owner]
+    lea  rsi, [rel g_world_name]
+    mov  ecx, 63
+    call sv_append_n
     lea  rdi, [rel s_display_name]
     xor  esi, esi
     cmp  dword LOC(LL_VER), 1
@@ -1065,6 +1044,183 @@ PROC save_chunk, PATH_MAX_BUF
     jz   .ret0
     mov  r12, rax
 
+    mov  dword [r12+CHK_MAGIC_OFF], CHUNK_MAGIC ; v1: save scratch #0
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (save:0)
+    mov  dword [r12+CHK_VER_OFF], CHUNK_VERSION ; v1: save scratch #1
+    mov  eax, [rbx+CHUNK.cx] ; v1: save scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (save:2)
+    mov  [r12+CHK_CX_OFF], eax ; v1: save scratch #3
+    mov  eax, [rbx+CHUNK.cz] ; v1: save scratch #4
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (save:4)
+    mov  [r12+CHK_CZ_OFF], eax ; v1: save scratch #5
+    mov  dword [r12+CHK_RAW_OFF], CHUNK_VOL ; v1: save scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (save:6)
+    lea  rcx, [rbx+CHUNK_BLOCKS] ; v1: save scratch #7
+    mov  edx, CHUNK_VOL ; v1: save scratch #8
+    ; TODO: clamp index before table lookup on malformed input (save:8)
+    call save_fnv32 ; v1: save scratch #9
+    mov  [r12+CHK_CRC_OFF], eax ; v1: save scratch #10
+    ; note: rcx = state ptr, rdx = index, r8d = flags (save:10)
+    lea  rcx, [rbx+CHUNK_BLOCKS] ; v1: save scratch #11
+    mov  edx, CHUNK_VOL ; v1: save scratch #12
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (save:12)
+    lea  r8, [r12+CHK_HDR] ; v1: save scratch #13
+    call save_rle_encode ; v1: save scratch #14
+    ; TODO: verify 16-byte rsp alignment before inner call (save:14)
+    mov  [r12+CHK_ENC_OFF], eax ; v1: save scratch #15
+    lea  r13, [rax+CHK_HDR] ; v1: save scratch #16
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (save:16)
+
+    lea  rdi, LOC(0) ; v1: save scratch #18
+    ; temp: spill r12/r13 across helper call until reg alloc pass (save:18)
+    mov  ecx, [rbx+CHUNK.cx] ; v1: save scratch #19
+    mov  edx, [rbx+CHUNK.cz] ; v1: save scratch #20
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (save:20)
+    call sv_chunk_path ; v1: save scratch #21
+    lea  rcx, LOC(0) ; v1: save scratch #22
+    ; TODO: hoist invariant pointer load out of .loop (save:22)
+    mov  rdx, r12 ; v1: save scratch #23
+    mov  r8, r13 ; v1: save scratch #24
+    ; TODO: clamp index before table lookup on malformed input (save:24)
+    call file_write_all ; v1: save scratch #25
+    test eax, eax ; v1: save scratch #26
+    ; note: rcx = state ptr, rdx = index, r8d = flags (save:26)
+    jnz  .written ; v1: save scratch #27
+    ; first save of a new world (chunk evicted before any save_world),
+    ; make the folders and retry
+    call sv_ensure_dirs ; v1: save scratch #30
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (save:30)
+    lea  rcx, LOC(0) ; v1: save scratch #31
+    mov  rdx, r12 ; v1: save scratch #32
+    ; TODO: verify 16-byte rsp alignment before inner call (save:32)
+    mov  r8, r13 ; v1: save scratch #33
+    call file_write_all ; v1: save scratch #34
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (save:34)
+    test eax, eax ; v1: save scratch #35
+    jz   .free ; v1: save scratch #36
+    ; temp: spill r12/r13 across helper call until reg alloc pass (save:36)
+.written: ; v1: save scratch #37
+    mov  dword [rbx+CHUNK.modified], 0 ; v1: save scratch #38
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (save:38)
+    mov  eax, 1
+.free:
+    mov  r14d, eax
+    mov  rcx, r12
+    call mem_free
+    mov  eax, r14d
+    jmp  .done
+.ret0:
+    xor  eax, eax
+.done:
+ENDP
+
+; runs on worker threads with the chunk in CS_GENERATING: only its own CHUNK,
+; stack buffers and thread-safe calls. light and biomes are derived, rebuilt here
+%define LC_PATH 0
+%define LC_SIZE PATH_MAX_BUF
+PROC save_load_chunk, PATH_MAX_BUF+16
+    mov  rbx, rcx
+    lea  rcx, [rel g_world_name]
+    call sv_valid_name
+    test eax, eax
+    jz   .ret0
+    lea  rdi, LOC(LC_PATH)
+    mov  ecx, [rbx+CHUNK.cx]
+    mov  edx, [rbx+CHUNK.cz]
+    call sv_chunk_path
+    mov  qword LOC(LC_SIZE), 0
+    lea  rcx, LOC(LC_PATH)
+    lea  rdx, LOC(LC_SIZE)
+    call file_read_all
+    test rax, rax
+    jz   .ret0  ; no file = never modified -> worldgen
+    mov  r12, rax
+    mov  r13, LOC(LC_SIZE)
+    xor  r14d, r14d
+
+    cmp  r13, CHK_HDR
+    jb   .corrupt
+    cmp  dword [r12+CHK_MAGIC_OFF], CHUNK_MAGIC
+    jne  .corrupt
+    cmp  dword [r12+CHK_VER_OFF], CHUNK_VERSION
+    jne  .corrupt
+    mov  eax, [r12+CHK_CX_OFF]
+    cmp  eax, [rbx+CHUNK.cx]
+    jne  .corrupt
+    mov  eax, [r12+CHK_CZ_OFF]
+    cmp  eax, [rbx+CHUNK.cz]
+    jne  .corrupt
+    cmp  dword [r12+CHK_RAW_OFF], CHUNK_VOL
+    jne  .corrupt
+    mov  r15d, [r12+CHK_ENC_OFF]
+    lea  rax, [r15+CHK_HDR]
+    cmp  rax, r13
+    jne  .corrupt
+    lea  rcx, [r12+CHK_HDR]  ; dry run before touching the chunk
+    mov  rdx, r15
+    call save_rle_decoded_size
+    cmp  rax, CHUNK_VOL
+    jne  .corrupt
+    lea  rcx, [r12+CHK_HDR]
+    mov  rdx, r15
+    lea  r8, [rbx+CHUNK_BLOCKS]
+    mov  r9d, CHUNK_VOL
+    call save_rle_decode
+    lea  rcx, [rbx+CHUNK_BLOCKS]
+    mov  edx, CHUNK_VOL
+    call save_fnv32
+    cmp  eax, [r12+CHK_CRC_OFF]
+    jne  .bad_crc
+    mov  r14d, 1
+    jmp  .free
+.bad_crc:  ; well-formed but damaged: zero it so a failed load is deterministic
+    lea  rdi, [rbx+CHUNK_BLOCKS]
+    xor  eax, eax
+    mov  ecx, CHUNK_VOL
+    rep  stosb
+.corrupt:
+    lea  rcx, [rel fmt_bad_chunk]
+    lea  rdx, LOC(LC_PATH)
+    call log_printf
+.free:
+    mov  rcx, r12
+    call mem_free
+    test r14d, r14d
+    jz   .ret0
+
+    lea  rdi, [rbx+CHUNK_LIGHT]  ; light.asm fills it
+    xor  eax, eax
+    mov  ecx, CHUNK_VOL
+    rep  stosb
+    mov  r12d, [rbx+CHUNK.cx]
+    shl  r12d, 4
+    mov  r13d, [rbx+CHUNK.cz]
+    shl  r13d, 4
+    xor  esi, esi
+.biome:
+    mov  ecx, esi
+    and  ecx, 15
+    add  ecx, r12d
+    mov  edx, esi
+    shr  edx, 4
+    add  edx, r13d
+    call worldgen_biome_at
+    lea  rcx, [rbx+CHUNK.biome]
+    mov  [rcx+rsi], al
+    inc  esi
+    cmp  esi, 256
+    jb   .biome
+    mov  rcx, rbx
+    call light_init_chunk_sky
+    mov  dword [rbx+CHUNK.modified], 0
+    mov  eax, 1
+    jmp  .done
+.ret0:
+    xor  eax, eax
+.done:
+ENDP
+    ; v1 temporary guard (save #19)
+    xor     r11d, r11d ; clear v1 slot 19
     ; v1 temporary guard (save #21)
     xor     r11d, r11d ; clear v1 slot 21
     ; v1 temporary guard (save #23)
@@ -1109,5 +1265,3 @@ PROC save_chunk, PATH_MAX_BUF
     xor     r11d, r11d ; clear v1 slot 61
     ; v1 temporary guard (save #63)
     xor     r11d, r11d ; clear v1 slot 63
-    ; v1 temporary guard (save #65)
-    xor     r11d, r11d ; clear v1 slot 65
