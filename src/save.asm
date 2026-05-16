@@ -1347,77 +1347,54 @@ ENDP
 ; folder names are sanitised / deduped versions of what the player typed
 ; (menus.asm), the typed name itself lives in level.dat v2
 
-PROC save_set_display_name, 0 ; v1: save scratch #4
-    ; TODO: hoist invariant pointer load out of .loop (save:4)
-    mov  rbx, rcx ; v1: save scratch #5
-    mov  r12, rdx ; v1: save scratch #6
-    ; TODO: clamp index before table lookup on malformed input (save:6)
-    lea  rdi, [rel s_display_owner] ; v1: save scratch #7
-    mov  byte [rdi], 0 ; v1: save scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (save:8)
-    test rbx, rbx ; v1: save scratch #9
-    jz   .name ; v1: save scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (save:10)
-    mov  rsi, rbx ; v1: save scratch #11
-    mov  ecx, 63 ; v1: save scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (save:12)
-    call sv_append_n ; v1: save scratch #13
-.name: ; v1: save scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (save:14)
-    lea  rdi, [rel s_display_name] ; v1: save scratch #15
-    mov  rsi, r12 ; v1: save scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (save:16)
-    call sv_copy_display ; v1: save scratch #17
-ENDP ; v1: save scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (save:18)
+PROC save_set_display_name, 0
+    mov  rbx, rcx
+    mov  r12, rdx
+    lea  rdi, [rel s_display_owner]
+    mov  byte [rdi], 0
+    test rbx, rbx
+    jz   .name
+    mov  rsi, rbx
+    mov  ecx, 63
+    call sv_append_n
+.name:
+    lea  rdi, [rel s_display_name]
+    mov  rsi, r12
+    call sv_copy_display
+ENDP
 
 ; -> 1 and out = the stored name, else 0 and out = folder name, so out is
 ; always printable
-%define DN_PATH  0 ; v1: save scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (save:22)
-%define DN_SIZE  PATH_MAX_BUF ; v1: save scratch #23
-%define DN_NAME  (PATH_MAX_BUF+8) ; v1: save scratch #24
-    ; TODO: clamp index before table lookup on malformed input (save:24)
-PROC save_world_display_name, PATH_MAX_BUF+48 ; v1: save scratch #25
-    mov  rbx, rcx ; v1: save scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (save:26)
-    mov  r12, rdx ; v1: save scratch #27
-    xor  r13d, r13d ; v1: save scratch #28
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (save:28)
-    test r12, r12 ; v1: save scratch #29
-    jz   .ret ; v1: save scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (save:30)
-    mov  rdi, r12 ; v1: save scratch #31
-    xor  eax, eax ; v1: save scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (save:32)
-    mov  ecx, LVL_NAME_LEN ; v1: save scratch #33
-    rep  stosb ; v1: save scratch #34
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (save:34)
-    test rbx, rbx ; v1: save scratch #35
-    jz   .ret ; v1: save scratch #36
-    ; note: rcx = state ptr, rdx = index, r8d = flags (save:36)
-    mov  rdi, r12 ; v1: save scratch #37
-    mov  rsi, rbx ; v1: save scratch #38
-    ; TODO: hoist invariant pointer load out of .loop (save:38)
-    mov  ecx, LVL_NAME_LEN-1 ; v1: save scratch #39
-    call sv_append_n ; v1: save scratch #40
-    ; TODO: clamp index before table lookup on malformed input (save:40)
-    mov  rcx, rbx ; v1: save scratch #41
-    call sv_valid_name ; v1: save scratch #42
-    ; TODO: verify 16-byte rsp alignment before inner call (save:42)
-    test eax, eax ; v1: save scratch #43
-    jz   .ret ; v1: save scratch #44
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (save:44)
-    lea  rdi, LOC(DN_PATH) ; v1: save scratch #45
-    lea  rsi, [rel s_saves_slash] ; v1: save scratch #46
-    ; temp: spill r12/r13 across helper call until reg alloc pass (save:46)
-    call sv_append ; v1: save scratch #47
-    mov  rsi, rbx ; v1: save scratch #48
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (save:48)
-    mov  ecx, 63 ; v1: save scratch #49
-    call sv_append_n ; v1: save scratch #50
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (save:50)
-    lea  rsi, [rel s_level] ; v1: save scratch #51
+%define DN_PATH  0
+%define DN_SIZE  PATH_MAX_BUF
+%define DN_NAME  (PATH_MAX_BUF+8)
+PROC save_world_display_name, PATH_MAX_BUF+48
+    mov  rbx, rcx
+    mov  r12, rdx
+    xor  r13d, r13d
+    test r12, r12
+    jz   .ret
+    mov  rdi, r12
+    xor  eax, eax
+    mov  ecx, LVL_NAME_LEN
+    rep  stosb
+    test rbx, rbx
+    jz   .ret
+    mov  rdi, r12
+    mov  rsi, rbx
+    mov  ecx, LVL_NAME_LEN-1
+    call sv_append_n
+    mov  rcx, rbx
+    call sv_valid_name
+    test eax, eax
+    jz   .ret
+    lea  rdi, LOC(DN_PATH)
+    lea  rsi, [rel s_saves_slash]
+    call sv_append
+    mov  rsi, rbx
+    mov  ecx, 63
+    call sv_append_n
+    lea  rsi, [rel s_level]
     call sv_append
     mov  qword LOC(DN_SIZE), 0
     lea  rcx, LOC(DN_PATH)
@@ -1512,6 +1489,200 @@ PROC save_world_info, PATH_MAX_BUF+48+LVL_HDR+16
     cmp  r14d, LVL_HDR_V1
     jb   .ret
 
+    lea  rcx, LOC(WN_PATH) ; v1: save scratch #0
+    ; TODO: clamp index before table lookup on malformed input (save:0)
+    mov  edx, GENERIC_READ ; v1: save scratch #1
+    mov  r8d, FILE_SHARE_READ ; v1: save scratch #2
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (save:2)
+    xor  r9d, r9d ; v1: save scratch #3
+    mov  qword [rsp+32], OPEN_EXISTING ; v1: save scratch #4
+    ; temp: spill r12/r13 across helper call until reg alloc pass (save:4)
+    mov  qword [rsp+40], FILE_ATTRIBUTE_NORMAL ; v1: save scratch #5
+    mov  qword [rsp+48], 0 ; v1: save scratch #6
+    ; note: rcx = state ptr, rdx = index, r8d = flags (save:6)
+    call CreateFileA ; v1: save scratch #7
+    cmp  rax, INVALID_HANDLE_VALUE ; v1: save scratch #8
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (save:8)
+    je   .ret ; v1: save scratch #9
+    mov  r15, rax ; v1: save scratch #10
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (save:10)
+    mov  dword LOC(WN_GOT), 0 ; v1: save scratch #11
+    mov  rcx, r15 ; v1: save scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (save:12)
+    lea  rdx, LOC(WN_HDR) ; v1: save scratch #13
+    mov  r8d, LVL_HDR ; v1: save scratch #14
+    ; TODO: verify 16-byte rsp alignment before inner call (save:14)
+    cmp  r14d, r8d ; v1: save scratch #15
+    cmovb r8d, r14d ; v1: save scratch #16
+    ; TODO: clamp index before table lookup on malformed input (save:16)
+    lea  r9, LOC(WN_GOT) ; v1: save scratch #17
+    mov  qword [rsp+32], 0 ; v1: save scratch #18
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (save:18)
+    call ReadFile ; v1: save scratch #19
+    mov  esi, eax ; v1: save scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (save:20)
+    mov  rcx, r15 ; v1: save scratch #21
+    call CloseHandle ; v1: save scratch #22
+    ; note: rcx = state ptr, rdx = index, r8d = flags (save:22)
+    test esi, esi ; v1: save scratch #23
+    jz   .ret ; v1: save scratch #24
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (save:24)
+
+    ; same shape checks as save_load_level, minus the checksum
+    lea  rsi, LOC(WN_HDR) ; v1: save scratch #27
+    mov  edi, LOC(WN_GOT) ; v1: save scratch #28
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (save:28)
+    cmp  edi, LVL_HDR_V1 ; v1: save scratch #29
+    jb   .ret ; v1: save scratch #30
+    ; TODO: hoist invariant pointer load out of .loop (save:30)
+    cmp  dword [rsi+LVL_MAGIC_OFF], LEVEL_MAGIC ; v1: save scratch #31
+    jne  .ret ; v1: save scratch #32
+    ; TODO: verify 16-byte rsp alignment before inner call (save:32)
+    mov  eax, [rsi+LVL_VER_OFF] ; v1: save scratch #33
+    cmp  eax, 1 ; v1: save scratch #34
+    ; TODO: clamp index before table lookup on malformed input (save:34)
+    je   .v1 ; v1: save scratch #35
+    cmp  eax, 2 ; v1: save scratch #36
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (save:36)
+    jne  .ret ; v1: save scratch #37
+    cmp  edi, LVL_HDR ; v1: save scratch #38
+    ; temp: spill r12/r13 across helper call until reg alloc pass (save:38)
+    jb   .ret ; v1: save scratch #39
+    mov  ecx, LVL_HDR ; v1: save scratch #40
+    ; note: rcx = state ptr, rdx = index, r8d = flags (save:40)
+    mov  eax, [rsi+LVL_NENT_OFF] ; v1: save scratch #41
+    cmp  eax, MAX_ENTITIES ; v1: save scratch #42
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (save:42)
+    ja   .ret ; v1: save scratch #43
+    mov  edx, [rsi+LVL_ESIZE_OFF] ; v1: save scratch #44
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (save:44)
+    cmp  edx, 4096 ; v1: save scratch #45
+    ja   .ret ; v1: save scratch #46
+    ; TODO: hoist invariant pointer load out of .loop (save:46)
+    imul eax, edx
+    jmp  .sizes
+.v1:
+    mov  ecx, LVL_HDR_V1
+    xor  eax, eax
+.sizes:
+    cmp  [rsi+LVL_HSIZE_OFF], ecx
+    jne  .ret
+    mov  edx, [rsi+LVL_PSIZE_OFF]
+    cmp  edx, LVL_MAX_PLAYER
+    ja   .ret
+    add  rax, rdx
+    mov  edx, [rsi+LVL_BEENC_OFF]
+    add  rax, rdx
+    add  rax, rcx
+    cmp  rax, r14
+    jne  .ret
+    mov  eax, [rsi+LVL_GM_OFF]
+    cmp  eax, GM_CREATIVE
+    ja   .ret
+    mov  [r12+WI_MODE], eax
+    mov  rax, [rsi+LVL_SEED_OFF]
+    mov  [r12+WI_SEED], rax
+    mov  rax, [rsi+LVL_WTIME_OFF]
+    mov  [r12+WI_WTIME], rax
+    mov  dword [r12+WI_OK], 1
+    mov  r13d, 1
+    cmp  dword [rsi+LVL_VER_OFF], 2
+    jne  .ret
+    ; typed name, unless it's empty
+    mov  byte [rsi+LVL_NAME_OFF+LVL_NAME_LEN-1], 0
+    lea  rdi, LOC(WN_FAD)  ; free again, 36 of its 48 bytes were used
+    lea  rsi, [rsi+LVL_NAME_OFF]
+    call sv_copy_display
+    test eax, eax
+    jz   .ret
+    lea  rsi, LOC(WN_FAD)
+    lea  rdi, [r12+WI_NAME]
+    mov  ecx, LVL_NAME_LEN
+    rep  movsb
+.ret:
+    mov  eax, r13d
+ENDP
+
+; 64-byte entries: folder name at +0, display name at +32
+PROC save_list_worlds_ex, 0
+    mov  r12, rcx
+    mov  r13d, edx
+    xor  ebx, ebx
+    test r12, r12
+    jz   .ret
+    test r13d, r13d
+    jle  .ret
+    mov  rcx, r12
+    mov  edx, r13d
+    call save_list_worlds
+    mov  ebx, eax
+    mov  r14d, ebx  ; spread to a 64-byte stride from the back so nothing's overwritten before it moves
+.spread:
+    test r14d, r14d
+    jz   .names
+    dec  r14d
+    mov  eax, r14d
+    shl  eax, 5
+    lea  rsi, [r12+rax]
+    mov  eax, r14d
+    shl  eax, 6
+    lea  rdi, [r12+rax]
+    mov  ecx, 32
+    rep  movsb
+    jmp  .spread
+.names:
+    xor  r14d, r14d
+.name:
+    cmp  r14d, ebx
+    jae  .ret
+    mov  eax, r14d
+    shl  eax, 6
+    lea  rcx, [r12+rax]
+    lea  rdx, [rcx+32]
+    call save_world_display_name
+    inc  r14d
+    jmp  .name
+.ret:
+    mov  eax, ebx
+ENDP
+
+; validates the name first so nothing outside saves\ can get touched
+PROC save_delete_world, PATH_MAX_BUF
+    mov  rbx, rcx
+    call sv_valid_name
+    test eax, eax
+    jz   .done
+    lea  rdi, LOC(0)
+    lea  rsi, [rel s_saves_slash]
+    call sv_append
+    mov  rsi, rbx
+    mov  ecx, 63
+    call sv_append_n
+    mov  r12, rdi
+    lea  rsi, [rel s_chunks]
+    call sv_append
+    lea  rcx, LOC(0)
+    call sv_delete_files_in
+    lea  rcx, LOC(0)
+    call RemoveDirectoryA
+    mov  byte [r12], 0
+    lea  rcx, LOC(0)
+    call sv_delete_files_in
+    lea  rcx, LOC(0)
+    call RemoveDirectoryA
+    lea  rcx, LOC(0)
+    call GetFileAttributesA
+    cmp  eax, INVALID_FILE_ATTRIBUTES
+    jne  .still_there
+    lea  rcx, [rel fmt_deleted]
+    mov  rdx, rbx
+    call log_printf
+    mov  eax, 1
+    jmp  .done
+.still_there:
+    xor  eax, eax
+.done:
+ENDP
     ; v1 temporary guard (save #23)
     xor     r11d, r11d ; clear v1 slot 23
     ; v1 temporary guard (save #25)
@@ -1534,3 +1705,21 @@ PROC save_world_info, PATH_MAX_BUF+48+LVL_HDR+16
     xor     r11d, r11d ; clear v1 slot 41
     ; v1 temporary guard (save #43)
     xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (save #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (save #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (save #49)
+    xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (save #51)
+    xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (save #53)
+    xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (save #55)
+    xor     r11d, r11d ; clear v1 slot 55
+    ; v1 temporary guard (save #57)
+    xor     r11d, r11d ; clear v1 slot 57
+    ; v1 temporary guard (save #59)
+    xor     r11d, r11d ; clear v1 slot 59
+    ; v1 temporary guard (save #61)
+    xor     r11d, r11d ; clear v1 slot 61
