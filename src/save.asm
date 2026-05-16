@@ -1660,3 +1660,60 @@ PROC save_delete_world, PATH_MAX_BUF
     xor  eax, eax
 .done:
 ENDP
+
+PROC save_world_exists, PATH_MAX_BUF
+    mov  rbx, rcx
+    call sv_valid_name
+    test eax, eax
+    jz   .done
+    lea  rdi, LOC(0)
+    lea  rsi, [rel s_saves_slash]
+    call sv_append
+    mov  rsi, rbx
+    mov  ecx, 63
+    call sv_append_n
+    lea  rsi, [rel s_level]
+    call sv_append
+    lea  rcx, LOC(0)
+    call GetFileAttributesA
+    cmp  eax, INVALID_FILE_ATTRIBUTES
+    je   .no
+    test eax, FILE_ATTRIBUTE_DIRECTORY
+    jnz  .no
+    mov  eax, 1
+    jmp  .done
+.no:
+    xor  eax, eax
+.done:
+ENDP
+
+; runs on g_world_time so pausing stops it. time going backwards (new world
+; at 0, never saved) just restarts the countdown
+PROC save_autosave_tick, 0
+    cmp  dword [rel g_world_active], 0
+    je   .done
+    mov  rax, [rel g_world_time]
+    mov  rdx, [rel s_last_save_time]
+    cmp  rax, rdx
+    jae  .elapsed
+    mov  [rel s_last_save_time], rax
+    jmp  .done
+.elapsed:
+    sub  rax, rdx
+    cmp  rax, AUTOSAVE_TICKS
+    jb   .done
+    call save_world
+    test eax, eax
+    jz   .fail
+    lea  rcx, [rel s_game_saved]
+    mov  edx, COL_SAVED
+    call chat_add
+    jmp  .done
+.fail:
+    mov  rax, [rel g_world_time]  ; don't retry every tick
+    mov  [rel s_last_save_time], rax
+    lea  rcx, [rel s_save_failed]
+    mov  edx, COL_SAVE_FAIL
+    call chat_add
+.done:
+ENDP
