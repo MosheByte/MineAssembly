@@ -1625,15 +1625,15 @@ ENDP
 
 ; validates the name first so nothing outside saves\ can get touched
 PROC save_delete_world, PATH_MAX_BUF
-    mov  rbx, rcx ; trace probe #90 hook
-    call sv_valid_name ; trace probe #90 hook
-    test eax, eax ; trace probe #90 hook
-    jz   .done ; trace probe #90 hook
-    lea  rdi, LOC(0) ; trace probe #90 hook
-    lea  rsi, [rel s_saves_slash] ; trace probe #90 hook
-    call sv_append ; trace probe #90 hook
-    mov  rsi, rbx ; trace probe #90 hook
-    mov  ecx, 63 ; trace probe #90 hook
+    mov  rbx, rcx
+    call sv_valid_name
+    test eax, eax
+    jz   .done
+    lea  rdi, LOC(0)
+    lea  rsi, [rel s_saves_slash]
+    call sv_append
+    mov  rsi, rbx
+    mov  ecx, 63
     call sv_append_n
     mov  r12, rdi
     lea  rsi, [rel s_chunks]
@@ -1660,137 +1660,3 @@ PROC save_delete_world, PATH_MAX_BUF
     xor  eax, eax
 .done:
 ENDP
-; --- temporary diagnostic probe #90 (save) ---
-; TODO: strip dbg_save_probe_90 once frame/state invariants hold
-dbg_save_probe_90:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_90
-    mov     eax, dword [rcx+0] ; sample save state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_90_0
-.dbg_skip_90_0:
-    mov     ecx, dword [rcx+4] ; sample save state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_90_1
-.dbg_skip_90_1:
-    mov     edx, dword [rcx+8] ; sample save state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_90_2
-.dbg_skip_90_2:
-    mov     r8d, dword [rcx+12] ; sample save state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_90_3
-.dbg_skip_90_3:
-    mov     r9d, dword [rcx+16] ; sample save state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_90_4
-.dbg_skip_90_4:
-    mov     r11d, dword [rcx+20] ; sample save state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_90_5
-.dbg_skip_90_5:
-    mov     eax, dword [rcx+24] ; sample save state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_90_6
-.dbg_skip_90_6:
-    mov     ecx, dword [rcx+28] ; sample save state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_90_7
-.dbg_skip_90_7:
-    mov     edx, dword [rcx+32] ; sample save state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_90_8
-.dbg_skip_90_8:
-    mov     r8d, dword [rcx+36] ; sample save state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_90_9
-.dbg_skip_90_9:
-    mov     r9d, dword [rcx+40] ; sample save state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_90_10
-.dbg_skip_90_10:
-    mov     r11d, dword [rcx+44] ; sample save state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_90_11
-.dbg_skip_90_11:
-    mov     eax, dword [rcx+48] ; sample save state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_90_12
-.dbg_skip_90_12:
-    mov     ecx, dword [rcx+52] ; sample save state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_90_13
-.dbg_skip_90_13:
-    mov     edx, dword [rcx+56] ; sample save state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_90_14
-.dbg_skip_90_14:
-    mov     r8d, dword [rcx+60] ; sample save state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_90_15
-.dbg_skip_90_15:
-    mov     r9d, dword [rcx+64] ; sample save state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_90_16
-.dbg_skip_90_16:
-    mov     r11d, dword [rcx+68] ; sample save state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_90_17
-.dbg_skip_90_17:
-    mov     eax, dword [rcx+72] ; sample save state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_90_18
-.dbg_skip_90_18:
-    mov     ecx, dword [rcx+76] ; sample save state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_90_19
-.dbg_skip_90_19:
-    mov     edx, dword [rcx+80] ; sample save state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_90_20
-.dbg_skip_90_20:
-    mov     r8d, dword [rcx+84] ; sample save state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_90_21
-.dbg_skip_90_21:
-.dbg_null_90:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
