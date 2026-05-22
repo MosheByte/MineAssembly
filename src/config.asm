@@ -258,70 +258,49 @@ PROC config_load, 16
     call cfg_apply
     lea  rax, [rel cfg_opts]
     mov  rcx, rdi
-    sub  rcx, rax ; v1: config scratch #0
-    ; TODO: verify 16-byte rsp alignment before inner call (config:0)
-    shr  rcx, 5 ; v1: config scratch #1
-    bts  r15d, ecx ; v1: config scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (config:2)
-.next_line: ; v1: config scratch #3
-    mov  rsi, r13 ; v1: config scratch #4
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (config:4)
-    jmp  .line ; v1: config scratch #5
+    sub  rcx, rax
+    shr  rcx, 5  ; /OPT_SIZE
+    bts  r15d, ecx
+.next_line:
+    mov  rsi, r13
+    jmp  .line
 
-.eof: ; v1: config scratch #7
-    mov  rcx, r12 ; v1: config scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (config:8)
-    call mem_free ; v1: config scratch #9
-    cmp  r15d, OPT_ALL_MASK ; v1: config scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (config:10)
-    je   .done ; v1: config scratch #11
-    call config_save ; v1: config scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (config:12)
-.done: ; v1: config scratch #13
-ENDP ; v1: config scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (config:14)
+.eof:
+    mov  rcx, r12
+    call mem_free
+    cmp  r15d, OPT_ALL_MASK
+    je   .done
+    call config_save  ; something was missing, rewrite all of it
+.done:
+ENDP
 
-    global config_save ; v1: config scratch #16
-    ; TODO: clamp index before table lookup on malformed input (config:16)
-    align 16 ; v1: config scratch #17
-config_save: ; v1: config scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (config:18)
-    push rbp ; v1: config scratch #19
-    mov  rbp, rsp ; v1: config scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (config:20)
-    push rbx ; v1: config scratch #21
-    push rsi ; v1: config scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (config:22)
-    push rdi ; v1: config scratch #23
-    push r12 ; v1: config scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (config:24)
-    push r13 ; v1: config scratch #25
-    sub  rsp, FRAME_OUT + 8 ; v1: config scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (config:26)
-    lea  rdi, [rel cfg_buf] ; v1: config scratch #27
-    lea  rsi, [rel s_header] ; v1: config scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (config:28)
-    call cfg_append ; v1: config scratch #29
-    lea  rbx, [rel cfg_opts] ; v1: config scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (config:30)
-    lea  r13, [rel g_settings] ; v1: config scratch #31
-    mov  r12d, OPT_COUNT ; v1: config scratch #32
-    ; TODO: clamp index before table lookup on malformed input (config:32)
-.row: ; v1: config scratch #33
-    mov  rsi, [rbx+OPT_NAME] ; v1: config scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (config:34)
-    call cfg_append ; v1: config scratch #35
-    mov  byte [rdi], ':' ; v1: config scratch #36
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (config:36)
-    inc  rdi ; v1: config scratch #37
-    mov  eax, [rbx+OPT_OFS] ; v1: config scratch #38
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (config:38)
-    cmp  dword [rbx+OPT_TYPE], OT_FLOAT ; v1: config scratch #39
-    je   .float ; v1: config scratch #40
-    ; TODO: hoist invariant pointer load out of .loop (config:40)
-    mov  eax, [r13+rax] ; v1: config scratch #41
-    call cfg_append_int ; v1: config scratch #42
-    ; temp: spill r12/r13 across helper call until reg alloc pass (config:42)
+    global config_save
+    align 16
+config_save:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    sub  rsp, FRAME_OUT + 8
+    lea  rdi, [rel cfg_buf]
+    lea  rsi, [rel s_header]
+    call cfg_append
+    lea  rbx, [rel cfg_opts]
+    lea  r13, [rel g_settings]
+    mov  r12d, OPT_COUNT
+.row:
+    mov  rsi, [rbx+OPT_NAME]
+    call cfg_append
+    mov  byte [rdi], ':'
+    inc  rdi
+    mov  eax, [rbx+OPT_OFS]
+    cmp  dword [rbx+OPT_TYPE], OT_FLOAT
+    je   .float
+    mov  eax, [r13+rax]
+    call cfg_append_int
     jmp  .eol
 .float:
     movss xmm0, [r13+rax]
@@ -394,6 +373,177 @@ cfg_apply:
     minss xmm0, xmm1
     movss [r9], xmm0
     ret
+.not_float: ; v1: config scratch #0
+    ; TODO: hoist invariant pointer load out of .loop (config:0)
+    cmp  eax, OT_BOOL ; v1: config scratch #1
+    jne  .int ; v1: config scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (config:2)
+    xorps xmm1, xmm1 ; v1: config scratch #3
+    xor  edx, edx ; v1: config scratch #4
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (config:4)
+    ucomiss xmm0, xmm1 ; v1: config scratch #5
+    setne dl ; v1: config scratch #6
+    ; note: rcx = state ptr, rdx = index, r8d = flags (config:6)
+    mov  [r9], edx ; v1: config scratch #7
+    ret ; v1: config scratch #8
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (config:8)
+.int: ; v1: config scratch #9
+    cvtsi2ss xmm1, dword [rcx+OPT_MIN] ; v1: config scratch #10
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (config:10)
+    maxss xmm0, xmm1 ; v1: config scratch #11
+    cvtsi2ss xmm1, dword [rcx+OPT_MAX] ; v1: config scratch #12
+    ; TODO: clamp index before table lookup on malformed input (config:12)
+    minss xmm0, xmm1 ; v1: config scratch #13
+    cvtss2si eax, xmm0 ; v1: config scratch #14
+    ; TODO: verify 16-byte rsp alignment before inner call (config:14)
+    mov  [r9], eax ; v1: config scratch #15
+    ret ; v1: config scratch #16
+    ; TODO: hoist invariant pointer load out of .loop (config:16)
+
+; rcx start, rdx end -> eax 1 + xmm0, or 0. token, then only blanks or a # comment
+%define PV_NEG  0 ; v1: config scratch #19
+SPROC cfg_parse_value, 16 ; v1: config scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (config:20)
+    mov  rsi, rcx ; v1: config scratch #21
+    mov  rdi, rdx ; v1: config scratch #22
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (config:22)
+.skip_ws: ; v1: config scratch #23
+    cmp  rsi, rdi ; v1: config scratch #24
+    ; note: rcx = state ptr, rdx = index, r8d = flags (config:24)
+    jae  .fail ; v1: config scratch #25
+    movzx eax, byte [rsi] ; v1: config scratch #26
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (config:26)
+    cmp  eax, ' ' ; v1: config scratch #27
+    je   .ws ; v1: config scratch #28
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (config:28)
+    cmp  eax, 9 ; v1: config scratch #29
+    jne  .tok ; v1: config scratch #30
+    ; TODO: clamp index before table lookup on malformed input (config:30)
+.ws: ; v1: config scratch #31
+    inc  rsi ; v1: config scratch #32
+    ; TODO: verify 16-byte rsp alignment before inner call (config:32)
+    jmp  .skip_ws ; v1: config scratch #33
+.tok: ; v1: config scratch #34
+    ; TODO: hoist invariant pointer load out of .loop (config:34)
+    mov  rbx, rsi ; v1: config scratch #35
+.tok_end: ; v1: config scratch #36
+    ; temp: spill r12/r13 across helper call until reg alloc pass (config:36)
+    cmp  rbx, rdi ; v1: config scratch #37
+    jae  .tok_done ; v1: config scratch #38
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (config:38)
+    movzx eax, byte [rbx] ; v1: config scratch #39
+    cmp  eax, ' ' ; v1: config scratch #40
+    ; note: rcx = state ptr, rdx = index, r8d = flags (config:40)
+    jbe  .tok_done ; v1: config scratch #41
+    cmp  eax, '#' ; v1: config scratch #42
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (config:42)
+    je   .tok_done ; v1: config scratch #43
+    inc  rbx
+    jmp  .tok_end
+.tok_done:
+    cmp  rbx, rsi
+    je   .fail
+    mov  rcx, rbx
+.rest:
+    cmp  rcx, rdi
+    jae  .rest_ok
+    movzx eax, byte [rcx]
+    cmp  eax, '#'
+    je   .rest_ok
+    cmp  eax, ' '
+    ja   .fail  ; "70 abc" -> nope
+    inc  rcx
+    jmp  .rest
+.rest_ok:
+    mov  r12, rbx
+    sub  r12, rsi
+
+    lea  r13, [rel cfg_words]
+.word:
+    mov  r14, [r13]
+    test r14, r14
+    jz   .number
+    xor  edx, edx
+.wch:
+    cmp  rdx, r12
+    jae  .wend
+    movzx eax, byte [r14+rdx]
+    test eax, eax
+    jz   .wnext
+    movzx r8d, byte [rsi+rdx]
+    TOLOWER r8, r8d, r9d
+    cmp  eax, r8d
+    jne  .wnext
+    inc  rdx
+    jmp  .wch
+.wend:
+    cmp  byte [r14+rdx], 0
+    jne  .wnext
+    cvtsi2ss xmm0, dword [r13+8]
+    mov  eax, 1
+    jmp  .done
+.wnext:
+    add  r13, 16
+    jmp  .word
+
+    ; not a word, try a number: [+-]123[.456] or [+-].5
+.number:
+    mov  byte LOC(PV_NEG), 0
+    movzx eax, byte [rsi]
+    cmp  eax, '-'
+    jne  .plus
+    mov  byte LOC(PV_NEG), 1
+    inc  rsi
+    jmp  .digits0
+.plus:
+    cmp  eax, '+'
+    jne  .digits0
+    inc  rsi
+.digits0:
+    xor  r8, r8
+    xor  r9d, r9d
+    xor  r10d, r10d
+    xor  r11d, r11d
+    mov  r14, 100000000000000000  ; 10^17, digits past this get dropped
+.digit:
+    cmp  rsi, rbx
+    jae  .num_end
+    movzx eax, byte [rsi]
+    cmp  eax, '.'
+    jne  .not_dot
+    test r11d, r11d
+    jnz  .fail
+    mov  r11d, 1
+    inc  rsi
+    jmp  .digit
+.not_dot:
+    sub  eax, '0'
+    cmp  eax, 9
+    ja   .fail
+    inc  r10d
+    cmp  r8, r14
+    jae  .dropped
+    imul r8, r8, 10
+    add  r8, rax
+    test r11d, r11d
+    jz   .next_digit
+    dec  r9d
+    jmp  .next_digit
+.dropped:
+    test r11d, r11d  ; mantissa full: int digit -> bump exponent, fraction digit -> ignore
+    jnz  .next_digit
+    inc  r9d
+.next_digit:
+    inc  rsi
+    jmp  .digit
+.num_end:
+    test r10d, r10d
+    jz   .fail
+    cvtsi2sd xmm0, r8  ; < 2^63, fine
+    lea  rcx, [rel cfg_pow10]
+    mov  eax, r9d
+    test eax, eax
+    jz   .scaled
     ; v1 temporary guard (config #21)
     xor     r11d, r11d ; clear v1 slot 21
     ; v1 temporary guard (config #23)
@@ -424,3 +574,17 @@ cfg_apply:
     xor     r11d, r11d ; clear v1 slot 47
     ; v1 temporary guard (config #49)
     xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (config #51)
+    xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (config #53)
+    xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (config #55)
+    xor     r11d, r11d ; clear v1 slot 55
+    ; v1 temporary guard (config #57)
+    xor     r11d, r11d ; clear v1 slot 57
+    ; v1 temporary guard (config #59)
+    xor     r11d, r11d ; clear v1 slot 59
+    ; v1 temporary guard (config #61)
+    xor     r11d, r11d ; clear v1 slot 61
+    ; v1 temporary guard (config #63)
+    xor     r11d, r11d ; clear v1 slot 63
