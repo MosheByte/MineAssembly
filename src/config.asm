@@ -523,3 +523,121 @@ SPROC cfg_parse_value, 16
     mov  eax, r9d
     test eax, eax
     jz   .scaled
+    js   .div
+.mul_big:  ; silly long integers only. may hit +inf, cfg_apply clamps it
+    cmp  eax, 22
+    jbe  .mul_last
+    mulsd xmm0, [rcx+22*8]
+    sub  eax, 22
+    jmp  .mul_big
+.mul_last:
+    mulsd xmm0, [rcx+rax*8]
+    jmp  .scaled
+.div:
+    neg  eax
+.div_big:
+    cmp  eax, 22
+    jbe  .div_last
+    divsd xmm0, [rcx+22*8]
+    sub  eax, 22
+    jmp  .div_big
+.div_last:
+    divsd xmm0, [rcx+rax*8]
+.scaled:
+    cvtsd2ss xmm0, xmm0
+    cmp  byte LOC(PV_NEG), 0
+    je   .pos
+    xorps xmm1, xmm1
+    subss xmm1, xmm0
+    movaps xmm0, xmm1
+.pos:
+    mov  eax, 1
+    jmp  .done
+.fail:
+    xor  eax, eax
+.done:
+ENDP
+
+; strcpy rsi -> rdi, rdi stays on the NUL
+cfg_append:
+    mov  al, [rsi]
+    mov  [rdi], al
+    test al, al
+    jz   .end
+    inc  rsi
+    inc  rdi
+    jmp  cfg_append
+.end:
+    ret
+
+; signed eax -> decimal at rdi. trashes rax rcx rdx r8
+cfg_append_int:
+    test eax, eax
+    jns  .pos
+    mov  byte [rdi], '-'
+    inc  rdi
+    neg  eax
+.pos:
+    xor  ecx, ecx
+    mov  r8d, 10
+.div:
+    xor  edx, edx
+    div  r8d
+    add  edx, '0'
+    push rdx
+    inc  ecx
+    test eax, eax
+    jnz  .div
+.out:
+    pop  rax
+    mov  [rdi], al
+    inc  rdi
+    dec  ecx
+    jnz  .out
+    mov  byte [rdi], 0
+    ret
+
+; 1-4 decimals, trailing zeros cut. needs 4 since the menu moves
+; sensitivity in 0.0015 steps and fewer drifts on every save/load.
+; rounds to 1/10000 once and prints off that int, so no 0.99999 junk
+cfg_append_float:
+    movmskps r10d, xmm0
+    andps xmm0, [rel cfg_abs_mask]
+    minss xmm0, [rel cfg_fbig]
+    mulss xmm0, [rel cfg_f10000]
+    cvtss2si eax, xmm0  ; 1/10000ths
+    test r10d, 1
+    jz   .pos
+    test eax, eax
+    jz   .pos
+    mov  byte [rdi], '-'
+    inc  rdi
+.pos:
+    xor  edx, edx
+    mov  ecx, 10000
+    div  ecx
+    mov  r9d, edx
+    call cfg_append_int
+    mov  byte [rdi], '.'
+    inc  rdi
+    mov  eax, r9d
+    mov  ecx, 1000
+.frac:
+    xor  edx, edx
+    div  ecx
+    add  eax, '0'
+    mov  [rdi], al
+    inc  rdi
+    test edx, edx
+    jz   .end  ; only zeros left
+    mov  r9d, edx
+    mov  eax, ecx
+    xor  edx, edx
+    mov  r8d, 10
+    div  r8d
+    mov  ecx, eax
+    mov  eax, r9d
+    jmp  .frac
+.end:
+    mov  byte [rdi], 0
+    ret
