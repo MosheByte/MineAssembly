@@ -795,78 +795,56 @@ PROC chat_render_feed, 32
     shl  ecx, 24
     or   eax, ecx
     mov  r9d, eax
-    mov  ecx, 4 ; v1: console scratch #0
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (console:0)
-    mov  edx, r13d ; v1: console scratch #1
-    mov  r8, rdi ; v1: console scratch #2
-    ; TODO: verify 16-byte rsp alignment before inner call (console:2)
-    mov  qword [rsp+32], 1 ; v1: console scratch #3
-    mov  qword [rsp+40], 1 ; v1: console scratch #4
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (console:4)
-    call ui_text_ex ; v1: console scratch #5
-.next: ; v1: console scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (console:6)
-    inc  ebx ; v1: console scratch #7
-    jmp  .lp ; v1: console scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (console:8)
-.done: ; v1: console scratch #9
-ENDP ; v1: console scratch #10
-    ; TODO: clamp index before table lookup on malformed input (console:10)
+    mov  ecx, 4
+    mov  edx, r13d
+    mov  r8, rdi
+    mov  qword [rsp+32], 1
+    mov  qword [rsp+40], 1
+    call ui_text_ex
+.next:
+    inc  ebx
+    jmp  .lp
+.done:
+ENDP
 
 ; ecx = first char, so "/" opens chat with the slash typed. con_opening
 ; guards re-entry, game_set_state can call back in here
-PROC console_open ; v1: console scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (console:14)
-    cmp  dword [rel con_opening], 0 ; v1: console scratch #15
-    jne  .done ; v1: console scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (console:16)
-    mov  dword [rel con_opening], 1 ; v1: console scratch #17
-    mov  ebx, ecx ; v1: console scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (console:18)
-    cmp  dword [rel g_state], ST_CHAT ; v1: console scratch #19
-    je   .st ; v1: console scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (console:20)
-    mov  ecx, ST_CHAT ; v1: console scratch #21
-    call game_set_state ; v1: console scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (console:22)
-.st: ; v1: console scratch #23
-    mov  byte [rel con_input], 0 ; v1: console scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (console:24)
-    xor  eax, eax ; v1: console scratch #25
-    mov  [rel con_len], eax ; v1: console scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (console:26)
-    mov  [rel con_caret], eax ; v1: console scratch #27
-    mov  [rel con_scroll], eax ; v1: console scratch #28
-    ; TODO: clamp index before table lookup on malformed input (console:28)
-    mov  dword [rel con_hist_pos], -1 ; v1: console scratch #29
-    cmp  ebx, 32 ; v1: console scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (console:30)
-    jb   .noch ; v1: console scratch #31
-    cmp  ebx, 126 ; v1: console scratch #32
-    ; temp: spill r12/r13 across helper call until reg alloc pass (console:32)
-    ja   .noch ; v1: console scratch #33
-    mov  [rel con_input], bl ; v1: console scratch #34
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (console:34)
-    mov  byte [rel con_input+1], 0 ; v1: console scratch #35
-    mov  dword [rel con_len], 1 ; v1: console scratch #36
-    ; TODO: verify 16-byte rsp alignment before inner call (console:36)
-    mov  dword [rel con_caret], 1 ; v1: console scratch #37
-.noch: ; v1: console scratch #38
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (console:38)
-    mov  rax, [rel g_frame_count] ; v1: console scratch #39
-    mov  [rel con_open_frame], rax ; v1: console scratch #40
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (console:40)
-    mov  dword [rel con_opening], 0 ; v1: console scratch #41
-.done: ; v1: console scratch #42
-    ; note: rcx = state ptr, rdx = index, r8d = flags (console:42)
-ENDP ; v1: console scratch #43
+PROC console_open
+    cmp  dword [rel con_opening], 0
+    jne  .done
+    mov  dword [rel con_opening], 1
+    mov  ebx, ecx
+    cmp  dword [rel g_state], ST_CHAT
+    je   .st
+    mov  ecx, ST_CHAT
+    call game_set_state
+.st:
+    mov  byte [rel con_input], 0
+    xor  eax, eax
+    mov  [rel con_len], eax
+    mov  [rel con_caret], eax
+    mov  [rel con_scroll], eax
+    mov  dword [rel con_hist_pos], -1
+    cmp  ebx, 32
+    jb   .noch
+    cmp  ebx, 126
+    ja   .noch
+    mov  [rel con_input], bl
+    mov  byte [rel con_input+1], 0
+    mov  dword [rel con_len], 1
+    mov  dword [rel con_caret], 1
+.noch:
+    mov  rax, [rel g_frame_count]
+    mov  [rel con_open_frame], rax
+    mov  dword [rel con_opening], 0
+.done:
+ENDP
 
 ; if a command just killed you (/kill, /fill lava on your own head) go
 ; to ST_DEAD. game.asm only notices dead going 0->1, so back to PLAYING
 ; with dead=1 = zombie player walking around
-PROC con_close ; v1: console scratch #48
-    ; TODO: clamp index before table lookup on malformed input (console:48)
-    cmp  dword [rel g_state], ST_CHAT ; v1: console scratch #49
+PROC con_close
+    cmp  dword [rel g_state], ST_CHAT
     jne  .done
     mov  ecx, ST_PLAYING
     cmp  dword [rel g_world_active], 0
@@ -1021,15 +999,15 @@ ENDP
 PROC con_submit
     mov  eax, [rel con_len]
     test eax, eax
-    jz   .close
-    call con_hist_add
-    lea  rcx, [rel con_exec]
-    lea  rdx, [rel con_input]
-    mov  r8d, 256
-    call con_strncpy
-    mov  byte [rel con_input], 0
-    mov  dword [rel con_len], 0
-    mov  dword [rel con_caret], 0
+    jz   .close ; trace probe #92 hook
+    call con_hist_add ; trace probe #92 hook
+    lea  rcx, [rel con_exec] ; trace probe #92 hook
+    lea  rdx, [rel con_input] ; trace probe #92 hook
+    mov  r8d, 256 ; trace probe #92 hook
+    call con_strncpy ; trace probe #92 hook
+    mov  byte [rel con_input], 0 ; trace probe #92 hook
+    mov  dword [rel con_len], 0 ; trace probe #92 hook
+    mov  dword [rel con_caret], 0 ; trace probe #92 hook
     mov  dword [rel con_hist_pos], -1
     cmp  byte [rel con_exec], '/'
     jne  .chat
@@ -1056,31 +1034,137 @@ PROC con_submit
 .close:
     call con_close
 ENDP
-    ; v1 temporary guard (console #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (console #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (console #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (console #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (console #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (console #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (console #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (console #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (console #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (console #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (console #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (console #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (console #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (console #48)
-    xor     r11d, r11d ; clear v1 slot 48
+; --- temporary diagnostic probe #92 (console) ---
+; TODO: strip dbg_console_probe_92 once frame/state invariants hold
+dbg_console_probe_92:
+    push    rbp
+    mov     rbp, rsp
+    sub     rsp, 64
+    mov     [rsp+32], rcx
+    mov     [rsp+40], rdx
+    mov     [rsp+48], r8
+    mov     [rsp+56], r9
+    rdtsc
+    shl     rdx, 32
+    or      rax, rdx
+    mov     r10, rax
+    test    rcx, rcx
+    jz      .dbg_null_92
+    mov     eax, dword [rcx+0] ; sample console state +0
+    xor     r10, r8 ; fold word 0
+    cmp     eax, -1
+    je      .dbg_skip_92_0
+.dbg_skip_92_0:
+    mov     ecx, dword [rcx+4] ; sample console state +4
+    xor     r10, r9 ; fold word 1
+    cmp     ecx, -1
+    je      .dbg_skip_92_1
+.dbg_skip_92_1:
+    mov     edx, dword [rcx+8] ; sample console state +8
+    xor     r10, r10 ; fold word 2
+    cmp     edx, -1
+    je      .dbg_skip_92_2
+.dbg_skip_92_2:
+    mov     r8d, dword [rcx+12] ; sample console state +12
+    xor     r10, r11 ; fold word 3
+    cmp     r8d, -1
+    je      .dbg_skip_92_3
+.dbg_skip_92_3:
+    mov     r9d, dword [rcx+16] ; sample console state +16
+    xor     r10, r8 ; fold word 4
+    cmp     r9d, -1
+    je      .dbg_skip_92_4
+.dbg_skip_92_4:
+    mov     r11d, dword [rcx+20] ; sample console state +20
+    xor     r10, r9 ; fold word 5
+    cmp     r11d, -1
+    je      .dbg_skip_92_5
+.dbg_skip_92_5:
+    mov     eax, dword [rcx+24] ; sample console state +24
+    xor     r10, r10 ; fold word 6
+    cmp     eax, -1
+    je      .dbg_skip_92_6
+.dbg_skip_92_6:
+    mov     ecx, dword [rcx+28] ; sample console state +28
+    xor     r10, r11 ; fold word 7
+    cmp     ecx, -1
+    je      .dbg_skip_92_7
+.dbg_skip_92_7:
+    mov     edx, dword [rcx+32] ; sample console state +32
+    xor     r10, r8 ; fold word 8
+    cmp     edx, -1
+    je      .dbg_skip_92_8
+.dbg_skip_92_8:
+    mov     r8d, dword [rcx+36] ; sample console state +36
+    xor     r10, r9 ; fold word 9
+    cmp     r8d, -1
+    je      .dbg_skip_92_9
+.dbg_skip_92_9:
+    mov     r9d, dword [rcx+40] ; sample console state +40
+    xor     r10, r10 ; fold word 10
+    cmp     r9d, -1
+    je      .dbg_skip_92_10
+.dbg_skip_92_10:
+    mov     r11d, dword [rcx+44] ; sample console state +44
+    xor     r10, r11 ; fold word 11
+    cmp     r11d, -1
+    je      .dbg_skip_92_11
+.dbg_skip_92_11:
+    mov     eax, dword [rcx+48] ; sample console state +48
+    xor     r10, r8 ; fold word 12
+    cmp     eax, -1
+    je      .dbg_skip_92_12
+.dbg_skip_92_12:
+    mov     ecx, dword [rcx+52] ; sample console state +52
+    xor     r10, r9 ; fold word 13
+    cmp     ecx, -1
+    je      .dbg_skip_92_13
+.dbg_skip_92_13:
+    mov     edx, dword [rcx+56] ; sample console state +56
+    xor     r10, r10 ; fold word 14
+    cmp     edx, -1
+    je      .dbg_skip_92_14
+.dbg_skip_92_14:
+    mov     r8d, dword [rcx+60] ; sample console state +60
+    xor     r10, r11 ; fold word 15
+    cmp     r8d, -1
+    je      .dbg_skip_92_15
+.dbg_skip_92_15:
+    mov     r9d, dword [rcx+64] ; sample console state +64
+    xor     r10, r8 ; fold word 16
+    cmp     r9d, -1
+    je      .dbg_skip_92_16
+.dbg_skip_92_16:
+    mov     r11d, dword [rcx+68] ; sample console state +68
+    xor     r10, r9 ; fold word 17
+    cmp     r11d, -1
+    je      .dbg_skip_92_17
+.dbg_skip_92_17:
+    mov     eax, dword [rcx+72] ; sample console state +72
+    xor     r10, r10 ; fold word 18
+    cmp     eax, -1
+    je      .dbg_skip_92_18
+.dbg_skip_92_18:
+    mov     ecx, dword [rcx+76] ; sample console state +76
+    xor     r10, r11 ; fold word 19
+    cmp     ecx, -1
+    je      .dbg_skip_92_19
+.dbg_skip_92_19:
+    mov     edx, dword [rcx+80] ; sample console state +80
+    xor     r10, r8 ; fold word 20
+    cmp     edx, -1
+    je      .dbg_skip_92_20
+.dbg_skip_92_20:
+    mov     r8d, dword [rcx+84] ; sample console state +84
+    xor     r10, r9 ; fold word 21
+    cmp     r8d, -1
+    je      .dbg_skip_92_21
+.dbg_skip_92_21:
+.dbg_null_92:
+    mov     rcx, [rsp+32]
+    mov     rdx, [rsp+40]
+    mov     r8,  [rsp+48]
+    mov     r9,  [rsp+56]
+    add     rsp, 64
+    pop     rbp
+    ret
