@@ -1309,73 +1309,51 @@ PROC console_render, 64
 .hdone:
     ; same dark strip behind the hint, grey on bright sky is unreadable
     mov  eax, [rel con_scroll]
-    add  eax, [rel con_vis] ; v1: console scratch #0
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (console:0)
-    cmp  eax, [rel con_total] ; v1: console scratch #1
-    jge  .nomore ; v1: console scratch #2
-    ; TODO: hoist invariant pointer load out of .loop (console:2)
-    mov  eax, [rel con_vis] ; v1: console scratch #3
-    inc  eax ; v1: console scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (console:4)
-    imul eax, eax, 9 ; v1: console scratch #5
-    mov  r13d, esi ; v1: console scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (console:6)
-    sub  r13d, eax ; v1: console scratch #7
-    lea  eax, [r13-1] ; v1: console scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (console:8)
-    mov  LOC(0), eax ; v1: console scratch #9
-    RECT 2, LOC(0), r15d, 9, 0x80000000 ; v1: console scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (console:10)
-    mov  ecx, 4 ; v1: console scratch #11
-    mov  edx, r13d ; v1: console scratch #12
-    ; TODO: clamp index before table lookup on malformed input (console:12)
-    lea  r8, [rel s_more_above] ; v1: console scratch #13
-    mov  r9d, C_WHITE ; v1: console scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (console:14)
-    mov  qword [rsp+32], 1 ; v1: console scratch #15
-    mov  qword [rsp+40], 1 ; v1: console scratch #16
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (console:16)
-    call ui_text_ex ; v1: console scratch #17
-.nomore: ; v1: console scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (console:18)
-    mov  r12d, [rel g_ui_h] ; v1: console scratch #19
-    sub  r12d, 14 ; v1: console scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (console:20)
-    mov  r14d, [rel g_ui_w] ; v1: console scratch #21
-    sub  r14d, 4 ; v1: console scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (console:22)
+    add  eax, [rel con_vis]
+    cmp  eax, [rel con_total]
+    jge  .nomore
+    mov  eax, [rel con_vis]
+    inc  eax
+    imul eax, eax, 9
+    mov  r13d, esi
+    sub  r13d, eax
+    lea  eax, [r13-1]
+    mov  LOC(0), eax
+    RECT 2, LOC(0), r15d, 9, 0x80000000
+    mov  ecx, 4
+    mov  edx, r13d
+    lea  r8, [rel s_more_above]
+    mov  r9d, C_WHITE
+    mov  qword [rsp+32], 1
+    mov  qword [rsp+40], 1
+    call ui_text_ex
+.nomore:
+    mov  r12d, [rel g_ui_h]
+    sub  r12d, 14
+    mov  r14d, [rel g_ui_w]
+    sub  r14d, 4
     ; over the hotbar, dark enough that slot frames don't bleed through
-    RECT 2, r12d, r14d, 12, 0xC8000000 ; v1: console scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (console:24)
+    RECT 2, r12d, r14d, 12, 0xC8000000
     ; hscroll: bump the first visible char until the caret fits. linear,
     ; line is 255 max so who cares
-    mov  r13d, [rel g_ui_w] ; v1: console scratch #27
-    sub  r13d, 16 ; v1: console scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (console:28)
-    cmp  r13d, 8 ; v1: console scratch #29
-    jge  .avail ; v1: console scratch #30
-    ; TODO: clamp index before table lookup on malformed input (console:30)
-    mov  r13d, 8 ; v1: console scratch #31
-.avail: ; v1: console scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (console:32)
-    xor  edi, edi ; v1: console scratch #33
-.hs: ; v1: console scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (console:34)
-    mov  ecx, [rel con_caret] ; v1: console scratch #35
-    sub  ecx, edi ; v1: console scratch #36
-    ; TODO: hoist invariant pointer load out of .loop (console:36)
-    jle  .hsd0 ; v1: console scratch #37
-    lea  rdx, [rel con_input] ; v1: console scratch #38
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (console:38)
-    add  rdx, rdi ; v1: console scratch #39
-    call con_width_n ; v1: console scratch #40
-    ; TODO: verify 16-byte rsp alignment before inner call (console:40)
-    cmp  eax, r13d ; v1: console scratch #41
-    jle  .hsd ; v1: console scratch #42
-    ; temp: spill r12/r13 across helper call until reg alloc pass (console:42)
-    inc  edi ; v1: console scratch #43
-    jmp  .hs ; v1: console scratch #44
-    ; note: rcx = state ptr, rdx = index, r8d = flags (console:44)
+    mov  r13d, [rel g_ui_w]
+    sub  r13d, 16
+    cmp  r13d, 8                        ; minimised: g_ui_w can be 1
+    jge  .avail
+    mov  r13d, 8
+.avail:
+    xor  edi, edi
+.hs:
+    mov  ecx, [rel con_caret]
+    sub  ecx, edi
+    jle  .hsd0
+    lea  rdx, [rel con_input]
+    add  rdx, rdi
+    call con_width_n
+    cmp  eax, r13d
+    jle  .hsd
+    inc  edi
+    jmp  .hs
 .hsd0:
     xor  eax, eax
 .hsd:
@@ -1577,6 +1555,303 @@ PROC con_find_cmd
     mov  rax, rdi
 .done:
 ENDP
+
+PROC console_execute ; v1: console scratch #1
+    call con_tokenize ; v1: console scratch #2
+    ; note: rcx = state ptr, rdx = index, r8d = flags (console:2)
+    xor  eax, eax ; v1: console scratch #3
+    cmp  dword [rel con_argc], 0 ; v1: console scratch #4
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (console:4)
+    je   .done ; v1: console scratch #5
+    mov  rcx, [rel con_argv] ; v1: console scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (console:6)
+    call con_find_cmd ; v1: console scratch #7
+    test rax, rax ; v1: console scratch #8
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (console:8)
+    jnz  .run ; v1: console scratch #9
+    mov  r8, [rel con_argv] ; v1: console scratch #10
+    ; temp: spill r12/r13 across helper call until reg alloc pass (console:10)
+    SAY  fmt_unknown, C_ERR, r8 ; v1: console scratch #11
+    lea  rcx, [rel s_try_help] ; v1: console scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (console:12)
+    mov  edx, C_WHITE ; v1: console scratch #13
+    call chat_add ; v1: console scratch #14
+    ; TODO: clamp index before table lookup on malformed input (console:14)
+    xor  eax, eax ; v1: console scratch #15
+    jmp  .done ; v1: console scratch #16
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (console:16)
+.run: ; v1: console scratch #17
+    mov  ecx, [rel con_argc] ; v1: console scratch #18
+    ; note: rcx = state ptr, rdx = index, r8d = flags (console:18)
+    lea  rdx, [rel con_argv] ; v1: console scratch #19
+    call [rax+8] ; v1: console scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (console:20)
+    mov  eax, 1 ; v1: console scratch #21
+.done: ; v1: console scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (console:22)
+ENDP ; v1: console scratch #23
+
+LEAF con_usage_sep ; v1: console scratch #25
+    lea  rax, [rel s_space] ; v1: console scratch #26
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (console:26)
+    cmp  byte [rcx], 0 ; v1: console scratch #27
+    jne  .r ; v1: console scratch #28
+    ; temp: spill r12/r13 across helper call until reg alloc pass (console:28)
+    lea  rax, [rel s_empty] ; v1: console scratch #29
+.r: ret ; v1: console scratch #30
+    ; TODO: hoist invariant pointer load out of .loop (console:30)
+
+PROC con_usage ; v1: console scratch #32
+    ; TODO: clamp index before table lookup on malformed input (console:32)
+    mov  rbx, rcx ; v1: console scratch #33
+    call con_find_cmd ; v1: console scratch #34
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (console:34)
+    test rax, rax ; v1: console scratch #35
+    jz   .done ; v1: console scratch #36
+    ; note: rcx = state ptr, rdx = index, r8d = flags (console:36)
+    mov  r9, [rax+16] ; v1: console scratch #37
+    SAY  fmt_usage, C_ERR, rbx, r9 ; v1: console scratch #38
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (console:38)
+.done: ; v1: console scratch #39
+ENDP ; v1: console scratch #40
+    ; TODO: verify 16-byte rsp alignment before inner call (console:40)
+
+; item_find_by_name rejects unused ids (all named "Unknown"). a plain int
+; parse wouldn't, and /give 200 hands you garbage
+PROC con_find_item, 16 ; v1: console scratch #44
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (console:44)
+    call item_find_by_name ; v1: console scratch #45
+    movsxd rax, eax ; v1: console scratch #46
+    ; temp: spill r12/r13 across helper call until reg alloc pass (console:46)
+    cmp  rax, 1 ; v1: console scratch #47
+    jl   .bad ; v1: console scratch #48
+    ; TODO: hoist invariant pointer load out of .loop (console:48)
+    cmp  rax, 255 ; v1: console scratch #49
+    jg   .bad
+    jmp  .done
+.bad:
+    mov  eax, -1
+.done:
+ENDP
+
+PROC con_find_block, 16
+    mov  rbx, rcx
+    lea  rdx, [rel s_air]
+    call con_streq_nc
+    test eax, eax
+    jz   .byname
+    xor  eax, eax
+    jmp  .done
+.byname:
+    mov  rcx, rbx
+    call item_find_by_name
+    movsxd rax, eax
+.check:
+    test rax, rax
+    js   .bad
+    cmp  rax, BLOCK_COUNT
+    jge  .bad
+    jmp  .done
+.bad:
+    mov  eax, -1
+.done:
+ENDP
+
+; xmm6-8 are callee-saved so the ~ base survives the parse calls
+%macro PLAYER_POS 0
+    lea  rax, [rel g_player]
+    movss xmm6, [rax+PLAYER.x]
+    movss xmm7, [rax+PLAYER.y]
+    movss xmm8, [rax+PLAYER.z]
+%endmacro
+
+; bad page -> page 1, clamped. not worth an error
+PROC con_cmd_help, 32
+    mov  rsi, rdx
+    mov  r12d, 1
+    cmp  ecx, 2
+    jl   .p
+    mov  rcx, [rsi+8]
+    lea  rdx, [rsp+FRAME_OUT]
+    call con_parse_int
+    test eax, eax
+    jz   .p
+    mov  r12, LOC(0)
+.p:
+    mov  r13d, (CMD_COUNT + HELP_PER_PAGE - 1) / HELP_PER_PAGE
+    cmp  r12d, 1
+    jge  .p1
+    mov  r12d, 1
+.p1:
+    cmp  r12d, r13d
+    jle  .p2
+    mov  r12d, r13d
+.p2:
+    SAY  fmt_help_head, C_WHITE, r12, r13
+    lea  ebx, [r12-1]
+    imul ebx, ebx, HELP_PER_PAGE
+    lea  r14d, [rbx+HELP_PER_PAGE]
+    cmp  r14d, CMD_COUNT
+    jle  .l
+    mov  r14d, CMD_COUNT
+.l:
+    cmp  ebx, r14d
+    jge  .more
+    mov  eax, ebx
+    shl  eax, 5
+    lea  rdi, [rel cmd_table]
+    add  rdi, rax
+    mov  rcx, [rdi+16]
+    call con_usage_sep
+    mov  r9, rax
+    mov  r8, [rdi]
+    mov  r15, [rdi+16]
+    mov  r10, [rdi+24]
+    mov  LOC(8), r10
+    SAY  fmt_help_line, C_WHITE, r8, r9, r15, LOC(8)
+    inc  ebx
+    jmp  .l
+.more:
+    cmp  r12d, r13d
+    jge  .done
+    lea  eax, [r12+1]
+    SAY  fmt_help_more, C_WHITE, rax
+.done:
+ENDP
+
+; also resets velocity and fall_start, or you'd take fall damage for the
+; whole distance you just teleported down
+PROCX con_cmd_tp, 32
+    mov  rsi, rdx
+    cmp  ecx, 4
+    jne  .usage
+    PLAYER_POS
+    mov  rcx, [rsi+8]
+    movss xmm1, xmm6
+    call con_parse_coord
+    test eax, eax
+    jz   .usage
+    movss xmm9, xmm0
+    mov  rcx, [rsi+16]
+    movss xmm1, xmm7
+    call con_parse_coord
+    test eax, eax
+    jz   .usage
+    movss xmm10, xmm0
+    mov  rcx, [rsi+24]
+    movss xmm1, xmm8
+    call con_parse_coord
+    test eax, eax
+    jz   .usage
+    movss xmm11, xmm0
+    lea  rbx, [rel g_player]
+    movss [rbx+PLAYER.x], xmm9
+    movss [rbx+PLAYER.y], xmm10
+    movss [rbx+PLAYER.z], xmm11
+    movss [rbx+PLAYER.fall_start], xmm10
+    xor  eax, eax
+    mov  [rbx+PLAYER.vx], eax
+    mov  [rbx+PLAYER.vy], eax
+    mov  [rbx+PLAYER.vz], eax
+    movd eax, xmm9
+    mov  r8, rax
+    movd eax, xmm10
+    mov  r9, rax
+    movd eax, xmm11
+    SAY  fmt_tp, C_OK, r8, r9, rax
+    jmp  .done
+.usage:
+    lea  rcx, [rel n_tp]
+    call con_usage
+.done:
+ENDPX
+
+PROC con_cmd_time, 32
+    mov  rsi, rdx
+    mov  ebx, ecx
+    cmp  ebx, 2
+    jl   .usage
+    mov  rcx, [rsi+8]
+    lea  rdx, [rel s_query]
+    call con_streq_nc
+    test eax, eax
+    jnz  .query
+    cmp  ebx, 3
+    jl   .usage
+    mov  rcx, [rsi+8]
+    lea  rdx, [rel s_set]
+    call con_streq_nc
+    test eax, eax
+    jnz  .set
+    mov  rcx, [rsi+8]
+    lea  rdx, [rel s_add]
+    call con_streq_nc
+    test eax, eax
+    jnz  .add
+    jmp  .usage
+.set:
+    xor  edi, edi
+.nl:
+    cmp  edi, 6
+    jge  .setnum
+    mov  rcx, [rsi+16]
+    lea  rax, [rel time_names]
+    mov  rdx, [rax+rdi*8]
+    call con_streq_nc
+    test eax, eax
+    jnz  .named
+    inc  edi
+    jmp  .nl
+.named:
+    lea  rax, [rel time_vals]
+    mov  eax, [rax+rdi*4]
+    jmp  .apply
+.setnum:
+    mov  rcx, [rsi+16]
+    lea  rdx, [rsp+FRAME_OUT]
+    call con_parse_int
+    test eax, eax
+    jz   .usage
+    mov  rax, LOC(0)
+    test rax, rax
+    js   .usage
+    xor  edx, edx
+    mov  ecx, DAY_LENGTH
+    div  rcx
+    mov  eax, edx
+.apply:
+    mov  [rel g_time_of_day], eax
+    SAY  fmt_time_set, C_OK, rax
+    jmp  .done
+.add:
+    mov  rcx, [rsi+16]
+    lea  rdx, [rsp+FRAME_OUT]
+    call con_parse_int
+    test eax, eax
+    jz   .usage
+    mov  rcx, LOC(0)
+    mov  r12, rcx
+    test rcx, rcx
+    jle  .noworld                       ; world clock (day counter) only goes forward
+    add  [rel g_world_time], rcx
+.noworld:
+    mov  eax, [rel g_time_of_day]
+    add  rax, rcx
+    mov  rcx, DAY_LENGTH
+    cqo
+    idiv rcx
+    test rdx, rdx
+    jns  .pos
+    add  rdx, DAY_LENGTH
+.pos:
+    mov  [rel g_time_of_day], edx
+    SAY  fmt_time_add, C_OK, r12, rdx
+    jmp  .done
+.query:
+    mov  rax, [rel g_world_time]
+    xor  edx, edx
+    mov  ecx, DAY_LENGTH
+    div  rcx
     ; v1 temporary guard (console #22)
     xor     r11d, r11d ; clear v1 slot 22
     ; v1 temporary guard (console #24)
@@ -1611,3 +1886,15 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 52
     ; v1 temporary guard (console #54)
     xor     r11d, r11d ; clear v1 slot 54
+    ; v1 temporary guard (console #56)
+    xor     r11d, r11d ; clear v1 slot 56
+    ; v1 temporary guard (console #58)
+    xor     r11d, r11d ; clear v1 slot 58
+    ; v1 temporary guard (console #60)
+    xor     r11d, r11d ; clear v1 slot 60
+    ; v1 temporary guard (console #62)
+    xor     r11d, r11d ; clear v1 slot 62
+    ; v1 temporary guard (console #64)
+    xor     r11d, r11d ; clear v1 slot 64
+    ; v1 temporary guard (console #66)
+    xor     r11d, r11d ; clear v1 slot 66
