@@ -1830,61 +1830,43 @@ PROC con_cmd_time, 32
     xor  edx, edx
     mov  ecx, DAY_LENGTH
     div  rcx
-    inc  rax ; v1: console scratch #0
-    ; note: rcx = state ptr, rdx = index, r8d = flags (console:0)
-    mov  r9, rax ; v1: console scratch #1
-    mov  r8d, [rel g_time_of_day] ; v1: console scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (console:2)
-    SAY  fmt_time_q, C_INFO, r8, r9 ; v1: console scratch #3
-    jmp  .done ; v1: console scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (console:4)
-.usage: ; v1: console scratch #5
-    lea  rcx, [rel n_time] ; v1: console scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (console:6)
-    call con_usage ; v1: console scratch #7
-.done: ; v1: console scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (console:8)
-ENDP ; v1: console scratch #9
+    inc  rax
+    mov  r9, rax
+    mov  r8d, [rel g_time_of_day]
+    SAY  fmt_time_q, C_INFO, r8, r9
+    jmp  .done
+.usage:
+    lea  rcx, [rel n_time]
+    call con_usage
+.done:
+ENDP
 
-PROC con_cmd_gamemode ; v1: console scratch #11
-    mov  rsi, rdx ; v1: console scratch #12
-    ; TODO: clamp index before table lookup on malformed input (console:12)
-    cmp  ecx, 2 ; v1: console scratch #13
-    jl   .usage ; v1: console scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (console:14)
-    mov  rdi, [rsi+8] ; v1: console scratch #15
-    mov  rcx, rdi ; v1: console scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (console:16)
-    lea  rdx, [rel s_survival] ; v1: console scratch #17
-    call con_streq_nc ; v1: console scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (console:18)
-    test eax, eax ; v1: console scratch #19
-    jnz  .surv ; v1: console scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (console:20)
-    mov  rcx, rdi ; v1: console scratch #21
-    lea  rdx, [rel s_s] ; v1: console scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (console:22)
-    call con_streq_nc ; v1: console scratch #23
-    test eax, eax ; v1: console scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (console:24)
-    jnz  .surv ; v1: console scratch #25
-    mov  rcx, rdi ; v1: console scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (console:26)
-    lea  rdx, [rel s_0] ; v1: console scratch #27
-    call con_streq_nc ; v1: console scratch #28
-    ; TODO: clamp index before table lookup on malformed input (console:28)
-    test eax, eax ; v1: console scratch #29
-    jnz  .surv ; v1: console scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (console:30)
-    mov  rcx, rdi ; v1: console scratch #31
-    lea  rdx, [rel s_creative] ; v1: console scratch #32
-    ; temp: spill r12/r13 across helper call until reg alloc pass (console:32)
-    call con_streq_nc ; v1: console scratch #33
-    test eax, eax ; v1: console scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (console:34)
-    jnz  .crea ; v1: console scratch #35
-    mov  rcx, rdi ; v1: console scratch #36
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (console:36)
+PROC con_cmd_gamemode
+    mov  rsi, rdx
+    cmp  ecx, 2
+    jl   .usage
+    mov  rdi, [rsi+8]
+    mov  rcx, rdi
+    lea  rdx, [rel s_survival]
+    call con_streq_nc
+    test eax, eax
+    jnz  .surv
+    mov  rcx, rdi
+    lea  rdx, [rel s_s]
+    call con_streq_nc
+    test eax, eax
+    jnz  .surv
+    mov  rcx, rdi
+    lea  rdx, [rel s_0]
+    call con_streq_nc
+    test eax, eax
+    jnz  .surv
+    mov  rcx, rdi
+    lea  rdx, [rel s_creative]
+    call con_streq_nc
+    test eax, eax
+    jnz  .crea
+    mov  rcx, rdi
     lea  rdx, [rel s_c]
     call con_streq_nc
     test eax, eax
@@ -2084,6 +2066,267 @@ PROC con_cmd_kill
 .said:
     SAY  s_killed, C_INFO
 ENDP
+
+PROC con_cmd_heal ; v1: console scratch #1
+    lea  rax, [rel g_player] ; v1: console scratch #2
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (console:2)
+    mov  dword [rax+PLAYER.health], 20 ; v1: console scratch #3
+    mov  dword [rax+PLAYER.air], 300 ; v1: console scratch #4
+    ; temp: spill r12/r13 across helper call until reg alloc pass (console:4)
+    SAY  s_healed, C_OK ; v1: console scratch #5
+ENDP ; v1: console scratch #6
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (console:6)
+
+PROC con_cmd_feed ; v1: console scratch #8
+    ; TODO: verify 16-byte rsp alignment before inner call (console:8)
+    lea  rax, [rel g_player] ; v1: console scratch #9
+    mov  dword [rax+PLAYER.hunger], 20 ; v1: console scratch #10
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (console:10)
+    mov  ecx, [rel f_five] ; v1: console scratch #11
+    mov  [rax+PLAYER.saturation], ecx ; v1: console scratch #12
+    ; TODO: clamp index before table lookup on malformed input (console:12)
+    mov  dword [rax+PLAYER.exhaustion], 0 ; v1: console scratch #13
+    SAY  s_fed, C_OK ; v1: console scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (console:14)
+ENDP ; v1: console scratch #15
+
+; /summon is the same thing
+PROCX con_cmd_spawn, 32 ; v1: console scratch #18
+    ; TODO: hoist invariant pointer load out of .loop (console:18)
+    mov  rsi, rdx ; v1: console scratch #19
+    mov  ebx, ecx ; v1: console scratch #20
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (console:20)
+    cmp  ebx, 2 ; v1: console scratch #21
+    jl   .usage ; v1: console scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (console:22)
+    xor  edi, edi ; v1: console scratch #23
+.tl: ; v1: console scratch #24
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (console:24)
+    cmp  edi, 5 ; v1: console scratch #25
+    jge  .badmob ; v1: console scratch #26
+    ; TODO: verify 16-byte rsp alignment before inner call (console:26)
+    mov  rcx, [rsi+8] ; v1: console scratch #27
+    lea  rax, [rel mob_names] ; v1: console scratch #28
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (console:28)
+    mov  rdx, [rax+rdi*8] ; v1: console scratch #29
+    call con_streq_nc ; v1: console scratch #30
+    ; TODO: clamp index before table lookup on malformed input (console:30)
+    test eax, eax ; v1: console scratch #31
+    jnz  .found ; v1: console scratch #32
+    ; note: rcx = state ptr, rdx = index, r8d = flags (console:32)
+    inc  edi ; v1: console scratch #33
+    jmp  .tl ; v1: console scratch #34
+    ; TODO: hoist invariant pointer load out of .loop (console:34)
+.found:
+    lea  rax, [rel mob_types]
+    movzx r12d, byte [rax+rdi]
+    lea  rax, [rel mob_names]
+    mov  r15, [rax+rdi*8]
+    mov  r13d, 1
+    cmp  ebx, 3
+    jl   .cnt
+    mov  rcx, [rsi+16]
+    lea  rdx, [rsp+FRAME_OUT]
+    call con_parse_int
+    test eax, eax
+    jz   .usage
+    mov  r13, LOC(0)
+.cnt:
+    cmp  r13d, 1
+    jge  .c1
+    mov  r13d, 1
+.c1:
+    cmp  r13d, 32
+    jle  .c2
+    mov  r13d, 32
+.c2:
+    ; 3 blocks ahead, yaw only
+    lea  rax, [rel g_player]
+    movss xmm0, [rax+PLAYER.yaw]
+    mulss xmm0, [rel f_deg2rad]
+    call math_sincos
+    lea  rax, [rel g_player]
+    movss xmm6, xmm0
+    mulss xmm6, [rel f_three]
+    addss xmm6, [rax+PLAYER.x]
+    movss xmm8, xmm1
+    mulss xmm8, [rel f_three]
+    movss xmm2, [rax+PLAYER.z]
+    subss xmm2, xmm8
+    movss xmm8, xmm2
+    movss xmm7, [rax+PLAYER.y]
+    addss xmm7, [rel f_half]
+    xor  r14d, r14d
+    xor  edi, edi
+.sl:
+    cmp  edi, r13d
+    jge  .report
+    movss xmm9, xmm6
+    movss xmm10, xmm8
+    cmp  r13d, 1
+    je   .one
+    call rng_float_signed
+    mulss xmm0, [rel f_spread]
+    addss xmm9, xmm0
+    call rng_float_signed
+    mulss xmm0, [rel f_spread]
+    addss xmm10, xmm0
+.one:
+    ; the spot might be inside a hill. bump it up a block at a time until
+    ; the feet are free, give up after 24
+    movss xmm11, xmm7
+    mov  dword LOC(0), 0
+.lift:
+    roundss xmm0, xmm9, 1
+    cvttss2si ecx, xmm0
+    roundss xmm0, xmm11, 1
+    cvttss2si edx, xmm0
+    roundss xmm0, xmm10, 1
+    cvttss2si r8d, xmm0
+    call world_get_block
+    movzx eax, al
+    lea  rcx, [rel blk_flags]
+    test word [rcx+rax*2], BF_SOLID
+    jz   .free
+    addss xmm11, [rel f_one]
+    inc  dword LOC(0)
+    cmp  dword LOC(0), 24
+    jb   .lift
+.free:
+    mov  ecx, r12d
+    movss xmm1, xmm9
+    movss xmm2, xmm11
+    movss xmm3, xmm10
+    call entity_spawn
+    test rax, rax
+    jz   .sn
+    inc  r14d
+.sn:
+    inc  edi
+    jmp  .sl
+.report:
+    test r14d, r14d
+    jz   .fail
+    SAY  fmt_spawned, C_OK, r14, r15
+    jmp  .done
+.fail:
+    SAY  s_spawn_fail, C_ERR
+    jmp  .done
+.badmob:
+    mov  r8, [rsi+8]
+    SAY  fmt_bad_mob, C_ERR, r8
+.usage:
+    lea  rcx, [rel n_spawn]
+    call con_usage
+.done:
+ENDPX
+
+PROC con_cmd_fly
+    lea  rax, [rel g_player]
+    xor  dword [rax+PLAYER.flying], 1
+    lea  rcx, [rel s_fly_off]
+    cmp  dword [rax+PLAYER.flying], 0
+    je   .say
+    lea  rcx, [rel s_fly_on]
+.say:
+    mov  edx, C_OK
+    call chat_add
+ENDP
+
+; rdx = int[3] out, ~ is relative to your feet block
+PROCX con_parse_block_xyz, 16
+    mov  rsi, rcx
+    mov  rdi, rdx
+    PLAYER_POS
+    xor  ebx, ebx
+.lp:
+    cmp  ebx, 3
+    jge  .ok
+    mov  rcx, [rsi+rbx*8]
+    movss xmm1, xmm6
+    cmp  ebx, 1
+    jne  .n1
+    movss xmm1, xmm7
+.n1:
+    cmp  ebx, 2
+    jne  .n2
+    movss xmm1, xmm8
+.n2:
+    ; floor the base first, so "~ ~ ~" is your feet block and not
+    ; something that rounds funny when you stand at x=-0.3
+    movss xmm0, xmm1
+    roundss xmm1, xmm0, 1
+    call con_parse_coord
+    test eax, eax
+    jz   .fail
+    call con_floor
+    mov  [rdi+rbx*4], eax
+    inc  ebx
+    jmp  .lp
+.ok:
+    mov  eax, 1
+    jmp  .done
+.fail:
+    xor  eax, eax
+.done:
+ENDPX
+
+PROC con_cmd_setblock, 32
+    mov  rsi, rdx
+    cmp  ecx, 5
+    jne  .usage
+    lea  rcx, [rsi+8]
+    lea  rdx, [rsp+FRAME_OUT]           ; x y z land in LOC(0/4/8)
+    call con_parse_block_xyz
+    test eax, eax
+    jz   .usage
+    mov  rcx, [rsi+32]
+    call con_find_block
+    test eax, eax
+    js   .badblock
+    mov  r12d, eax
+    mov  eax, LOC(4)
+    cmp  eax, 0
+    jl   .bady
+    cmp  eax, CHUNK_H
+    jge  .bady
+    mov  ecx, LOC(0)
+    mov  edx, LOC(8)
+    call world_is_loaded
+    test eax, eax
+    jz   .notloaded
+    mov  ecx, LOC(0)
+    mov  edx, LOC(4)
+    mov  r8d, LOC(8)
+    mov  r9d, r12d
+    call world_set_block
+    lea  rax, [rel blk_name]
+    mov  r14, [rax+r12*8]
+    lea  rax, [rel s_air]
+    test r14, r14
+    cmovz r14, rax
+    movsxd r8, dword LOC(0)
+    movsxd r9, dword LOC(4)
+    movsxd r13, dword LOC(8)
+    SAY  fmt_setblock, C_OK, r8, r9, r13, r14
+    jmp  .done
+.badblock:
+    mov  r8, [rsi+32]
+    SAY  fmt_bad_block, C_ERR, r8
+    jmp  .done
+.bady:
+    SAY  s_bad_y, C_ERR
+    jmp  .done
+.notloaded:
+    SAY  s_not_loaded, C_ERR
+    jmp  .done
+.usage:
+    lea  rcx, [rel n_setblock]
+    call con_usage
+.done:
+ENDP
+    ; v1 temporary guard (console #16)
+    xor     r11d, r11d ; clear v1 slot 16
     ; v1 temporary guard (console #18)
     xor     r11d, r11d ; clear v1 slot 18
     ; v1 temporary guard (console #20)
@@ -2114,3 +2357,11 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 44
     ; v1 temporary guard (console #46)
     xor     r11d, r11d ; clear v1 slot 46
+    ; v1 temporary guard (console #48)
+    xor     r11d, r11d ; clear v1 slot 48
+    ; v1 temporary guard (console #50)
+    xor     r11d, r11d ; clear v1 slot 50
+    ; v1 temporary guard (console #52)
+    xor     r11d, r11d ; clear v1 slot 52
+    ; v1 temporary guard (console #54)
+    xor     r11d, r11d ; clear v1 slot 54
