@@ -1036,50 +1036,35 @@ PROC con_submit
 ENDP
 
 ; first match in table order wins, that's why the table is alphabetical
-PROC con_complete ; v1: console scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (console:2)
-    cmp  byte [rel con_input], '/' ; v1: console scratch #3
-    jne  .done ; v1: console scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (console:4)
-    lea  rsi, [rel con_input+1] ; v1: console scratch #5
-    xor  ebx, ebx ; v1: console scratch #6
-    ; TODO: clamp index before table lookup on malformed input (console:6)
-.wl: ; v1: console scratch #7
-    movzx eax, byte [rsi+rbx] ; v1: console scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (console:8)
-    test eax, eax ; v1: console scratch #9
-    jz   .word ; v1: console scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (console:10)
-    cmp  eax, ' ' ; v1: console scratch #11
-    je   .done ; v1: console scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (console:12)
-    inc  ebx ; v1: console scratch #13
-    jmp  .wl ; v1: console scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (console:14)
-.word: ; v1: console scratch #15
-    lea  rdi, [rel cmd_table] ; v1: console scratch #16
-    ; note: rcx = state ptr, rdx = index, r8d = flags (console:16)
-    xor  r12d, r12d ; v1: console scratch #17
-.find: ; v1: console scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (console:18)
-    cmp  r12d, CMD_COUNT ; v1: console scratch #19
-    jge  .done ; v1: console scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (console:20)
-    mov  rcx, [rdi] ; v1: console scratch #21
-    mov  rdx, rsi ; v1: console scratch #22
-    ; TODO: clamp index before table lookup on malformed input (console:22)
-    mov  r8d, ebx ; v1: console scratch #23
-    call con_prefix_nc ; v1: console scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (console:24)
-    test eax, eax ; v1: console scratch #25
-    jnz  .hit ; v1: console scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (console:26)
-    add  rdi, CMD_SIZE ; v1: console scratch #27
-    inc  r12d ; v1: console scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (console:28)
-    jmp  .find ; v1: console scratch #29
-.hit: ; v1: console scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (console:30)
+PROC con_complete
+    cmp  byte [rel con_input], '/'
+    jne  .done
+    lea  rsi, [rel con_input+1]
+    xor  ebx, ebx
+.wl:
+    movzx eax, byte [rsi+rbx]
+    test eax, eax
+    jz   .word
+    cmp  eax, ' '
+    je   .done
+    inc  ebx
+    jmp  .wl
+.word:
+    lea  rdi, [rel cmd_table]
+    xor  r12d, r12d
+.find:
+    cmp  r12d, CMD_COUNT
+    jge  .done
+    mov  rcx, [rdi]
+    mov  rdx, rsi
+    mov  r8d, ebx
+    call con_prefix_nc
+    test eax, eax
+    jnz  .hit
+    add  rdi, CMD_SIZE
+    inc  r12d
+    jmp  .find
+.hit:
     lea  rcx, [rel con_tmp]
     mov  byte [rcx], '/'
     inc  rcx
@@ -1324,49 +1309,305 @@ PROC console_render, 64
 .hdone:
     ; same dark strip behind the hint, grey on bright sky is unreadable
     mov  eax, [rel con_scroll]
-    ; v1 temporary guard (console #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (console #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (console #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (console #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (console #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (console #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (console #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (console #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (console #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (console #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (console #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (console #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (console #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (console #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (console #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (console #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (console #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (console #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (console #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (console #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (console #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (console #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (console #59)
-    xor     r11d, r11d ; clear v1 slot 59
+    add  eax, [rel con_vis] ; v1: console scratch #0
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (console:0)
+    cmp  eax, [rel con_total] ; v1: console scratch #1
+    jge  .nomore ; v1: console scratch #2
+    ; TODO: hoist invariant pointer load out of .loop (console:2)
+    mov  eax, [rel con_vis] ; v1: console scratch #3
+    inc  eax ; v1: console scratch #4
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (console:4)
+    imul eax, eax, 9 ; v1: console scratch #5
+    mov  r13d, esi ; v1: console scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (console:6)
+    sub  r13d, eax ; v1: console scratch #7
+    lea  eax, [r13-1] ; v1: console scratch #8
+    ; temp: spill r12/r13 across helper call until reg alloc pass (console:8)
+    mov  LOC(0), eax ; v1: console scratch #9
+    RECT 2, LOC(0), r15d, 9, 0x80000000 ; v1: console scratch #10
+    ; note: rcx = state ptr, rdx = index, r8d = flags (console:10)
+    mov  ecx, 4 ; v1: console scratch #11
+    mov  edx, r13d ; v1: console scratch #12
+    ; TODO: clamp index before table lookup on malformed input (console:12)
+    lea  r8, [rel s_more_above] ; v1: console scratch #13
+    mov  r9d, C_WHITE ; v1: console scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (console:14)
+    mov  qword [rsp+32], 1 ; v1: console scratch #15
+    mov  qword [rsp+40], 1 ; v1: console scratch #16
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (console:16)
+    call ui_text_ex ; v1: console scratch #17
+.nomore: ; v1: console scratch #18
+    ; TODO: hoist invariant pointer load out of .loop (console:18)
+    mov  r12d, [rel g_ui_h] ; v1: console scratch #19
+    sub  r12d, 14 ; v1: console scratch #20
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (console:20)
+    mov  r14d, [rel g_ui_w] ; v1: console scratch #21
+    sub  r14d, 4 ; v1: console scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (console:22)
+    ; over the hotbar, dark enough that slot frames don't bleed through
+    RECT 2, r12d, r14d, 12, 0xC8000000 ; v1: console scratch #24
+    ; temp: spill r12/r13 across helper call until reg alloc pass (console:24)
+    ; hscroll: bump the first visible char until the caret fits. linear,
+    ; line is 255 max so who cares
+    mov  r13d, [rel g_ui_w] ; v1: console scratch #27
+    sub  r13d, 16 ; v1: console scratch #28
+    ; note: rcx = state ptr, rdx = index, r8d = flags (console:28)
+    cmp  r13d, 8 ; v1: console scratch #29
+    jge  .avail ; v1: console scratch #30
+    ; TODO: clamp index before table lookup on malformed input (console:30)
+    mov  r13d, 8 ; v1: console scratch #31
+.avail: ; v1: console scratch #32
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (console:32)
+    xor  edi, edi ; v1: console scratch #33
+.hs: ; v1: console scratch #34
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (console:34)
+    mov  ecx, [rel con_caret] ; v1: console scratch #35
+    sub  ecx, edi ; v1: console scratch #36
+    ; TODO: hoist invariant pointer load out of .loop (console:36)
+    jle  .hsd0 ; v1: console scratch #37
+    lea  rdx, [rel con_input] ; v1: console scratch #38
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (console:38)
+    add  rdx, rdi ; v1: console scratch #39
+    call con_width_n ; v1: console scratch #40
+    ; TODO: verify 16-byte rsp alignment before inner call (console:40)
+    cmp  eax, r13d ; v1: console scratch #41
+    jle  .hsd ; v1: console scratch #42
+    ; temp: spill r12/r13 across helper call until reg alloc pass (console:42)
+    inc  edi ; v1: console scratch #43
+    jmp  .hs ; v1: console scratch #44
+    ; note: rcx = state ptr, rdx = index, r8d = flags (console:44)
+.hsd0:
+    xor  eax, eax
+.hsd:
+    mov  LOC(4), eax
+    lea  r8, [rel con_input]
+    add  r8, rdi
+    mov  ecx, 4
+    lea  edx, [r12+2]
+    mov  r9d, 0xFFF0F0F0
+    mov  qword [rsp+32], 1
+    mov  qword [rsp+40], 1
+    call ui_text_ex
+    movss xmm0, [rel ui_time]
+    mulss xmm0, [rel f_two]
+    cvttss2si eax, xmm0
+    test eax, 1
+    jnz  .nocaret
+    mov  eax, LOC(4)
+    add  eax, 4
+    mov  LOC(8), eax
+    lea  eax, [r12+1]
+    mov  LOC(12), eax
+    RECT LOC(8), LOC(12), 1, 10, 0xFFF0F0F0
+.nocaret:
+    mov  ecx, 1
+    call con_suggest
+ENDP
+
+; topmost y chat may use. hud_dbg_yl is set by hud_debug earlier in the
+; same frame, so this depends on draw order
+PROC con_min_top
+    mov  eax, 2
+    cmp  dword [rel g_show_debug], 0
+    je   .done
+    cmp  dword [rel g_hide_hud], 0
+    jne  .done
+    mov  eax, [rel hud_dbg_yl]
+    inc  eax
+.done:
+ENDP
+
+; ecx=0 only counts (layout needs that first). prefix matches while typing
+; the name, the exact command's usage once there's a space. max 6
+PROC con_suggest, 64
+    mov  LOC(8), ecx
+    xor  r13d, r13d
+    cmp  byte [rel con_input], '/'
+    jne  .done
+    lea  rsi, [rel con_input+1]
+    xor  ebx, ebx
+    xor  r15d, r15d
+.wl:
+    movzx eax, byte [rsi+rbx]
+    test eax, eax
+    jz   .wd
+    cmp  eax, ' '
+    jne  .wn
+    mov  r15d, 1
+    jmp  .wd
+.wn:
+    inc  ebx
+    jmp  .wl
+.wd:
+    lea  rdi, [rel cmd_table]
+    xor  r12d, r12d
+    mov  r14d, [rel g_ui_h]
+    sub  r14d, 25
+.lp:
+    cmp  r12d, CMD_COUNT
+    jge  .done
+    cmp  r13d, 6
+    jge  .done
+    test r15d, r15d
+    jnz  .exact
+    mov  rcx, [rdi]
+    mov  rdx, rsi
+    mov  r8d, ebx
+    call con_prefix_nc
+    test eax, eax
+    jz   .next
+    jmp  .show
+.exact:
+    mov  rcx, [rdi]
+    call con_strlen
+    cmp  eax, ebx
+    jne  .next
+    mov  rcx, [rdi]
+    mov  rdx, rsi
+    mov  r8d, ebx
+    call con_prefix_nc
+    test eax, eax
+    jz   .next
+.show:
+    cmp  dword LOC(8), 0
+    je   .counted
+    mov  rcx, [rdi+16]
+    call con_usage_sep
+    mov  r9, rax
+    lea  rcx, [rel con_msg]
+    lea  rdx, [rel fmt_help_line]
+    mov  r8, [rdi]
+    mov  rax, [rdi+16]
+    mov  [rsp+32], rax
+    mov  rax, [rdi+24]
+    mov  [rsp+40], rax
+    call str_format
+    lea  rcx, [rel con_msg]
+    call ui_text_dims
+    lea  r8d, [rax+4]
+    mov  LOC(0), r8d
+    lea  eax, [r14-1]
+    mov  LOC(4), eax
+    RECT 2, LOC(4), LOC(0), 10, 0xF0101018 ; nearly opaque, history is right behind it
+    mov  ecx, 4
+    mov  edx, r14d
+    lea  r8, [rel con_msg]
+    mov  r9d, C_WHITE
+    mov  qword [rsp+32], 1
+    mov  qword [rsp+40], 1
+    call ui_text_ex
+.counted:
+    sub  r14d, 9
+    inc  r13d
+.next:
+    add  rdi, CMD_SIZE
+    inc  r12d
+    jmp  .lp
+.done:
+    mov  eax, r13d
+ENDP
+
+; no quoting, didn't need it
+PROC con_tokenize
+    mov  rsi, rcx
+.ls:
+    cmp  byte [rsi], ' '
+    jne  .sl
+    inc  rsi
+    jmp  .ls
+.sl:
+    cmp  byte [rsi], '/'
+    jne  .cp
+    inc  rsi
+.cp:
+    lea  rcx, [rel con_tok]
+    mov  rdx, rsi
+    mov  r8d, 256
+    call con_strncpy
+    lea  rsi, [rel con_tok]
+    lea  rdi, [rel con_argv]
+    xor  ebx, ebx
+.tok:
+    cmp  byte [rsi], ' '
+    jne  .t1
+    inc  rsi
+    jmp  .tok
+.t1:
+    cmp  byte [rsi], 0
+    je   .end
+    cmp  ebx, MAX_ARGS
+    jge  .end
+    mov  [rdi+rbx*8], rsi
+    inc  ebx
+.t2:
+    movzx eax, byte [rsi]
+    test eax, eax
+    jz   .end
+    cmp  eax, ' '
+    je   .t3
+    inc  rsi
+    jmp  .t2
+.t3:
+    mov  byte [rsi], 0
+    inc  rsi
+    jmp  .tok
+.end:
+    mov  [rel con_argc], ebx
+ENDP
+
+PROC con_find_cmd
+    mov  rsi, rcx
+    lea  rdi, [rel cmd_table]
+    xor  ebx, ebx
+.lp:
+    cmp  ebx, CMD_COUNT
+    jge  .no
+    mov  rcx, rsi
+    mov  rdx, [rdi]
+    call con_streq_nc
+    test eax, eax
+    jnz  .yes
+    add  rdi, CMD_SIZE
+    inc  ebx
+    jmp  .lp
+.no:
+    xor  eax, eax
+    jmp  .done
+.yes:
+    mov  rax, rdi
+.done:
+ENDP
+    ; v1 temporary guard (console #22)
+    xor     r11d, r11d ; clear v1 slot 22
+    ; v1 temporary guard (console #24)
+    xor     r11d, r11d ; clear v1 slot 24
+    ; v1 temporary guard (console #26)
+    xor     r11d, r11d ; clear v1 slot 26
+    ; v1 temporary guard (console #28)
+    xor     r11d, r11d ; clear v1 slot 28
+    ; v1 temporary guard (console #30)
+    xor     r11d, r11d ; clear v1 slot 30
+    ; v1 temporary guard (console #32)
+    xor     r11d, r11d ; clear v1 slot 32
+    ; v1 temporary guard (console #34)
+    xor     r11d, r11d ; clear v1 slot 34
+    ; v1 temporary guard (console #36)
+    xor     r11d, r11d ; clear v1 slot 36
+    ; v1 temporary guard (console #38)
+    xor     r11d, r11d ; clear v1 slot 38
+    ; v1 temporary guard (console #40)
+    xor     r11d, r11d ; clear v1 slot 40
+    ; v1 temporary guard (console #42)
+    xor     r11d, r11d ; clear v1 slot 42
+    ; v1 temporary guard (console #44)
+    xor     r11d, r11d ; clear v1 slot 44
+    ; v1 temporary guard (console #46)
+    xor     r11d, r11d ; clear v1 slot 46
+    ; v1 temporary guard (console #48)
+    xor     r11d, r11d ; clear v1 slot 48
+    ; v1 temporary guard (console #50)
+    xor     r11d, r11d ; clear v1 slot 50
+    ; v1 temporary guard (console #52)
+    xor     r11d, r11d ; clear v1 slot 52
+    ; v1 temporary guard (console #54)
+    xor     r11d, r11d ; clear v1 slot 54
