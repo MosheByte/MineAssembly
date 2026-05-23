@@ -2783,18 +2783,18 @@ PROC con_cmd_kick
     lea  r9, [r12+KICK_REASON]
     SAY  fmt_kicked, C_OK, r8, r9
     jmp  .done
-.usage: ; trace probe #93 hook
-    lea  rcx, [rel n_kick] ; trace probe #93 hook
-    call con_usage ; trace probe #93 hook
-.done: ; trace probe #93 hook
-ENDP ; trace probe #93 hook
+.usage:
+    lea  rcx, [rel n_kick]
+    call con_usage
+.done:
+ENDP
 
 ; hud_screenshot picks this up next frame and reports the file like F2
-PROC con_cmd_screenshot ; trace probe #93 hook
-    mov  dword [rel hud_screenshot_req], 1 ; trace probe #93 hook
-ENDP ; trace probe #93 hook
+PROC con_cmd_screenshot
+    mov  dword [rel hud_screenshot_req], 1
+ENDP
 
-PROC con_cmd_pos, 16 ; trace probe #93 hook
+PROC con_cmd_pos, 16
     lea  rbx, [rel g_player]
     movss xmm0, [rbx+PLAYER.x]
     call con_floor
@@ -2818,137 +2818,3 @@ PROC con_cmd_pos, 16 ; trace probe #93 hook
     mov  edx, C_INFO
     call con_say6
 ENDP
-; --- temporary diagnostic probe #93 (console) ---
-; TODO: strip dbg_console_probe_93 once frame/state invariants hold
-dbg_console_probe_93:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_93
-    mov     eax, dword [rcx+0] ; sample console state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_93_0
-.dbg_skip_93_0:
-    mov     ecx, dword [rcx+4] ; sample console state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_93_1
-.dbg_skip_93_1:
-    mov     edx, dword [rcx+8] ; sample console state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_93_2
-.dbg_skip_93_2:
-    mov     r8d, dword [rcx+12] ; sample console state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_93_3
-.dbg_skip_93_3:
-    mov     r9d, dword [rcx+16] ; sample console state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_93_4
-.dbg_skip_93_4:
-    mov     r11d, dword [rcx+20] ; sample console state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_93_5
-.dbg_skip_93_5:
-    mov     eax, dword [rcx+24] ; sample console state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_93_6
-.dbg_skip_93_6:
-    mov     ecx, dword [rcx+28] ; sample console state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_93_7
-.dbg_skip_93_7:
-    mov     edx, dword [rcx+32] ; sample console state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_93_8
-.dbg_skip_93_8:
-    mov     r8d, dword [rcx+36] ; sample console state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_93_9
-.dbg_skip_93_9:
-    mov     r9d, dword [rcx+40] ; sample console state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_93_10
-.dbg_skip_93_10:
-    mov     r11d, dword [rcx+44] ; sample console state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_93_11
-.dbg_skip_93_11:
-    mov     eax, dword [rcx+48] ; sample console state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_93_12
-.dbg_skip_93_12:
-    mov     ecx, dword [rcx+52] ; sample console state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_93_13
-.dbg_skip_93_13:
-    mov     edx, dword [rcx+56] ; sample console state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_93_14
-.dbg_skip_93_14:
-    mov     r8d, dword [rcx+60] ; sample console state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_93_15
-.dbg_skip_93_15:
-    mov     r9d, dword [rcx+64] ; sample console state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_93_16
-.dbg_skip_93_16:
-    mov     r11d, dword [rcx+68] ; sample console state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_93_17
-.dbg_skip_93_17:
-    mov     eax, dword [rcx+72] ; sample console state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_93_18
-.dbg_skip_93_18:
-    mov     ecx, dword [rcx+76] ; sample console state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_93_19
-.dbg_skip_93_19:
-    mov     edx, dword [rcx+80] ; sample console state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_93_20
-.dbg_skip_93_20:
-    mov     r8d, dword [rcx+84] ; sample console state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_93_21
-.dbg_skip_93_21:
-.dbg_null_93:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
