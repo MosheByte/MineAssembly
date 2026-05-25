@@ -2818,3 +2818,48 @@ PROC con_cmd_pos, 16
     mov  edx, C_INFO
     call con_say6
 ENDP
+
+PROC con_say6
+    mov  ebx, edx
+    mov  rax, ARG5
+    mov  [rsp+32], rax
+    mov  rax, ARG6
+    mov  [rsp+40], rax
+    mov  rax, ARG7
+    mov  [rsp+48], rax
+    mov  rax, ARG8
+    mov  [rsp+56], rax
+    mov  rdx, rcx
+    lea  rcx, [rel con_msg]
+    call str_format
+    lea  rcx, [rel con_msg]
+    mov  edx, ebx
+    call chat_add
+ENDP
+
+PROC con_cmd_spawnpoint
+    lea  rbx, [rel g_player]
+    mov  eax, [rbx+PLAYER.x]
+    mov  [rbx+PLAYER.spawn_x], eax
+    mov  eax, [rbx+PLAYER.y]
+    mov  [rbx+PLAYER.spawn_y], eax
+    mov  eax, [rbx+PLAYER.z]
+    mov  [rbx+PLAYER.spawn_z], eax
+    movss xmm0, [rbx+PLAYER.x]
+    call con_floor
+    movsxd rsi, eax
+    movss xmm0, [rbx+PLAYER.y]
+    call con_floor
+    movsxd rdi, eax
+    movss xmm0, [rbx+PLAYER.z]
+    call con_floor
+    movsxd r12, eax
+    SAY  fmt_spawnpt, C_OK, rsi, rdi, r12
+ENDP
+
+PROC con_cmd_about
+    SAY  s_about1, C_WHITE
+    SAY  s_about2, C_WHITE
+    SAY  s_about3, C_WHITE
+    SAY  s_about4, C_WHITE
+ENDP
