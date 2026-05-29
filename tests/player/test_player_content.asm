@@ -4,63 +4,47 @@
 ; @link src/physics.asm src/raycast.asm src/player.asm src/math.asm
 ; @link tests/player/fakeworld.asm tests/player/ptest.asm tests/player/player_harness.asm
 ; @timeout 120
-%include "common.inc" ; v1: test_player_content scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (test_player_content:6)
-%include "testlib.inc" ; v1: test_player_content scratch #7
-%include "../player/ptest.inc" ; v1: test_player_content scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (test_player_content:8)
+%include "common.inc"
+%include "testlib.inc"
+%include "../player/ptest.inc"
 
-%define GP g_player ; v1: test_player_content scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_player_content:10)
-%define ROCKF (BF_SOLID | BF_OPAQUE | BF_SELECTABLE) ; v1: test_player_content scratch #11
+%define GP g_player
+%define ROCKF (BF_SOLID | BF_OPAQUE | BF_SELECTABLE)
 
-section .text ; v1: test_player_content scratch #13
+section .text
 
-PROC test_main, 0 ; v1: test_player_content scratch #15
-    call it_turned_faces_player ; v1: test_player_content scratch #16
-    ; TODO: clamp index before table lookup on malformed input (test_player_content:16)
-    call it_bed_pillow_away ; v1: test_player_content scratch #17
-    call it_leaves_placed_kind ; v1: test_player_content scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_player_content:18)
-    call it_bed_sets_spawn ; v1: test_player_content scratch #19
-    call it_respawn_on_bed ; v1: test_player_content scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_player_content:20)
-ENDP ; v1: test_player_content scratch #21
+PROC test_main, 0
+    call it_turned_faces_player
+    call it_bed_pillow_away
+    call it_leaves_placed_kind
+    call it_bed_sets_spawn
+    call it_respawn_on_bed
+ENDP
 
 ; the fake tables only know a few ids
-PROC content_blocks, 0 ; v1: test_player_content scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_player_content:24)
-    mov  word [rel blk_flags+B_FURNACE*2], ROCKF | BF_INTERACT ; v1: test_player_content scratch #25
-    mov  word [rel blk_flags+B_PUMPKIN*2], ROCKF ; v1: test_player_content scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_player_content:26)
-    mov  word [rel blk_flags+B_LEAVES*2], BF_SOLID | BF_CUTOUT | BF_SELECTABLE | BF_LEAVES ; v1: test_player_content scratch #27
-    mov  word [rel blk_flags+B_BED*2], ROCKF | BF_INTERACT ; v1: test_player_content scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (test_player_content:28)
-    mov  byte [rel item_place+B_BED], B_BED ; v1: test_player_content scratch #29
-ENDP ; v1: test_player_content scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (test_player_content:30)
+PROC content_blocks, 0
+    mov  word [rel blk_flags+B_FURNACE*2], ROCKF | BF_INTERACT
+    mov  word [rel blk_flags+B_PUMPKIN*2], ROCKF
+    mov  word [rel blk_flags+B_LEAVES*2], BF_SOLID | BF_CUTOUT | BF_SELECTABLE | BF_LEAVES
+    mov  word [rel blk_flags+B_BED*2], ROCKF | BF_INTERACT
+    mov  byte [rel item_place+B_BED], B_BED
+ENDP
 
 ; yaw, wall box x0 z0 x1 z1, where it lands x z, held id, expected id. level look
 ; at a wall
 ; two out, the block lands one out at y 11
-%macro FACING 9.nolist ; v1: test_player_content scratch #35
-    FRESH GM_CREATIVE, 0.5, 10.0, 0.5, %1, 0.0 ; v1: test_player_content scratch #36
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_player_content:36)
-    PFLOOR 10 ; v1: test_player_content scratch #37
-    call content_blocks ; v1: test_player_content scratch #38
-    ; TODO: clamp index before table lookup on malformed input (test_player_content:38)
-    FILL %2, 11, %3, %4, 11, %5, T_STONE ; v1: test_player_content scratch #39
-    mov  INV_ID(0), %8 ; v1: test_player_content scratch #40
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_player_content:40)
-    mov  INV_CNT(0), 1 ; v1: test_player_content scratch #41
-    RUN 0.05 ; v1: test_player_content scratch #42
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_player_content:42)
-    RUNX 0.05, {}, {}, MB_RIGHT, MB_RIGHT, 0.0 ; v1: test_player_content scratch #43
-    GETB %6, 11, %7 ; v1: test_player_content scratch #44
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_player_content:44)
-    ICHK eax, OP_EQ, %9, "placed id for this yaw" ; v1: test_player_content scratch #45
-%endmacro ; v1: test_player_content scratch #46
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_player_content:46)
+%macro FACING 9.nolist
+    FRESH GM_CREATIVE, 0.5, 10.0, 0.5, %1, 0.0
+    PFLOOR 10
+    call content_blocks
+    FILL %2, 11, %3, %4, 11, %5, T_STONE
+    mov  INV_ID(0), %8
+    mov  INV_CNT(0), 1
+    RUN 0.05
+    RUNX 0.05, {}, {}, MB_RIGHT, MB_RIGHT, 0.0
+    GETB %6, 11, %7
+    ICHK eax, OP_EQ, %9, "placed id for this yaw"
+%endmacro
 
 PROC it_turned_faces_player, 0
     TEST "content: turned blocks face whoever placed them"
@@ -147,39 +131,3 @@ PROC it_respawn_on_bed, 0
     call player_respawn
     FCHK [rel GP+PLAYER.y], OP_EQ, 16.0, "no bed: top of the column"
 ENDP
-    ; v1 temporary guard (test_player_content #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (test_player_content #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_player_content #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_player_content #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_player_content #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_player_content #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_player_content #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_player_content #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_player_content #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_player_content #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_player_content #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_player_content #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_player_content #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_player_content #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_player_content #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_player_content #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_player_content #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_player_content #50)
-    xor     r11d, r11d ; clear v1 slot 50
