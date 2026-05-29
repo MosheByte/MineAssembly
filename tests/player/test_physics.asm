@@ -504,3 +504,64 @@ PROC ph_box_free, 0
     BOXFREE 2.9, 5.9, -3.0, 3.5, 6.5, -2.5
     ICHK eax, OP_EQ, 0, "corner overlap"
 ENDP
+
+PROC wl_no_phantom_bedrock, 0
+    TEST "limits: no phantom bedrock below world"
+    ; world_get_block says bedrock for y < 0 but collision has to ignore that
+    call fw_clear
+    BODY 0.5, 0.5, 0.5
+    MOVE 0.0, -3.0, 0.0
+    mov  ebx, eax
+    CHECK_NEAR [rel body+PHYS.y], -2.5, 0.000005, "fell below 0"
+    FLAGS_NONE ebx, PF_GROUND | PF_HIT_Y, "no ground below 0"
+    mov  r12d, 20
+.l: MOVE 0.0, -3.9, 0.0
+    dec  r12d
+    jnz  .l
+    FCHK [rel body+PHYS.y], OP_LT, -70.0, "deep in the void"
+    BOXFREE 0.0, -3.0, 0.0, 1.0, -1.0, 1.0
+    ICHK eax, OP_EQ, 1, "box below 0 is free"
+    SETB 0, 0, 0, T_STONE                   ; a real one at y = 0 still holds
+    BODY 0.5, 2.0, 0.5
+    MOVE 0.0, -3.0, 0.0
+    mov  ebx, eax
+    FCHK [rel body+PHYS.y], OP_EQ, 1.0, "lands on the y=0 block"
+    FLAGS_ALL ebx, PF_GROUND, "GROUND"
+ENDP
+
+PROC wl_border_stops_movement, 0
+    TEST "limits: border stops movement"
+    call fw_clear
+    BODY 999998.0, 10.0, 0.5
+    MOVE 3.0, 0.0, 0.0
+    mov  ebx, eax
+    FCHK [rel body+PHYS.x], OP_EQ, 999999.7, "x = float(BORDER-0.3)"
+    FLAGS_ALL ebx, PF_HIT_X, "HIT_X"
+    MOVE 1.0, 0.0, 0.0
+    mov  ebx, eax
+    FCHK [rel body+PHYS.x], OP_EQ, 999999.7, "still at the border"
+    FLAGS_ALL ebx, PF_HIT_X, "HIT_X again"
+    MOVE -1.0, 0.0, 0.0
+    mov  ebx, eax
+    FLAGS_NONE ebx, PF_HIT_X, "no HIT_X walking back"
+    FCHK [rel body+PHYS.x], OP_LT, 999999.7, "moved back in"
+    BODY 0.5, 10.0, -999999.0
+    MOVE 0.0, 0.0, -2.0
+    mov  ebx, eax
+    FCHK [rel body+PHYS.z], OP_EQ, -999999.7, "z = -float(BORDER-0.3)"
+    FLAGS_ALL ebx, PF_HIT_Z, "HIT_Z"
+ENDP
+
+PROC wl_border_pulls_back, 0
+    TEST "limits: border pulls outside body back"
+    call fw_clear
+    BODY 2e9, 10.0, -5e6, 0.25
+    MOVE 0.0, 0.0, 0.0
+    mov  ebx, eax
+    FCHK [rel body+PHYS.x], OP_EQ, 999999.75, "x pulled to the border"
+    FCHK [rel body+PHYS.z], OP_EQ, -999999.75, "z pulled to the border"
+    FLAGS_ALL ebx, PF_HIT_X | PF_HIT_Z, "HIT_X and HIT_Z"
+    BODY 0.5, 10.0, 0.5
+    MOVE 0.1, 0.0, 0.0
+    ICHK eax, OP_EQ, 0, "no flags inside the border"
+ENDP
