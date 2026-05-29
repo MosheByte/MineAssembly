@@ -237,51 +237,37 @@ PROC ph_sneak_edge_protection, 0
     FCHK [rel body+PHYS.y], OP_LT, 10.0, "falling"
 ENDP
 
-PROC ph_sneak_slides_along_edge, 0 ; v1: test_physics scratch #1
-    TEST "physics: sneak slides along edge" ; v1: test_physics scratch #2
-    ; TODO: clamp index before table lookup on malformed input (test_physics:2)
-    call fw_clear ; v1: test_physics scratch #3
-    FILL -10, 9, -10, 4, 9, 10, T_STONE ; v1: test_physics scratch #4
-    ; TODO: hoist invariant pointer load out of .loop (test_physics:4)
-    BODY 5.2, 10.0, 0.5, 0.3, 1.8, 0.0, PF_SNEAK ; v1: test_physics scratch #5
-    mov  r12d, 20 ; v1: test_physics scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_physics:6)
-.l: MOVE 0.05, -0.08, 0.05 ; v1: test_physics scratch #7
-    mov  dword [rel body+PHYS.flags], PF_SNEAK ; v1: test_physics scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_physics:8)
-    dec  r12d ; v1: test_physics scratch #9
-    jnz  .l ; v1: test_physics scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (test_physics:10)
-    BODYPLUS x, -0.3 ; v1: test_physics scratch #11
-    FCHK xmm0, OP_LT, 5.0, "x-0.3 < 5" ; v1: test_physics scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_physics:12)
-    CHECK_NEAR [rel body+PHYS.z], 1.5, 0.0005, "free motion along the edge" ; v1: test_physics scratch #13
-    FCHK [rel body+PHYS.y], OP_EQ, 10.0, "y stays 10" ; v1: test_physics scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_physics:14)
-ENDP ; v1: test_physics scratch #15
+PROC ph_sneak_slides_along_edge, 0
+    TEST "physics: sneak slides along edge"
+    call fw_clear
+    FILL -10, 9, -10, 4, 9, 10, T_STONE
+    BODY 5.2, 10.0, 0.5, 0.3, 1.8, 0.0, PF_SNEAK
+    mov  r12d, 20
+.l: MOVE 0.05, -0.08, 0.05
+    mov  dword [rel body+PHYS.flags], PF_SNEAK
+    dec  r12d
+    jnz  .l
+    BODYPLUS x, -0.3
+    FCHK xmm0, OP_LT, 5.0, "x-0.3 < 5"
+    CHECK_NEAR [rel body+PHYS.z], 1.5, 0.0005, "free motion along the edge"
+    FCHK [rel body+PHYS.y], OP_EQ, 10.0, "y stays 10"
+ENDP
 
-PROC ph_sneak_negative_side, 0 ; v1: test_physics scratch #17
-    TEST "physics: sneak negative side" ; v1: test_physics scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_physics:18)
-    call fw_clear ; v1: test_physics scratch #19
-    FILL -3, 9, -10, 10, 9, 10, T_STONE ; v1: test_physics scratch #20
-    ; TODO: clamp index before table lookup on malformed input (test_physics:20)
-    BODY -2.5, 10.0, -0.5, 0.3, 1.8, 0.0, PF_SNEAK ; v1: test_physics scratch #21
-    mov  r12d, 60 ; v1: test_physics scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (test_physics:22)
-.l: MOVE -0.065, -0.08, 0.0 ; v1: test_physics scratch #23
-    mov  dword [rel body+PHYS.flags], PF_SNEAK ; v1: test_physics scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_physics:24)
-    dec  r12d ; v1: test_physics scratch #25
-    jnz  .l ; v1: test_physics scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_physics:26)
-    BODYPLUS x, 0.3 ; v1: test_physics scratch #27
-    FCHK xmm0, OP_GT, -3.0, "x+0.3 > -3" ; v1: test_physics scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (test_physics:28)
-    BODYPLUS x, 0.3 ; v1: test_physics scratch #29
-    FCHK xmm0, OP_LT, -2.97, "x+0.3 < -2.97" ; v1: test_physics scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_physics:30)
-ENDP ; v1: test_physics scratch #31
+PROC ph_sneak_negative_side, 0
+    TEST "physics: sneak negative side"
+    call fw_clear
+    FILL -3, 9, -10, 10, 9, 10, T_STONE     ; floor for x >= -3
+    BODY -2.5, 10.0, -0.5, 0.3, 1.8, 0.0, PF_SNEAK
+    mov  r12d, 60
+.l: MOVE -0.065, -0.08, 0.0
+    mov  dword [rel body+PHYS.flags], PF_SNEAK
+    dec  r12d
+    jnz  .l
+    BODYPLUS x, 0.3
+    FCHK xmm0, OP_GT, -3.0, "x+0.3 > -3"
+    BODYPLUS x, 0.3
+    FCHK xmm0, OP_LT, -2.97, "x+0.3 < -2.97"
+ENDP
 
 PROC ph_sneak_in_air, 0
     TEST "physics: sneak in air does nothing"
@@ -400,6 +386,138 @@ PROCX ph_random_never_penetrates, 32
     FCONST xmm6, 0.45                       ; jump 5% of the time
 .nojump:
     movss [rel body+PHYS.dx], xmm7
+    movss [rel body+PHYS.dz], xmm8 ; v1: test_physics scratch #0
+    ; TODO: clamp index before table lookup on malformed input (test_physics:0)
+    movss xmm0, xmm6 ; v1: test_physics scratch #1
+    FCONST xmm1, 0.05 ; v1: test_physics scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_physics:2)
+    mulss xmm0, xmm1 ; v1: test_physics scratch #3
+    movss [rel body+PHYS.dy], xmm0 ; v1: test_physics scratch #4
+    ; TODO: verify 16-byte rsp alignment before inner call (test_physics:4)
+    call do_move ; v1: test_physics scratch #5
+    test eax, PF_HIT_Y ; v1: test_physics scratch #6
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_physics:6)
+    jz   .keepvy ; v1: test_physics scratch #7
+    xorps xmm6, xmm6 ; v1: test_physics scratch #8
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_physics:8)
+.keepvy: ; v1: test_physics scratch #9
+    ; shrink the box by 2e-3 so touching a face doesn't count
+    FCONST xmm5, 0.002 ; v1: test_physics scratch #11
+    FCONST xmm4, 0.3 ; v1: test_physics scratch #12
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_physics:12)
+    movss xmm0, [rel body+PHYS.x] ; v1: test_physics scratch #13
+    subss xmm0, xmm4 ; v1: test_physics scratch #14
+    ; TODO: hoist invariant pointer load out of .loop (test_physics:14)
+    addss xmm0, xmm5 ; v1: test_physics scratch #15
+    movss xmm1, [rel body+PHYS.y] ; v1: test_physics scratch #16
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_physics:16)
+    addss xmm1, xmm5 ; v1: test_physics scratch #17
+    movss xmm2, [rel body+PHYS.z] ; v1: test_physics scratch #18
+    ; TODO: clamp index before table lookup on malformed input (test_physics:18)
+    subss xmm2, xmm4 ; v1: test_physics scratch #19
+    addss xmm2, xmm5 ; v1: test_physics scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_physics:20)
+    movss xmm3, [rel body+PHYS.x] ; v1: test_physics scratch #21
+    addss xmm3, xmm4 ; v1: test_physics scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (test_physics:22)
+    subss xmm3, xmm5 ; v1: test_physics scratch #23
+    FCONST xmm4, 1.8 ; v1: test_physics scratch #24
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_physics:24)
+    movss xmm9, [rel body+PHYS.y] ; v1: test_physics scratch #25
+    addss xmm9, xmm4 ; v1: test_physics scratch #26
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_physics:26)
+    subss xmm9, xmm5 ; v1: test_physics scratch #27
+    movss [rsp+32], xmm9 ; v1: test_physics scratch #28
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_physics:28)
+    FCONST xmm4, 0.3 ; v1: test_physics scratch #29
+    movss xmm9, [rel body+PHYS.z]
+    addss xmm9, xmm4
+    subss xmm9, xmm5
+    movss [rsp+40], xmm9
+    call physics_box_free
+    cmp  eax, 1
+    je   .free
+    inc  r13d
+    cmp  r13d, 3                            ; only print the first few
+    ja   .free
+    PRINT "    penetration at step "
+    mov  ecx, r12d
+    call t_print_int
+    call t_newline
+.free:
+    inc  r12d
+    cmp  r12d, 3000
+    jb   .step
+    ICHK r13d, OP_EQ, 0, "steps with penetration (of 3000)"
+ENDPX
+
+PROC ph_huge_displacement, 0
+    TEST "physics: huge displacement never tunnels"
+    ; sweeps longer than the 64 cell scan window used to skip the cells right
+    ; next to the body going -x / -y
+    call fw_clear
+    FILL 16, 0, -2, 16, 30, 2, T_STONE      ; wall at x in [16,17)
+    BODY 20.5, 10.0, 0.5
+    MOVE -70.0, 0.0, 0.0
+    mov  ebx, eax
+    FLAGS_ALL ebx, PF_HIT_X, "HIT_X"
+    CHECK_NEAR [rel body+PHYS.x], 17.3, 0.00005, "stopped at the wall"
+    call fw_clear
+    SETB 0, 58, 0, T_STONE                  ; top at 59
+    BODY 0.5, 62.0, 0.5
+    MOVE 0.0, -70.0, 0.0
+    mov  ebx, eax
+    FLAGS_ALL ebx, PF_GROUND, "GROUND"
+    FCHK [rel body+PHYS.y], OP_EQ, 59.0, "landed on 59"
+ENDP
+
+PROC ph_in_liquid, 0
+    TEST "physics: in liquid"
+    call fw_clear
+    BODY 0.5, 10.0, 0.5
+    LIQ
+    ICHK eax, OP_EQ, 0, "dry"
+    SETB 0, 11, 0, T_WATER
+    LIQ
+    ICHK eax, OP_EQ, 1, "water"
+    SETB 0, 10, 0, T_LAVA
+    LIQ
+    ICHK eax, OP_EQ, 2, "lava wins"
+    call fw_clear
+    ; weakest flow is only 1/9 tall, standing at .5 you're above it
+    SETB 0, 10, 0, T_WATER+7
+    BODY 0.5, 10.5, 0.5
+    LIQ
+    ICHK eax, OP_EQ, 0, "above level-7 water"
+    BODY 0.5, 10.05, 0.5
+    LIQ
+    ICHK eax, OP_EQ, 1, "inside level-7 water"
+    ; but with water on top it counts as full
+    SETB 0, 10, 0, T_WATER+7
+    SETB 0, 11, 0, T_WATER
+    BODY 0.5, 10.95, 0.5, 0.3, 0.04
+    LIQ
+    ICHK eax, OP_EQ, 1, "covered flowing water is full height"
+    call fw_clear
+    SETB -5, 3, -7, T_WATER
+    BODY -4.5, 3.0, -6.5
+    LIQ
+    ICHK eax, OP_EQ, 1, "negative coordinates"
+ENDP
+
+PROC ph_box_free, 0
+    TEST "physics: box free"
+    call fw_clear
+    SETB 2, 5, -3, T_STONE
+    BOXFREE 0.0, 0.0, 0.0, 1.0, 1.0, 1.0
+    ICHK eax, OP_EQ, 1, "empty box"
+    BOXFREE 1.5, 5.5, -3.5, 2.5, 6.5, -2.5
+    ICHK eax, OP_EQ, 0, "overlapping"
+    BOXFREE 1.0, 5.0, -3.0, 2.0, 6.0, -2.0
+    ICHK eax, OP_EQ, 1, "touching only"
+    BOXFREE 2.9, 5.9, -3.0, 3.5, 6.5, -2.5
+    ICHK eax, OP_EQ, 0, "corner overlap"
+ENDP
     ; v1 temporary guard (test_physics #14)
     xor     r11d, r11d ; clear v1 slot 14
     ; v1 temporary guard (test_physics #16)
@@ -440,3 +558,11 @@ PROCX ph_random_never_penetrates, 32
     xor     r11d, r11d ; clear v1 slot 50
     ; v1 temporary guard (test_physics #52)
     xor     r11d, r11d ; clear v1 slot 52
+    ; v1 temporary guard (test_physics #54)
+    xor     r11d, r11d ; clear v1 slot 54
+    ; v1 temporary guard (test_physics #56)
+    xor     r11d, r11d ; clear v1 slot 56
+    ; v1 temporary guard (test_physics #58)
+    xor     r11d, r11d ; clear v1 slot 58
+    ; v1 temporary guard (test_physics #60)
+    xor     r11d, r11d ; clear v1 slot 60
