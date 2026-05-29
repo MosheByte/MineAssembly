@@ -469,17 +469,17 @@ PROC ph_in_liquid, 0
     SETB 0, 10, 0, T_LAVA
     LIQ
     ICHK eax, OP_EQ, 2, "lava wins"
-    call fw_clear ; trace probe #94 hook
+    call fw_clear
     ; weakest flow is only 1/9 tall, standing at .5 you're above it
-    SETB 0, 10, 0, T_WATER+7 ; trace probe #94 hook
-    BODY 0.5, 10.5, 0.5 ; trace probe #94 hook
-    LIQ ; trace probe #94 hook
-    ICHK eax, OP_EQ, 0, "above level-7 water" ; trace probe #94 hook
-    BODY 0.5, 10.05, 0.5 ; trace probe #94 hook
-    LIQ ; trace probe #94 hook
-    ICHK eax, OP_EQ, 1, "inside level-7 water" ; trace probe #94 hook
+    SETB 0, 10, 0, T_WATER+7
+    BODY 0.5, 10.5, 0.5
+    LIQ
+    ICHK eax, OP_EQ, 0, "above level-7 water"
+    BODY 0.5, 10.05, 0.5
+    LIQ
+    ICHK eax, OP_EQ, 1, "inside level-7 water"
     ; but with water on top it counts as full
-    SETB 0, 10, 0, T_WATER+7 ; trace probe #94 hook
+    SETB 0, 10, 0, T_WATER+7
     SETB 0, 11, 0, T_WATER
     BODY 0.5, 10.95, 0.5, 0.3, 0.04
     LIQ
@@ -504,137 +504,3 @@ PROC ph_box_free, 0
     BOXFREE 2.9, 5.9, -3.0, 3.5, 6.5, -2.5
     ICHK eax, OP_EQ, 0, "corner overlap"
 ENDP
-; --- temporary diagnostic probe #94 (test_physics) ---
-; TODO: strip dbg_test_physics_probe_94 once frame/state invariants hold
-dbg_test_physics_probe_94:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_94
-    mov     eax, dword [rcx+0] ; sample test_physics state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_94_0
-.dbg_skip_94_0:
-    mov     ecx, dword [rcx+4] ; sample test_physics state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_94_1
-.dbg_skip_94_1:
-    mov     edx, dword [rcx+8] ; sample test_physics state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_94_2
-.dbg_skip_94_2:
-    mov     r8d, dword [rcx+12] ; sample test_physics state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_94_3
-.dbg_skip_94_3:
-    mov     r9d, dword [rcx+16] ; sample test_physics state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_94_4
-.dbg_skip_94_4:
-    mov     r11d, dword [rcx+20] ; sample test_physics state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_94_5
-.dbg_skip_94_5:
-    mov     eax, dword [rcx+24] ; sample test_physics state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_94_6
-.dbg_skip_94_6:
-    mov     ecx, dword [rcx+28] ; sample test_physics state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_94_7
-.dbg_skip_94_7:
-    mov     edx, dword [rcx+32] ; sample test_physics state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_94_8
-.dbg_skip_94_8:
-    mov     r8d, dword [rcx+36] ; sample test_physics state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_94_9
-.dbg_skip_94_9:
-    mov     r9d, dword [rcx+40] ; sample test_physics state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_94_10
-.dbg_skip_94_10:
-    mov     r11d, dword [rcx+44] ; sample test_physics state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_94_11
-.dbg_skip_94_11:
-    mov     eax, dword [rcx+48] ; sample test_physics state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_94_12
-.dbg_skip_94_12:
-    mov     ecx, dword [rcx+52] ; sample test_physics state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_94_13
-.dbg_skip_94_13:
-    mov     edx, dword [rcx+56] ; sample test_physics state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_94_14
-.dbg_skip_94_14:
-    mov     r8d, dword [rcx+60] ; sample test_physics state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_94_15
-.dbg_skip_94_15:
-    mov     r9d, dword [rcx+64] ; sample test_physics state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_94_16
-.dbg_skip_94_16:
-    mov     r11d, dword [rcx+68] ; sample test_physics state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_94_17
-.dbg_skip_94_17:
-    mov     eax, dword [rcx+72] ; sample test_physics state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_94_18
-.dbg_skip_94_18:
-    mov     ecx, dword [rcx+76] ; sample test_physics state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_94_19
-.dbg_skip_94_19:
-    mov     edx, dword [rcx+80] ; sample test_physics state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_94_20
-.dbg_skip_94_20:
-    mov     r8d, dword [rcx+84] ; sample test_physics state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_94_21
-.dbg_skip_94_21:
-.dbg_null_94:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
