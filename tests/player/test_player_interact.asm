@@ -3,75 +3,54 @@
 ; @link src/physics.asm src/raycast.asm src/player.asm src/math.asm
 ; @link tests/player/fakeworld.asm tests/player/ptest.asm tests/player/player_harness.asm
 ; @timeout 120
-%include "common.inc" ; v1: test_player_interact scratch #5
-%include "testlib.inc" ; v1: test_player_interact scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_player_interact:6)
-%include "../player/ptest.inc" ; v1: test_player_interact scratch #7
+%include "common.inc"
+%include "testlib.inc"
+%include "../player/ptest.inc"
 
-%define GP g_player ; v1: test_player_interact scratch #9
-%define B_BREAD 138 ; v1: test_player_interact scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (test_player_interact:10)
+%define GP g_player
+%define B_BREAD 138                 ; any item id, the test makes it food
 
-section .text ; v1: test_player_interact scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_player_interact:12)
+section .text
 
-PROC test_main, 0 ; v1: test_player_interact scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_player_interact:14)
-    call it_target_is_set ; v1: test_player_interact scratch #15
-    call it_creative_instant_break ; v1: test_player_interact scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (test_player_interact:16)
-    call it_bedrock_unbreakable ; v1: test_player_interact scratch #17
-    call it_survival_mining_time ; v1: test_player_interact scratch #18
-    ; TODO: clamp index before table lookup on malformed input (test_player_interact:18)
-    call it_survival_no_harvest_penalty ; v1: test_player_interact scratch #19
-    call it_place_block ; v1: test_player_interact scratch #20
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_player_interact:20)
-    call it_no_place_inside_player ; v1: test_player_interact scratch #21
-    call it_place_replaces_tall_grass ; v1: test_player_interact scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_player_interact:22)
-    call it_middle_click_pick ; v1: test_player_interact scratch #23
-    call it_eating ; v1: test_player_interact scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_player_interact:24)
-ENDP ; v1: test_player_interact scratch #25
+PROC test_main, 0
+    call it_target_is_set
+    call it_creative_instant_break
+    call it_bedrock_unbreakable
+    call it_survival_mining_time
+    call it_survival_no_harvest_penalty
+    call it_place_block
+    call it_no_place_inside_player
+    call it_place_replaces_tall_grass
+    call it_middle_click_pick
+    call it_eating
+ENDP
 
-PROC it_target_is_set, 0 ; v1: test_player_interact scratch #27
-    TEST "interact: target is set" ; v1: test_player_interact scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (test_player_interact:28)
-    FRESH GM_SURVIVAL, 0.5, 10.0, 0.5, 0.0, -90.0 ; v1: test_player_interact scratch #29
-    PFLOOR 10 ; v1: test_player_interact scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_player_interact:30)
-    RUN 0.05 ; v1: test_player_interact scratch #31
-    ICHK [rel g_hit+RAYHIT.hit], OP_EQ, 1, "hit" ; v1: test_player_interact scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_player_interact:32)
-    ICHK [rel g_hit+RAYHIT.x], OP_EQ, 0, "x" ; v1: test_player_interact scratch #33
-    ICHK [rel g_hit+RAYHIT.y], OP_EQ, 9, "y" ; v1: test_player_interact scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (test_player_interact:34)
-    ICHK [rel g_hit+RAYHIT.z], OP_EQ, 0, "z" ; v1: test_player_interact scratch #35
-    ICHK [rel g_hit+RAYHIT.face], OP_EQ, FACE_PY, "top face" ; v1: test_player_interact scratch #36
-    ; TODO: clamp index before table lookup on malformed input (test_player_interact:36)
-ENDP ; v1: test_player_interact scratch #37
+PROC it_target_is_set, 0
+    TEST "interact: target is set"
+    FRESH GM_SURVIVAL, 0.5, 10.0, 0.5, 0.0, -90.0
+    PFLOOR 10
+    RUN 0.05
+    ICHK [rel g_hit+RAYHIT.hit], OP_EQ, 1, "hit"
+    ICHK [rel g_hit+RAYHIT.x], OP_EQ, 0, "x"
+    ICHK [rel g_hit+RAYHIT.y], OP_EQ, 9, "y"
+    ICHK [rel g_hit+RAYHIT.z], OP_EQ, 0, "z"
+    ICHK [rel g_hit+RAYHIT.face], OP_EQ, FACE_PY, "top face"
+ENDP
 
-PROC it_creative_instant_break, 0 ; v1: test_player_interact scratch #39
-    TEST "interact: creative instant break and repeat" ; v1: test_player_interact scratch #40
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_player_interact:40)
-    FRESH GM_CREATIVE ; v1: test_player_interact scratch #41
-    PFLOOR 10 ; v1: test_player_interact scratch #42
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_player_interact:42)
-    FILL -2, 10, -3, 2, 12, -3, T_STONE ; v1: test_player_interact scratch #43
-    RUN 0.05 ; v1: test_player_interact scratch #44
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_player_interact:44)
-    ICHK [rel g_hit+RAYHIT.hit], OP_EQ, 1, "hit" ; v1: test_player_interact scratch #45
-    ICHK [rel g_hit+RAYHIT.x], OP_EQ, 0, "x" ; v1: test_player_interact scratch #46
-    ; TODO: hoist invariant pointer load out of .loop (test_player_interact:46)
-    ICHK [rel g_hit+RAYHIT.y], OP_EQ, 11, "y" ; v1: test_player_interact scratch #47
-    ICHK [rel g_hit+RAYHIT.z], OP_EQ, -3, "z" ; v1: test_player_interact scratch #48
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_player_interact:48)
-    RUNX 0.05, {}, {}, MB_LEFT, MB_LEFT, 0.0 ; v1: test_player_interact scratch #49
-    GETB 0, 11, -3 ; v1: test_player_interact scratch #50
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_player_interact:50)
-    ICHK eax, OP_EQ, T_AIR, "broken instantly" ; v1: test_player_interact scratch #51
-    GETB 0, 11, -4 ; v1: test_player_interact scratch #52
-    ; TODO: verify 16-byte rsp alignment before inner call (test_player_interact:52)
+PROC it_creative_instant_break, 0
+    TEST "interact: creative instant break and repeat"
+    FRESH GM_CREATIVE
+    PFLOOR 10
+    FILL -2, 10, -3, 2, 12, -3, T_STONE
+    RUN 0.05
+    ICHK [rel g_hit+RAYHIT.hit], OP_EQ, 1, "hit"
+    ICHK [rel g_hit+RAYHIT.x], OP_EQ, 0, "x"
+    ICHK [rel g_hit+RAYHIT.y], OP_EQ, 11, "y"
+    ICHK [rel g_hit+RAYHIT.z], OP_EQ, -3, "z"
+    RUNX 0.05, {}, {}, MB_LEFT, MB_LEFT, 0.0
+    GETB 0, 11, -3
+    ICHK eax, OP_EQ, T_AIR, "broken instantly"
+    GETB 0, 11, -4
     ICHK eax, OP_EQ, T_AIR, "nothing more to break behind"
     ; holding repeats about every 0.2 s
     FILL 0, 11, -6, 0, 11, -4, T_STONE
@@ -134,47 +113,96 @@ PROC it_survival_no_harvest_penalty, 0
     GETB 0, 11, -3
     ICHK eax, OP_EQ, T_AIR, "broken after 1.8 s"
 ENDP
-    ; v1 temporary guard (test_player_interact #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (test_player_interact #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (test_player_interact #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (test_player_interact #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (test_player_interact #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (test_player_interact #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (test_player_interact #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (test_player_interact #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (test_player_interact #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (test_player_interact #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (test_player_interact #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (test_player_interact #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (test_player_interact #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (test_player_interact #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (test_player_interact #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (test_player_interact #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (test_player_interact #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (test_player_interact #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (test_player_interact #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (test_player_interact #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (test_player_interact #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (test_player_interact #63)
-    xor     r11d, r11d ; clear v1 slot 63
+
+PROC it_place_block, 0
+    TEST "interact: place block"
+    FRESH
+    PFLOOR 10
+    FILL -2, 10, -3, 2, 12, -3, T_STONE
+    mov  INV_ID(0), T_DIRT
+    mov  INV_CNT(0), 3
+    RUN 0.05
+    RUNX 0.05, {}, {}, MB_RIGHT, MB_RIGHT, 0.0
+    GETB 0, 11, -2
+    ICHK eax, OP_EQ, T_DIRT, "placed against the +Z face"
+    movzx eax, INV_CNT(0)
+    ICHK eax, OP_EQ, 2, "one dirt used"
+ENDP
+
+PROC it_no_place_inside_player, 0
+    TEST "interact: no place inside player"
+    FRESH GM_SURVIVAL, 0.5, 10.0, 0.5, 0.0, -90.0
+    PFLOOR 10
+    mov  INV_ID(0), T_DIRT
+    mov  INV_CNT(0), 3
+    RUNX 0.05, {}, {}, MB_RIGHT, MB_RIGHT, 0.0
+    GETB 0, 10, 0
+    ICHK eax, OP_EQ, T_AIR, "solid block refused inside the player"
+    movzx eax, INV_CNT(0)
+    ICHK eax, OP_EQ, 3, "nothing used"
+    ; torch isn't solid so it's fine there
+    or   word [rel blk_flags+T_TORCH*2], BF_SUPPORT
+    mov  INV_ID(0), T_TORCH
+    RUNX 0.3, {}, {}, MB_RIGHT, MB_RIGHT, 0.0
+    GETB 0, 10, 0
+    ICHK eax, OP_EQ, T_TORCH, "torch placed at the feet"
+ENDP
+
+PROC it_place_replaces_tall_grass, 0
+    TEST "interact: place replaces tall grass"
+    FRESH GM_SURVIVAL, 0.5, 10.0, 0.5, 0.0, -45.0
+    PFLOOR 10, T_GRASS
+    SETB 0, 10, -1, T_TALL_GRASS
+    RUN 0.05
+    ICHK [rel g_hit+RAYHIT.x], OP_EQ, 0, "x"
+    ICHK [rel g_hit+RAYHIT.y], OP_EQ, 10, "y"
+    ICHK [rel g_hit+RAYHIT.z], OP_EQ, -1, "z"
+    ICHK [rel g_hit+RAYHIT.block], OP_EQ, T_TALL_GRASS, "targets the tall grass"
+    mov  INV_ID(0), T_SAND
+    mov  INV_CNT(0), 5
+    RUNX 0.05, {}, {}, MB_RIGHT, MB_RIGHT, 0.0
+    GETB 0, 10, -1
+    ICHK eax, OP_EQ, T_SAND, "sand replaced the grass"
+ENDP
+
+PROC it_middle_click_pick, 0
+    TEST "interact: middle click pick"
+    FRESH GM_CREATIVE, 0.5, 10.0, 0.5, 0.0, -90.0
+    PFLOOR 10, T_GRASS
+    xor  eax, eax
+    lea  rcx, [rel GP+PLAYER.inv]
+.clr:
+    mov  word [rcx+rax*4], 0                ; id + count
+    inc  eax
+    cmp  eax, 9
+    jb   .clr
+    mov  INV_ID(0), T_STONE
+    mov  INV_CNT(0), 1
+    mov  dword [rel GP+PLAYER.selected], 0
+    RUNX 0.05, {}, {}, 0, MB_MIDDLE, 0.0
+    ICHK [rel GP+PLAYER.selected], OP_EQ, 1, "first free slot selected"
+    movzx eax, INV_ID(1)
+    ICHK eax, OP_EQ, T_GRASS, "picked grass"
+    movzx eax, INV_CNT(1)
+    ICHK eax, OP_EQ, 64, "full stack"
+    mov  dword [rel GP+PLAYER.selected], 4
+    RUNX 0.05, {}, {}, 0, MB_MIDDLE, 0.0
+    ICHK [rel GP+PLAYER.selected], OP_EQ, 1, "already in the hotbar: select it"
+ENDP
+
+PROC it_eating, 0
+    TEST "interact: eating"
+    FRESH
+    PFLOOR 10
+    mov  dword [rel GP+PLAYER.hunger], 10
+    mov  INV_ID(0), B_BREAD
+    mov  INV_CNT(0), 2
+    mov  byte [rel item_food+B_BREAD], 5
+    RUNX 1.5, {}, {}, MB_RIGHT, 0, 0.0
+    ICHK [rel GP+PLAYER.hunger], OP_EQ, 10, "still eating after 1.5 s"
+    RUNX 0.2, {}, {}, MB_RIGHT, 0, 0.0
+    ICHK [rel GP+PLAYER.hunger], OP_EQ, 15, "ate: +5"
+    movzx eax, INV_CNT(0)
+    ICHK eax, OP_EQ, 1, "one bread used"
+    CHECK_NEAR [rel GP+PLAYER.saturation], 11.0, 0.0005, "saturation min(15, 5 + 5*0.6*2)"
+ENDP
