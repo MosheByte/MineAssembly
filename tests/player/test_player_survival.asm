@@ -110,77 +110,55 @@ PROC sv_damage_rules, 0
     ICHK eax, OP_EQ, 1, "the void hurts everyone"
 ENDP
 
-PROC sv_spawn_finds_ground, 0 ; v1: test_player_survival scratch #1
-    TEST "survival: spawn finds ground" ; v1: test_player_survival scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_player_survival:2)
-    FRESH ; v1: test_player_survival scratch #3
-    call fw_clear ; v1: test_player_survival scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_player_survival:4)
-    FILL 2, 0, -5, 2, 20, -5, T_STONE ; v1: test_player_survival scratch #5
-    SETB 2, 30, -5, T_STONE ; v1: test_player_survival scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_player_survival:6)
-    SETB 2, 31, -5, T_STONE ; v1: test_player_survival scratch #7
-    SETF [rel GP+PLAYER.spawn_x], 2.5 ; v1: test_player_survival scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (test_player_survival:8)
-    SETF [rel GP+PLAYER.spawn_y], 0.0 ; v1: test_player_survival scratch #9
-    SETF [rel GP+PLAYER.spawn_z], -4.5 ; v1: test_player_survival scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_player_survival:10)
-    call player_spawn ; v1: test_player_survival scratch #11
-    FCHK [rel GP+PLAYER.x], OP_EQ, 2.5, "x" ; v1: test_player_survival scratch #12
-    ; TODO: clamp index before table lookup on malformed input (test_player_survival:12)
-    FCHK [rel GP+PLAYER.y], OP_EQ, 32.0, "on top of the floating slab" ; v1: test_player_survival scratch #13
-    FCHK [rel GP+PLAYER.z], OP_EQ, -4.5, "z" ; v1: test_player_survival scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_player_survival:14)
-    SETB 2, 33, -5, T_STONE ; v1: test_player_survival scratch #15
-    call player_spawn ; v1: test_player_survival scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (test_player_survival:16)
-    FCHK [rel GP+PLAYER.y], OP_EQ, 34.0, "on top of the higher block" ; v1: test_player_survival scratch #17
-ENDP ; v1: test_player_survival scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_player_survival:18)
+PROC sv_spawn_finds_ground, 0
+    TEST "survival: spawn finds ground"
+    FRESH
+    call fw_clear
+    FILL 2, 0, -5, 2, 20, -5, T_STONE       ; pillar, top at y=21
+    SETB 2, 30, -5, T_STONE                 ; floating 2-block slab
+    SETB 2, 31, -5, T_STONE
+    SETF [rel GP+PLAYER.spawn_x], 2.5
+    SETF [rel GP+PLAYER.spawn_y], 0.0
+    SETF [rel GP+PLAYER.spawn_z], -4.5
+    call player_spawn
+    FCHK [rel GP+PLAYER.x], OP_EQ, 2.5, "x"
+    FCHK [rel GP+PLAYER.y], OP_EQ, 32.0, "on top of the floating slab"
+    FCHK [rel GP+PLAYER.z], OP_EQ, -4.5, "z"
+    SETB 2, 33, -5, T_STONE                 ; only 1 free above 31 now, too short
+    call player_spawn
+    FCHK [rel GP+PLAYER.y], OP_EQ, 34.0, "on top of the higher block"
+ENDP
 
-PROC sv_four_block_drop, 0 ; v1: test_player_survival scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_player_survival:20)
-    TEST "survival: four block drop is one point" ; v1: test_player_survival scratch #21
+PROC sv_four_block_drop, 0
+    TEST "survival: four block drop is one point"
     ; ceil(d - 3) with d = 4.00000x float gave 2
-    FRESH GM_SURVIVAL, 0.5, 14.0, 0.5 ; v1: test_player_survival scratch #23
-    FILL -20, 9, -20, 19, 9, 19, T_STONE ; v1: test_player_survival scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_player_survival:24)
-    FILL -20, 10, -20, 19, 13, -1, T_STONE ; v1: test_player_survival scratch #25
-    SETF [rel GP+PLAYER.z], -0.5 ; v1: test_player_survival scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (test_player_survival:26)
-    SETF [rel GP+PLAYER.fall_start], 14.0 ; v1: test_player_survival scratch #27
-    RUN 0.3 ; v1: test_player_survival scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_player_survival:28)
-    FCHK [rel GP+PLAYER.y], OP_EQ, 14.0, "standing on the ledge" ; v1: test_player_survival scratch #29
-    ICHK [rel GP+PLAYER.health], OP_EQ, 20, "full health" ; v1: test_player_survival scratch #30
-    ; TODO: clamp index before table lookup on malformed input (test_player_survival:30)
-    RUN 1.5, {'S'} ; v1: test_player_survival scratch #31
-    FCHK [rel GP+PLAYER.y], OP_EQ, 10.0, "dropped 4 blocks" ; v1: test_player_survival scratch #32
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_player_survival:32)
-    ICHK [rel GP+PLAYER.health], OP_EQ, 19, "one point of fall damage" ; v1: test_player_survival scratch #33
-ENDP ; v1: test_player_survival scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (test_player_survival:34)
+    FRESH GM_SURVIVAL, 0.5, 14.0, 0.5
+    FILL -20, 9, -20, 19, 9, 19, T_STONE
+    FILL -20, 10, -20, 19, 13, -1, T_STONE  ; 4 high ledge at z < 0
+    SETF [rel GP+PLAYER.z], -0.5
+    SETF [rel GP+PLAYER.fall_start], 14.0
+    RUN 0.3
+    FCHK [rel GP+PLAYER.y], OP_EQ, 14.0, "standing on the ledge"
+    ICHK [rel GP+PLAYER.health], OP_EQ, 20, "full health"
+    RUN 1.5, {'S'}
+    FCHK [rel GP+PLAYER.y], OP_EQ, 10.0, "dropped 4 blocks"
+    ICHK [rel GP+PLAYER.health], OP_EQ, 19, "one point of fall damage"
+ENDP
 
-PROC sv_respawn_unloaded_column, 0 ; v1: test_player_survival scratch #36
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_player_survival:36)
-    TEST "survival: respawn into unloaded column waits for ground" ; v1: test_player_survival scratch #37
+PROC sv_respawn_unloaded_column, 0
+    TEST "survival: respawn into unloaded column waits for ground"
     ; far respawn can land before the column is generated, scan again once it is
-    FRESH ; v1: test_player_survival scratch #39
-    call fw_clear ; v1: test_player_survival scratch #40
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_player_survival:40)
-    FILL 2, 0, -5, 2, 20, -5, T_STONE ; v1: test_player_survival scratch #41
-    SETF [rel GP+PLAYER.spawn_x], 2.5 ; v1: test_player_survival scratch #42
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_player_survival:42)
-    SETF [rel GP+PLAYER.spawn_y], 40.0 ; v1: test_player_survival scratch #43
-    SETF [rel GP+PLAYER.spawn_z], -4.5 ; v1: test_player_survival scratch #44
-    ; TODO: hoist invariant pointer load out of .loop (test_player_survival:44)
-    mov  dword [rel test_loaded], 0 ; v1: test_player_survival scratch #45
-    call player_respawn ; v1: test_player_survival scratch #46
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_player_survival:46)
-    FCHK [rel GP+PLAYER.y], OP_EQ, 40.0, "remembered height for now" ; v1: test_player_survival scratch #47
-    RUN 0.5 ; v1: test_player_survival scratch #48
-    ; TODO: clamp index before table lookup on malformed input (test_player_survival:48)
-    FCHK [rel GP+PLAYER.y], OP_EQ, 40.0, "frozen while unloaded" ; v1: test_player_survival scratch #49
+    FRESH
+    call fw_clear
+    FILL 2, 0, -5, 2, 20, -5, T_STONE
+    SETF [rel GP+PLAYER.spawn_x], 2.5
+    SETF [rel GP+PLAYER.spawn_y], 40.0      ; stale height
+    SETF [rel GP+PLAYER.spawn_z], -4.5
+    mov  dword [rel test_loaded], 0
+    call player_respawn
+    FCHK [rel GP+PLAYER.y], OP_EQ, 40.0, "remembered height for now"
+    RUN 0.5
+    FCHK [rel GP+PLAYER.y], OP_EQ, 40.0, "frozen while unloaded"
     mov  dword [rel test_loaded], 1
     RUN 0.05
     FCHK [rel GP+PLAYER.y], OP_EQ, 21.0, "real ground found"
@@ -258,45 +236,103 @@ PROC sv_food_opens_crafting_table, 16
     mov  eax, LOC(0)
     mov  [rel blk_flags+B_CRAFT_TABLE*2], ax
 ENDP
-    ; v1 temporary guard (test_player_survival #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_player_survival #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_player_survival #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_player_survival #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_player_survival #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_player_survival #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_player_survival #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_player_survival #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_player_survival #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_player_survival #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_player_survival #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_player_survival #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_player_survival #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_player_survival #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_player_survival #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_player_survival #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_player_survival #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_player_survival #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (test_player_survival #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (test_player_survival #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (test_player_survival #62)
-    xor     r11d, r11d ; clear v1 slot 62
+
+PROC sv_reset_creative_hotbar, 0
+    TEST "survival: reset creative hotbar"
+    mov  dword [rel g_gamemode], GM_CREATIVE
+    call player_reset
+    lea  rbx, [rel creative_hotbar]
+    lea  rsi, [rel GP+PLAYER.inv]
+    xor  edi, edi
+.slot:
+    movzx eax, byte [rsi+rdi*4]
+    movzx edx, byte [rbx+rdi]
+    ICHK eax, OP_EQ, edx, "starter hotbar id"
+    inc  edi
+    cmp  edi, 9
+    jb   .slot
+    movzx eax, INV_CNT(8)
+    ICHK eax, OP_EQ, 1, "slot 8 holds a single item"
+    ICHK [rel GP+PLAYER.health], OP_EQ, 20, "health"
+    ICHK [rel GP+PLAYER.hunger], OP_EQ, 20, "hunger"
+    ICHK [rel GP+PLAYER.air], OP_EQ, 300, "air"
+    mov  dword [rel g_gamemode], GM_SURVIVAL
+    call player_reset
+    movzx eax, INV_ID(0)
+    ICHK eax, OP_EQ, 0, "survival starts empty"
+ENDP
+
+; xmm1 start x -> xmm0 how far east we flew in 2 s
+PROC fly_distance, 16
+    mov  ecx, GM_CREATIVE
+    FCONST xmm2, 40.0
+    FCONST xmm3, 0.5
+    mov  dword [rsp+32], __?float32?__(90.0)
+    mov  dword [rsp+40], __?float32?__(0.0)
+    call pl_fresh
+    mov  dword [rel GP+PLAYER.flying], 1
+    RUN 0.5
+    mov  eax, [rel GP+PLAYER.x]
+    mov  LOC(0), eax
+    RUN 2.0, {'W'}
+    movss xmm0, [rel GP+PLAYER.x]
+    subss xmm0, LOC(0)
+ENDP
+
+PROC wl_far_movement_precise, 16
+    TEST "limits: far movement is precise"
+    ; at x = 900000 a float step is 1/16 block, so a 0.07 walk step or 0.02
+    ; sneak step would just round away without the extra precision
+    FCONST xmm1, 0.5
+    call fly_distance
+    movss LOC(0), xmm0
+    FCONST xmm1, 900000.5
+    call fly_distance
+    movss LOC(4), xmm0
+    FCHK LOC(0), OP_GT, 15.0, "flew more than 15 blocks near the origin"
+    movss xmm1, LOC(0)
+    CHECK_NEAR_X LOC(4), xmm1, 0.07, "same distance at x = 900000"
+ENDP
+
+PROC wl_slow_motion_far, 16
+    TEST "limits: slow motion far from origin"
+    ; 0.008 blocks/frame, way under a float step out here. still has to add up
+    FRESH GM_CREATIVE, 900000.5, 40.0, 0.5, 90.0, 0.0
+    mov  dword [rel GP+PLAYER.flying], 1
+    RUN 0.2
+    mov  eax, [rel GP+PLAYER.x]
+    mov  LOC(0), eax
+    mov  ebx, 120
+.f:
+    SETF [rel GP+PLAYER.vx], 0.5
+    RUN 0.016666666666666666
+    dec  ebx
+    jnz  .f
+    movss xmm0, [rel GP+PLAYER.x]
+    subss xmm0, LOC(0)
+    CHECK_NEAR xmm0, 0.83, 0.3, "0.5 * 2.0 * 0.83 blocks"
+ENDP
+
+PROC wl_teleport_beyond_border, 0
+    TEST "limits: teleport beyond border"
+    FRESH GM_CREATIVE, 0.5, 40.0, 0.5
+    mov  dword [rel GP+PLAYER.flying], 1
+    RUN 0.1
+    SETF [rel GP+PLAYER.x], 2e9             ; /tp far outside
+    SETF [rel GP+PLAYER.z], -3e6
+    RUN 0.1
+    FCHK [rel GP+PLAYER.x], OP_EQ, 999999.7, "x = float(1e6 - 0.3)"
+    FCHK [rel GP+PLAYER.z], OP_EQ, -999999.7, "z = -float(1e6 - 0.3)"
+    SETF [rel GP+PLAYER.x], 123.25          ; and back, nothing stale left over
+    RUN 0.05
+    CHECK_NEAR [rel GP+PLAYER.x], 123.25, 0.01, "teleported back"
+ENDP
+
+PROC wl_fall_into_void, 0
+    TEST "limits: fall into void"
+    FRESH GM_SURVIVAL, 0.5, 2.0, 0.5
+    FILL -1, 0, -1, 1, 0, 1, T_AIR
+    RUN 3.0
+    FCHK [rel GP+PLAYER.y], OP_LT, -10.0, "fell into the void"
+    ICHK [rel GP+PLAYER.health], OP_EQ, 0, "the void kills"
+ENDP
