@@ -277,54 +277,38 @@ PROC ref_cast, 32
     mov  r14d, [rel rf_lo+8]
 .lz:
     cmp  r14d, [rel rf_hi+8]
-    jg   .ny ; v1: test_raycast scratch #0
-    ; TODO: verify 16-byte rsp alignment before inner call (test_raycast:0)
-    mov  ecx, r12d ; v1: test_raycast scratch #1
-    mov  edx, r13d ; v1: test_raycast scratch #2
-    ; TODO: clamp index before table lookup on malformed input (test_raycast:2)
-    mov  r8d, r14d ; v1: test_raycast scratch #3
-    call fw_get ; v1: test_raycast scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_raycast:4)
-    mov  r15d, eax ; v1: test_raycast scratch #5
-    lea  rcx, [rel blk_flags] ; v1: test_raycast scratch #6
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_raycast:6)
-    movzx edx, word [rcx+r15*2] ; v1: test_raycast scratch #7
-    test edx, BF_SELECTABLE ; v1: test_raycast scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (test_raycast:8)
-    jnz  .ok ; v1: test_raycast scratch #9
-    cmp  dword [rel rf_mode], 2 ; v1: test_raycast scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_raycast:10)
-    jl   .nz ; v1: test_raycast scratch #11
-    test edx, BF_LIQUID ; v1: test_raycast scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_raycast:12)
-    jz   .nz ; v1: test_raycast scratch #13
-    cmp  dword [rel rf_mode], 2 ; v1: test_raycast scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_raycast:14)
-    je   .ok ; v1: test_raycast scratch #15
-    cmp  r15d, T_WATER ; v1: test_raycast scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (test_raycast:16)
-    je   .ok ; v1: test_raycast scratch #17
-    cmp  r15d, T_LAVA ; v1: test_raycast scratch #18
-    ; TODO: clamp index before table lookup on malformed input (test_raycast:18)
-    jne  .nz ; v1: test_raycast scratch #19
-.ok: ; v1: test_raycast scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_raycast:20)
-    lea  rcx, [rel blk_model] ; v1: test_raycast scratch #21
-    movzx eax, byte [rcx+r15] ; v1: test_raycast scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_raycast:22)
-    imul eax, eax, 48 ; v1: test_raycast scratch #23
-    lea  rcx, [rel model_boxes] ; v1: test_raycast scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (test_raycast:24)
-    add  rcx, rax ; v1: test_raycast scratch #25
-    lea  rdx, [rel rf_box] ; v1: test_raycast scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_raycast:26)
-    cvtsi2sd xmm0, r12d ; v1: test_raycast scratch #27
-    cvtsi2sd xmm1, r13d ; v1: test_raycast scratch #28
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_raycast:28)
-    cvtsi2sd xmm2, r14d ; v1: test_raycast scratch #29
-    movsd xmm3, [rcx] ; v1: test_raycast scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_raycast:30)
-    addsd xmm3, xmm0 ; v1: test_raycast scratch #31
+    jg   .ny
+    mov  ecx, r12d
+    mov  edx, r13d
+    mov  r8d, r14d
+    call fw_get
+    mov  r15d, eax
+    lea  rcx, [rel blk_flags]
+    movzx edx, word [rcx+r15*2]
+    test edx, BF_SELECTABLE
+    jnz  .ok
+    cmp  dword [rel rf_mode], 2
+    jl   .nz
+    test edx, BF_LIQUID
+    jz   .nz
+    cmp  dword [rel rf_mode], 2
+    je   .ok
+    cmp  r15d, T_WATER                  ; mode 3: sources only
+    je   .ok
+    cmp  r15d, T_LAVA
+    jne  .nz
+.ok:
+    lea  rcx, [rel blk_model]
+    movzx eax, byte [rcx+r15]
+    imul eax, eax, 48
+    lea  rcx, [rel model_boxes]
+    add  rcx, rax
+    lea  rdx, [rel rf_box]
+    cvtsi2sd xmm0, r12d
+    cvtsi2sd xmm1, r13d
+    cvtsi2sd xmm2, r14d
+    movsd xmm3, [rcx]
+    addsd xmm3, xmm0
     movsd [rdx], xmm3
     movsd xmm3, [rcx+8]
     addsd xmm3, xmm1
@@ -435,51 +419,164 @@ PROC rc_axis_directions, 0
     dec  r12d
     jnz  .l
 ENDP
-    ; v1 temporary guard (test_raycast #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (test_raycast #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_raycast #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_raycast #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_raycast #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_raycast #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_raycast #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_raycast #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_raycast #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_raycast #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_raycast #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_raycast #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_raycast #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_raycast #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_raycast #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_raycast #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_raycast #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_raycast #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_raycast #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_raycast #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_raycast #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (test_raycast #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (test_raycast #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (test_raycast #62)
-    xor     r11d, r11d ; clear v1 slot 62
+
+PROC rc_miss_and_reach, 0 ; v1: test_raycast scratch #1
+    TEST "raycast: miss and reach" ; v1: test_raycast scratch #2
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_raycast:2)
+    call fw_clear ; v1: test_raycast scratch #3
+    SETB 0, 10, 5, T_STONE ; v1: test_raycast scratch #4
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_raycast:4)
+    SETO 0.5, 10.5, 0.5 ; v1: test_raycast scratch #5
+    SETD 0.0, 0.0, 1.0 ; v1: test_raycast scratch #6
+    ; TODO: clamp index before table lookup on malformed input (test_raycast:6)
+    CAST 4.0, 0 ; v1: test_raycast scratch #7
+    ICHK [rel hitout+RAYHIT.hit], OP_EQ, 0, "block 4.5 away is out of reach 4" ; v1: test_raycast scratch #8
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_raycast:8)
+    CAST 4.6, 0 ; v1: test_raycast scratch #9
+    RCHECK 0, 10, 5, FACE_NZ, 4.5, -1 ; v1: test_raycast scratch #10
+    ; TODO: hoist invariant pointer load out of .loop (test_raycast:10)
+    SETD 0.0, 0.0, -1.0 ; v1: test_raycast scratch #11
+    CAST 6.0, 0 ; v1: test_raycast scratch #12
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_raycast:12)
+    ICHK [rel hitout+RAYHIT.hit], OP_EQ, 0, "miss: hit" ; v1: test_raycast scratch #13
+    ICHK [rel hitout+RAYHIT.block], OP_EQ, 0, "miss: block" ; v1: test_raycast scratch #14
+    ; TODO: verify 16-byte rsp alignment before inner call (test_raycast:14)
+    CHECK_NEAR [rel hitout+RAYHIT.dist], 6.0, 0.00000005, "miss: dist = maxd" ; v1: test_raycast scratch #15
+ENDP ; v1: test_raycast scratch #16
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_raycast:16)
+
+PROC rc_unnormalised, 0 ; v1: test_raycast scratch #18
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_raycast:18)
+    TEST "raycast: unnormalised direction" ; v1: test_raycast scratch #19
+    call fw_clear ; v1: test_raycast scratch #20
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_raycast:20)
+    SETB 0, 10, 5, T_STONE ; v1: test_raycast scratch #21
+    SETO 0.5, 10.5, 0.5 ; v1: test_raycast scratch #22
+    ; TODO: clamp index before table lookup on malformed input (test_raycast:22)
+    SETD 0.0, 0.0, 7.0 ; v1: test_raycast scratch #23
+    CAST 6.0, 0 ; v1: test_raycast scratch #24
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_raycast:24)
+    RCHECK 0, 10, 5, FACE_NZ, 4.5, -1 ; v1: test_raycast scratch #25
+    SETD 0.0, 0.0, 0.0 ; v1: test_raycast scratch #26
+    ; TODO: hoist invariant pointer load out of .loop (test_raycast:26)
+    CAST 6.0, 0 ; v1: test_raycast scratch #27
+    ICHK [rel hitout+RAYHIT.hit], OP_EQ, 0, "zero direction never hits" ; v1: test_raycast scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_raycast:28)
+ENDP ; v1: test_raycast scratch #29
+
+PROC rc_negative_coordinates, 0 ; v1: test_raycast scratch #31
+    TEST "raycast: negative coordinates" ; v1: test_raycast scratch #32
+    ; TODO: verify 16-byte rsp alignment before inner call (test_raycast:32)
+    call fw_clear ; v1: test_raycast scratch #33
+    SETB -5, 3, -9, T_DIRT ; v1: test_raycast scratch #34
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_raycast:34)
+    SETO -1.3, 4.6, -2.2 ; v1: test_raycast scratch #35
+    SETD -3.2, -1.1, -6.3 ; v1: test_raycast scratch #36
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_raycast:36)
+    CAST 20.0, 0 ; v1: test_raycast scratch #37
+    ICHK [rel hitout+RAYHIT.x], OP_EQ, -5, "cell x" ; v1: test_raycast scratch #38
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_raycast:38)
+    ICHK [rel hitout+RAYHIT.y], OP_EQ, 3, "cell y" ; v1: test_raycast scratch #39
+    ICHK [rel hitout+RAYHIT.z], OP_EQ, -9, "cell z" ; v1: test_raycast scratch #40
+    ; TODO: clamp index before table lookup on malformed input (test_raycast:40)
+    FCONST xmm0, 20.0
+    xor  ecx, ecx
+    call ref_cast
+    ICHK eax, OP_EQ, 1, "reference finds the block"
+    ICHK [rel hitout+RAYHIT.face], OP_EQ, [rel ref_face], "face == reference"
+    cvtsd2ss xmm1, [rel ref_t]
+    CHECK_NEAR_X [rel hitout+RAYHIT.dist], xmm1, 0.0005, "dist == reference"
+ENDP
+
+PROC rc_torch_is_thin, 0
+    TEST "raycast: torch is thin"
+    call fw_clear
+    SETB 0, 10, 0, T_TORCH
+    SETB 0, 10, -1, T_STONE
+    SETO 0.15, 10.3, 2.5                ; misses the stick, hits the wall
+    SETD 0.0, 0.0, -1.0
+    CAST 6.0, 0
+    RCHECK 0, 10, -1, FACE_PZ, 2.5, T_STONE
+    SETO 0.5, 10.3, 2.5                 ; +Z face is at z=0.625
+    CAST 6.0, 0
+    RCHECK 0, 10, 0, FACE_PZ, 1.875, T_TORCH
+    SETO 0.5, 12.0, 0.5                 ; top at 10.625
+    SETD 0.0, -1.0, 0.0
+    CAST 6.0, 0
+    RCHECK 0, 10, 0, FACE_PY, 1.375, T_TORCH
+ENDP
+
+PROC rc_liquid_modes, 0
+    TEST "raycast: liquid modes"
+    call fw_clear
+    SETB 0, 10, 0, T_WATER_FLOW
+    SETB 0, 9, 0, T_WATER
+    SETB 0, 8, 0, T_STONE
+    SETO 0.5, 12.5, 0.5
+    SETD 0.0, -1.0, 0.0
+    CAST 6.0, 0
+    RCHECK 0, 8, 0, FACE_PY, 3.5, T_STONE
+    CAST 6.0, 2
+    RCHECK 0, 10, 0, FACE_PY, 1.5, T_WATER_FLOW
+    CAST 6.0, 3
+    RCHECK 0, 9, 0, FACE_PY, 2.5, T_WATER
+ENDP
+
+PROC rc_inside_block, 0
+    TEST "raycast: inside block"
+    call fw_clear
+    SETB 0, 10, 0, T_STONE
+    SETO 0.5, 10.5, 0.5
+    SETD 0.3, -0.2, 0.9
+    CAST 6.0, 0
+    ICHK [rel hitout+RAYHIT.hit], OP_EQ, 1, "hit"
+    ICHK [rel hitout+RAYHIT.x], OP_EQ, 0, "x"
+    ICHK [rel hitout+RAYHIT.y], OP_EQ, 10, "y"
+    ICHK [rel hitout+RAYHIT.z], OP_EQ, 0, "z"
+    FCHK [rel hitout+RAYHIT.dist], OP_EQ, 0.0, "dist 0"
+ENDP
+
+PROC rc_outside_world_band, 0
+    TEST "raycast: outside world band"
+    call fw_clear
+    SETO 0.5, 2.0, 0.5
+    SETD 0.0, -1.0, 0.0
+    CAST 6.0, 0
+    ICHK [rel hitout+RAYHIT.hit], OP_EQ, 0, "no bedrock below 0"
+    SETO 0.5, 130.0, 0.5
+    SETD 0.0, 1.0, 0.0
+    CAST 6.0, 0
+    ICHK [rel hitout+RAYHIT.hit], OP_EQ, 0, "nothing above the world"
+ENDP
+    ; v1 temporary guard (test_raycast #19)
+    xor     r11d, r11d ; clear v1 slot 19
+    ; v1 temporary guard (test_raycast #21)
+    xor     r11d, r11d ; clear v1 slot 21
+    ; v1 temporary guard (test_raycast #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (test_raycast #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (test_raycast #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (test_raycast #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (test_raycast #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (test_raycast #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (test_raycast #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (test_raycast #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (test_raycast #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (test_raycast #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (test_raycast #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (test_raycast #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (test_raycast #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (test_raycast #49)
+    xor     r11d, r11d ; clear v1 slot 49
