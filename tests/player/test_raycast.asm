@@ -532,49 +532,35 @@ ENDP
 
 ; 4000 random rays, 900 random blocks. edge/corner ties make exact compares
 ; flaky so cells only have to match most of the time (> 1000)
-%define RL_MODE  0 ; v1: test_raycast scratch #3
-%define RL_MAXD  4 ; v1: test_raycast scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (test_raycast:4)
-%define RL_TH    8 ; v1: test_raycast scratch #5
-%define RL_PH    16 ; v1: test_raycast scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (test_raycast:6)
-%define RL_TMP   24 ; v1: test_raycast scratch #7
-PROCX rc_random_against_reference, 64 ; v1: test_raycast scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_raycast:8)
-    TEST "raycast: random against reference" ; v1: test_raycast scratch #9
-    call fw_clear ; v1: test_raycast scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_raycast:10)
-    mov  ecx, 99 ; v1: test_raycast scratch #11
-    call t_rng_seed ; v1: test_raycast scratch #12
-    ; TODO: clamp index before table lookup on malformed input (test_raycast:12)
-    mov  r12d, 900 ; v1: test_raycast scratch #13
-.blk: ; v1: test_raycast scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_raycast:14)
-    mov  ecx, -10 ; v1: test_raycast scratch #15
-    mov  edx, 9 ; v1: test_raycast scratch #16
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_raycast:16)
-    call pt_rand_int ; v1: test_raycast scratch #17
-    mov  ebx, eax ; v1: test_raycast scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_raycast:18)
-    xor  ecx, ecx ; v1: test_raycast scratch #19
-    mov  edx, 19 ; v1: test_raycast scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (test_raycast:20)
-    call pt_rand_int ; v1: test_raycast scratch #21
-    mov  esi, eax ; v1: test_raycast scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (test_raycast:22)
-    mov  ecx, -10 ; v1: test_raycast scratch #23
-    mov  edx, 9 ; v1: test_raycast scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_raycast:24)
-    call pt_rand_int ; v1: test_raycast scratch #25
-    mov  edi, eax ; v1: test_raycast scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_raycast:26)
-    xor  ecx, ecx ; v1: test_raycast scratch #27
-    mov  edx, 7 ; v1: test_raycast scratch #28
-    ; TODO: clamp index before table lookup on malformed input (test_raycast:28)
-    call pt_rand_int ; v1: test_raycast scratch #29
-    lea  rcx, [rel palette] ; v1: test_raycast scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_raycast:30)
-    movzx r9d, byte [rcx+rax] ; v1: test_raycast scratch #31
+%define RL_MODE  0
+%define RL_MAXD  4
+%define RL_TH    8
+%define RL_PH    16
+%define RL_TMP   24
+PROCX rc_random_against_reference, 64
+    TEST "raycast: random against reference"
+    call fw_clear
+    mov  ecx, 99
+    call t_rng_seed
+    mov  r12d, 900
+.blk:
+    mov  ecx, -10
+    mov  edx, 9
+    call pt_rand_int
+    mov  ebx, eax
+    xor  ecx, ecx
+    mov  edx, 19
+    call pt_rand_int
+    mov  esi, eax
+    mov  ecx, -10
+    mov  edx, 9
+    call pt_rand_int
+    mov  edi, eax
+    xor  ecx, ecx
+    mov  edx, 7
+    call pt_rand_int
+    lea  rcx, [rel palette]
+    movzx r9d, byte [rcx+rax]
     mov  ecx, ebx
     mov  edx, esi
     mov  r8d, edi
@@ -665,39 +651,108 @@ PROCX rc_random_against_reference, 64 ; v1: test_raycast scratch #8
     mov  eax, [rcx+rax*4]
     mov  LOC(RL_MAXD), eax
 
-    ; v1 temporary guard (test_raycast #14)
-    xor     r11d, r11d ; clear v1 slot 14
-    ; v1 temporary guard (test_raycast #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (test_raycast #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_raycast #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_raycast #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_raycast #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_raycast #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_raycast #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_raycast #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_raycast #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_raycast #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_raycast #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_raycast #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_raycast #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_raycast #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_raycast #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_raycast #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_raycast #48)
-    xor     r11d, r11d ; clear v1 slot 48
+    movss xmm0, LOC(RL_MAXD)
+    mov  ecx, LOC(RL_MODE)
+    call do_cast
+    movss xmm0, LOC(RL_MAXD)
+    mov  ecx, LOC(RL_MODE)
+    call ref_cast
+    mov  ebx, eax
+    movss xmm7, LOC(RL_MAXD)
+    FCONST xmm1, 0.001
+    subss xmm7, xmm1                    ; anything past this is a reach-limit coin flip
+    test ebx, ebx
+    jnz  .have_ref
+    cmp  dword [rel hitout+RAYHIT.hit], 0
+    je   .next
+    FCHKX [rel hitout+RAYHIT.dist], OP_GT, xmm7, "hit without reference only at the reach limit"
+    jmp  .next
+.have_ref:
+    cvtsd2ss xmm8, [rel ref_t]
+    cmp  dword [rel hitout+RAYHIT.hit], 0
+    jne  .both
+    FCHKX xmm8, OP_GT, xmm7, "missed a reference block only at the reach limit"
+    jmp  .next
+.both:
+    movss xmm0, [rel hitout+RAYHIT.dist]
+    subss xmm0, xmm8
+    andps xmm0, [rel f_abs]
+    FCHK xmm0, OP_LE, 0.002, "dist == reference within 2e-3"
+    ; different cell = edge/corner tie, nothing else to compare
+    mov  eax, [rel hitout+RAYHIT.x]
+    cmp  eax, [rel ref_cell]
+    jne  .next
+    mov  eax, [rel hitout+RAYHIT.y]
+    cmp  eax, [rel ref_cell+4]
+    jne  .next
+    mov  eax, [rel hitout+RAYHIT.z]
+    cmp  eax, [rel ref_cell+8]
+    jne  .next
+    inc  r13d
+    ; face is only well defined away from edges and on full cubes
+    movss xmm0, [rel hitout+RAYHIT.dist]
+    andps xmm0, [rel f_abs]
+    FCONST xmm1, 0.0001
+    comiss xmm0, xmm1
+    jbe  .block
+    xor  ebx, ebx                       ; near-integer coords, 2+ = on an edge
+    xor  esi, esi
+.fx:
+    lea  rax, [rel hitout+RAYHIT.px]
+    cvtss2sd xmm0, [rax+rsi*4]
+    cvtsd2si rax, xmm0
+    cvtsi2sd xmm1, rax
+    subsd xmm0, xmm1
+    andpd xmm0, [rel d_mabs]
+    mov  rax, __?float64?__(0.002)
+    movq xmm1, rax
+    comisd xmm0, xmm1
+    jae  .fx_no
+    inc  ebx
+.fx_no:
+    inc  esi
+    cmp  esi, 3
+    jb   .fx
+    cmp  ebx, 1
+    ja   .block
+    mov  eax, [rel ref_block]
+    lea  rcx, [rel blk_model]
+    movzx eax, byte [rcx+rax]
+    cmp  eax, MODEL_CUBE
+    je   .face
+    cmp  eax, MODEL_LIQUID
+    jne  .block
+.face:
+    ICHK [rel hitout+RAYHIT.face], OP_EQ, [rel ref_face], "face == reference"
+.block:
+    ICHK [rel hitout+RAYHIT.block], OP_EQ, [rel ref_block], "block == reference"
+    ; hit point has to be o + dn*dist
+    xor  esi, esi
+.pt:
+    lea  rax, [rel ray_o]
+    cvtss2sd xmm0, [rax+rsi*4]
+    lea  rax, [rel rf_d]
+    movsd xmm1, [rax+rsi*8]
+    cvtss2sd xmm2, [rel hitout+RAYHIT.dist]
+    mulsd xmm1, xmm2
+    addsd xmm0, xmm1
+    lea  rax, [rel hitout+RAYHIT.px]
+    cvtss2sd xmm1, [rax+rsi*4]
+    subsd xmm1, xmm0
+    andpd xmm1, [rel d_mabs]
+    cvtsd2ss xmm0, xmm1
+    FCHK xmm0, OP_LE, 0.001, "hit point on the ray"
+    inc  esi
+    cmp  esi, 3
+    jb   .pt
+.next:
+    inc  r12d
+    cmp  r12d, 4000
+    jb   .ray
+    ICHK r13d, OP_GT, 1000, "rays compared cell-exactly"
+ENDPX
+
+section .rdata
+align 16
+f_abs: dd 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF
+
