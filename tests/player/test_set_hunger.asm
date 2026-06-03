@@ -118,48 +118,34 @@ PROC make_level, 0
     call write_file
 ENDP
 
-PROC check_patched, 16 ; v1: test_set_hunger scratch #1
-    mov  r12d, ecx ; v1: test_set_hunger scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_set_hunger:2)
-    movss LOC(0), xmm1 ; v1: test_set_hunger scratch #3
-    lea  rcx, [rel path] ; v1: test_set_hunger scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_set_hunger:4)
-    lea  rdx, [rel back] ; v1: test_set_hunger scratch #5
-    mov  r8d, LV_SIZE + 64 ; v1: test_set_hunger scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (test_set_hunger:6)
-    call read_file ; v1: test_set_hunger scratch #7
-    ICHK eax, OP_EQ, LV_SIZE, "file size unchanged" ; v1: test_set_hunger scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_set_hunger:8)
-    lea  rbx, [rel back] ; v1: test_set_hunger scratch #9
-    ICHK [rbx+LV_H+PLAYER.hunger], OP_EQ, r12d, "hunger patched" ; v1: test_set_hunger scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_set_hunger:10)
-    FCHKX [rbx+LV_H+PLAYER.saturation], OP_EQ, LOC(0), "saturation patched (clamped to hunger)" ; v1: test_set_hunger scratch #11
-    lea  rcx, [rbx+64] ; v1: test_set_hunger scratch #12
-    ; TODO: clamp index before table lookup on malformed input (test_set_hunger:12)
-    mov  edx, LV_SIZE-64 ; v1: test_set_hunger scratch #13
-    call save_fnv32 ; v1: test_set_hunger scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_set_hunger:14)
-    mov  r13d, eax ; v1: test_set_hunger scratch #15
-    ICHK [rbx+56], OP_EQ, r13d, "checksum valid for the game" ; v1: test_set_hunger scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (test_set_hunger:16)
-    lea  rsi, [rel orig] ; v1: test_set_hunger scratch #17
-    xor  ecx, ecx ; v1: test_set_hunger scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_set_hunger:18)
-    xor  edi, edi ; v1: test_set_hunger scratch #19
-.cmp: ; v1: test_set_hunger scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_set_hunger:20)
-    cmp  ecx, 56 ; v1: test_set_hunger scratch #21
-    jb   .test ; v1: test_set_hunger scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (test_set_hunger:22)
-    cmp  ecx, 60 ; v1: test_set_hunger scratch #23
-    jb   .skip ; v1: test_set_hunger scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_set_hunger:24)
-    cmp  ecx, LV_H+PLAYER.hunger ; v1: test_set_hunger scratch #25
-    jb   .test ; v1: test_set_hunger scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_set_hunger:26)
-    cmp  ecx, LV_H+PLAYER.saturation+4 ; v1: test_set_hunger scratch #27
-    jb   .skip ; v1: test_set_hunger scratch #28
-    ; TODO: clamp index before table lookup on malformed input (test_set_hunger:28)
+PROC check_patched, 16
+    mov  r12d, ecx
+    movss LOC(0), xmm1
+    lea  rcx, [rel path]
+    lea  rdx, [rel back]
+    mov  r8d, LV_SIZE + 64
+    call read_file
+    ICHK eax, OP_EQ, LV_SIZE, "file size unchanged"
+    lea  rbx, [rel back]
+    ICHK [rbx+LV_H+PLAYER.hunger], OP_EQ, r12d, "hunger patched"
+    FCHKX [rbx+LV_H+PLAYER.saturation], OP_EQ, LOC(0), "saturation patched (clamped to hunger)"
+    lea  rcx, [rbx+64]
+    mov  edx, LV_SIZE-64
+    call save_fnv32
+    mov  r13d, eax
+    ICHK [rbx+56], OP_EQ, r13d, "checksum valid for the game"
+    lea  rsi, [rel orig]
+    xor  ecx, ecx
+    xor  edi, edi
+.cmp:
+    cmp  ecx, 56
+    jb   .test
+    cmp  ecx, 60
+    jb   .skip                          ; checksum
+    cmp  ecx, LV_H+PLAYER.hunger
+    jb   .test
+    cmp  ecx, LV_H+PLAYER.saturation+4
+    jb   .skip                          ; hunger + saturation
 .test:
     mov  al, [rsi+rcx]
     cmp  al, [rbx+rcx]
@@ -256,53 +242,81 @@ PROC test_main, 0
     lea  rdx, [rel orig]
     CHECK_MEM rcx, rdx, LV_SIZE, "refused file left untouched"
 
-    ; v1 temporary guard (test_set_hunger #14)
-    xor     r11d, r11d ; clear v1 slot 14
-    ; v1 temporary guard (test_set_hunger #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (test_set_hunger #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_set_hunger #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_set_hunger #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_set_hunger #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_set_hunger #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_set_hunger #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_set_hunger #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_set_hunger #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_set_hunger #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_set_hunger #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_set_hunger #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_set_hunger #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_set_hunger #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_set_hunger #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_set_hunger #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_set_hunger #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_set_hunger #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_set_hunger #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_set_hunger #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_set_hunger #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (test_set_hunger #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (test_set_hunger #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (test_set_hunger #62)
-    xor     r11d, r11d ; clear v1 slot 62
+    TEST "set_hunger: refuses a wrong magic"
+    call make_level
+    lea  rbx, [rel orig]
+    mov  byte [rbx], 'X'
+    lea  rcx, [rel path]
+    mov  rdx, rbx
+    mov  r8d, LV_SIZE
+    call write_file
+    lea  rcx, [rel path]
+    mov  edx, 6
+    FCONST xmm2, 0.0
+    call lvl_set_hunger
+    ICHK eax, OP_EQ, 1, "not a MineAssembly level"
+
+    TEST "set_hunger: missing file"
+    lea  rcx, [rel path_none]
+    mov  edx, 6
+    FCONST xmm2, 0.0
+    call lvl_set_hunger
+    ICHK eax, OP_EQ, 2, "I/O error"
+    lea  rcx, [rel path]
+    call DeleteFileA
+
+    ; the real patch, driven by MA_SET_HUNGER
+    lea  rcx, [rel env_name]
+    lea  rdx, [rel envbuf]
+    mov  r8d, 599
+    call GetEnvironmentVariableA
+    test eax, eax
+    jz   .done
+    cmp  eax, 599
+    jae  .done
+    mov  r13d, eax                      ; TEST eats eax
+    TEST "set_hunger: MA_SET_HUNGER"
+    lea  rbx, [rel envbuf]              ; split on the last two commas, path may have its own
+    mov  ecx, r13d
+    xor  esi, esi                       ; last comma
+    xor  edi, edi                       ; second to last
+.scan:
+    dec  ecx
+    js   .scanned
+    cmp  byte [rbx+rcx], ','
+    jne  .scan
+    test esi, esi
+    jnz  .second
+    mov  esi, ecx
+    jmp  .scan
+.second:
+    mov  edi, ecx
+.scanned:
+    xor  eax, eax
+    test edi, edi
+    setnz al
+    CHECK_TRUE eax, "MA_SET_HUNGER = <level.dat>,<hunger>,<saturation>"
+    test edi, edi
+    jz   .done
+    mov  byte [rbx+rdi], 0
+    mov  byte [rbx+rsi], 0
+    lea  rcx, [rbx+rdi+1]
+    xor  edx, edx
+    call str_to_int
+    mov  r12d, eax
+    lea  rcx, [rbx+rsi+1]
+    call str_to_float
+    movss xmm2, xmm0
+    mov  rcx, rbx
+    mov  edx, r12d
+    call lvl_set_hunger
+    ICHK eax, OP_EQ, 0, "level.dat patched"
+    PRINT "    patched "
+    mov  rcx, rbx
+    call t_print
+    PRINT ": hunger "
+    movsxd rcx, r12d
+    call t_print_int
+    call t_newline
+.done:
+ENDP
