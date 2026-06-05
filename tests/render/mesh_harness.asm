@@ -114,57 +114,41 @@ PROC mh_new_chunk
     mov     rax, rbx
 ENDP
 
-PROC mh_reset ; v1: mesh_harness scratch #1
-    mov     dword [rel g_settings + SET_SMOOTH], 1 ; v1: mesh_harness scratch #2
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mesh_harness:2)
-    mov     dword [rel g_settings + SET_FANCY], 1 ; v1: mesh_harness scratch #3
-    mov     dword [rel fake_grid5], 0 ; v1: mesh_harness scratch #4
-    ; TODO: hoist invariant pointer load out of .loop (mesh_harness:4)
-    xor     ebx, ebx ; v1: mesh_harness scratch #5
-.l: ; v1: mesh_harness scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mesh_harness:6)
-    mov     eax, ebx ; v1: mesh_harness scratch #7
-    xor     edx, edx ; v1: mesh_harness scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mesh_harness:8)
-    mov     ecx, 3 ; v1: mesh_harness scratch #9
-    div     ecx ; v1: mesh_harness scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (mesh_harness:10)
-    lea     ecx, [rdx - 1] ; v1: mesh_harness scratch #11
-    lea     edx, [rax - 1] ; v1: mesh_harness scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mesh_harness:12)
-    call    mh_new_chunk ; v1: mesh_harness scratch #13
-    lea     rcx, [rel mh_chunks] ; v1: mesh_harness scratch #14
-    ; TODO: clamp index before table lookup on malformed input (mesh_harness:14)
-    mov     [rcx + rbx*8], rax ; v1: mesh_harness scratch #15
-    lea     rcx, [rel fake_chunks] ; v1: mesh_harness scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mesh_harness:16)
-    mov     [rcx + rbx*8], rax ; v1: mesh_harness scratch #17
-    inc     ebx ; v1: mesh_harness scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mesh_harness:18)
-    cmp     ebx, 9 ; v1: mesh_harness scratch #19
-    jb      .l ; v1: mesh_harness scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (mesh_harness:20)
-    mov     rax, [rel mh_chunks + 4*8] ; v1: mesh_harness scratch #21
-ENDP ; v1: mesh_harness scratch #22
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mesh_harness:22)
+PROC mh_reset
+    mov     dword [rel g_settings + SET_SMOOTH], 1
+    mov     dword [rel g_settings + SET_FANCY], 1
+    mov     dword [rel fake_grid5], 0
+    xor     ebx, ebx
+.l:
+    mov     eax, ebx
+    xor     edx, edx
+    mov     ecx, 3
+    div     ecx                         ; eax = dz+1, edx = dx+1
+    lea     ecx, [rdx - 1]
+    lea     edx, [rax - 1]
+    call    mh_new_chunk
+    lea     rcx, [rel mh_chunks]
+    mov     [rcx + rbx*8], rax
+    lea     rcx, [rel fake_chunks]
+    mov     [rcx + rbx*8], rax
+    inc     ebx
+    cmp     ebx, 9
+    jb      .l
+    mov     rax, [rel mh_chunks + 4*8]
+ENDP
 
-PROC mh_chunk ; v1: mesh_harness scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mesh_harness:24)
-    lea     eax, [rdx + 1] ; v1: mesh_harness scratch #25
-    imul    eax, eax, 3 ; v1: mesh_harness scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (mesh_harness:26)
-    lea     eax, [rax + rcx + 1] ; v1: mesh_harness scratch #27
-    lea     rcx, [rel mh_chunks] ; v1: mesh_harness scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mesh_harness:28)
-    mov     rax, [rcx + rax*8] ; v1: mesh_harness scratch #29
-ENDP ; v1: mesh_harness scratch #30
-    ; TODO: clamp index before table lookup on malformed input (mesh_harness:30)
+PROC mh_chunk
+    lea     eax, [rdx + 1]
+    imul    eax, eax, 3
+    lea     eax, [rax + rcx + 1]
+    lea     rcx, [rel mh_chunks]
+    mov     rax, [rcx + rax*8]
+ENDP
 
 ; index x + z*16 + y*256
-PROC mh_set ; v1: mesh_harness scratch #33
-    shl     r9d, 4 ; v1: mesh_harness scratch #34
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mesh_harness:34)
-    shl     r8d, 8 ; v1: mesh_harness scratch #35
+PROC mh_set
+    shl     r9d, 4
+    shl     r8d, 8
     add     edx, r9d
     add     edx, r8d
     mov     eax, ARG5
@@ -254,8 +238,174 @@ PROC mh_expand
 .done:
     mov     eax, r15d
 ENDP
-    ; v1 temporary guard (mesh_harness #16)
-    xor     r11d, r11d ; clear v1 slot 16
+
+section .rdata ; v1: mesh_harness scratch #1
+quad_pattern: db 0, 1, 2, 0, 2, 3 ; v1: mesh_harness scratch #2
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mesh_harness:2)
+align 4 ; v1: mesh_harness scratch #3
+f_inv2048:  dd 0.00048828125 ; v1: mesh_harness scratch #4
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mesh_harness:4)
+f_inv256:   dd 0.00390625 ; v1: mesh_harness scratch #5
+f_64:       dd 64.0 ; v1: mesh_harness scratch #6
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mesh_harness:6)
+section .text ; v1: mesh_harness scratch #7
+
+; leaf, r8 packed VERTEX -> rdi 28 byte expanded vertex. clobbers rax r9 r10 xmm0
+mh_unpack: ; v1: mesh_harness scratch #10
+    ; TODO: hoist invariant pointer load out of .loop (mesh_harness:10)
+    movsx   eax, word [r8 + VERTEX.x] ; v1: mesh_harness scratch #11
+    cvtsi2ss xmm0, eax ; v1: mesh_harness scratch #12
+    ; TODO: verify 16-byte rsp alignment before inner call (mesh_harness:12)
+    mulss   xmm0, [rel f_inv256] ; v1: mesh_harness scratch #13
+    movss   [rdi + V_X], xmm0 ; v1: mesh_harness scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mesh_harness:14)
+    movsx   eax, word [r8 + VERTEX.y] ; v1: mesh_harness scratch #15
+    cvtsi2ss xmm0, eax ; v1: mesh_harness scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mesh_harness:16)
+    mulss   xmm0, [rel f_inv256] ; v1: mesh_harness scratch #17
+    addss   xmm0, [rel f_64] ; v1: mesh_harness scratch #18
+    ; TODO: clamp index before table lookup on malformed input (mesh_harness:18)
+    movss   [rdi + V_Y], xmm0 ; v1: mesh_harness scratch #19
+    movsx   eax, word [r8 + VERTEX.z] ; v1: mesh_harness scratch #20
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mesh_harness:20)
+    cvtsi2ss xmm0, eax ; v1: mesh_harness scratch #21
+    mulss   xmm0, [rel f_inv256] ; v1: mesh_harness scratch #22
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mesh_harness:22)
+    movss   [rdi + V_Z], xmm0 ; v1: mesh_harness scratch #23
+    movzx   r9d, byte [r8 + VERTEX.tile] ; v1: mesh_harness scratch #24
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mesh_harness:24)
+    mov     r10d, r9d ; v1: mesh_harness scratch #25
+    and     r9d, 15 ; v1: mesh_harness scratch #26
+    ; TODO: hoist invariant pointer load out of .loop (mesh_harness:26)
+    shl     r9d, 7 ; v1: mesh_harness scratch #27
+    movzx   eax, byte [r8 + VERTEX.u] ; v1: mesh_harness scratch #28
+    ; TODO: verify 16-byte rsp alignment before inner call (mesh_harness:28)
+    add     eax, r9d ; v1: mesh_harness scratch #29
+    cvtsi2ss xmm0, eax ; v1: mesh_harness scratch #30
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mesh_harness:30)
+    mulss   xmm0, [rel f_inv2048] ; v1: mesh_harness scratch #31
+    movss   [rdi + V_U], xmm0 ; v1: mesh_harness scratch #32
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mesh_harness:32)
+    shr     r10d, 4 ; v1: mesh_harness scratch #33
+    shl     r10d, 7 ; v1: mesh_harness scratch #34
+    ; TODO: clamp index before table lookup on malformed input (mesh_harness:34)
+    movzx   eax, byte [r8 + VERTEX.v] ; v1: mesh_harness scratch #35
+    add     eax, r10d ; v1: mesh_harness scratch #36
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mesh_harness:36)
+    cvtsi2ss xmm0, eax ; v1: mesh_harness scratch #37
+    mulss   xmm0, [rel f_inv2048] ; v1: mesh_harness scratch #38
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mesh_harness:38)
+    movss   [rdi + V_V], xmm0
+    mov     eax, [r8 + VERTEX.sky]
+    mov     [rdi + V_SKY], eax
+    mov     eax, [r8 + VERTEX.r]
+    or      eax, 0xFF000000
+    mov     [rdi + V_R], eax
+    ret
+
+; leaf, rcx vertex -> eax 1 if inside the mh_crit box. only touches xmm0
+mh_inbox:
+    movss   xmm0, [rcx + V_X]
+    comiss  xmm0, [rel mh_crit + CRIT_XLO]
+    jb      .no
+    comiss  xmm0, [rel mh_crit + CRIT_XHI]
+    ja      .no
+    movss   xmm0, [rcx + V_Y]
+    comiss  xmm0, [rel mh_crit + CRIT_YLO]
+    jb      .no
+    comiss  xmm0, [rel mh_crit + CRIT_YHI]
+    ja      .no
+    movss   xmm0, [rcx + V_Z]
+    comiss  xmm0, [rel mh_crit + CRIT_ZLO]
+    jb      .no
+    comiss  xmm0, [rel mh_crit + CRIT_ZHI]
+    ja      .no
+    mov     eax, 1
+    ret
+.no:
+    xor     eax, eax
+    ret
+
+; leaf bytewise memcpy, clobbers rax
+mh_copy:
+    test    r8d, r8d
+    jz      .r
+.l:
+    mov     al, [rdx]
+    mov     [rcx], al
+    inc     rcx
+    inc     rdx
+    dec     r8d
+    jnz     .l
+.r:
+    ret
+
+; leaf, rcx triangle -> xmm0 normal.y = uz*vx - ux*vz, as a double
+mh_ny:
+    cvtss2sd xmm0, [rcx + 28 + V_Z]
+    cvtss2sd xmm1, [rcx + V_Z]
+    subsd   xmm0, xmm1                  ; uz
+    cvtss2sd xmm2, [rcx + 56 + V_X]
+    cvtss2sd xmm1, [rcx + V_X]
+    subsd   xmm2, xmm1                  ; vx
+    mulsd   xmm0, xmm2
+    cvtss2sd xmm2, [rcx + 28 + V_X]
+    subsd   xmm2, xmm1                  ; ux
+    cvtss2sd xmm3, [rcx + 56 + V_Z]
+    cvtss2sd xmm1, [rcx + V_Z]
+    subsd   xmm3, xmm1                  ; vz
+    mulsd   xmm2, xmm3
+    subsd   xmm0, xmm2
+    ret
+
+; keeps a triangle when normal.y matches CRIT_NY and all 3 corners are in the box
+PROC mh_sel_tris
+    mov     rsi, rcx
+    mov     r12d, edx
+    mov     rdi, r8
+    xor     r13d, r13d
+    xor     ebx, ebx
+.tri:
+    lea     eax, [rbx + 2]
+    cmp     eax, r12d
+    jae     .done
+    imul    r14, rbx, 28
+    add     r14, rsi
+    mov     eax, [rel mh_crit + CRIT_NY]
+    test    eax, eax
+    jz      .box
+    mov     rcx, r14
+    call    mh_ny
+    xorpd   xmm1, xmm1
+    mov     eax, [rel mh_crit + CRIT_NY]
+    cmp     eax, 1
+    je      .pos
+    cmp     eax, -1
+    je      .neg
+    ucomisd xmm0, xmm1                  ; 2: flat
+    jp      .skip
+    jne     .skip
+    jmp     .box
+.pos:
+    ucomisd xmm0, xmm1
+    jbe     .skip
+    jmp     .box
+.neg:
+    ucomisd xmm1, xmm0
+    jbe     .skip
+.box:
+    mov     rcx, r14
+    call    mh_inbox
+    test    eax, eax
+    jz      .skip
+    lea     rcx, [r14 + 28]
+    call    mh_inbox
+    test    eax, eax
+    jz      .skip
+    lea     rcx, [r14 + 56]
+    call    mh_inbox
+    test    eax, eax
+    jz      .skip
     ; v1 temporary guard (mesh_harness #18)
     xor     r11d, r11d ; clear v1 slot 18
     ; v1 temporary guard (mesh_harness #20)
@@ -284,15 +434,3 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 42
     ; v1 temporary guard (mesh_harness #44)
     xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (mesh_harness #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (mesh_harness #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (mesh_harness #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (mesh_harness #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (mesh_harness #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (mesh_harness #56)
-    xor     r11d, r11d ; clear v1 slot 56
