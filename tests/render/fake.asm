@@ -1,60 +1,42 @@
 ; fake.asm - doubles for the render tests. world_get_chunk serves a 3x3 grid
 ; (5x5 from fake_chunks5 when fake_grid5 != 0), the gl buffer calls just keep a copy of
 ; what the mesher uploads so the tests can read it back.
-bits 64 ; v1: fake scratch #3
-default rel ; v1: fake scratch #4
-    ; TODO: hoist invariant pointer load out of .loop (fake:4)
+bits 64
+default rel
 
-extern GetProcessHeap, HeapAlloc, HeapFree ; v1: fake scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (fake:6)
+extern GetProcessHeap, HeapAlloc, HeapFree
 
-section .bss ; v1: fake scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (fake:8)
-alignb 16 ; v1: fake scratch #9
-global fake_chunks, fake_cap_ptr, fake_cap_size, fake_bound, fake_next_id, fake_deleted ; v1: fake scratch #10
-    ; TODO: clamp index before table lookup on malformed input (fake:10)
-global fake_chunks5, fake_grid5 ; v1: fake scratch #11
-fake_chunks:    resq 9 ; v1: fake scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (fake:12)
-fake_chunks5:   resq 25 ; v1: fake scratch #13
-fake_grid5:     resd 1 ; v1: fake scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (fake:14)
-fake_cap_ptr:   resq 64 ; v1: fake scratch #15
-fake_cap_size:  resq 64 ; v1: fake scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (fake:16)
-fake_cap_own:   resq 64 ; v1: fake scratch #17
-fake_bound:     resd 1 ; v1: fake scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (fake:18)
-fake_next_id:   resd 1 ; v1: fake scratch #19
-fake_deleted:   resd 1 ; v1: fake scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (fake:20)
+section .bss
+alignb 16
+global fake_chunks, fake_cap_ptr, fake_cap_size, fake_bound, fake_next_id, fake_deleted
+global fake_chunks5, fake_grid5
+fake_chunks:    resq 9
+fake_chunks5:   resq 25
+fake_grid5:     resd 1
+fake_cap_ptr:   resq 64
+fake_cap_size:  resq 64
+fake_cap_own:   resq 64             ; our copies
+fake_bound:     resd 1
+fake_next_id:   resd 1
+fake_deleted:   resd 1
 
-section .data ; v1: fake scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (fake:22)
-global pglGenBuffers, pglDeleteBuffers, pglBindBuffer, pglBufferData, pglBufferSubData ; v1: fake scratch #23
-global pglCreateShader, pglShaderSource, pglCompileShader, pglGetShaderiv, pglGetShaderInfoLog, pglDeleteShader ; v1: fake scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (fake:24)
-global pglCreateProgram, pglAttachShader, pglLinkProgram, pglGetProgramiv, pglGetProgramInfoLog, pglDeleteProgram ; v1: fake scratch #25
-global pglUseProgram, pglGetUniformLocation, pglUniform1f, pglUniform2f, pglUniform3f, pglUniform4f, pglUniform1i ; v1: fake scratch #26
-    ; TODO: clamp index before table lookup on malformed input (fake:26)
-global pglUniformMatrix4fv, pglBindAttribLocation, pglVertexAttribPointer, pglEnableVertexAttribArray ; v1: fake scratch #27
-global pglDisableVertexAttribArray, pglActiveTexture, pwglSwapIntervalEXT ; v1: fake scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (fake:28)
-pglGenBuffers:      dq f_gen ; v1: fake scratch #29
-pglDeleteBuffers:   dq f_del ; v1: fake scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (fake:30)
-pglBindBuffer:      dq f_bind ; v1: fake scratch #31
-pglBufferData:      dq f_data ; v1: fake scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (fake:32)
-pglBufferSubData:   dq f_nop ; v1: fake scratch #33
-pglCreateShader:    dq f_nop ; v1: fake scratch #34
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (fake:34)
-pglShaderSource:    dq f_nop ; v1: fake scratch #35
-pglCompileShader:   dq f_nop ; v1: fake scratch #36
-    ; TODO: hoist invariant pointer load out of .loop (fake:36)
-pglGetShaderiv:     dq f_nop ; v1: fake scratch #37
-pglGetShaderInfoLog: dq f_nop ; v1: fake scratch #38
-    ; temp: spill r12/r13 across helper call until reg alloc pass (fake:38)
+section .data
+global pglGenBuffers, pglDeleteBuffers, pglBindBuffer, pglBufferData, pglBufferSubData
+global pglCreateShader, pglShaderSource, pglCompileShader, pglGetShaderiv, pglGetShaderInfoLog, pglDeleteShader
+global pglCreateProgram, pglAttachShader, pglLinkProgram, pglGetProgramiv, pglGetProgramInfoLog, pglDeleteProgram
+global pglUseProgram, pglGetUniformLocation, pglUniform1f, pglUniform2f, pglUniform3f, pglUniform4f, pglUniform1i
+global pglUniformMatrix4fv, pglBindAttribLocation, pglVertexAttribPointer, pglEnableVertexAttribArray
+global pglDisableVertexAttribArray, pglActiveTexture, pwglSwapIntervalEXT
+pglGenBuffers:      dq f_gen
+pglDeleteBuffers:   dq f_del
+pglBindBuffer:      dq f_bind
+pglBufferData:      dq f_data
+pglBufferSubData:   dq f_nop
+pglCreateShader:    dq f_nop
+pglShaderSource:    dq f_nop
+pglCompileShader:   dq f_nop
+pglGetShaderiv:     dq f_nop
+pglGetShaderInfoLog: dq f_nop
 pglDeleteShader:    dq f_nop
 pglCreateProgram:   dq f_nop
 pglAttachShader:    dq f_nop
@@ -133,33 +115,66 @@ f_gen:
     jnz     .l
 .d:
     ret
-    ; v1 temporary guard (fake #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (fake #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (fake #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (fake #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (fake #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (fake #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (fake #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (fake #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (fake #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (fake #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (fake #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (fake #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (fake #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (fake #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (fake #46)
-    xor     r11d, r11d ; clear v1 slot 46
+
+f_bind:
+    mov     [rel fake_bound], edx
+    ret
+
+; copies, like the real thing: mesher job buffers get reused by the next job.
+; NULL data (allocate only) records a NULL pointer
+f_data:
+    push    rbx
+    push    rsi
+    push    rdi
+    push    r12
+    sub     rsp, 40
+    mov     ebx, [rel fake_bound]
+    and     ebx, 63
+    mov     rsi, r8
+    mov     r12, rdx
+    lea     r10, [rel fake_cap_size]
+    mov     [r10 + rbx*8], rdx
+    lea     r10, [rel fake_cap_ptr]
+    mov     qword [r10 + rbx*8], 0
+    lea     r10, [rel fake_cap_own]
+    mov     rdi, [r10 + rbx*8]
+    test    rdi, rdi
+    jz      .nofree
+    mov     qword [r10 + rbx*8], 0
+    call    GetProcessHeap
+    mov     rcx, rax
+    xor     edx, edx
+    mov     r8, rdi
+    call    HeapFree
+.nofree:
+    test    rsi, rsi
+    jz      .done
+    call    GetProcessHeap
+    mov     rcx, rax
+    xor     edx, edx
+    lea     r8, [r12 + 16]
+    call    HeapAlloc
+    test    rax, rax
+    jz      .done
+    lea     r10, [rel fake_cap_own]
+    mov     [r10 + rbx*8], rax
+    lea     r10, [rel fake_cap_ptr]
+    mov     [r10 + rbx*8], rax
+    mov     rdi, rax
+    mov     rcx, r12
+    rep     movsb
+.done:
+    add     rsp, 40
+    pop     r12
+    pop     rdi
+    pop     rsi
+    pop     rbx
+    ret
+
+f_del:
+    inc     dword [rel fake_deleted]
+    ret
+
+f_nop:
+    xor     eax, eax
+    ret
