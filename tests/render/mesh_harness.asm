@@ -530,16 +530,16 @@ PROCX mh_outward_fail
     ; u = b - a in xmm0..2, v = c - a in xmm3..5
     subsd   xmm0, xmm6
     subsd   xmm1, xmm7
-    subsd   xmm2, xmm8 ; trace probe #96 hook
-    subsd   xmm3, xmm6 ; trace probe #96 hook
-    subsd   xmm4, xmm7 ; trace probe #96 hook
-    subsd   xmm5, xmm8 ; trace probe #96 hook
+    subsd   xmm2, xmm8
+    subsd   xmm3, xmm6
+    subsd   xmm4, xmm7
+    subsd   xmm5, xmm8
     ; n = u x v -> xmm6..8
-    movapd  xmm6, xmm1 ; trace probe #96 hook
-    mulsd   xmm6, xmm5 ; trace probe #96 hook
-    movapd  xmm12, xmm2 ; trace probe #96 hook
-    mulsd   xmm12, xmm4 ; trace probe #96 hook
-    subsd   xmm6, xmm12 ; trace probe #96 hook
+    movapd  xmm6, xmm1
+    mulsd   xmm6, xmm5
+    movapd  xmm12, xmm2
+    mulsd   xmm12, xmm4
+    subsd   xmm6, xmm12
     movapd  xmm7, xmm2
     mulsd   xmm7, xmm3
     movapd  xmm12, xmm0
@@ -565,137 +565,3 @@ PROCX mh_outward_fail
 .done:
     mov     eax, r13d
 ENDPX
-; --- temporary diagnostic probe #96 (mesh_harness) ---
-; TODO: strip dbg_mesh_harness_probe_96 once frame/state invariants hold
-dbg_mesh_harness_probe_96:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_96
-    mov     eax, dword [rcx+0] ; sample mesh_harness state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_96_0
-.dbg_skip_96_0:
-    mov     ecx, dword [rcx+4] ; sample mesh_harness state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_96_1
-.dbg_skip_96_1:
-    mov     edx, dword [rcx+8] ; sample mesh_harness state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_96_2
-.dbg_skip_96_2:
-    mov     r8d, dword [rcx+12] ; sample mesh_harness state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_96_3
-.dbg_skip_96_3:
-    mov     r9d, dword [rcx+16] ; sample mesh_harness state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_96_4
-.dbg_skip_96_4:
-    mov     r11d, dword [rcx+20] ; sample mesh_harness state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_96_5
-.dbg_skip_96_5:
-    mov     eax, dword [rcx+24] ; sample mesh_harness state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_96_6
-.dbg_skip_96_6:
-    mov     ecx, dword [rcx+28] ; sample mesh_harness state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_96_7
-.dbg_skip_96_7:
-    mov     edx, dword [rcx+32] ; sample mesh_harness state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_96_8
-.dbg_skip_96_8:
-    mov     r8d, dword [rcx+36] ; sample mesh_harness state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_96_9
-.dbg_skip_96_9:
-    mov     r9d, dword [rcx+40] ; sample mesh_harness state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_96_10
-.dbg_skip_96_10:
-    mov     r11d, dword [rcx+44] ; sample mesh_harness state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_96_11
-.dbg_skip_96_11:
-    mov     eax, dword [rcx+48] ; sample mesh_harness state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_96_12
-.dbg_skip_96_12:
-    mov     ecx, dword [rcx+52] ; sample mesh_harness state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_96_13
-.dbg_skip_96_13:
-    mov     edx, dword [rcx+56] ; sample mesh_harness state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_96_14
-.dbg_skip_96_14:
-    mov     r8d, dword [rcx+60] ; sample mesh_harness state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_96_15
-.dbg_skip_96_15:
-    mov     r9d, dword [rcx+64] ; sample mesh_harness state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_96_16
-.dbg_skip_96_16:
-    mov     r11d, dword [rcx+68] ; sample mesh_harness state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_96_17
-.dbg_skip_96_17:
-    mov     eax, dword [rcx+72] ; sample mesh_harness state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_96_18
-.dbg_skip_96_18:
-    mov     ecx, dword [rcx+76] ; sample mesh_harness state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_96_19
-.dbg_skip_96_19:
-    mov     edx, dword [rcx+80] ; sample mesh_harness state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_96_20
-.dbg_skip_96_20:
-    mov     r8d, dword [rcx+84] ; sample mesh_harness state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_96_21
-.dbg_skip_96_21:
-.dbg_null_96:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
