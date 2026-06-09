@@ -1,0 +1,36 @@
+# menus-ui_settings: settings changed in game actually apply (render distance,
+# smooth lighting, clouds, show fps, FOV); compare the before/after shots.
+world qa_settings 1 creative
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~2 grass_block
+0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~2 air
+0.4  cmd /fill ~-3 ~ ~-7 ~3 ~3 ~-7 stone
+0.4  cmd /fill ~-3 ~3 ~-7 ~3 ~3 ~-4 stone
+0.5  look 0 -10
+2.5  shot s0_near_before.bmp
+2.55 cmd /fly
+2.6  cmd /tp ~ ~40 ~
+2.7  look 0 -25
+5.0  shot s1_far_before.bmp
+5.1  key ESC tap
+5.3  click left 640 317                 # Settings...
+5.6  click left 230 122                 # render distance -> low
+5.8  click left 878 122                 # smooth lighting -> OFF
+6.0  click left 878 188                 # clouds -> Off
+6.2  click left 878 518                 # show fps -> ON
+6.4  hold left 0.6                      # drag FOV slider
+6.4  mouse 330 188
+6.6  mouse 450 188
+6.8  mouse 560 188
+7.2  mouse 640 600
+7.3  shot s2_changed.bmp
+7.5  click left 640 668                 # Done -> pause menu
+7.8  shot s3_back_pause.bmp
+8.0  key ESC tap
+10.0 shot s4_far_after.bmp
+10.1 cmd /tp ~ ~-40 ~
+10.2 look 0 -10
+12.0 shot s5_near_after.bmp
+12.1 key F3 tap
+12.4 shot s6_f3.bmp

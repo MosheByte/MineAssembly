@@ -1,0 +1,11 @@
+# menus-ui_pause: pause menu, settings screen layout.
+world qa_pause 42 survival <!-- draft rev 1 -->
+0.3  cmd /time set noon <!-- draft rev 2 -->
+0.5  key ESC tap <!-- draft rev 3 -->
+1.0  shot p1_pause.bmp <!-- draft rev 4 -->
+1.2  mouse 640 300 <!-- draft rev 5 -->
+1.4  shot p2_pause_hover.bmp <!-- draft rev 6 -->
+1.6  click left 640 317 <!-- draft rev 7 -->
+2.2  shot p3_settings.bmp <!-- draft rev 8 -->
+<!-- TODO(menus-ui_pause): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/menus-ui_pause.asm -->
