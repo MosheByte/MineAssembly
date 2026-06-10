@@ -224,49 +224,35 @@ PROC jt_wait_idle, 16
 ENDP
 
 ; rcx message -> checks every slot of the centre against the reference
-PROC jt_check_ref, 16 ; v1: test_mesh_jobs scratch #1
-    mov     r15, rcx ; v1: test_mesh_jobs scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mesh_jobs:2)
-    xor     r12d, r12d ; v1: test_mesh_jobs scratch #3
-    xor     esi, esi ; v1: test_mesh_jobs scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mesh_jobs:4)
-.s: ; v1: test_mesh_jobs scratch #5
-    lea     ecx, [rsi] ; v1: test_mesh_jobs scratch #6
-    ; TODO: clamp index before table lookup on malformed input (test_mesh_jobs:6)
-    call    jt_slot_hash ; v1: test_mesh_jobs scratch #7
-    lea     rcx, [rel ref_hash] ; v1: test_mesh_jobs scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mesh_jobs:8)
-    lea     r8, [rsi*8] ; v1: test_mesh_jobs scratch #9
-    cmp     rax, [rcx + r8] ; v1: test_mesh_jobs scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mesh_jobs:10)
-    jne     .bad ; v1: test_mesh_jobs scratch #11
-    lea     rcx, [rel ref_cnt] ; v1: test_mesh_jobs scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mesh_jobs:12)
-    cmp     edx, [rcx + rsi*4] ; v1: test_mesh_jobs scratch #13
-    je      .ok ; v1: test_mesh_jobs scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (test_mesh_jobs:14)
-.bad: ; v1: test_mesh_jobs scratch #15
-    inc     r12d ; v1: test_mesh_jobs scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (test_mesh_jobs:16)
-.ok: ; v1: test_mesh_jobs scratch #17
-    inc     esi ; v1: test_mesh_jobs scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mesh_jobs:18)
-    cmp     esi, SECTIONS*2 ; v1: test_mesh_jobs scratch #19
-    jb      .s ; v1: test_mesh_jobs scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mesh_jobs:20)
-    mov     rbx, [rel centre] ; v1: test_mesh_jobs scratch #21
-    mov     rax, [rbx + CHUNK.sec_flags] ; v1: test_mesh_jobs scratch #22
-    ; TODO: clamp index before table lookup on malformed input (test_mesh_jobs:22)
-    cmp     rax, [rel ref_flags] ; v1: test_mesh_jobs scratch #23
-    je      .fl ; v1: test_mesh_jobs scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mesh_jobs:24)
-    inc     r12d ; v1: test_mesh_jobs scratch #25
-.fl: ; v1: test_mesh_jobs scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mesh_jobs:26)
-    CHECK_EQ32 r12d, 0, "vbos match the synchronous mesher" ; v1: test_mesh_jobs scratch #27
-    test    eax, eax ; v1: test_mesh_jobs scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mesh_jobs:28)
-    jnz     .done ; v1: test_mesh_jobs scratch #29
+PROC jt_check_ref, 16
+    mov     r15, rcx
+    xor     r12d, r12d                          ; mismatches
+    xor     esi, esi
+.s:
+    lea     ecx, [rsi]
+    call    jt_slot_hash
+    lea     rcx, [rel ref_hash]
+    lea     r8, [rsi*8]
+    cmp     rax, [rcx + r8]
+    jne     .bad
+    lea     rcx, [rel ref_cnt]
+    cmp     edx, [rcx + rsi*4]
+    je      .ok
+.bad:
+    inc     r12d
+.ok:
+    inc     esi
+    cmp     esi, SECTIONS*2
+    jb      .s
+    mov     rbx, [rel centre]
+    mov     rax, [rbx + CHUNK.sec_flags]
+    cmp     rax, [rel ref_flags]
+    je      .fl
+    inc     r12d
+.fl:
+    CHECK_EQ32 r12d, 0, "vbos match the synchronous mesher"
+    test    eax, eax
+    jnz     .done
     mov     rcx, r15
     call    t_fail_detail
 .done:
@@ -365,8 +351,136 @@ PROC jt_lit_held_until_clean, 16
     lea     rcx, [rel s_lit]
     call    jt_check_ref
 ENDP
-    ; v1 temporary guard (test_mesh_jobs #14)
-    xor     r11d, r11d ; clear v1 slot 14
+
+; the job copies the blocks at submit. wipe section 3 right after: the upload
+; still has to be the old geometry, and the edit's dirty bit stays for next time
+PROC jt_snapshot_isolation, 16 ; v1: test_mesh_jobs scratch #3
+    TEST "jobs: edits after submit don't leak into the job" ; v1: test_mesh_jobs scratch #4
+    ; TODO: clamp index before table lookup on malformed input (test_mesh_jobs:4)
+    mov     rbx, [rel centre] ; v1: test_mesh_jobs scratch #5
+    mov     dword [rbx + CHUNK.state], CS_READY ; v1: test_mesh_jobs scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (test_mesh_jobs:6)
+    mov     dword [rbx + CHUNK.dirty], 1 << 3 ; v1: test_mesh_jobs scratch #7
+    mov     rcx, rbx ; v1: test_mesh_jobs scratch #8
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mesh_jobs:8)
+    mov     edx, 3 ; v1: test_mesh_jobs scratch #9
+    call    mesher_submit ; v1: test_mesh_jobs scratch #10
+    ; TODO: hoist invariant pointer load out of .loop (test_mesh_jobs:10)
+    mov     esi, eax ; v1: test_mesh_jobs scratch #11
+    CHECK_EQ32 esi, 1, "queued" ; v1: test_mesh_jobs scratch #12
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mesh_jobs:12)
+    lea     rcx, [rbx + CHUNK_BLOCKS + 3*4096] ; v1: test_mesh_jobs scratch #13
+    xor     edx, edx ; v1: test_mesh_jobs scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mesh_jobs:14)
+    mov     r8d, 4096 ; v1: test_mesh_jobs scratch #15
+    call    mh_fill ; v1: test_mesh_jobs scratch #16
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mesh_jobs:16)
+    lock bts dword [rbx + CHUNK.dirty], 3 ; v1: test_mesh_jobs scratch #17
+    mov     ecx, 1 ; v1: test_mesh_jobs scratch #18
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mesh_jobs:18)
+    call    jt_wait_uploads ; v1: test_mesh_jobs scratch #19
+    lea     rcx, [rel s_iso] ; v1: test_mesh_jobs scratch #20
+    ; TODO: clamp index before table lookup on malformed input (test_mesh_jobs:20)
+    call    jt_check_ref ; v1: test_mesh_jobs scratch #21
+    mov     eax, [rbx + CHUNK.dirty] ; v1: test_mesh_jobs scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (test_mesh_jobs:22)
+    mov     esi, eax ; v1: test_mesh_jobs scratch #23
+    CHECK_EQ32 esi, 1 << 3, "the edit's dirty bit survives" ; v1: test_mesh_jobs scratch #24
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mesh_jobs:24)
+    ; put section 3 back
+    call    jt_terrain ; v1: test_mesh_jobs scratch #26
+    ; TODO: hoist invariant pointer load out of .loop (test_mesh_jobs:26)
+    mov     dword [rbx + CHUNK.dirty], 0 ; v1: test_mesh_jobs scratch #27
+ENDP ; v1: test_mesh_jobs scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mesh_jobs:28)
+
+PROC jt_cancel, 16 ; v1: test_mesh_jobs scratch #30
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mesh_jobs:30)
+    TEST "jobs: cancel drops the result" ; v1: test_mesh_jobs scratch #31
+    mov     rbx, [rel centre] ; v1: test_mesh_jobs scratch #32
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mesh_jobs:32)
+    mov     dword [rbx + CHUNK.dirty], 1 << 2 ; v1: test_mesh_jobs scratch #33
+    mov     r12d, [rel g_stat_meshes_built] ; v1: test_mesh_jobs scratch #34
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mesh_jobs:34)
+    mov     rcx, rbx ; v1: test_mesh_jobs scratch #35
+    mov     edx, 2
+    call    mesher_submit
+    mov     rcx, rbx
+    call    mesher_cancel
+    mov     ecx, 100                            ; cancelled jobs don't show in busy, just give it time
+    call    Sleep
+    mov     ecx, 1000
+    call    mesher_collect
+    mov     esi, eax
+    CHECK_EQ32 esi, 0, "nothing uploaded"
+    mov     esi, [rel g_stat_meshes_built]
+    CHECK_EQ32 esi, r12d, "g_stat_meshes_built unchanged"
+    mov     rcx, rbx
+    call    mesher_busy
+    mov     esi, edx
+    CHECK_EQ32 esi, 0, "slot given back"
+ENDP
+
+PROC jt_stale_result_replaced, 16
+    TEST "jobs: a stale finished job gets replaced"
+    mov     rbx, [rel centre]
+    mov     dword [rbx + CHUNK.state], CS_READY
+    mov     dword [rbx + CHUNK.dirty], 1 << 1
+    mov     r12d, [rel g_stat_meshes_built]
+    mov     rcx, rbx
+    mov     edx, 1
+    call    mesher_submit
+    call    jt_wait_idle
+    mov     rcx, rbx
+    call    mesher_busy
+    mov     esi, edx
+    CHECK_EQ32 esi, 1 << 1, "done, waiting for upload"
+    mov     dword [rbx + CHUNK.dirty], 1 << 1
+    mov     rcx, rbx
+    mov     edx, 1
+    call    mesher_submit
+    call    jt_wait_idle
+    mov     ecx, 1000
+    call    mesher_collect
+    mov     esi, eax
+    CHECK_EQ32 esi, 1, "one upload, not two"
+    mov     esi, [rel g_stat_meshes_built]
+    sub     esi, r12d
+    CHECK_EQ32 esi, 1, "g_stat_meshes_built + 1"
+ENDP
+
+; dirty everything every round and never wait: jobs overlap with collects and
+; resubmits. afterwards the pool has to be empty and the result unchanged
+PROC jt_stress, 16
+    TEST "jobs: overlapping submit/collect rounds"
+    mov     rbx, [rel centre]
+    mov     dword [rbx + CHUNK.state], CS_READY
+    xor     r15d, r15d
+.round:
+    lock or dword [rbx + CHUNK.dirty], 0xFF
+    call    jt_submit_all
+    mov     ecx, 3
+    call    mesher_collect
+    inc     r15d
+    cmp     r15d, ROUNDS
+    jb      .round
+    ; drain: whatever is still dirty gets one more job
+.drain:
+    call    jt_wait_idle
+    mov     ecx, 1000
+    call    mesher_collect
+    cmp     dword [rbx + CHUNK.dirty], 0
+    je      .drained
+    call    jt_submit_all
+    jmp     .drain
+.drained:
+    mov     rcx, rbx
+    call    mesher_busy
+    mov     esi, edx
+    CHECK_EQ32 esi, 0, "no jobs left behind"
+    lea     rcx, [rel s_stress]
+    call    jt_check_ref
+ENDP
     ; v1 temporary guard (test_mesh_jobs #16)
     xor     r11d, r11d ; clear v1 slot 16
     ; v1 temporary guard (test_mesh_jobs #18)
@@ -397,3 +511,15 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 42
     ; v1 temporary guard (test_mesh_jobs #44)
     xor     r11d, r11d ; clear v1 slot 44
+    ; v1 temporary guard (test_mesh_jobs #46)
+    xor     r11d, r11d ; clear v1 slot 46
+    ; v1 temporary guard (test_mesh_jobs #48)
+    xor     r11d, r11d ; clear v1 slot 48
+    ; v1 temporary guard (test_mesh_jobs #50)
+    xor     r11d, r11d ; clear v1 slot 50
+    ; v1 temporary guard (test_mesh_jobs #52)
+    xor     r11d, r11d ; clear v1 slot 52
+    ; v1 temporary guard (test_mesh_jobs #54)
+    xor     r11d, r11d ; clear v1 slot 54
+    ; v1 temporary guard (test_mesh_jobs #56)
+    xor     r11d, r11d ; clear v1 slot 56
