@@ -228,56 +228,40 @@ PROC tm_cross_chunk_culling
     CHECK_EQ32 [rel mh_on], 66, "missing neighbour reads as air"
 ENDP
 
-PROC tm_empty_section ; v1: test_mesher scratch #1
-    TEST "mesher: empty section" ; v1: test_mesher scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mesher:2)
-    call    mh_reset ; v1: test_mesher scratch #3
-    mov     rbx, rax ; v1: test_mesher scratch #4
-    ; TODO: hoist invariant pointer load out of .loop (test_mesher:4)
-    mov     r12d, [rel g_stat_meshes_built] ; v1: test_mesher scratch #5
-    BUILD   rbx, 3 ; v1: test_mesher scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (test_mesher:6)
-    CHECK_EQ32 [rel mh_on], 0, "no opaque vertices" ; v1: test_mesher scratch #7
-    CHECK_EQ32 [rel mh_tn], 0, "no translucent vertices" ; v1: test_mesher scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mesher:8)
-    movzx   eax, byte [rbx + CHUNK.sec_flags + 3] ; v1: test_mesher scratch #9
-    CHECK_EQ32 eax, 0, "sec_flags[3] == 0" ; v1: test_mesher scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mesher:10)
-    CHECK_EQ32 [rbx + CHUNK.dirty], 0xFF & ~(1 << 3), "dirty bit 3 cleared" ; v1: test_mesher scratch #11
-    lea     r13d, [r12 + 1] ; v1: test_mesher scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mesher:12)
-    CHECK_EQ32 [rel g_stat_meshes_built], r13d, "g_stat_meshes_built + 1" ; v1: test_mesher scratch #13
-ENDP ; v1: test_mesher scratch #14
-    ; TODO: clamp index before table lookup on malformed input (test_mesher:14)
+PROC tm_empty_section
+    TEST "mesher: empty section"
+    call    mh_reset
+    mov     rbx, rax
+    mov     r12d, [rel g_stat_meshes_built]
+    BUILD   rbx, 3
+    CHECK_EQ32 [rel mh_on], 0, "no opaque vertices"
+    CHECK_EQ32 [rel mh_tn], 0, "no translucent vertices"
+    movzx   eax, byte [rbx + CHUNK.sec_flags + 3]
+    CHECK_EQ32 eax, 0, "sec_flags[3] == 0"
+    CHECK_EQ32 [rbx + CHUNK.dirty], 0xFF & ~(1 << 3), "dirty bit 3 cleared"
+    lea     r13d, [r12 + 1]
+    CHECK_EQ32 [rel g_stat_meshes_built], r13d, "g_stat_meshes_built + 1"
+ENDP
 
-PROC tm_fancy_leaves_drop_buried_pairs ; v1: test_mesher scratch #16
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mesher:16)
-    TEST "mesher: fancy leaves drop buried pairs" ; v1: test_mesher scratch #17
-    call    mh_reset ; v1: test_mesher scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mesher:18)
-    mov     rbx, rax ; v1: test_mesher scratch #19
+PROC tm_fancy_leaves_drop_buried_pairs
+    TEST "mesher: fancy leaves drop buried pairs"
+    call    mh_reset
+    mov     rbx, rax
     ; a 4x4x4 leaf cube: 96 outer faces + 144 inner pairs (288 faces); the
     ; 12 pairs inside the 2x2x2 core join two fully enclosed leaves
-    mov     esi, 4 ; v1: test_mesher scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (test_mesher:22)
-.x1: ; v1: test_mesher scratch #23
-    mov     edi, 20 ; v1: test_mesher scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (test_mesher:24)
-.y1: ; v1: test_mesher scratch #25
-    mov     r12d, 4 ; v1: test_mesher scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mesher:26)
-.z1: ; v1: test_mesher scratch #27
-    SETB    rbx, esi, edi, r12d, B_LEAVES ; v1: test_mesher scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mesher:28)
-    inc     r12d ; v1: test_mesher scratch #29
-    cmp     r12d, 8 ; v1: test_mesher scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mesher:30)
-    jb      .z1 ; v1: test_mesher scratch #31
-    inc     edi ; v1: test_mesher scratch #32
-    ; TODO: clamp index before table lookup on malformed input (test_mesher:32)
-    cmp     edi, 24 ; v1: test_mesher scratch #33
-    jb      .y1 ; v1: test_mesher scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mesher:34)
+    mov     esi, 4
+.x1:
+    mov     edi, 20
+.y1:
+    mov     r12d, 4
+.z1:
+    SETB    rbx, esi, edi, r12d, B_LEAVES
+    inc     r12d
+    cmp     r12d, 8
+    jb      .z1
+    inc     edi
+    cmp     edi, 24
+    jb      .y1
     inc     esi
     cmp     esi, 8
     jb      .x1
@@ -379,6 +363,163 @@ PROC tm_grass_side_tint_flag
     COUNT   mh_o, [rel mh_on], V_FLAGS, 0, 0xFF
     CHECK_EQ32 eax, [rel mh_on], "stone flags all 0"
 ENDP
+
+PROC tm_grass_tint_and_biome_blend ; v1: test_mesher scratch #1
+    TEST "mesher: grass tint and biome blend" ; v1: test_mesher scratch #2
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mesher:2)
+    call    mh_reset ; v1: test_mesher scratch #3
+    mov     rbx, rax ; v1: test_mesher scratch #4
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mesher:4)
+    mov     dword [rel biome_grass_color + 2*4], 0xFF00FF00 ; v1: test_mesher scratch #5
+    mov     dword [rel biome_grass_color + 3*4], 0xFF0000FF ; v1: test_mesher scratch #6
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mesher:6)
+    mov     edx, 2 ; v1: test_mesher scratch #7
+    call    tm_all_biomes ; v1: test_mesher scratch #8
+    ; TODO: hoist invariant pointer load out of .loop (test_mesher:8)
+    mov     ecx, 3 ; v1: test_mesher scratch #9
+    call    tm_east_biome ; v1: test_mesher scratch #10
+    ; TODO: verify 16-byte rsp alignment before inner call (test_mesher:10)
+    SETB    rbx, 5, 20, 5, B_GRASS ; v1: test_mesher scratch #11
+    SETB    rbx, 15, 20, 5, B_GRASS ; v1: test_mesher scratch #12
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mesher:12)
+    BUILD   rbx, 1 ; v1: test_mesher scratch #13
+    CRIT    -1, -BIG, BIG, -BIG, BIG, -BIG, BIG ; v1: test_mesher scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mesher:14)
+    SEL_TRIS mh_o, [rel mh_on], mh_sel ; v1: test_mesher scratch #15
+    mov     r12d, eax ; v1: test_mesher scratch #16
+    ; TODO: clamp index before table lookup on malformed input (test_mesher:16)
+    CHECK_TRUE r12d, "bottom faces exist" ; v1: test_mesher scratch #17
+    COUNT   mh_sel, r12d, V_FLAGS, 0xFFFFFF00, 0xFFFFFFFF ; v1: test_mesher scratch #18
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mesher:18)
+    CHECK_EQ32 eax, r12d, "bottom (flags,r,g,b) == (0,255,255,255)" ; v1: test_mesher scratch #19
+    CRIT    0, 5.0, 6.0, 21.0, 21.0, -BIG, BIG ; v1: test_mesher scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mesher:20)
+    SEL_VERTS mh_o, [rel mh_on], mh_sel ; v1: test_mesher scratch #21
+    mov     r12d, eax ; v1: test_mesher scratch #22
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mesher:22)
+    COUNT   mh_sel, r12d, V_R, 0x00FF00, 0xFFFFFF ; v1: test_mesher scratch #23
+    mov     r13d, eax ; v1: test_mesher scratch #24
+    ; TODO: hoist invariant pointer load out of .loop (test_mesher:24)
+    CHECK_TRUE r13d, "green tint present at x=5" ; v1: test_mesher scratch #25
+    COUNT   mh_sel, r12d, V_R, 0xFFFFFF, 0xFFFFFF ; v1: test_mesher scratch #26
+    ; TODO: verify 16-byte rsp alignment before inner call (test_mesher:26)
+    add     r13d, eax ; v1: test_mesher scratch #27
+    CHECK_EQ32 r13d, r12d, "x=5 top colours are only green / white" ; v1: test_mesher scratch #28
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mesher:28)
+    ; 9-tap tent blur: x = 15 sees chunk (1,0) in its columns 16..19 with
+    ; weights 4+3+2+1 = 10 of 25 -> 40 % red, 60 % green
+    CRIT    0, 15.0, 16.0, 21.0, 21.0, -BIG, BIG ; v1: test_mesher scratch #31
+    SEL_VERTS mh_o, [rel mh_on], mh_sel
+    mov     r12d, eax
+    COUNT   mh_sel, r12d, V_R, 0x009966, 0xFFFFFF
+    CHECK_TRUE eax, "x=15 has the blended (102,153,0)"
+ENDP
+
+PROC tm_lava_does_not_darken_floor_corners
+    TEST "mesher: lava does not darken floor corners"
+    call    mh_reset
+    mov     rbx, rax
+    ; lava cell has sky 0 (opacity 15) but must not drag down the smooth
+    ; sky light of the floor corners next to it
+    lea     r15, [rel blk_opacity]
+    movzx   r14d, byte [r15 + B_LAVA]   ; restored at the end
+    mov     byte [r15 + B_LAVA], 15
+    SETB    rbx, 5, 40, 5, B_STONE
+    SETB    rbx, 6, 40, 5, B_STONE
+    SETB    rbx, 6, 41, 5, B_LAVA
+    lea     rcx, [rbx + CHUNK_LIGHT]
+    mov     edx, 0xFE                   ; open: sky 15, block 14
+    mov     r8d, 32768
+    call    mh_fill
+    LIGHT   rbx, 6, 41, 5, 0x0F         ; lava cell: sky 0, block 15
+    BUILD   rbx, 2
+    CRIT    1, 5.0, 6.0, 41.0, 41.0, 5.0, 6.0
+    SEL_TRIS mh_o, [rel mh_on], mh_sel
+    mov     r12d, eax
+    CHECK_TRUE r12d, "floor top corners exist"
+    COUNT   mh_sel, r12d, V_SKY, 255, 0xFF
+    CHECK_EQ32 eax, r12d, "sky light stays full"
+    COUNT_GE mh_sel, r12d, V_BLK, 14*17
+    CHECK_EQ32 eax, r12d, "block light is not lowered"
+    CRIT    0, 6.0, 6.0, -BIG, BIG, -BIG, BIG
+    SEL_VERTS mh_sel, r12d, mh_sel2
+    mov     r13d, eax
+    CHECK_TRUE r13d, "east corners exist"
+    COUNT_GE mh_sel2, r13d, V_BLK, 14*17 + 1
+    CHECK_EQ32 eax, r13d, "lava glow brightens east corners"
+    mov     [r15 + B_LAVA], r14b
+ENDP
+
+PROC tm_lava_is_opaque_pass
+    TEST "mesher: lava is opaque pass"
+    call    mh_reset
+    mov     rbx, rax
+    SETB    rbx, 8, 40, 8, B_LAVA
+    BUILD   rbx, 2
+    CHECK_EQ32 [rel mh_tn], 0, "no translucent vertices"
+    CHECK_EQ32 [rel mh_on], 36, "6 faces, no underside for lava"
+ENDP
+
+PROC tm_leaves_fancy_and_fast
+    TEST "mesher: leaves fancy and fast"
+    call    mh_reset
+    mov     rbx, rax
+    SETB    rbx, 3, 20, 3, B_LEAVES
+    SETB    rbx, 4, 20, 3, B_LEAVES
+    BUILD   rbx, 1
+    CHECK_EQ32 [rel mh_on], 72, "fancy: inner faces kept"
+    COUNT   mh_o, [rel mh_on], V_FLAGS, 1, 1
+    CHECK_EQ32 eax, [rel mh_on], "fancy leaves wave"
+    COUNT   mh_o, [rel mh_on], V_FLAGS, 4, 4
+    CHECK_EQ32 eax, 0, "fancy leaves keep alpha holes"
+    SETTING SET_FANCY, 0
+    BUILD   rbx, 1
+    CHECK_EQ32 [rel mh_on], 60, "fast: culled like opaque"
+    COUNT   mh_o, [rel mh_on], V_FLAGS, 4, 4
+    CHECK_EQ32 eax, [rel mh_on], "fast leaves fill alpha holes"
+    SETB    rbx, 5, 20, 3, B_STONE
+    BUILD   rbx, 1
+    CHECK_EQ32 [rel mh_on], 54 + 30, "leaf +X face hidden by stone too"
+ENDP
+
+PROC tm_models
+    TEST "mesher: models"
+    call    mh_reset
+    mov     rbx, rax
+    SETB    rbx, 2, 20, 2, B_TALL_GRASS
+    BUILD   rbx, 1
+    CHECK_EQ32 [rel mh_on], 24, "cross model: 4 quads"
+    CRIT    0, -BIG, BIG, 21.0, 21.0, -BIG, BIG
+    SEL_VERTS mh_o, [rel mh_on], mh_sel
+    mov     r12d, eax
+    CHECK_TRUE r12d, "plant has top vertices"
+    COUNT   mh_sel, r12d, V_FLAGS, 1, 1
+    CHECK_EQ32 eax, r12d, "plant tops wave"
+    CRIT    0, -BIG, BIG, 20.0, 20.0, -BIG, BIG
+    SEL_VERTS mh_o, [rel mh_on], mh_sel
+    mov     r12d, eax
+    COUNT   mh_sel, r12d, V_FLAGS, 0, 0xFF
+    CHECK_EQ32 eax, r12d, "plant roots do not wave"
+    SETB    rbx, 2, 20, 2, B_TORCH
+    BUILD   rbx, 1
+    CHECK_EQ32 [rel mh_on], 36, "torch: 6 quads"
+    MINMAX  mh_o, [rel mh_on], V_Y
+    CHECK_NEAR xmm1, 20.625, 0.000005, "torch top at y + 10/16"
+    SETB    rbx, 2, 20, 2, B_LANTERN
+    BUILD   rbx, 1
+    CHECK_EQ32 [rel mh_on], 66, "lantern: 11 quads"
+    SETB    rbx, 2, 20, 2, B_CACTUS
+    BUILD   rbx, 1
+    CHECK_EQ32 [rel mh_on], 36, "cactus: 6 quads"
+    CRIT    0, 2.06245, 2.06255, -BIG, BIG, -BIG, BIG
+    SEL_VERTS mh_o, [rel mh_on], mh_sel
+    CHECK_TRUE eax, "cactus side inset at x = 2.0625"
+    CRIT    0, 2.93745, 2.93755, -BIG, BIG, -BIG, BIG
+    SEL_VERTS mh_o, [rel mh_on], mh_sel
+    CHECK_TRUE eax, "cactus side inset at x = 2.9375"
+ENDP
+    ; v1 temporary guard (test_mesher #14)
+    xor     r11d, r11d ; clear v1 slot 14
     ; v1 temporary guard (test_mesher #16)
     xor     r11d, r11d ; clear v1 slot 16
     ; v1 temporary guard (test_mesher #18)
@@ -427,5 +568,3 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 60
     ; v1 temporary guard (test_mesher #62)
     xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (test_mesher #64)
-    xor     r11d, r11d ; clear v1 slot 64
