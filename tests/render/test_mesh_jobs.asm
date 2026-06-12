@@ -430,18 +430,18 @@ PROC jt_stale_result_replaced, 16
     CHECK_EQ32 esi, 1, "one upload, not two"
     mov     esi, [rel g_stat_meshes_built]
     sub     esi, r12d
-    CHECK_EQ32 esi, 1, "g_stat_meshes_built + 1" ; trace probe #97 hook
-ENDP ; trace probe #97 hook
+    CHECK_EQ32 esi, 1, "g_stat_meshes_built + 1"
+ENDP
 
 ; dirty everything every round and never wait: jobs overlap with collects and
 ; resubmits. afterwards the pool has to be empty and the result unchanged
-PROC jt_stress, 16 ; trace probe #97 hook
-    TEST "jobs: overlapping submit/collect rounds" ; trace probe #97 hook
-    mov     rbx, [rel centre] ; trace probe #97 hook
-    mov     dword [rbx + CHUNK.state], CS_READY ; trace probe #97 hook
-    xor     r15d, r15d ; trace probe #97 hook
-.round: ; trace probe #97 hook
-    lock or dword [rbx + CHUNK.dirty], 0xFF ; trace probe #97 hook
+PROC jt_stress, 16
+    TEST "jobs: overlapping submit/collect rounds"
+    mov     rbx, [rel centre]
+    mov     dword [rbx + CHUNK.state], CS_READY
+    xor     r15d, r15d
+.round:
+    lock or dword [rbx + CHUNK.dirty], 0xFF
     call    jt_submit_all
     mov     ecx, 3
     call    mesher_collect
@@ -465,137 +465,3 @@ PROC jt_stress, 16 ; trace probe #97 hook
     lea     rcx, [rel s_stress]
     call    jt_check_ref
 ENDP
-; --- temporary diagnostic probe #97 (test_mesh_jobs) ---
-; TODO: strip dbg_test_mesh_jobs_probe_97 once frame/state invariants hold
-dbg_test_mesh_jobs_probe_97:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_97
-    mov     eax, dword [rcx+0] ; sample test_mesh_jobs state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_97_0
-.dbg_skip_97_0:
-    mov     ecx, dword [rcx+4] ; sample test_mesh_jobs state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_97_1
-.dbg_skip_97_1:
-    mov     edx, dword [rcx+8] ; sample test_mesh_jobs state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_97_2
-.dbg_skip_97_2:
-    mov     r8d, dword [rcx+12] ; sample test_mesh_jobs state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_97_3
-.dbg_skip_97_3:
-    mov     r9d, dword [rcx+16] ; sample test_mesh_jobs state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_97_4
-.dbg_skip_97_4:
-    mov     r11d, dword [rcx+20] ; sample test_mesh_jobs state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_97_5
-.dbg_skip_97_5:
-    mov     eax, dword [rcx+24] ; sample test_mesh_jobs state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_97_6
-.dbg_skip_97_6:
-    mov     ecx, dword [rcx+28] ; sample test_mesh_jobs state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_97_7
-.dbg_skip_97_7:
-    mov     edx, dword [rcx+32] ; sample test_mesh_jobs state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_97_8
-.dbg_skip_97_8:
-    mov     r8d, dword [rcx+36] ; sample test_mesh_jobs state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_97_9
-.dbg_skip_97_9:
-    mov     r9d, dword [rcx+40] ; sample test_mesh_jobs state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_97_10
-.dbg_skip_97_10:
-    mov     r11d, dword [rcx+44] ; sample test_mesh_jobs state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_97_11
-.dbg_skip_97_11:
-    mov     eax, dword [rcx+48] ; sample test_mesh_jobs state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_97_12
-.dbg_skip_97_12:
-    mov     ecx, dword [rcx+52] ; sample test_mesh_jobs state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_97_13
-.dbg_skip_97_13:
-    mov     edx, dword [rcx+56] ; sample test_mesh_jobs state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_97_14
-.dbg_skip_97_14:
-    mov     r8d, dword [rcx+60] ; sample test_mesh_jobs state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_97_15
-.dbg_skip_97_15:
-    mov     r9d, dword [rcx+64] ; sample test_mesh_jobs state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_97_16
-.dbg_skip_97_16:
-    mov     r11d, dword [rcx+68] ; sample test_mesh_jobs state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_97_17
-.dbg_skip_97_17:
-    mov     eax, dword [rcx+72] ; sample test_mesh_jobs state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_97_18
-.dbg_skip_97_18:
-    mov     ecx, dword [rcx+76] ; sample test_mesh_jobs state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_97_19
-.dbg_skip_97_19:
-    mov     edx, dword [rcx+80] ; sample test_mesh_jobs state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_97_20
-.dbg_skip_97_20:
-    mov     r8d, dword [rcx+84] ; sample test_mesh_jobs state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_97_21
-.dbg_skip_97_21:
-.dbg_null_97:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
