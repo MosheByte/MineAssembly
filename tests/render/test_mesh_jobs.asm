@@ -465,3 +465,40 @@ PROC jt_stress, 16
     lea     rcx, [rel s_stress]
     call    jt_check_ref
 ENDP
+
+; quit makes the workers finish the task ring before they exit
+PROC jt_shutdown_drains, 16
+    TEST "jobs: shutdown runs what's still queued"
+    mov     rbx, [rel centre]
+    mov     rcx, rbx
+    call    jt_forget
+    mov     dword [rbx + CHUNK.dirty], 0xFF
+    call    jt_submit_all
+    call    chunkmgr_shutdown
+    mov     rcx, rbx
+    call    mesher_busy
+    mov     esi, eax
+    CHECK_EQ32 esi, 0, "nothing still queued after shutdown"
+    mov     ecx, 1000
+    call    mesher_collect
+    mov     esi, eax
+    CHECK_EQ32 esi, SECTIONS, "all 8 collected"
+    lea     rcx, [rel s_shut]
+    call    jt_check_ref
+    ; no workers now: mesher_submit meshes right here
+    mov     dword [rbx + CHUNK.dirty], 1
+    mov     rcx, rbx
+    xor     edx, edx
+    call    mesher_submit
+    mov     esi, eax
+    CHECK_EQ32 esi, 2, "no workers -> meshed inline"
+    mov     ecx, 1000
+    call    mesher_collect
+ENDP
+
+section .rdata
+s_same:     db "after the first async pass", 0
+s_lit:      db "after the held LIT upload", 0
+s_iso:      db "after the snapshot test", 0
+s_stress:   db "after the stress rounds", 0
+s_shut:     db "after shutdown", 0
