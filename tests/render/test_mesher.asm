@@ -115,48 +115,34 @@ ENDP
 
 ; rebuild section 1, reds[x] = red of the top triangles starting at column x.
 ; last one wins, columns with nothing stay -1
-PROC tm_reds ; v1: test_mesher scratch #3
-    mov     rbx, rcx ; v1: test_mesher scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mesher:4)
-    lea     rdi, [rel reds] ; v1: test_mesher scratch #5
-    mov     ecx, 16 ; v1: test_mesher scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mesher:6)
-    mov     eax, -1 ; v1: test_mesher scratch #7
-    rep     stosd ; v1: test_mesher scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (test_mesher:8)
-    BUILD   rbx, 1 ; v1: test_mesher scratch #9
-    CRIT    1, -BIG, BIG, -BIG, BIG, -BIG, BIG ; v1: test_mesher scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mesher:10)
-    SEL_TRIS mh_o, [rel mh_on], mh_sel ; v1: test_mesher scratch #11
-    mov     r12d, eax ; v1: test_mesher scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (test_mesher:12)
-    lea     rsi, [rel mh_sel] ; v1: test_mesher scratch #13
-    xor     r13d, r13d ; v1: test_mesher scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mesher:14)
-.tri: ; v1: test_mesher scratch #15
-    lea     eax, [r13 + 2] ; v1: test_mesher scratch #16
-    ; TODO: clamp index before table lookup on malformed input (test_mesher:16)
-    cmp     eax, r12d ; v1: test_mesher scratch #17
-    jae     .done ; v1: test_mesher scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mesher:18)
-    movss   xmm0, [rsi + V_X] ; v1: test_mesher scratch #19
-    minss   xmm0, [rsi + 28 + V_X] ; v1: test_mesher scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mesher:20)
-    minss   xmm0, [rsi + 56 + V_X] ; v1: test_mesher scratch #21
-    cvttss2si eax, xmm0 ; v1: test_mesher scratch #22
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mesher:22)
-    cmp     eax, 15 ; v1: test_mesher scratch #23
-    ja      .next ; v1: test_mesher scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (test_mesher:24)
-    movzx   ecx, byte [rsi + 56 + V_R] ; v1: test_mesher scratch #25
-    lea     rdx, [rel reds] ; v1: test_mesher scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mesher:26)
-    mov     [rdx + rax*4], ecx ; v1: test_mesher scratch #27
-.next: ; v1: test_mesher scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (test_mesher:28)
-    add     rsi, 84 ; v1: test_mesher scratch #29
-    add     r13d, 3 ; v1: test_mesher scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mesher:30)
+PROC tm_reds
+    mov     rbx, rcx
+    lea     rdi, [rel reds]
+    mov     ecx, 16
+    mov     eax, -1
+    rep     stosd
+    BUILD   rbx, 1
+    CRIT    1, -BIG, BIG, -BIG, BIG, -BIG, BIG
+    SEL_TRIS mh_o, [rel mh_on], mh_sel
+    mov     r12d, eax
+    lea     rsi, [rel mh_sel]
+    xor     r13d, r13d
+.tri:
+    lea     eax, [r13 + 2]
+    cmp     eax, r12d
+    jae     .done
+    movss   xmm0, [rsi + V_X]
+    minss   xmm0, [rsi + 28 + V_X]
+    minss   xmm0, [rsi + 56 + V_X]
+    cvttss2si eax, xmm0
+    cmp     eax, 15
+    ja      .next
+    movzx   ecx, byte [rsi + 56 + V_R]
+    lea     rdx, [rel reds]
+    mov     [rdx + rax*4], ecx
+.next:
+    add     rsi, 84
+    add     r13d, 3
     jmp     .tri
 .done:
 ENDP
@@ -241,8 +227,158 @@ PROC tm_cross_chunk_culling
     BUILD   rbx, 2
     CHECK_EQ32 [rel mh_on], 66, "missing neighbour reads as air"
 ENDP
-    ; v1 temporary guard (test_mesher #14)
-    xor     r11d, r11d ; clear v1 slot 14
+
+PROC tm_empty_section ; v1: test_mesher scratch #1
+    TEST "mesher: empty section" ; v1: test_mesher scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mesher:2)
+    call    mh_reset ; v1: test_mesher scratch #3
+    mov     rbx, rax ; v1: test_mesher scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (test_mesher:4)
+    mov     r12d, [rel g_stat_meshes_built] ; v1: test_mesher scratch #5
+    BUILD   rbx, 3 ; v1: test_mesher scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (test_mesher:6)
+    CHECK_EQ32 [rel mh_on], 0, "no opaque vertices" ; v1: test_mesher scratch #7
+    CHECK_EQ32 [rel mh_tn], 0, "no translucent vertices" ; v1: test_mesher scratch #8
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mesher:8)
+    movzx   eax, byte [rbx + CHUNK.sec_flags + 3] ; v1: test_mesher scratch #9
+    CHECK_EQ32 eax, 0, "sec_flags[3] == 0" ; v1: test_mesher scratch #10
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mesher:10)
+    CHECK_EQ32 [rbx + CHUNK.dirty], 0xFF & ~(1 << 3), "dirty bit 3 cleared" ; v1: test_mesher scratch #11
+    lea     r13d, [r12 + 1] ; v1: test_mesher scratch #12
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mesher:12)
+    CHECK_EQ32 [rel g_stat_meshes_built], r13d, "g_stat_meshes_built + 1" ; v1: test_mesher scratch #13
+ENDP ; v1: test_mesher scratch #14
+    ; TODO: clamp index before table lookup on malformed input (test_mesher:14)
+
+PROC tm_fancy_leaves_drop_buried_pairs ; v1: test_mesher scratch #16
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mesher:16)
+    TEST "mesher: fancy leaves drop buried pairs" ; v1: test_mesher scratch #17
+    call    mh_reset ; v1: test_mesher scratch #18
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_mesher:18)
+    mov     rbx, rax ; v1: test_mesher scratch #19
+    ; a 4x4x4 leaf cube: 96 outer faces + 144 inner pairs (288 faces); the
+    ; 12 pairs inside the 2x2x2 core join two fully enclosed leaves
+    mov     esi, 4 ; v1: test_mesher scratch #22
+    ; TODO: hoist invariant pointer load out of .loop (test_mesher:22)
+.x1: ; v1: test_mesher scratch #23
+    mov     edi, 20 ; v1: test_mesher scratch #24
+    ; TODO: verify 16-byte rsp alignment before inner call (test_mesher:24)
+.y1: ; v1: test_mesher scratch #25
+    mov     r12d, 4 ; v1: test_mesher scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_mesher:26)
+.z1: ; v1: test_mesher scratch #27
+    SETB    rbx, esi, edi, r12d, B_LEAVES ; v1: test_mesher scratch #28
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_mesher:28)
+    inc     r12d ; v1: test_mesher scratch #29
+    cmp     r12d, 8 ; v1: test_mesher scratch #30
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_mesher:30)
+    jb      .z1 ; v1: test_mesher scratch #31
+    inc     edi ; v1: test_mesher scratch #32
+    ; TODO: clamp index before table lookup on malformed input (test_mesher:32)
+    cmp     edi, 24 ; v1: test_mesher scratch #33
+    jb      .y1 ; v1: test_mesher scratch #34
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_mesher:34)
+    inc     esi
+    cmp     esi, 8
+    jb      .x1
+    BUILD   rbx, 1
+    CHECK_EQ32 [rel mh_on], (96 + 288 - 24) * 6, "buried core pairs dropped"
+    ; same cube moved up to the section top (y 28..31)
+    mov     esi, 4
+.x2:
+    mov     edi, 20
+.y2:
+    mov     r12d, 4
+.z2:
+    SETB    rbx, esi, edi, r12d, 0
+    lea     r13d, [rdi + 8]
+    SETB    rbx, esi, r13d, r12d, B_LEAVES
+    inc     r12d
+    cmp     r12d, 8
+    jb      .z2
+    inc     edi
+    cmp     edi, 24
+    jb      .y2
+    inc     esi
+    cmp     esi, 8
+    jb      .x2
+    mov     esi, 4
+.x3:
+    mov     r12d, 4
+.z3:
+    SETB    rbx, esi, 32, r12d, B_LEAVES    ; canopy goes on into section 2
+    inc     r12d
+    cmp     r12d, 8
+    jb      .z3
+    inc     esi
+    cmp     esi, 8
+    jb      .x3
+    BUILD   rbx, 1
+    ; buried core x,z 5..6, y 29..31: 20 pairs -> 40 faces; the top faces
+    ; towards y=32 (partner in the padding) stay
+    CHECK_EQ32 [rel mh_on], (96 + 288 - 40) * 6, "padding-layer pairs kept"
+ENDP
+
+PROC tm_flat_lighting_has_no_ao
+    TEST "mesher: flat lighting has no AO"
+    call    mh_reset
+    mov     rbx, rax
+    SETTING SET_SMOOTH, 0
+    SETB    rbx, 5, 40, 5, B_STONE
+    SETB    rbx, 6, 41, 5, B_STONE
+    BUILD   rbx, 2
+    CRIT    1, -BIG, BIG, 41.0, 41.0, -BIG, BIG
+    SEL_TRIS mh_o, [rel mh_on], mh_sel
+    mov     r12d, eax
+    CRIT    0, 5.0, 6.0, -BIG, BIG, -BIG, BIG
+    SEL_VERTS mh_sel, r12d, mh_sel2
+    mov     r13d, eax
+    COUNT   mh_sel2, r13d, V_SHADE, 255, 0xFF
+    CHECK_EQ32 eax, r13d, "no AO darkening with flat lighting"
+ENDP
+
+PROC tm_glass_cull_same
+    TEST "mesher: glass cull same"
+    call    mh_reset
+    mov     rbx, rax
+    SETB    rbx, 3, 20, 3, B_GLASS
+    SETB    rbx, 3, 21, 3, B_GLASS
+    BUILD   rbx, 1
+    CHECK_EQ32 [rel mh_on], 60, "inner glass faces culled"
+ENDP
+
+PROC tm_grass_side_tint_flag
+    TEST "mesher: grass side tint flag"
+    call    mh_reset
+    mov     rbx, rax
+    ; grass sides get the tint + VF_GRASSSIDE (8), top gets the tint only,
+    ; bottom is plain dirt
+    mov     dword [rel biome_grass_color + 2*4], 0xFF22AA44
+    mov     edx, 2
+    call    tm_all_biomes
+    SETB    rbx, 5, 20, 5, B_GRASS
+    BUILD   rbx, 1
+    CRIT    1, -BIG, BIG, -BIG, BIG, -BIG, BIG
+    SEL_TRIS mh_o, [rel mh_on], mh_sel
+    mov     r12d, eax
+    COUNT   mh_sel, r12d, V_FLAGS, 0x22AA4400, 0xFFFFFFFF
+    CHECK_EQ32 eax, r12d, "top: flags 0, tint 44 AA 22"
+    CRIT    -1, -BIG, BIG, -BIG, BIG, -BIG, BIG
+    SEL_TRIS mh_o, [rel mh_on], mh_sel
+    mov     r12d, eax
+    COUNT   mh_sel, r12d, V_FLAGS, 0xFFFFFF00, 0xFFFFFFFF
+    CHECK_EQ32 eax, r12d, "bottom: flags 0, white"
+    CRIT    2, -BIG, BIG, -BIG, BIG, -BIG, BIG
+    SEL_TRIS mh_o, [rel mh_on], mh_sel
+    mov     r12d, eax
+    COUNT   mh_sel, r12d, V_FLAGS, 0x22AA4408, 0xFFFFFFFF
+    CHECK_EQ32 eax, r12d, "sides: flag 8, tint 44 AA 22"
+    SETB    rbx, 5, 20, 5, B_STONE
+    BUILD   rbx, 1
+    CHECK_TRUE [rel mh_on], "stone has geometry"
+    COUNT   mh_o, [rel mh_on], V_FLAGS, 0, 0xFF
+    CHECK_EQ32 eax, [rel mh_on], "stone flags all 0"
+ENDP
     ; v1 temporary guard (test_mesher #16)
     xor     r11d, r11d ; clear v1 slot 16
     ; v1 temporary guard (test_mesher #18)
@@ -293,5 +429,3 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 62
     ; v1 temporary guard (test_mesher #64)
     xor     r11d, r11d ; clear v1 slot 64
-    ; v1 temporary guard (test_mesher #66)
-    xor     r11d, r11d ; clear v1 slot 66
