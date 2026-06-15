@@ -504,3 +504,170 @@ PROC tm_models
     SEL_VERTS mh_o, [rel mh_on], mh_sel
     CHECK_TRUE eax, "cactus side inset at x = 2.9375"
 ENDP
+
+PROC tm_neighbour_culling
+    TEST "mesher: neighbour culling"
+    call    mh_reset
+    mov     rbx, rax
+    SETB    rbx, 8, 40, 8, B_STONE
+    SETB    rbx, 9, 40, 8, B_STONE
+    BUILD   rbx, 2
+    CHECK_EQ32 [rel mh_on], 60, "shared face culled"
+ENDP
+
+PROC tm_section_border_culling
+    TEST "mesher: section border culling"
+    call    mh_reset
+    mov     rbx, rax
+    SETB    rbx, 4, 47, 4, B_STONE      ; top of section 2
+    SETB    rbx, 4, 48, 4, B_STONE      ; bottom of section 3
+    BUILD   rbx, 2
+    CHECK_EQ32 [rel mh_on], 30, "face against section 3 culled"
+ENDP
+
+PROC tm_single_cube_36_vertices
+    TEST "mesher: single cube 36 vertices"
+    call    mh_reset
+    mov     rbx, rax
+    SETB    rbx, 8, 40, 8, B_STONE
+    BUILD   rbx, 2
+    CHECK_EQ32 [rel mh_on], 36, "36 opaque vertices"
+    CHECK_EQ32 [rel mh_tn], 0, "no translucent vertices"
+    movzx   eax, byte [rbx + CHUNK.sec_flags + 2]
+    CHECK_EQ32 eax, 1, "sec_flags[2] == opaque"
+    MINMAX  mh_o, [rel mh_on], V_X
+    movss   [rel mh_tmpf], xmm1
+    CHECK_NEAR xmm0, 8.0, 0.000001, "min x"
+    CHECK_NEAR [rel mh_tmpf], 9.0, 0.000001, "max x"
+    MINMAX  mh_o, [rel mh_on], V_Y
+    movss   [rel mh_tmpf], xmm1
+    CHECK_NEAR xmm0, 40.0, 0.000001, "min y"
+    CHECK_NEAR [rel mh_tmpf], 41.0, 0.000001, "max y"
+    MINMAX  mh_o, [rel mh_on], V_Z
+    movss   [rel mh_tmpf], xmm1
+    CHECK_NEAR xmm0, 8.0, 0.000001, "min z"
+    CHECK_NEAR [rel mh_tmpf], 9.0, 0.000001, "max z"
+    COUNT   mh_o, [rel mh_on], V_SHADE, 255, 0xFF
+    CHECK_EQ32 eax, 6, "top shade 1.0 (255)"
+    COUNT   mh_o, [rel mh_on], V_SHADE, 128, 0xFF
+    CHECK_EQ32 eax, 6, "bottom shade 0.5 (128)"
+    COUNT   mh_o, [rel mh_on], V_SHADE, 153, 0xFF
+    CHECK_EQ32 eax, 12, "X faces shade 0.6 (153)"
+    COUNT   mh_o, [rel mh_on], V_SHADE, 204, 0xFF
+    CHECK_EQ32 eax, 12, "Z faces shade 0.8 (204)"
+    COUNT   mh_o, [rel mh_on], V_SKY, 255, 0xFF
+    CHECK_EQ32 eax, [rel mh_on], "full sky light"
+    ; ccw winding
+    lea     rcx, [rel mh_o]
+    mov     edx, [rel mh_on]
+    lea     r8, [rel centre_cube]
+    call    mh_outward_fail
+    CHECK_EQ32 eax, 0, "all triangles face outwards"
+    ; uv inset 1/1024, tile 0
+    MINMAX  mh_o, [rel mh_on], V_U
+    movss   [rel mh_tmpf], xmm1
+    CHECK_NEAR xmm0, 0.0009765625, 0.0000005, "min u = 1/1024"
+    CHECK_NEAR [rel mh_tmpf], 0.0615234375, 0.0000005, "max u = 1/16 - 1/1024"
+ENDP
+
+PROC tm_smooth_light_average
+    TEST "mesher: smooth light average"
+    call    mh_reset
+    mov     rbx, rax
+    SETB    rbx, 5, 40, 5, B_STONE
+    lea     rcx, [rbx + CHUNK_LIGHT]
+    xor     edx, edx
+    mov     r8d, 32768
+    call    mh_fill
+    LIGHT   rbx, 5, 41, 5, 0x0F         ; block light 15 straight above only
+    BUILD   rbx, 2
+    CRIT    1, -BIG, BIG, 41.0, 41.0, -BIG, BIG
+    SEL_TRIS mh_o, [rel mh_on], mh_sel
+    mov     r12d, eax
+    CHECK_TRUE r12d, "top face exists"
+    ; each corner averages 4 cells, one of them lit: 15*17/4 = 63.75
+    COUNT   mh_sel, r12d, V_BLK, 63, 0xFF
+    CHECK_EQ32 eax, r12d, "block light 63 at every corner"
+    SETTING SET_SMOOTH, 0
+    BUILD   rbx, 2
+    SEL_TRIS mh_o, [rel mh_on], mh_sel
+    mov     r12d, eax
+    COUNT   mh_sel, r12d, V_BLK, 255, 0xFF
+    CHECK_EQ32 eax, r12d, "flat: block light 255"
+    COUNT   mh_sel, r12d, V_SHADE, 255, 0xFF
+    CHECK_EQ32 eax, r12d, "flat: shade 255"
+ENDP
+
+PROC tm_water_pool
+    TEST "mesher: water pool"
+    call    mh_reset
+    mov     rbx, rax
+    mov     esi, 4
+.x:
+    mov     edi, 4
+.z:
+    SETB    rbx, esi, 39, edi, B_STONE
+    mov     r12d, B_WATER
+    cmp     esi, 4
+    je      .edge
+    cmp     esi, 8
+    je      .edge
+    cmp     edi, 4
+    je      .edge
+    cmp     edi, 8
+    jne     .put
+.edge:
+    mov     r12d, B_STONE
+.put:
+    SETB    rbx, esi, 40, edi, r12d
+    inc     edi
+    cmp     edi, 9
+    jb      .z
+    inc     esi
+    cmp     esi, 9
+    jb      .x
+    BUILD   rbx, 2
+    ; 9 water cells: only top + underside quads, no sides against water/stone
+    CHECK_EQ32 [rel mh_tn], 9 * 12, "9 cells x (top + underside)"
+    CRIT    0, 6.0, 7.0, -BIG, BIG, 6.0, 7.0
+    SEL_VERTS mh_t, [rel mh_tn], mh_sel
+    mov     r12d, eax
+    CHECK_TRUE r12d, "centre vertices exist"
+    CRIT    0, -BIG, BIG, 40.886936, 40.890842, -BIG, BIG ; verts are 1/256 block, +-1/512
+    SEL_VERTS mh_sel, r12d, mh_sel2
+    CHECK_EQ32 eax, r12d, "pool surface at 40 + 0.888889"
+    ; water with water above: no top face, full-height sides
+    SETB    rbx, 8, 60, 8, B_WATER
+    SETB    rbx, 8, 61, 8, B_WATER + 3
+    BUILD   rbx, 3
+    CRIT    0, 8.0, 9.0, -BIG, 61.0, -BIG, BIG
+    SEL_VERTS mh_t, [rel mh_tn], mh_sel
+    mov     r12d, eax
+    CHECK_TRUE r12d, "lower water cell has vertices"
+    MINMAX  mh_sel, r12d, V_Y
+    CHECK_NEAR xmm1, 61.0, 0.000001, "lower cell sides reach y = 61"
+ENDP
+
+PROC tm_water_single_source
+    TEST "mesher: water single source"
+    call    mh_reset
+    mov     rbx, rax
+    SETB    rbx, 8, 40, 8, B_WATER
+    BUILD   rbx, 2
+    CHECK_EQ32 [rel mh_on], 0, "no opaque vertices"
+    CHECK_EQ32 [rel mh_tn], 42, "top + underside + 4 sides + bottom"
+    movzx   eax, byte [rbx + CHUNK.sec_flags + 2]
+    CHECK_EQ32 eax, 2, "sec_flags[2] == translucent"
+    ; h = 0.888889 * 4 / 7 (source weighted 4, three open cells) = 0.5079366
+    CRIT    0, -BIG, BIG, 40.00001, BIG, -BIG, BIG
+    SEL_VERTS mh_t, [rel mh_tn], mh_sel
+    mov     r12d, eax
+    CHECK_TRUE r12d, "surface vertices exist"
+    CRIT    0, -BIG, BIG, 40.5059835, 40.5098897, -BIG, BIG ; |y-40-h| <= 1/512, verts are 1/256
+    SEL_VERTS mh_sel, r12d, mh_sel2
+    CHECK_EQ32 eax, r12d, "surface height 40 + 4/7 * 0.888889"
+    COUNT   mh_sel, r12d, V_FLAGS, 2, 2
+    CHECK_EQ32 eax, r12d, "liquid surface flag on the top"
+    COUNT   mh_t, [rel mh_tn], V_FLAGS, 0, 0xFF
+    CHECK_TRUE eax, "bottoms are not bobbing"
+ENDP
