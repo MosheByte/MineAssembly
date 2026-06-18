@@ -121,70 +121,51 @@ PROC tr_fov_smoothing
     CHECK_NEAR [rel g_fov_current], 78.4, 0.005, "fov settles at 70 * 1.12"
 ENDP
 
-PROC tr_third_person_back ; v1: test_render scratch #1
-    TEST "render: third person back / front" ; v1: test_render scratch #2
-    ; TODO: hoist invariant pointer load out of .loop (test_render:2)
-    call    tr_setup ; v1: test_render scratch #3
-    mov     dword [rel g_player + PLAYER.yaw], 0 ; v1: test_render scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_render:4)
-    mov     dword [rel g_player + PLAYER.pitch], 0 ; v1: test_render scratch #5
-    mov     dword [rel g_view_mode], 1 ; v1: test_render scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_render:6)
-    call    render_set_camera ; v1: test_render scratch #7
-    CHECK_NEAR [rel g_cam_pos + 8], 0.75, 0.0005, "back camera 4 blocks behind (z = -3.25 + 4)" ; v1: test_render scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_render:8)
-    mov     dword [rel g_view_mode], 2 ; v1: test_render scratch #9
-    call    render_set_camera ; v1: test_render scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_render:10)
-    CHECK_NEAR [rel g_cam_pos + 8], -7.25, 0.0005, "front camera 4 blocks ahead (z = -3.25 - 4)" ; v1: test_render scratch #11
-    CHECK_NEAR [rel g_cam_dir + 8], 1.0, 0.00005, "front camera looks back at the player" ; v1: test_render scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_render:12)
-ENDP ; v1: test_render scratch #13
+PROC tr_third_person_back
+    TEST "render: third person back / front"
+    call    tr_setup
+    mov     dword [rel g_player + PLAYER.yaw], 0
+    mov     dword [rel g_player + PLAYER.pitch], 0
+    mov     dword [rel g_view_mode], 1
+    call    render_set_camera           ; raycast is a stub, never hits -> full 4 block boom
+    CHECK_NEAR [rel g_cam_pos + 8], 0.75, 0.0005, "back camera 4 blocks behind (z = -3.25 + 4)"
+    mov     dword [rel g_view_mode], 2
+    call    render_set_camera
+    CHECK_NEAR [rel g_cam_pos + 8], -7.25, 0.0005, "front camera 4 blocks ahead (z = -3.25 - 4)"
+    CHECK_NEAR [rel g_cam_dir + 8], 1.0, 0.00005, "front camera looks back at the player"
+ENDP
 
 ; the section budget must never leave a first mesh half done. centre is READY
 ; with 5 dirty sections, the 4 edge chunks are LIT with 8 each. budget 24:
 ; 5+8+8 = 21, so the 3rd edge chunk has to be finished (29), not cut at 24
 ; and left LIT with a partial dirty mask.
-PROC tr_update_meshes_finishes_first_mesh ; v1: test_render scratch #19
-    TEST "render: update_meshes finishes a first mesh" ; v1: test_render scratch #20
-    ; TODO: clamp index before table lookup on malformed input (test_render:20)
-    call    tr_setup ; v1: test_render scratch #21
-    xor     ebx, ebx ; v1: test_render scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (test_render:22)
-.mk: ; v1: test_render scratch #23
-    mov     eax, ebx ; v1: test_render scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (test_render:24)
-    xor     edx, edx ; v1: test_render scratch #25
-    mov     ecx, 5 ; v1: test_render scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_render:26)
-    div     ecx ; v1: test_render scratch #27
-    lea     ecx, [rdx - 2] ; v1: test_render scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_render:28)
-    lea     edx, [rax - 2] ; v1: test_render scratch #29
-    call    mh_new_chunk ; v1: test_render scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_render:30)
-    mov     dword [rax + CHUNK.dirty], 0xFF ; v1: test_render scratch #31
-    lea     rcx, [rel chunks25] ; v1: test_render scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_render:32)
-    mov     [rcx + rbx*8], rax ; v1: test_render scratch #33
-    lea     rcx, [rel fake_chunks5] ; v1: test_render scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_render:34)
-    mov     [rcx + rbx*8], rax ; v1: test_render scratch #35
-    lea     rcx, [rel g_chunk_list] ; v1: test_render scratch #36
-    ; TODO: clamp index before table lookup on malformed input (test_render:36)
-    mov     [rcx + rbx*8], rax ; v1: test_render scratch #37
-    inc     ebx ; v1: test_render scratch #38
-    ; TODO: verify 16-byte rsp alignment before inner call (test_render:38)
-    cmp     ebx, 25 ; v1: test_render scratch #39
-    jb      .mk ; v1: test_render scratch #40
-    ; TODO: hoist invariant pointer load out of .loop (test_render:40)
-    mov     r12, [rel chunks25 + 12*8] ; v1: test_render scratch #41
-    mov     dword [r12 + CHUNK.state], CS_READY ; v1: test_render scratch #42
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_render:42)
-    mov     dword [r12 + CHUNK.dirty], 0x1F ; v1: test_render scratch #43
-    mov     dword [rel fake_grid5], 1 ; v1: test_render scratch #44
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_render:44)
-    mov     dword [rel g_chunk_count], 25 ; v1: test_render scratch #45
+PROC tr_update_meshes_finishes_first_mesh
+    TEST "render: update_meshes finishes a first mesh"
+    call    tr_setup
+    xor     ebx, ebx
+.mk:
+    mov     eax, ebx
+    xor     edx, edx
+    mov     ecx, 5
+    div     ecx                         ; eax = dz+2, edx = dx+2
+    lea     ecx, [rdx - 2]
+    lea     edx, [rax - 2]
+    call    mh_new_chunk
+    mov     dword [rax + CHUNK.dirty], 0xFF     ; chunkmgr dirties everything on LIT
+    lea     rcx, [rel chunks25]
+    mov     [rcx + rbx*8], rax
+    lea     rcx, [rel fake_chunks5]
+    mov     [rcx + rbx*8], rax
+    lea     rcx, [rel g_chunk_list]
+    mov     [rcx + rbx*8], rax
+    inc     ebx
+    cmp     ebx, 25
+    jb      .mk
+    mov     r12, [rel chunks25 + 12*8]  ; centre
+    mov     dword [r12 + CHUNK.state], CS_READY
+    mov     dword [r12 + CHUNK.dirty], 0x1F
+    mov     dword [rel fake_grid5], 1
+    mov     dword [rel g_chunk_count], 25
     mov     dword [rel g_player + PLAYER.x], __?float32?__(8.0)
     mov     dword [rel g_player + PLAYER.z], __?float32?__(8.0)
     mov     dword [rel g_player + PLAYER.y], __?float32?__(70.0)
@@ -249,6 +230,146 @@ section .rdata
 edge_idx:   db 7, 11, 13, 17
 section .text
 
+PROC tr_update_meshes_promotes_ready ; v1: test_render scratch #0
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_render:0)
+    TEST "render: update_meshes promotes LIT to READY" ; v1: test_render scratch #1
+    call    tr_setup ; v1: test_render scratch #2
+    ; TODO: clamp index before table lookup on malformed input (test_render:2)
+    xor     ebx, ebx ; v1: test_render scratch #3
+.mk: ; v1: test_render scratch #4
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_render:4)
+    mov     eax, ebx ; v1: test_render scratch #5
+    xor     edx, edx ; v1: test_render scratch #6
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_render:6)
+    mov     ecx, 3 ; v1: test_render scratch #7
+    div     ecx ; v1: test_render scratch #8
+    ; TODO: verify 16-byte rsp alignment before inner call (test_render:8)
+    lea     ecx, [rdx - 1] ; v1: test_render scratch #9
+    lea     edx, [rax - 1] ; v1: test_render scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_render:10)
+    call    mh_new_chunk ; v1: test_render scratch #11
+    mov     dword [rax + CHUNK.dirty], 0xFF ; v1: test_render scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_render:12)
+    lea     rcx, [rel chunks25] ; v1: test_render scratch #13
+    mov     [rcx + rbx*8], rax ; v1: test_render scratch #14
+    ; TODO: hoist invariant pointer load out of .loop (test_render:14)
+    lea     rcx, [rel fake_chunks] ; v1: test_render scratch #15
+    mov     [rcx + rbx*8], rax ; v1: test_render scratch #16
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_render:16)
+    lea     rcx, [rel g_chunk_list] ; v1: test_render scratch #17
+    mov     [rcx + rbx*8], rax ; v1: test_render scratch #18
+    ; TODO: clamp index before table lookup on malformed input (test_render:18)
+    inc     ebx ; v1: test_render scratch #19
+    cmp     ebx, 9 ; v1: test_render scratch #20
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_render:20)
+    jb      .mk ; v1: test_render scratch #21
+    mov     r12, [rel chunks25 + 4*8] ; v1: test_render scratch #22
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_render:22)
+    SETB    r12, 5, 70, 5, 1 ; v1: test_render scratch #23
+    mov     dword [rel g_chunk_count], 9 ; v1: test_render scratch #24
+    ; TODO: verify 16-byte rsp alignment before inner call (test_render:24)
+    mov     dword [rel g_player + PLAYER.x], __?float32?__(8.0) ; v1: test_render scratch #25
+    mov     dword [rel g_player + PLAYER.z], __?float32?__(8.0) ; v1: test_render scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_render:26)
+    call    render_update_meshes ; v1: test_render scratch #27
+    CHECK_EQ32 [r12 + CHUNK.state], CS_READY, "centre promoted to CS_READY" ; v1: test_render scratch #28
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_render:28)
+    CHECK_EQ32 [r12 + CHUNK.dirty], 0, "centre dirty mask cleared"
+    CHECK_EQ32 [r12 + CHUNK.vcount + 4*2*4], 24, "6 quads x 4 vertices (indexed)"
+    ; border chunks have no lit neighbours, left alone
+    mov     rcx, [rel chunks25]
+    CHECK_EQ32 [rcx + CHUNK.state], CS_LIT, "border chunk left CS_LIT"
+    mov     dword [rel g_chunk_count], 0
+ENDP
+
+PROC tr_view_dir
+    lea     rcx, [rel g_mat_view]
+    lea     rdx, [rel g_cam_dir]
+    xor     r8d, r8d
+.row:
+    xorps   xmm0, xmm0
+    xor     r9d, r9d
+.col:
+    lea     eax, [r9*4 + r8]
+    movss   xmm1, [rcx + rax*4]
+    mulss   xmm1, [rdx + r9*4]
+    addss   xmm0, xmm1
+    inc     r9d
+    cmp     r9d, 3
+    jb      .col
+    lea     rax, [rel vtmp]
+    movss   [rax + r8*4], xmm0
+    inc     r8d
+    cmp     r8d, 4
+    jb      .row
+ENDP
+
+PROC tr_view_matrix_maps_look_dir_to_minus_z
+    TEST "render: view matrix maps look dir to -Z"
+    call    tr_setup
+    xor     ebx, ebx
+.case:
+    lea     rsi, [rel view_cases]
+    lea     rsi, [rsi + rbx*8]
+    mov     eax, [rsi]
+    mov     [rel g_player + PLAYER.yaw], eax
+    mov     eax, [rsi + 4]
+    mov     [rel g_player + PLAYER.pitch], eax
+    call    render_set_camera
+    call    tr_view_dir
+    CHECK_NEAR [rel vtmp], 0.0, 0.00005, "view*dir x == 0"
+    CHECK_NEAR [rel vtmp + 4], 0.0, 0.00005, "view*dir y == 0"
+    CHECK_NEAR [rel vtmp + 8], -1.0, 0.00005, "view*dir z == -1"
+    mov     rcx, rsi
+    call    tr_expect_dir
+    CHECK_NEAR_X [rel g_cam_dir], [rel exp_dir], 0.00005, "dir x = sin(yaw) cos(pitch)"
+    CHECK_NEAR_X [rel g_cam_dir + 4], [rel exp_dir + 4], 0.00005, "dir y = sin(pitch)"
+    CHECK_NEAR_X [rel g_cam_dir + 8], [rel exp_dir + 8], 0.00005, "dir z = -cos(yaw) cos(pitch)"
+    inc     ebx
+    cmp     ebx, VIEW_CASES
+    jb      .case
+ENDP
+
+; clip = g_mat_viewproj * (g_cam_dir * xmm0, 1) in double, then x/w y/w z/w
+; as floats in xmm0..2
+PROC tr_clip
+    cvtss2sd xmm4, xmm0
+    lea     rcx, [rel g_mat_viewproj]
+    lea     rdx, [rel g_cam_dir]
+    xor     r8d, r8d
+.row:
+    cvtss2sd xmm0, [rcx + (12*4) + r8*4]    ; w = 1 column
+    xor     r9d, r9d
+.col:
+    cvtss2sd xmm2, [rdx + r9*4]
+    mulsd   xmm2, xmm4
+    lea     eax, [r9*4 + r8]
+    cvtss2sd xmm1, [rcx + rax*4]
+    mulsd   xmm1, xmm2
+    addsd   xmm0, xmm1
+    inc     r9d
+    cmp     r9d, 3
+    jb      .col
+    lea     rax, [rel clip]
+    movsd   [rax + r8*8], xmm0
+    inc     r8d
+    cmp     r8d, 4
+    jb      .row
+    movsd   xmm3, [rel clip + 24]
+    movsd   xmm0, [rel clip]
+    divsd   xmm0, xmm3
+    cvtsd2ss xmm0, xmm0
+    movsd   xmm1, [rel clip + 8]
+    divsd   xmm1, xmm3
+    cvtsd2ss xmm1, xmm1
+    movsd   xmm2, [rel clip + 16]
+    divsd   xmm2, xmm3
+    cvtsd2ss xmm2, xmm2
+ENDP
+    ; v1 temporary guard (test_render #15)
+    xor     r11d, r11d ; clear v1 slot 15
+    ; v1 temporary guard (test_render #17)
+    xor     r11d, r11d ; clear v1 slot 17
     ; v1 temporary guard (test_render #19)
     xor     r11d, r11d ; clear v1 slot 19
     ; v1 temporary guard (test_render #21)
@@ -285,3 +406,5 @@ section .text
     xor     r11d, r11d ; clear v1 slot 51
     ; v1 temporary guard (test_render #53)
     xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (test_render #55)
+    xor     r11d, r11d ; clear v1 slot 55
