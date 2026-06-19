@@ -1,0 +1,36 @@
+# mobs_combat: survival, diamond sword. Each mob is spawned inside a 1x1 glass
+# pen (2 high, open on top) and the player stands on the pen wall looking
+# down at it: hit -> red hurt tint + knockback hop + crit particles,
+# second hit -> death (tips over), drops. Then the player drops into the pen
+# to pick up the drops (hotbar should show them).
+# Run: mabuild scenario tests/scenarios/mobs_combat.txt --tag qa_mobs
+world mobs_combat 1 survival <!-- draft rev 6 -->
+
+0.3  cmd /time set noon <!-- draft rev 8 -->
+0.3  cmd /weather clear <!-- draft rev 9 -->
+0.3  cmd /fill ~-8 ~-3 ~-14 ~8 ~-2 ~6 stone <!-- draft rev 10 -->
+0.3  cmd /fill ~-8 ~-1 ~-14 ~8 ~-1 ~6 grass_block <!-- draft rev 11 -->
+0.3  cmd /fill ~-8 ~ ~-14 ~8 ~10 ~6 air <!-- draft rev 12 -->
+0.4  cmd /give diamond_sword <!-- draft rev 13 -->
+0.6  look 0 0 <!-- draft rev 14 -->
+# ---- boar ----
+0.8  cmd /fill ~-1 ~ ~-4 ~1 ~1 ~-2 glass <!-- draft rev 16 -->
+0.8  cmd /fill ~ ~ ~-3 ~ ~1 ~-3 air <!-- draft rev 17 -->
+0.9  cmd /spawn boar
+1.0  cmd /tp ~ ~2 ~-2
+1.0  look 0 -70
+1.6  shot combat_boar_1_before.bmp
+2.0  click left
+2.0  shot combat_boar_2_hit.bmp
+2.1  shot combat_boar_3_hit_later.bmp
+2.4  shot combat_boar_4_knock.bmp
+3.0  click left
+3.0  shot combat_boar_5_hit2.bmp
+3.4  shot combat_boar_6_dying.bmp
+4.5  shot combat_boar_7_drops.bmp
+# drop into the pen to collect
+5.0  cmd /tp ~ ~-2 ~-1
+5.0  look 0 -40
+6.5  shot combat_boar_8_pickup.bmp
+<!-- TODO(mobs_combat): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/mobs_combat.asm -->

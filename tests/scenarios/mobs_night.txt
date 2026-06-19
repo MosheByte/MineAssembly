@@ -1,0 +1,49 @@
+# mobs_night: natural spawning, survival at night. The player stands on a
+# 1x1 stone pillar 6 blocks above the grassy coast of seed 1 (out of reach),
+# turns around slowly and photographs what spawns: glowbugs drifting over the
+# grass, shamblers 24-64 blocks away gathering below. F3 shows the entity
+# count on a few shots. Then dawn and noon: shamblers burn, glowbugs fade.
+# Run: mabuild scenario tests/scenarios/mobs_night.txt --tag qa_mobs
+world mobs_night 1 survival
+
+0.3  cmd /weather clear
+0.3  cmd /time set 13500
+0.3  cmd /fill ~ ~ ~ ~ ~5 ~ stone
+0.4  pos 0.5 77 0.5
+1.0  look 0 -20
+2.0  key F3 tap
+2.5  shot night_01_f3.bmp
+2.6  key F3 tap
+2.7  hidehud on
+10.0 shot night_02.bmp
+20.0 shot night_03.bmp
+20.5 turn 90 0 1
+22.0 shot night_04.bmp
+22.5 turn 90 0 1
+24.0 shot night_05.bmp
+24.5 turn 90 0 1
+26.0 shot night_06.bmp
+26.5 turn 90 0 1
+40.0 shot night_07.bmp
+40.5 turn 0 -35 1
+42.0 shot night_08_below.bmp
+42.5 turn 180 0 1
+44.0 shot night_09_below.bmp
+44.5 turn -180 35 1
+46.0 hidehud off
+46.0 key F3 tap
+46.5 shot night_10_f3.bmp
+46.6 key F3 tap
+46.7 hidehud on
+# dawn
+47.0 cmd /time set 23500
+52.0 shot night_11_dawn.bmp
+52.5 turn 0 -35 1
+54.0 shot night_12_dawn_below.bmp
+54.5 cmd /time set 1000
+62.0 shot night_13_morning_below.bmp
+70.0 shot night_14_morning_below.bmp
+70.5 turn 0 35 1
+72.0 hidehud off
+72.0 key F3 tap
+72.5 shot night_15_f3.bmp

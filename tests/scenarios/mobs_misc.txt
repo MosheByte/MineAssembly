@@ -1,0 +1,41 @@
+# mobs_misc: glowbugs up close at night (/spawn glowbug), woollies grazing a
+# fenced grass patch (grass should turn to dirt here and there), and the
+# entity limit (/spawn boar 32 several times).
+# Run: mabuild scenario tests/scenarios/mobs_misc.txt --tag qa_mobs
+world mobs_misc 1 creative
+
+0.3  cmd /weather clear
+0.3  cmd /time set midnight
+0.3  cmd /fill ~-8 ~-3 ~-14 ~8 ~-2 ~6 stone
+0.3  cmd /fill ~-8 ~-1 ~-14 ~8 ~-1 ~6 grass_block
+0.3  cmd /fill ~-8 ~ ~-14 ~8 ~10 ~6 air
+0.5  look 0 0
+0.6  cmd /spawn glowbug 6
+0.7  hidehud on
+1.0  look 0 5
+1.5  shot misc_bug_1.bmp
+2.0  frames 5 6 misc_bug_anim
+5.0  shot misc_bug_2.bmp
+# woolly paddock: 5x5 grass inside a 2-high glass fence, seen from above
+6.0  cmd /time set noon
+6.1  cmd /fill ~-3 ~ ~-9 ~3 ~1 ~-3 glass
+6.1  cmd /fill ~-2 ~ ~-8 ~2 ~1 ~-4 air
+6.2  cmd /tp ~ ~ ~-3
+6.3  look 0 0
+6.4  cmd /spawn woolly 6
+6.6  cmd /tp ~ ~9 ~
+6.7  look 0 -70
+7.5  shot misc_graze_1.bmp
+30.0 shot misc_graze_2.bmp
+50.0 shot misc_graze_3.bmp
+# entity limit
+51.0 cmd /tp ~ ~-9 ~6
+51.1 look 0 0
+51.2 cmd /spawn boar 32
+51.4 cmd /spawn boar 32
+51.6 cmd /spawn boar 32
+51.8 cmd /spawn boar 32
+52.0 cmd /spawn boar 32
+52.2 hidehud off
+52.3 key F3 tap
+53.0 shot misc_limit.bmp
