@@ -1,11 +1,9 @@
 # menus-ui_title: title screen, world select, create world screen.
-title <!-- draft rev 1 -->
-1.0  shot t1_title.bmp <!-- draft rev 2 -->
-1.2  mouse 640 354 <!-- draft rev 3 -->
-1.5  shot t2_hover.bmp <!-- draft rev 4 -->
-2.0  click left 640 354 <!-- draft rev 5 -->
-3.0  shot t3_worlds.bmp <!-- draft rev 6 -->
-3.5  click left 876 593 <!-- draft rev 7 -->
-4.5  shot t4_create.bmp <!-- draft rev 8 -->
-<!-- TODO(menus-ui_title): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/menus-ui_title.asm -->
+title
+1.0  shot t1_title.bmp
+1.2  mouse 640 354
+1.5  shot t2_hover.bmp
+2.0  click left 640 354
+3.0  shot t3_worlds.bmp
+3.5  click left 876 593
+4.5  shot t4_create.bmp
