@@ -2,18 +2,18 @@
 # back in the open seen from the side, then a shambler in a pen at midnight
 # (3 hits, rotten flesh 0-2), and a close look at dropped items (spin/bob).
 # Run: mabuild scenario tests/scenarios/mobs_combat2.txt --tag qa_mobs
-world mobs_combat2 1 survival <!-- draft rev 4 -->
+world mobs_combat2 1 survival
 
-0.3  cmd /time set noon <!-- draft rev 6 -->
-0.3  cmd /weather clear <!-- draft rev 7 -->
-0.3  cmd /fill ~-10 ~-3 ~-16 ~10 ~-2 ~8 stone <!-- draft rev 8 -->
-0.3  cmd /fill ~-10 ~-1 ~-16 ~10 ~-1 ~8 grass_block <!-- draft rev 9 -->
-0.3  cmd /fill ~-10 ~ ~-16 ~10 ~10 ~8 air <!-- draft rev 10 -->
-0.4  cmd /give diamond_sword <!-- draft rev 11 -->
-0.6  look 0 0 <!-- draft rev 12 -->
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-10 ~-3 ~-16 ~10 ~-2 ~8 stone
+0.3  cmd /fill ~-10 ~-1 ~-16 ~10 ~-1 ~8 grass_block
+0.3  cmd /fill ~-10 ~ ~-16 ~10 ~10 ~8 air
+0.4  cmd /give diamond_sword
+0.6  look 0 0
 # ---- woolly in a pen ----
-0.8  cmd /fill ~-1 ~ ~-4 ~1 ~1 ~-2 glass <!-- draft rev 14 -->
-0.8  cmd /fill ~ ~ ~-3 ~ ~1 ~-3 air <!-- draft rev 15 -->
+0.8  cmd /fill ~-1 ~ ~-4 ~1 ~1 ~-2 glass
+0.8  cmd /fill ~ ~ ~-3 ~ ~1 ~-3 air
 0.9  cmd /spawn woolly
 1.0  cmd /tp ~ ~2 ~-2
 1.0  look 0 -70
@@ -67,5 +67,3 @@ world mobs_combat2 1 survival <!-- draft rev 4 -->
 15.8 shot c2_item_1.bmp
 16.0 shot c2_item_2.bmp
 16.2 shot c2_item_3.bmp
-<!-- TODO(mobs_combat2): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/mobs_combat2.asm -->
