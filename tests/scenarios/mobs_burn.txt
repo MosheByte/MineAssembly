@@ -1,0 +1,33 @@
+# mobs_burn: shamblers in sunlight. Close-ups of a burning shambler (flames?)
+# in creative (so it does not chase), how long it takes to die, its drops.
+# Also a boar set on fire by lava should drop cooked meat.
+# Run: mabuild scenario tests/scenarios/mobs_burn.txt --tag qa_mobs
+world mobs_burn 1 creative
+
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-8 ~-3 ~-14 ~8 ~-2 ~6 stone
+0.3  cmd /fill ~-8 ~-1 ~-14 ~8 ~-1 ~6 grass_block
+0.3  cmd /fill ~-8 ~ ~-14 ~8 ~10 ~6 air
+# a 1x1 glass pen so it stays in front of the camera
+0.5  cmd /fill ~-1 ~ ~-4 ~1 ~1 ~-2 glass
+0.5  cmd /fill ~ ~ ~-3 ~ ~1 ~-3 air
+0.6  look 0 0
+0.7  cmd /spawn shambler
+0.8  look 0 -12
+0.9  hidehud on
+1.5  frames 4 8 burn_a
+3.0  shot burn_1.bmp
+8.0  shot burn_2.bmp
+14.0 shot burn_3.bmp
+20.0 shot burn_4.bmp
+23.0 shot burn_5.bmp
+26.0 shot burn_6.bmp
+# boar into lava: cooked meat?
+27.0 cmd /fill ~-1 ~ ~-4 ~1 ~1 ~-2 air
+27.1 cmd /fill ~-1 ~-1 ~-4 ~1 ~-1 ~-2 stone
+27.1 cmd /setblock ~ ~-1 ~-3 lava
+27.2 cmd /spawn boar
+28.0 shot burn_7_boar_lava.bmp
+32.0 shot burn_8_boar.bmp
+36.0 shot burn_9_boar_drops.bmp

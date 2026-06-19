@@ -1,0 +1,32 @@
+# menus-ui_worlds: several worlds via the menus (long name, duplicate name),
+# pause-menu world info, Save and Quit, world list layout.
+title
+0.5  click left 640 354                 # Singleplayer
+1.0  click left 876 593                 # Create New World
+1.5  type WWWWWWWWWWWWWWWWWWWWWW
+2.0  shot w1_longname.bmp
+2.2  click left 640 419                 # creative
+2.5  click left 402 665                 # Create
+6.0  key ESC tap
+6.5  shot w2_pause_longname.bmp
+7.0  click left 640 389                 # Save and Quit to Title
+8.5  click left 640 354                 # Singleplayer
+9.0  click left 876 593                 # Create New World (default name "New World")
+9.5  shot w3_create_default.bmp
+10.0 click left 402 665
+13.5 key ESC tap
+14.0 click left 640 389
+15.5 click left 640 354
+16.0 click left 876 593                 # again "New World" -> should become "New World (2)"
+16.5 shot w4_create_dup.bmp
+17.0 click left 402 665
+20.5 key ESC tap
+21.0 shot w5_pause_dup.bmp
+21.5 click left 640 389
+23.0 click left 640 354
+23.5 shot w6_list.bmp
+24.0 mouse 640 150
+24.3 shot w7_list_hover.bmp
+24.5 key DOWN tap
+24.7 key DOWN tap
+24.9 shot w8_list_keys.bmp

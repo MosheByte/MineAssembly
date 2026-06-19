@@ -1,0 +1,33 @@
+# mobs_boar: spawn a boar on a flat daylight stage and photograph it from
+# the front, side and back (HUD hidden), then watch it wander.
+# Run: mabuild scenario tests/scenarios/mobs_boar.txt --tag qa_mobs
+world mobs_boar 1 creative
+
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-8 ~-1 ~-14 ~8 ~-1 ~6 grass_block
+0.3  cmd /fill ~-8 ~ ~-14 ~8 ~10 ~6 air
+1.0  look 0 -20
+1.2  cmd /spawn boar
+1.3  hidehud on
+1.35 shot boar_1_front.bmp
+# step to the east of it, look west
+1.4  cmd /tp ~3 ~ ~-3
+1.4  look 270 -20
+1.5  shot boar_2_side.bmp
+# north of it, looking south
+1.6  cmd /tp ~-3 ~ ~-3
+1.6  look 180 -20
+1.7  shot boar_3_back.bmp
+# above-ish close
+1.8  cmd /tp ~ ~2 ~3
+1.8  look 180 -60
+1.9  shot boar_4_top.bmp
+2.0  cmd /tp ~ ~-2 ~4
+2.0  look 180 -15
+2.0  hidehud off
+4.0  shot boar_5_wander_a.bmp
+8.0  shot boar_6_wander_b.bmp
+12.0 cmd /spawn boar 6
+13.0 shot boar_7_herd.bmp
+20.0 shot boar_8_herd_later.bmp
