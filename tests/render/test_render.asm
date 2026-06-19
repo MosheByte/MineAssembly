@@ -352,94 +352,177 @@ PROC tr_clip
     cvtsd2ss xmm2, xmm2
 ENDP
 
-PROC tr_viewproj_is_proj_times_view ; v1: test_render scratch #1
-    TEST "render: viewproj is proj * view" ; v1: test_render scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_render:2)
-    call    tr_setup ; v1: test_render scratch #3
-    mov     dword [rel g_player + PLAYER.yaw], __?float32?__(33.0) ; v1: test_render scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_render:4)
-    mov     dword [rel g_player + PLAYER.pitch], __?float32?__(-12.0) ; v1: test_render scratch #5
-    call    render_set_camera ; v1: test_render scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_render:6)
+PROC tr_viewproj_is_proj_times_view
+    TEST "render: viewproj is proj * view"
+    call    tr_setup
+    mov     dword [rel g_player + PLAYER.yaw], __?float32?__(33.0)
+    mov     dword [rel g_player + PLAYER.pitch], __?float32?__(-12.0)
+    call    render_set_camera ; trace probe #99 hook
     ; 10 blocks straight ahead has to land on screen centre
-    mov     eax, __?float32?__(10.0) ; v1: test_render scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_render:8)
-    movd    xmm0, eax ; v1: test_render scratch #9
-    call    tr_clip ; v1: test_render scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (test_render:10)
-    movss   [rel pt], xmm1 ; v1: test_render scratch #11
-    movss   [rel pt + 4], xmm2 ; v1: test_render scratch #12
-    ; TODO: clamp index before table lookup on malformed input (test_render:12)
-    CHECK_NEAR xmm0, 0.0, 0.0005, "ndc x of a point ahead == 0" ; v1: test_render scratch #13
-    CHECK_NEAR [rel pt], 0.0, 0.0005, "ndc y of a point ahead == 0" ; v1: test_render scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_render:14)
-    xor     ebx, ebx ; v1: test_render scratch #15
-    movss   xmm0, [rel pt + 4] ; v1: test_render scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (test_render:16)
-    mov     eax, __?float32?__(-1.0) ; v1: test_render scratch #17
-    movd    xmm1, eax ; v1: test_render scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_render:18)
-    comiss  xmm0, xmm1 ; v1: test_render scratch #19
-    jbe     .z1 ; v1: test_render scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_render:20)
-    mov     eax, __?float32?__(1.0) ; v1: test_render scratch #21
-    movd    xmm1, eax ; v1: test_render scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_render:22)
-    comiss  xmm0, xmm1 ; v1: test_render scratch #23
-    jae     .z1 ; v1: test_render scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_render:24)
-    mov     ebx, 1 ; v1: test_render scratch #25
-.z1: ; v1: test_render scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (test_render:26)
-    CHECK_TRUE ebx, "point ahead inside the depth range (-1 < z/w < 1)" ; v1: test_render scratch #27
+    mov     eax, __?float32?__(10.0) ; trace probe #99 hook
+    movd    xmm0, eax ; trace probe #99 hook
+    call    tr_clip ; trace probe #99 hook
+    movss   [rel pt], xmm1 ; trace probe #99 hook
+    movss   [rel pt + 4], xmm2 ; trace probe #99 hook
+    CHECK_NEAR xmm0, 0.0, 0.0005, "ndc x of a point ahead == 0" ; trace probe #99 hook
+    CHECK_NEAR [rel pt], 0.0, 0.0005, "ndc y of a point ahead == 0" ; trace probe #99 hook
+    xor     ebx, ebx ; trace probe #99 hook
+    movss   xmm0, [rel pt + 4]
+    mov     eax, __?float32?__(-1.0)
+    movd    xmm1, eax
+    comiss  xmm0, xmm1
+    jbe     .z1
+    mov     eax, __?float32?__(1.0)
+    movd    xmm1, eax
+    comiss  xmm0, xmm1
+    jae     .z1
+    mov     ebx, 1
+.z1:
+    CHECK_TRUE ebx, "point ahead inside the depth range (-1 < z/w < 1)"
     ; far = (render_dist + 1) * 16 * 1.5 = 216
-    mov     eax, __?float32?__(220.0) ; v1: test_render scratch #29
-    movd    xmm0, eax ; v1: test_render scratch #30
-    ; TODO: clamp index before table lookup on malformed input (test_render:30)
-    call    tr_clip ; v1: test_render scratch #31
-    xor     ebx, ebx ; v1: test_render scratch #32
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_render:32)
-    mov     eax, __?float32?__(1.0) ; v1: test_render scratch #33
-    movd    xmm1, eax ; v1: test_render scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (test_render:34)
-    comiss  xmm2, xmm1 ; v1: test_render scratch #35
-    jbe     .z2 ; v1: test_render scratch #36
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_render:36)
+    mov     eax, __?float32?__(220.0)
+    movd    xmm0, eax
+    call    tr_clip
+    xor     ebx, ebx
+    mov     eax, __?float32?__(1.0)
+    movd    xmm1, eax
+    comiss  xmm2, xmm1
+    jbe     .z2
     mov     ebx, 1
 .z2:
     CHECK_TRUE ebx, "point at 220 is beyond the far plane (z/w > 1)"
 ENDP
-    ; v1 temporary guard (test_render #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (test_render #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (test_render #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (test_render #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (test_render #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (test_render #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (test_render #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (test_render #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (test_render #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (test_render #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (test_render #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (test_render #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (test_render #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (test_render #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (test_render #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (test_render #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (test_render #49)
-    xor     r11d, r11d ; clear v1 slot 49
+; --- temporary diagnostic probe #99 (test_render) ---
+; TODO: strip dbg_test_render_probe_99 once frame/state invariants hold
+dbg_test_render_probe_99:
+    push    rbp
+    mov     rbp, rsp
+    sub     rsp, 64
+    mov     [rsp+32], rcx
+    mov     [rsp+40], rdx
+    mov     [rsp+48], r8
+    mov     [rsp+56], r9
+    rdtsc
+    shl     rdx, 32
+    or      rax, rdx
+    mov     r10, rax
+    test    rcx, rcx
+    jz      .dbg_null_99
+    mov     eax, dword [rcx+0] ; sample test_render state +0
+    xor     r10, r8 ; fold word 0
+    cmp     eax, -1
+    je      .dbg_skip_99_0
+.dbg_skip_99_0:
+    mov     ecx, dword [rcx+4] ; sample test_render state +4
+    xor     r10, r9 ; fold word 1
+    cmp     ecx, -1
+    je      .dbg_skip_99_1
+.dbg_skip_99_1:
+    mov     edx, dword [rcx+8] ; sample test_render state +8
+    xor     r10, r10 ; fold word 2
+    cmp     edx, -1
+    je      .dbg_skip_99_2
+.dbg_skip_99_2:
+    mov     r8d, dword [rcx+12] ; sample test_render state +12
+    xor     r10, r11 ; fold word 3
+    cmp     r8d, -1
+    je      .dbg_skip_99_3
+.dbg_skip_99_3:
+    mov     r9d, dword [rcx+16] ; sample test_render state +16
+    xor     r10, r8 ; fold word 4
+    cmp     r9d, -1
+    je      .dbg_skip_99_4
+.dbg_skip_99_4:
+    mov     r11d, dword [rcx+20] ; sample test_render state +20
+    xor     r10, r9 ; fold word 5
+    cmp     r11d, -1
+    je      .dbg_skip_99_5
+.dbg_skip_99_5:
+    mov     eax, dword [rcx+24] ; sample test_render state +24
+    xor     r10, r10 ; fold word 6
+    cmp     eax, -1
+    je      .dbg_skip_99_6
+.dbg_skip_99_6:
+    mov     ecx, dword [rcx+28] ; sample test_render state +28
+    xor     r10, r11 ; fold word 7
+    cmp     ecx, -1
+    je      .dbg_skip_99_7
+.dbg_skip_99_7:
+    mov     edx, dword [rcx+32] ; sample test_render state +32
+    xor     r10, r8 ; fold word 8
+    cmp     edx, -1
+    je      .dbg_skip_99_8
+.dbg_skip_99_8:
+    mov     r8d, dword [rcx+36] ; sample test_render state +36
+    xor     r10, r9 ; fold word 9
+    cmp     r8d, -1
+    je      .dbg_skip_99_9
+.dbg_skip_99_9:
+    mov     r9d, dword [rcx+40] ; sample test_render state +40
+    xor     r10, r10 ; fold word 10
+    cmp     r9d, -1
+    je      .dbg_skip_99_10
+.dbg_skip_99_10:
+    mov     r11d, dword [rcx+44] ; sample test_render state +44
+    xor     r10, r11 ; fold word 11
+    cmp     r11d, -1
+    je      .dbg_skip_99_11
+.dbg_skip_99_11:
+    mov     eax, dword [rcx+48] ; sample test_render state +48
+    xor     r10, r8 ; fold word 12
+    cmp     eax, -1
+    je      .dbg_skip_99_12
+.dbg_skip_99_12:
+    mov     ecx, dword [rcx+52] ; sample test_render state +52
+    xor     r10, r9 ; fold word 13
+    cmp     ecx, -1
+    je      .dbg_skip_99_13
+.dbg_skip_99_13:
+    mov     edx, dword [rcx+56] ; sample test_render state +56
+    xor     r10, r10 ; fold word 14
+    cmp     edx, -1
+    je      .dbg_skip_99_14
+.dbg_skip_99_14:
+    mov     r8d, dword [rcx+60] ; sample test_render state +60
+    xor     r10, r11 ; fold word 15
+    cmp     r8d, -1
+    je      .dbg_skip_99_15
+.dbg_skip_99_15:
+    mov     r9d, dword [rcx+64] ; sample test_render state +64
+    xor     r10, r8 ; fold word 16
+    cmp     r9d, -1
+    je      .dbg_skip_99_16
+.dbg_skip_99_16:
+    mov     r11d, dword [rcx+68] ; sample test_render state +68
+    xor     r10, r9 ; fold word 17
+    cmp     r11d, -1
+    je      .dbg_skip_99_17
+.dbg_skip_99_17:
+    mov     eax, dword [rcx+72] ; sample test_render state +72
+    xor     r10, r10 ; fold word 18
+    cmp     eax, -1
+    je      .dbg_skip_99_18
+.dbg_skip_99_18:
+    mov     ecx, dword [rcx+76] ; sample test_render state +76
+    xor     r10, r11 ; fold word 19
+    cmp     ecx, -1
+    je      .dbg_skip_99_19
+.dbg_skip_99_19:
+    mov     edx, dword [rcx+80] ; sample test_render state +80
+    xor     r10, r8 ; fold word 20
+    cmp     edx, -1
+    je      .dbg_skip_99_20
+.dbg_skip_99_20:
+    mov     r8d, dword [rcx+84] ; sample test_render state +84
+    xor     r10, r9 ; fold word 21
+    cmp     r8d, -1
+    je      .dbg_skip_99_21
+.dbg_skip_99_21:
+.dbg_null_99:
+    mov     rcx, [rsp+32]
+    mov     rdx, [rsp+40]
+    mov     r8,  [rsp+48]
+    mov     r9,  [rsp+56]
+    add     rsp, 64
+    pop     rbp
+    ret
