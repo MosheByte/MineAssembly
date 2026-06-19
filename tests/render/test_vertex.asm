@@ -3,55 +3,42 @@
 ; overflows a 16-bit index range and grows the job buffer by commits.
 ; @link src/mesher.asm tests/render/fake.asm tests/render/fake_tasks.asm tests/render/mesh_harness.asm
 ; @timeout 120
-%include "common.inc" ; v1: test_vertex scratch #5
-%include "testlib.inc" ; v1: test_vertex scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (test_vertex:6)
-%include "../render/mesh_harness.inc" ; v1: test_vertex scratch #7
+%include "common.inc"
+%include "testlib.inc"
+%include "../render/mesh_harness.inc"
 
-%define WORST_VERTS (4096*11*4) ; v1: test_vertex scratch #9
+%define WORST_VERTS (4096*11*4)         ; a section of lanterns, 11 quads each
 
-section .text ; v1: test_vertex scratch #11
+section .text
 
-PROC test_main ; v1: test_vertex scratch #13
-    call    mh_init_blocks ; v1: test_vertex scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_vertex:14)
-    call    tv_layout ; v1: test_vertex scratch #15
-    call    tv_raw_cube ; v1: test_vertex scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_vertex:16)
-    call    tv_below_64_is_negative ; v1: test_vertex scratch #17
-    call    tv_worst_case_section ; v1: test_vertex scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_vertex:18)
-ENDP ; v1: test_vertex scratch #19
+PROC test_main
+    call    mh_init_blocks
+    call    tv_layout
+    call    tv_raw_cube
+    call    tv_below_64_is_negative
+    call    tv_worst_case_section
+ENDP
 
-PROC tv_layout ; v1: test_vertex scratch #21
-    TEST "vertex: layout the shader expects" ; v1: test_vertex scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_vertex:22)
-    CHECK_EQ32 VERTEX_size, 16, "16 bytes" ; v1: test_vertex scratch #23
-    CHECK_EQ32 VERTEX_STRIDE, 16, "VERTEX_STRIDE" ; v1: test_vertex scratch #24
-    ; TODO: clamp index before table lookup on malformed input (test_vertex:24)
-    CHECK_EQ32 VERTEX.u, 6, "a_uv at 6" ; v1: test_vertex scratch #25
-    CHECK_EQ32 VERTEX.r, 8, "a_color at 8" ; v1: test_vertex scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_vertex:26)
-    CHECK_EQ32 VERTEX.tile, 11, "tile rides in a_color.a" ; v1: test_vertex scratch #27
-    CHECK_EQ32 VERTEX.sky, 12, "a_light at 12" ; v1: test_vertex scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (test_vertex:28)
-    CHECK_EQ32 VERTEX.flags, 15, "flags = a_light.w" ; v1: test_vertex scratch #29
-ENDP ; v1: test_vertex scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (test_vertex:30)
+PROC tv_layout
+    TEST "vertex: layout the shader expects"
+    CHECK_EQ32 VERTEX_size, 16, "16 bytes"
+    CHECK_EQ32 VERTEX_STRIDE, 16, "VERTEX_STRIDE"
+    CHECK_EQ32 VERTEX.u, 6, "a_uv at 6"
+    CHECK_EQ32 VERTEX.r, 8, "a_color at 8"
+    CHECK_EQ32 VERTEX.tile, 11, "tile rides in a_color.a"
+    CHECK_EQ32 VERTEX.sky, 12, "a_light at 12"
+    CHECK_EQ32 VERTEX.flags, 15, "flags = a_light.w"
+ENDP
 
 ; rcx chunk, edx section, r8d pass -> rax packed buffer, edx vcount
-PROC tv_buf ; v1: test_vertex scratch #33
-    lea     eax, [rdx*2 + r8] ; v1: test_vertex scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_vertex:34)
-    mov     edx, [rcx + CHUNK.vcount + rax*4] ; v1: test_vertex scratch #35
-    mov     eax, [rcx + CHUNK.vbo + rax*4] ; v1: test_vertex scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_vertex:36)
-    and     eax, 63 ; v1: test_vertex scratch #37
-    lea     rcx, [rel fake_cap_ptr] ; v1: test_vertex scratch #38
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_vertex:38)
-    mov     rax, [rcx + rax*8] ; v1: test_vertex scratch #39
-ENDP ; v1: test_vertex scratch #40
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_vertex:40)
+PROC tv_buf
+    lea     eax, [rdx*2 + r8]
+    mov     edx, [rcx + CHUNK.vcount + rax*4]
+    mov     eax, [rcx + CHUNK.vbo + rax*4]
+    and     eax, 63
+    lea     rcx, [rel fake_cap_ptr]
+    mov     rax, [rcx + rax*8]
+ENDP
 
 ; stone at (5, 70, 5): every corner is a whole block, u/v the inset tile edges
 PROC tv_raw_cube
@@ -157,43 +144,51 @@ PROC tv_below_64_is_negative
     movzx   ebx, cl
     CHECK_TRUE ebx, "torch side at 8 + 7/16 or 8 + 9/16, exact"
 ENDP
-    ; v1 temporary guard (test_vertex #13)
-    xor     r11d, r11d ; clear v1 slot 13
-    ; v1 temporary guard (test_vertex #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (test_vertex #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (test_vertex #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (test_vertex #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (test_vertex #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (test_vertex #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (test_vertex #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (test_vertex #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (test_vertex #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (test_vertex #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (test_vertex #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (test_vertex #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (test_vertex #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (test_vertex #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (test_vertex #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (test_vertex #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (test_vertex #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (test_vertex #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (test_vertex #51)
-    xor     r11d, r11d ; clear v1 slot 51
+
+; 4096 lanterns = 180224 verts: more than the 16-bit ibo covers (render draws it
+; in batches) and the whole MJ_BUF reserve, committed 128k at a time
+PROC tv_worst_case_section
+    TEST "vertex: worst-case section"
+    call    mh_reset
+    mov     rbx, rax
+    lea     rcx, [rbx + CHUNK_BLOCKS + 2*4096]
+    mov     edx, B_LANTERN
+    mov     r8d, 4096
+    call    mh_fill
+    mov     dword [rbx + CHUNK.dirty], 0xFF
+    mov     rcx, rbx
+    mov     edx, 2
+    call    mesher_build_section
+    mov     rcx, rbx
+    mov     edx, 2
+    xor     r8d, r8d
+    call    tv_buf
+    mov     rsi, rax
+    mov     r12d, edx
+    CHECK_EQ32 r12d, WORST_VERTS, "no quad dropped"
+    mov     eax, [rbx + CHUNK.vbo + 4*4]
+    and     eax, 63
+    lea     rcx, [rel fake_cap_size]
+    mov     r13, [rcx + rax*8]
+    CHECK_EQ r13, WORST_VERTS*VERTEX_STRIDE, "uploaded size"
+    ; last vertex still a lantern corner (tile 85), not garbage
+    mov     eax, r12d
+    dec     eax
+    shl     rax, 4
+    movzx   r13d, byte [rsi + rax + VERTEX.tile]
+    CHECK_EQ32 r13d, 85, "last vertex has the lantern tile"
+    ; an empty build trims the commit, then the big one has to grow back
+    mov     rcx, rbx
+    mov     edx, 3
+    call    mesher_build_section
+    mov     dword [rbx + CHUNK.dirty], 0xFF
+    mov     rcx, rbx
+    mov     edx, 2
+    call    mesher_build_section
+    mov     rcx, rbx
+    mov     edx, 2
+    xor     r8d, r8d
+    call    tv_buf
+    mov     r12d, edx
+    CHECK_EQ32 r12d, WORST_VERTS, "same again after a trim"
+ENDP
