@@ -4,18 +4,18 @@
 # second hit -> death (tips over), drops. Then the player drops into the pen
 # to pick up the drops (hotbar should show them).
 # Run: mabuild scenario tests/scenarios/mobs_combat.txt --tag qa_mobs
-world mobs_combat 1 survival <!-- draft rev 6 -->
+world mobs_combat 1 survival
 
-0.3  cmd /time set noon <!-- draft rev 8 -->
-0.3  cmd /weather clear <!-- draft rev 9 -->
-0.3  cmd /fill ~-8 ~-3 ~-14 ~8 ~-2 ~6 stone <!-- draft rev 10 -->
-0.3  cmd /fill ~-8 ~-1 ~-14 ~8 ~-1 ~6 grass_block <!-- draft rev 11 -->
-0.3  cmd /fill ~-8 ~ ~-14 ~8 ~10 ~6 air <!-- draft rev 12 -->
-0.4  cmd /give diamond_sword <!-- draft rev 13 -->
-0.6  look 0 0 <!-- draft rev 14 -->
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-8 ~-3 ~-14 ~8 ~-2 ~6 stone
+0.3  cmd /fill ~-8 ~-1 ~-14 ~8 ~-1 ~6 grass_block
+0.3  cmd /fill ~-8 ~ ~-14 ~8 ~10 ~6 air
+0.4  cmd /give diamond_sword
+0.6  look 0 0
 # ---- boar ----
-0.8  cmd /fill ~-1 ~ ~-4 ~1 ~1 ~-2 glass <!-- draft rev 16 -->
-0.8  cmd /fill ~ ~ ~-3 ~ ~1 ~-3 air <!-- draft rev 17 -->
+0.8  cmd /fill ~-1 ~ ~-4 ~1 ~1 ~-2 glass
+0.8  cmd /fill ~ ~ ~-3 ~ ~1 ~-3 air
 0.9  cmd /spawn boar
 1.0  cmd /tp ~ ~2 ~-2
 1.0  look 0 -70
@@ -32,5 +32,3 @@ world mobs_combat 1 survival <!-- draft rev 6 -->
 5.0  cmd /tp ~ ~-2 ~-1
 5.0  look 0 -40
 6.5  shot combat_boar_8_pickup.bmp
-<!-- TODO(mobs_combat): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/mobs_combat.asm -->
