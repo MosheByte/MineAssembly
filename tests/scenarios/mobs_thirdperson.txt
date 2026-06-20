@@ -2,17 +2,17 @@
 # person. Checks the player box model (skin, held item, walk animation),
 # its blob shadow, and how the camera behaves next to a wall.
 # Run: mabuild scenario tests/scenarios/mobs_thirdperson.txt --tag qa_mobs
-world mobs_tp 1 survival <!-- draft rev 4 -->
+world mobs_tp 1 survival
 
-0.3  cmd /time set noon <!-- draft rev 6 -->
-0.3  cmd /weather clear <!-- draft rev 7 -->
-0.3  cmd /fill ~-8 ~-3 ~-14 ~8 ~-2 ~6 stone <!-- draft rev 8 -->
-0.3  cmd /fill ~-8 ~-1 ~-14 ~8 ~-1 ~6 snow_block <!-- draft rev 9 -->
-0.3  cmd /fill ~-8 ~ ~-14 ~8 ~10 ~6 air <!-- draft rev 10 -->
-0.4  cmd /give diamond_sword <!-- draft rev 11 -->
-0.6  look 0 -10 <!-- draft rev 12 -->
-1.0  key F5 tap <!-- draft rev 13 -->
-1.5  shot tp_1_back.bmp <!-- draft rev 14 -->
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-8 ~-3 ~-14 ~8 ~-2 ~6 stone
+0.3  cmd /fill ~-8 ~-1 ~-14 ~8 ~-1 ~6 snow_block
+0.3  cmd /fill ~-8 ~ ~-14 ~8 ~10 ~6 air
+0.4  cmd /give diamond_sword
+0.6  look 0 -10
+1.0  key F5 tap
+1.5  shot tp_1_back.bmp
 1.8  hidehud on
 1.9  shot tp_2_back_nohud.bmp
 2.0  key F5 tap
@@ -44,5 +44,3 @@ world mobs_tp 1 survival <!-- draft rev 4 -->
 # night: is the player model lit correctly?
 8.0  cmd /time set midnight
 8.5  shot tp_9_night.bmp
-<!-- TODO(mobs_thirdperson): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/mobs_thirdperson.asm -->
