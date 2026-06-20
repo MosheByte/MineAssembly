@@ -1,0 +1,27 @@
+# mobs_night_census: where do naturally spawned shamblers go? Survival, the
+# player stands still on the ground for 50 s of night. Then the clock jumps
+# to noon and the camera jumps 50 blocks straight up looking down, so every
+# shambler around the player shows up in daylight before it starts burning.
+# Expected: some shamblers near the player (they hunt within 24 blocks) and
+# hearts lost during the night.
+# Run: mabuild scenario tests/scenarios/mobs_night_census.txt --tag qa_mobs
+world mobs_census 1 survival <!-- draft rev 7 -->
+
+0.3  cmd /weather clear <!-- draft rev 9 -->
+0.3  cmd /time set 13200 <!-- draft rev 10 -->
+1.0  look 0 -10 <!-- draft rev 11 -->
+1.5  key F3 tap <!-- draft rev 12 -->
+2.0  shot census_1_start.bmp <!-- draft rev 13 -->
+30.0 shot census_2_night.bmp <!-- draft rev 14 -->
+50.0 shot census_3_night.bmp <!-- draft rev 15 -->
+50.5 cmd /gamemode creative <!-- draft rev 16 -->
+50.5 cmd /time set noon <!-- draft rev 17 -->
+50.5 pos 0.5 125 0.5
+50.5 look 0 -89.9
+50.6 key F3 tap
+50.6 hidehud on
+51.2 shot census_4_above.bmp
+51.4 pos 0.5 100 0.5
+52.0 shot census_5_above_low.bmp
+<!-- TODO(mobs_night_census): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/mobs_night_census.asm -->

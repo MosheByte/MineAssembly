@@ -1,0 +1,37 @@
+# mobs_shambler: shambler close-ups in daylight (it should burn), then at
+# midnight in survival: it should chase the player and hit (hearts drop,
+# knockback). Snow floor on a stone base so blob shadows are visible.
+# Run: mabuild scenario tests/scenarios/mobs_shambler.txt --tag qa_mobs
+world mobs_shambler 1 survival
+
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-8 ~-3 ~-14 ~8 ~-2 ~6 stone
+0.3  cmd /fill ~-8 ~-1 ~-14 ~8 ~-1 ~6 snow_block
+0.3  cmd /fill ~-8 ~ ~-14 ~8 ~10 ~6 air
+1.0  look 0 -15
+1.2  cmd /spawn shambler
+1.3  hidehud on
+1.35 shot sham_1_front.bmp
+1.4  cmd /tp ~3 ~ ~-3
+1.4  look 270 -15
+1.5  shot sham_2_side.bmp
+1.6  cmd /tp ~-3 ~ ~-3
+1.6  look 180 -15
+1.7  shot sham_3_back.bmp
+1.8  cmd /tp ~ ~ ~3
+1.8  look 180 -15
+1.8  hidehud off
+3.0  shot sham_4_burning.bmp
+6.0  shot sham_5_burning_later.bmp
+10.0 shot sham_6_after_burn.bmp
+# night: it should hunt the player
+11.0 cmd /time set midnight
+11.0 cmd /heal
+11.2 look 0 -10
+11.3 cmd /spawn shambler
+11.8 shot sham_7_night_spawn.bmp
+13.0 shot sham_8_night_chase.bmp
+15.0 shot sham_9_night_hit.bmp
+18.0 shot sham_10_night_later.bmp
+22.0 shot sham_11_night_later2.bmp
