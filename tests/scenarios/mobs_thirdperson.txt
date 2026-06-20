@@ -1,0 +1,48 @@
+# mobs_thirdperson: F5 cycles the camera: back view, front view, first
+# person. Checks the player box model (skin, held item, walk animation),
+# its blob shadow, and how the camera behaves next to a wall.
+# Run: mabuild scenario tests/scenarios/mobs_thirdperson.txt --tag qa_mobs
+world mobs_tp 1 survival <!-- draft rev 4 -->
+
+0.3  cmd /time set noon <!-- draft rev 6 -->
+0.3  cmd /weather clear <!-- draft rev 7 -->
+0.3  cmd /fill ~-8 ~-3 ~-14 ~8 ~-2 ~6 stone <!-- draft rev 8 -->
+0.3  cmd /fill ~-8 ~-1 ~-14 ~8 ~-1 ~6 snow_block <!-- draft rev 9 -->
+0.3  cmd /fill ~-8 ~ ~-14 ~8 ~10 ~6 air <!-- draft rev 10 -->
+0.4  cmd /give diamond_sword <!-- draft rev 11 -->
+0.6  look 0 -10 <!-- draft rev 12 -->
+1.0  key F5 tap <!-- draft rev 13 -->
+1.5  shot tp_1_back.bmp <!-- draft rev 14 -->
+1.8  hidehud on
+1.9  shot tp_2_back_nohud.bmp
+2.0  key F5 tap
+2.5  shot tp_3_front.bmp
+2.7  look 30 -20
+2.9  shot tp_4_front_angle.bmp
+3.0  key F5 tap
+3.3  shot tp_5_first.bmp
+# back view while walking
+3.5  look 0 -10
+3.6  key F5 tap
+3.8  key W down
+4.0  frames 3 6 tp_walk
+4.8  key W up
+# swing the sword in third person
+5.2  click left
+5.25 shot tp_6_swing.bmp
+# front view while walking toward the camera
+5.6  key F5 tap
+5.8  key W down
+6.2  shot tp_7_front_walk.bmp
+6.6  key W up
+# camera against a wall: back view with a wall right behind the player
+7.0  key F5 tap
+7.0  key F5 tap
+7.2  cmd /fill ~-2 ~ ~2 ~2 ~3 ~2 stone
+7.3  look 0 -10
+7.8  shot tp_8_wall_behind.bmp
+# night: is the player model lit correctly?
+8.0  cmd /time set midnight
+8.5  shot tp_9_night.bmp
+<!-- TODO(mobs_thirdperson): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/mobs_thirdperson.asm -->

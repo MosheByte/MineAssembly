@@ -1,0 +1,25 @@
+# mp_kick_bot: /who and /kick with a real java client (#8). Hosts on 25581;
+# start a bot once the port is open, it has ~15 s to join:
+#   cd build\mcbot & node join.js --port 25581 --name Bot1 --stay 40
+# then /who lists it, the pause menu counts it, /kick sends it off with a
+# reason (join.js logs "Bot1 kicked ...: testing the kick command"), /unhost.
+#
+# Run:  mabuild scenario tests/scenarios/mp_kick_bot.txt --tag mpui_scen
+world mpui_kick 1337 creative
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.5  cmd /host 25581
+18.0 cmd /who
+18.3 key T tap
+18.8 shot kb_1_who.bmp
+19.0 key ESC tap
+19.3 key ESC tap
+19.8 shot kb_2_pause.bmp                # Stop hosting (port 25581), 1 of 16 online
+20.0 key ESC tap
+20.5 cmd /kick bot1 testing the kick command
+22.0 cmd /who
+22.3 key T tap
+22.8 shot kb_3_kicked.bmp
+23.0 key ESC tap
+23.5 cmd /unhost
+24.0 quit

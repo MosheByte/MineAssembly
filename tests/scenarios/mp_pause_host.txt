@@ -1,0 +1,41 @@
+# mp_pause_host: the pause menu's java edition button (#7) and /unhost /who
+# /kick (#8). The first click tries the default port 25565, which is busy on
+# the dev box (a java server lives there), so it shows the error with a free
+# port to try. Then /host 25581, the button turns into Stop hosting, stops it,
+# and opens the same port again. Chat at the end has every command's output.
+#
+# Run:  mabuild scenario tests/scenarios/mp_pause_host.txt --tag mpui_scen
+world mpui_host 4242 creative
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+1.0  key ESC tap
+1.5  shot ph_1_pause.bmp                # Open to Java Edition (port 25565)
+1.8  mouse 640 480
+2.0  shot ph_2_hover.bmp
+2.2  click left 640 480                 # host button
+2.8  shot ph_3_after_click.bmp          # 25565 busy here: red error + /host suggestion
+3.0  key ESC tap
+3.3  cmd /host 25581
+3.4  cmd /host 25582                    # already open, says which port
+3.6  key ESC tap
+4.0  shot ph_4_hosting.bmp              # Stop hosting (port 25581), 0 of 16 online
+4.3  click left 640 480                 # stop
+4.8  shot ph_5_stopped.bmp              # Open to Java Edition (port 25581), the last port
+5.1  click left 640 480                 # open it again
+5.6  shot ph_6_reopened.bmp
+5.9  key ESC tap
+6.2  cmd /who
+6.3  cmd /kick nobody
+6.4  cmd /kick
+6.5  cmd /unhost
+6.6  cmd /unhost
+6.7  cmd /who
+6.8  cmd /kick Steve bye
+6.9  cmd /help 2
+7.2  key T tap
+7.6  shot ph_7_chat.bmp
+7.8  key ESC tap
+8.0  cmd /help 3
+8.1  cmd /help 4
+8.3  key T tap
+8.6  shot ph_8_help.bmp
