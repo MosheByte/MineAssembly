@@ -1,0 +1,55 @@
+# persistence_containers: put items into a chest and a lit furnace, then
+# ESC -> Save and Quit -> reload from the world list and open both again:
+# chest slots and furnace slots / progress must come back.
+#
+# Run:  mabuild scenario tests/scenarios/persistence_containers.txt --tag qa_persistence
+world persist_box 1 survival
+
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~2 grass_block
+0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~2 air
+0.5  cmd /give chest 1               # slot 1
+0.5  cmd /give furnace 1             # slot 2
+0.5  cmd /give diamond 7             # slot 3
+0.5  cmd /give coal 8                # slot 4
+0.5  cmd /give iron_ore 4            # slot 5
+0.5  cmd /give cobblestone 10        # slot 6
+1.0  look -20 -40
+1.2  key 1 tap
+1.4  click right                     # chest
+1.6  look 20 -40
+1.8  key 2 tap
+2.0  click right                     # furnace
+2.4  key 9 tap                       # empty hand
+2.6  look -20 -40
+3.0  click right                     # open the chest
+3.5  shot box_1_chest_open.bmp
+4.0  click left 531 563              # pick up the 7 diamonds
+4.4  click left 423 186              # -> chest slot 0
+4.8  click left 693 563              # pick up the 10 cobblestone
+5.2  click left 855 294              # -> chest slot 26 (last)
+5.6  shot box_2_chest_filled.bmp
+6.0  key ESC tap
+6.5  look 20 -40
+7.0  click right                     # open the furnace
+7.6  shot box_3_furnace_open.bmp
+8.0  click left 639 561              # pick up the 4 iron ore
+8.4  click left 566 186              # -> furnace input
+8.8  click left 585 561              # pick up the 8 coal
+9.2  click left 566 294              # -> furnace fuel
+22.0 shot box_4_furnace_smelting.bmp # ~12 s: one ingot done, the second cooking
+22.5 key ESC tap
+23.0 look 0 -30
+23.5 shot box_5_world_lit.bmp
+24.0 key ESC tap
+24.5 click left 640 390              # Save and Quit to Title
+25.5 click left 640 354              # Singleplayer
+26.5 click left 402 594              # Play Selected World
+36.0 look -20 -40
+36.5 click right                     # open the chest again
+37.5 shot box_6_chest_reloaded.bmp
+38.0 key ESC tap
+38.5 look 20 -40
+39.0 click right                     # open the furnace again
+40.0 shot box_7_furnace_reloaded.bmp

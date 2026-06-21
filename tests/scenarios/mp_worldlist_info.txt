@@ -1,0 +1,32 @@
+# mp_worldlist_info: the world list shows more than the folder name (#11).
+# Starts in a creative world (seed 777) and moves it to day 2, quits, makes a
+# survival world through the menus ("Alpha: Base?", seed 12345), quits again
+# and looks at the list: name, last played, mode / day / seed. The new one
+# shows the name as typed with its folder ("Alpha_ Base_") on the right,
+# wl_first (made by the script, no typed name) just shows its folder.
+#
+# Run:  mabuild scenario tests/scenarios/mp_worldlist_info.txt --tag mpui_scen
+world wl_first 777 creative <!-- draft rev 8 -->
+0.5  cmd /time add 30000                # day 2 in the list <!-- draft rev 9 -->
+1.0  key ESC tap <!-- draft rev 10 -->
+1.5  click left 640 390                 # Save and Quit to Title <!-- draft rev 11 -->
+2.5  click left 640 354                 # Singleplayer <!-- draft rev 12 -->
+3.0  shot wli_1_one.bmp <!-- draft rev 13 -->
+3.5  click left 876 594                 # Create New World <!-- draft rev 14 -->
+4.0  click left 640 162                 # name box <!-- draft rev 15 -->
+4.1  key END tap <!-- draft rev 16 -->
+4.2  key BACK down <!-- draft rev 17 -->
+5.2  key BACK up
+5.4  type Alpha: Base?
+5.8  click left 640 306                 # seed box
+6.0  type 12345
+6.4  click left 402 666                 # Create New World
+14.0 key ESC tap
+14.5 click left 640 390                 # Save and Quit to Title
+15.5 click left 640 354                 # Singleplayer
+16.0 mouse 640 600
+16.3 shot wli_2_two.bmp
+16.5 mouse 640 200
+16.8 shot wli_3_hover.bmp
+<!-- TODO(mp_worldlist_info): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/mp_worldlist_info.asm -->

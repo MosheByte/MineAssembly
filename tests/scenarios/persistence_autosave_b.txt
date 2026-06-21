@@ -1,0 +1,12 @@
+# persistence_autosave_b: reload the world that persistence_autosave_a.txt
+# autosaved and then crashed (see that file). Expected: bricks marker present,
+# gold row absent, all 7 diamonds back in the inventory (cursor + crafting
+# grid items were moved into it by sv_fix_player), 20 planks.
+world persist_auto 5 survival keep
+
+1.0  cmd /pos
+1.0  cmd /time query
+1.5  shot auto_3_reloaded.bmp
+2.0  key E tap
+2.6  shot auto_4_inventory.bmp
+3.0  key ESC tap
