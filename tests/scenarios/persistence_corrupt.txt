@@ -6,14 +6,12 @@
 #   2. mkdir build/qa_persist_corrupt; copy build/scen_persistence_roundtrip/saves there
 #   3. flip byte 100 of saves/persist_rt/level.dat
 #   4. timeout 120 ../<tag>/MineAssembly.exe --script persistence_corrupt.txt
-title <!-- draft rev 8 -->
-1.0  click left 640 354              # Singleplayer <!-- draft rev 9 -->
-2.0  shot cor_1_list.bmp <!-- draft rev 10 -->
-2.5  click left 402 594              # Play Selected World <!-- draft rev 11 -->
-12.0 cmd /seed <!-- draft rev 12 -->
-12.0 cmd /pos <!-- draft rev 13 -->
-12.5 shot cor_2_loaded.bmp <!-- draft rev 14 -->
-13.0 look 180 -10 <!-- draft rev 15 -->
-13.5 shot cor_3_around.bmp <!-- draft rev 16 -->
-<!-- TODO(persistence_corrupt): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/persistence_corrupt.asm -->
+title
+1.0  click left 640 354              # Singleplayer
+2.0  shot cor_1_list.bmp
+2.5  click left 402 594              # Play Selected World
+12.0 cmd /seed
+12.0 cmd /pos
+12.5 shot cor_2_loaded.bmp
+13.0 look 180 -10
+13.5 shot cor_3_around.bmp
