@@ -1,0 +1,17 @@
+# persistence_crash_new_a: a brand-new world is "crashed" (killed by the
+# timeout) before any save: build at spawn, fly away so the chunk is evicted
+# (and written to chunks\ by the chunk manager), then get killed.
+# Run in a private dir with a hard kill at ~22 s:
+#   timeout 22 ../<tag>/MineAssembly.exe --script persistence_crash_new_a.txt
+# then check saves\persist_crash\ (level.dat?) and run persistence_crash_new_b.txt.
+world persist_crash 1 survival
+
+0.3  cmd /time set noon
+0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~2 grass_block
+0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~2 air
+0.5  cmd /fill ~-1 ~ ~-5 ~1 ~4 ~-5 gold_block
+1.0  cmd /pos
+2.0  cmd /tp ~2000 ~ ~                # far away: the spawn chunks are evicted
+8.0  cmd /tp ~-2000 ~ ~               # and back
+12.0 cmd /tp ~2000 ~ ~
+60.0 wait                             # killed before this

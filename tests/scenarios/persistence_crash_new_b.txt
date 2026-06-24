@@ -1,0 +1,10 @@
+# persistence_crash_new_b: after persistence_crash_new_a was killed, open
+# the same folder with another seed (what "Create New World" with the same name
+# does when level.dat is missing). Expected: clean seed-2 terrain, no gold
+# tower from the crashed seed-1 world.
+world persist_crash 2 survival keep
+
+0.3  cmd /time set noon
+1.0  cmd /pos
+1.5  look 0 -5
+2.0  shot crash_b_1.bmp
