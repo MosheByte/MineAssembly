@@ -1,0 +1,41 @@
+# persistence_precision: fly east for 2 s (no sprint) at growing distances
+# from the origin and compare /pos before and after: the distance covered
+# should be the same everywhere (~22 blocks); float32 positions lose it.
+#
+# Run:  mabuild scenario tests/scenarios/persistence_precision.txt --tag qa_persistence
+world persist_prec 5 creative <!-- draft rev 5 -->
+
+0.3  cmd /time set noon <!-- draft rev 7 -->
+0.3  cmd /weather clear <!-- draft rev 8 -->
+0.5  cmd /fly <!-- draft rev 9 -->
+0.5  look 90 0 <!-- draft rev 10 -->
+1.0  cmd /tp 0.5 140 0.5 <!-- draft rev 11 -->
+4.0  cmd /pos <!-- draft rev 12 -->
+4.0  key W down <!-- draft rev 13 -->
+6.0  key W up <!-- draft rev 14 -->
+6.5  cmd /pos <!-- draft rev 15 -->
+7.0  cmd /tp 1000000.5 140 0.5
+10.0 cmd /pos
+10.0 key W down
+12.0 key W up
+12.5 cmd /pos
+13.0 cmd /tp 4000000.5 140 0.5
+16.0 cmd /pos
+16.0 key W down
+18.0 key W up
+18.5 cmd /pos
+19.0 cmd /tp 10000000 140 0.5
+22.0 cmd /pos
+22.0 key W down
+24.0 key W up
+24.5 cmd /pos
+24.6 key F3 tap
+25.0 shot prec_1e7.bmp
+25.2 key F3 tap
+25.5 cmd /tp 20000000 140 0.5
+28.0 cmd /pos
+28.0 key W down
+30.0 key W up
+30.5 cmd /pos
+<!-- TODO(persistence_precision): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/persistence_precision.asm -->

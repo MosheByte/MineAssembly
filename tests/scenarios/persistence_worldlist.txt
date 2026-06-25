@@ -1,0 +1,59 @@
+# persistence_worldlist: create two worlds with the same name through the
+# Create New World screen, save and quit each, check the world list (newest
+# first), then delete one with the two-click Delete button.
+#
+# Run:  mabuild scenario tests/scenarios/persistence_worldlist.txt --tag qa_persistence
+title
+1.0  click left 640 354              # Singleplayer
+2.0  shot wl_1_empty.bmp
+2.5  click left 876 594              # Create New World
+3.5  shot wl_2_create.bmp
+4.0  click left 640 162              # focus the name box
+4.2  key BACK tap
+4.4  key BACK tap
+4.6  key BACK tap
+4.8  key BACK tap
+5.0  key BACK tap
+5.2  key BACK tap
+5.4  key BACK tap
+5.6  key BACK tap
+5.8  key BACK tap
+6.0  key BACK tap
+6.2  type Alpha: Base?
+6.6  click left 640 306              # seed box
+6.8  type 12345
+7.2  shot wl_3_filled.bmp
+7.5  click left 402 666              # Create New World
+15.0 cmd /time set noon
+15.0 cmd /setblock ~ ~ ~-3 gold_block
+15.5 shot wl_4_alpha_ingame.bmp
+16.0 key ESC tap
+16.5 click left 640 390              # Save and Quit to Title
+17.5 click left 640 354              # Singleplayer
+18.5 click left 876 594              # Create New World
+19.5 click left 640 162
+19.7 key BACK tap
+19.9 key BACK tap
+20.1 key BACK tap
+20.3 key BACK tap
+20.5 key BACK tap
+20.7 key BACK tap
+20.9 key BACK tap
+21.1 key BACK tap
+21.3 key BACK tap
+21.5 key BACK tap
+21.7 type Alpha: Base?
+22.0 shot wl_5_second_create.bmp
+22.5 click left 402 666              # Create New World (same name)
+30.0 key ESC tap
+30.5 click left 640 390              # Save and Quit to Title
+31.5 click left 640 354              # Singleplayer
+32.5 shot wl_6_two_worlds.bmp
+33.0 click left 640 180              # select the second row
+33.5 click left 402 666              # Delete
+34.0 shot wl_7_confirm.bmp
+34.5 click left 402 666              # Click again to delete
+35.5 shot wl_8_after_delete.bmp
+36.0 click left 402 594              # Play Selected World (the remaining one)
+44.0 cmd /pos
+44.5 shot wl_9_remaining.bmp

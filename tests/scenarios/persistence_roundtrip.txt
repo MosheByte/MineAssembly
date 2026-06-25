@@ -1,0 +1,47 @@
+# persistence_roundtrip: build, break, change inventory/time/position, then
+# ESC -> "Save and Quit to Title" -> Singleplayer -> "Play Selected World"
+# in the same run, and check that everything came back.
+#
+# Run:  mabuild scenario tests/scenarios/persistence_roundtrip.txt --tag qa_persistence
+# Screens: rt_1_before rt_2_pause rt_3_title rt_4_worlds rt_5_after rt_6_hotbar
+world persist_rt 4242 survival
+
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~2 grass_block
+0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~2 air
+# landmark: a gold wall 7 blocks north, a diamond block, a 3-wide hole
+0.5  cmd /fill ~-2 ~ ~-7 ~2 ~3 ~-7 gold_block
+0.5  cmd /setblock ~ ~4 ~-7 diamond_block
+0.5  cmd /fill ~-1 ~-1 ~-3 ~1 ~-3 ~-3 air
+# inventory: distinctive stacks in hotbar slots 1..6
+0.6  cmd /give oak_planks 16
+0.6  cmd /give diamond 7
+0.6  cmd /give iron_ingot 23
+0.6  cmd /give torch 64
+0.6  cmd /give bricks 5
+0.6  cmd /give apple 3
+# place a plank by hand (real input path: world_set_block from the player)
+1.0  look 0 -35
+1.2  key 1 tap
+1.4  click right
+1.6  key 3 tap
+# odd look direction / position to compare after the reload
+2.0  cmd /tp ~1.3 ~ ~0.6
+2.5  look 20 -15
+2.6  cmd /time set 11500
+3.0  cmd /pos
+3.0  cmd /time query
+3.5  shot rt_1_before.bmp
+4.0  key ESC tap
+4.5  shot rt_2_pause.bmp
+5.0  click left 640 390               # Save and Quit to Title
+6.5  shot rt_3_title.bmp
+7.0  click left 640 354               # Singleplayer
+8.0  shot rt_4_worlds.bmp
+8.5  click left 402 594               # Play Selected World
+20.0 cmd /pos
+20.0 cmd /time query
+20.5 shot rt_5_after.bmp
+21.0 look 0 -10
+21.5 shot rt_6_front.bmp

@@ -1,0 +1,45 @@
+# render_perf_models: every mesher model up close, for before/after pixel diffs
+# of the packed 16 byte vertex (issue #3): settled water and lava flows
+# (fractional corner heights, cropped side uvs), torch, lantern, cactus inset,
+# cross plants with jitter, fancy leaves with AO, glass, a cave corner for
+# smooth light. waving runs on wall-clock time, so for a strict diff build both
+# sides with r_time forced to 0
+world render_perf_m 7 creative
+0.2  cmd /time set noon
+0.2  cmd /weather clear
+0.3  cmd /fly
+0.4  cmd /fill -14 69 -18 14 69 6 stone
+0.4  cmd /fill -14 70 -18 14 70 6 grass_block
+0.4  cmd /fill -14 71 -18 14 84 6 air
+0.5  cmd /fill 0 71 -18 0 72 -6 stone
+0.5  cmd /setblock -7 71 -12 water
+0.5  cmd /setblock 7 71 -12 lava
+0.6  cmd /setblock -2 71 -3 torch
+0.6  cmd /setblock -1 71 -3 lantern
+0.6  cmd /setblock 1 71 -3 cactus
+0.6  cmd /setblock 1 72 -3 cactus
+0.6  cmd /setblock 2 71 -3 tall_grass
+0.6  cmd /setblock 3 71 -3 red_flower
+0.6  cmd /setblock -3 71 -3 glass
+0.7  cmd /fill -10 71 -1 -7 73 2 oak_leaves
+0.7  cmd /fill 6 71 -1 10 74 3 stone
+0.7  cmd /fill 7 71 0 9 73 3 air
+1.0  hidehud on
+1.0  pos 0.5 80 6.5
+1.0  look 0 -35
+14.0 shot rp_1_overview.bmp
+14.1 pos 0.5 72.2 -0.5
+14.1 look 0 -20
+15.5 shot rp_2_models.bmp
+15.6 pos -7.5 74 -6
+15.6 look 0 -45
+17.0 shot rp_3_water.bmp
+17.1 pos 7.5 74 -8
+17.1 look 0 -45
+18.5 shot rp_4_lava.bmp
+18.6 pos -5 72.5 3.5
+18.6 look -60 -10
+20.0 shot rp_5_leaves.bmp
+20.1 pos 8 72 2.5
+20.1 look 0 0
+21.5 shot rp_6_cave.bmp
