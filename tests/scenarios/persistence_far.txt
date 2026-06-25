@@ -4,18 +4,18 @@
 # chunks were saved (c.<cx>.<cz>.bin with large/negative cx, cz).
 #
 # Run:  mabuild scenario tests/scenarios/persistence_far.txt --tag qa_persistence
-world persist_far 77 creative <!-- draft rev 6 -->
+world persist_far 77 creative
 
-0.3  cmd /time set noon <!-- draft rev 8 -->
-0.3  cmd /weather clear <!-- draft rev 9 -->
-0.5  key F3 tap <!-- draft rev 10 -->
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.5  key F3 tap
 # ---- 100 000 ----
-1.0  cmd /tp 100000.5 120 100000.5 <!-- draft rev 12 -->
-1.0  cmd /fly <!-- draft rev 13 -->
-1.0  look 45 -30 <!-- draft rev 14 -->
-7.0  cmd /fill ~2 ~-3 ~-2 ~4 ~-1 ~-4 gold_block <!-- draft rev 15 -->
-8.0  shot far_1_1e5.bmp <!-- draft rev 16 -->
-8.2  turn 3 1 1.0 <!-- draft rev 17 -->
+1.0  cmd /tp 100000.5 120 100000.5
+1.0  cmd /fly
+1.0  look 45 -30
+7.0  cmd /fill ~2 ~-3 ~-2 ~4 ~-1 ~-4 gold_block
+8.0  shot far_1_1e5.bmp
+8.2  turn 3 1 1.0
 8.6  shot far_2_1e5_turning.bmp
 # ---- 1 000 000 ----
 10.0 cmd /tp 1000000.5 120 1000000.5
@@ -53,5 +53,3 @@ world persist_far 77 creative <!-- draft rev 6 -->
 58.5 shot far_10_reloaded.bmp
 59.0 cmd /tp -1000000.5 120 -1000000.5
 65.0 shot far_11_neg_reloaded.bmp
-<!-- TODO(persistence_far): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/persistence_far.asm -->
