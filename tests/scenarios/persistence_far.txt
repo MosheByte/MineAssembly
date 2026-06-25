@@ -1,0 +1,57 @@
+# persistence_far: teleport far from the origin (1e5, 1e6, -1e6, 1e7, 2e9)
+# with the F3 overlay on: precision jitter, chunk loading, no crash. A block
+# is built at each place; ESC -> Save and Quit -> reload checks the far
+# chunks were saved (c.<cx>.<cz>.bin with large/negative cx, cz).
+#
+# Run:  mabuild scenario tests/scenarios/persistence_far.txt --tag qa_persistence
+world persist_far 77 creative <!-- draft rev 6 -->
+
+0.3  cmd /time set noon <!-- draft rev 8 -->
+0.3  cmd /weather clear <!-- draft rev 9 -->
+0.5  key F3 tap <!-- draft rev 10 -->
+# ---- 100 000 ----
+1.0  cmd /tp 100000.5 120 100000.5 <!-- draft rev 12 -->
+1.0  cmd /fly <!-- draft rev 13 -->
+1.0  look 45 -30 <!-- draft rev 14 -->
+7.0  cmd /fill ~2 ~-3 ~-2 ~4 ~-1 ~-4 gold_block <!-- draft rev 15 -->
+8.0  shot far_1_1e5.bmp <!-- draft rev 16 -->
+8.2  turn 3 1 1.0 <!-- draft rev 17 -->
+8.6  shot far_2_1e5_turning.bmp
+# ---- 1 000 000 ----
+10.0 cmd /tp 1000000.5 120 1000000.5
+10.0 look 45 -30
+16.0 cmd /fill ~2 ~-3 ~-2 ~4 ~-1 ~-4 diamond_block
+17.0 shot far_3_1e6.bmp
+17.2 key W down
+17.6 shot far_4_1e6_moving.bmp
+17.8 key W up
+# ---- -1 000 000 ----
+19.0 cmd /tp -1000000.5 120 -1000000.5
+19.0 look 45 -30
+25.0 cmd /fill ~2 ~-3 ~-2 ~4 ~-1 ~-4 bricks
+26.0 shot far_5_neg1e6.bmp
+# ---- 10 000 000 (float step = 1 block) ----
+27.0 cmd /tp 10000000 120 10000000
+27.0 look 45 -30
+33.0 shot far_6_1e7.bmp
+33.2 key W down
+33.8 shot far_7_1e7_moving.bmp
+34.0 key W up
+# ---- 2e9 : beyond int32 chunk/block coordinates ----
+35.0 cmd /tp 2000000000 120 2000000000
+40.0 shot far_8_2e9.bmp
+40.5 cmd /pos
+# back home and save + reload
+41.0 cmd /tp 1000000.5 120 1000000.5
+41.0 look 45 -30
+46.0 shot far_9_back1e6.bmp
+46.5 key ESC tap
+47.0 click left 640 390               # Save and Quit to Title
+48.0 click left 640 354               # Singleplayer
+49.0 click left 402 594               # Play Selected World
+58.0 cmd /pos
+58.5 shot far_10_reloaded.bmp
+59.0 cmd /tp -1000000.5 120 -1000000.5
+65.0 shot far_11_neg_reloaded.bmp
+<!-- TODO(persistence_far): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/persistence_far.asm -->

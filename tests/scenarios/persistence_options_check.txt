@@ -1,0 +1,7 @@
+# persistence_options_check: second start after persistence_options.txt in
+# the same working directory: the Settings screen must show the changed
+# values and a world must show the FPS counter / no clouds.
+title
+1.0  click left 640 426              # Settings...
+2.0  shot optc_1_settings.bmp
+2.5  key ESC tap

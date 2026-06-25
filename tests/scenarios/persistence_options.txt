@@ -1,0 +1,21 @@
+# persistence_options: change settings on the title screen (render distance,
+# FOV, clouds, view bobbing, show FPS, invert mouse), press Done, and check
+# options.txt. Then run persistence_options_check.txt in the same working
+# directory (build/scen_persistence_options) to see they are loaded again:
+#   cd build/scen_persistence_options
+#   timeout 120 ../<tag>/MineAssembly.exe --script ../../tests/scenarios/persistence_options_check.txt
+title
+1.0  click left 640 426              # Settings...
+2.0  shot opt_1_settings.bmp
+2.5  click left 495 123              # Render Distance slider -> ~12
+3.0  click left 474 189              # FOV slider -> ~90
+3.5  click left 879 189              # Clouds: Fancy -> Off
+4.0  click left 879 321              # View Bobbing: ON -> OFF
+4.5  click left 879 519              # Show FPS: OFF -> ON
+5.0  click left 399 585              # Invert Mouse: OFF -> ON
+5.5  mouse 640 700
+6.0  shot opt_2_changed.bmp
+6.5  click left 640 669              # Done (writes options.txt)
+7.5  click left 640 426              # Settings... again
+8.5  shot opt_3_reopened.bmp
+9.0  key ESC tap
