@@ -1,0 +1,83 @@
+# persistence_flight: 60 s of fast travel, chunk unload / reload around the
+# player. A marker built at spawn must survive being evicted (saved by the
+# chunk manager) and reloaded from disk when we come back. F3 is on in every
+# shot so the "Chunks: N loaded" line can be compared.
+#
+# Run:  mabuild scenario tests/scenarios/persistence_flight.txt --tag qa_persistence
+world persist_flight 9001 creative <!-- draft rev 6 -->
+
+0.3  cmd /time set noon <!-- draft rev 8 -->
+0.3  cmd /weather clear <!-- draft rev 9 -->
+0.3  cmd /fill ~-6 ~-1 ~-12 ~6 ~-1 ~2 grass_block <!-- draft rev 10 -->
+0.3  cmd /fill ~-6 ~ ~-12 ~6 ~10 ~2 air <!-- draft rev 11 -->
+0.5  cmd /fill ~-1 ~ ~-6 ~1 ~5 ~-6 diamond_block      # marker tower <!-- draft rev 12 -->
+0.5  cmd /setblock ~ ~6 ~-6 glowcrystal <!-- draft rev 13 -->
+0.6  cmd /spawnpoint <!-- draft rev 14 -->
+1.0  look 0 -5 <!-- draft rev 15 -->
+1.5  key F3 tap <!-- draft rev 16 -->
+2.0  shot fl_01_marker.bmp
+2.5  cmd /fly
+2.5  cmd /tp ~ ~40 ~
+# ---- 25 s sprint-flying east ----
+3.0  look 90 -20
+3.0  key CTRL down
+3.0  key W down
+8.0  shot fl_02_fly5s.bmp
+18.0 shot fl_03_fly15s.bmp
+28.0 shot fl_04_fly25s.bmp
+28.0 key W up
+28.0 key CTRL up
+28.2 cmd /pos
+# ---- 30 s of teleport hops, 160 blocks every 0.5 s (~320 blocks/s) ----
+29.0 cmd /tp ~160 ~ ~160
+29.5 cmd /tp ~160 ~ ~160
+30.0 cmd /tp ~160 ~ ~160
+30.5 cmd /tp ~160 ~ ~160
+31.0 cmd /tp ~160 ~ ~160
+31.5 cmd /tp ~160 ~ ~160
+32.0 cmd /tp ~160 ~ ~160
+32.5 cmd /tp ~160 ~ ~160
+33.0 cmd /tp ~160 ~ ~160
+33.5 cmd /tp ~160 ~ ~160
+34.0 cmd /tp ~-160 ~ ~160
+34.5 cmd /tp ~-160 ~ ~160
+35.0 cmd /tp ~-160 ~ ~160
+35.5 cmd /tp ~-160 ~ ~160
+36.0 cmd /tp ~-160 ~ ~160
+36.5 cmd /tp ~-160 ~ ~160
+37.0 cmd /tp ~-160 ~ ~160
+37.5 cmd /tp ~-160 ~ ~160
+38.0 cmd /tp ~-160 ~ ~160
+38.5 cmd /tp ~-160 ~ ~160
+39.0 shot fl_05_hops.bmp
+39.5 cmd /tp ~-160 ~ ~-160
+40.0 cmd /tp ~-160 ~ ~-160
+40.5 cmd /tp ~-160 ~ ~-160
+41.0 cmd /tp ~-160 ~ ~-160
+41.5 cmd /tp ~-160 ~ ~-160
+42.0 cmd /tp ~-160 ~ ~-160
+42.5 cmd /tp ~-160 ~ ~-160
+43.0 cmd /tp ~-160 ~ ~-160
+43.5 cmd /tp ~-160 ~ ~-160
+44.0 cmd /tp ~-160 ~ ~-160
+44.5 cmd /tp ~160 ~ ~-160
+45.0 cmd /tp ~160 ~ ~-160
+45.5 cmd /tp ~160 ~ ~-160
+46.0 cmd /tp ~160 ~ ~-160
+46.5 cmd /tp ~160 ~ ~-160
+47.0 cmd /tp ~160 ~ ~-160
+47.5 cmd /tp ~160 ~ ~-160
+48.0 cmd /tp ~160 ~ ~-160
+48.5 cmd /tp ~160 ~ ~-160
+49.0 cmd /tp ~160 ~ ~-160
+49.5 cmd /pos
+50.0 shot fl_06_hops_done.bmp
+# ---- back to the marker (spawn point) ----
+51.0 cmd /fly
+51.0 cmd /tp 24.5 68 12.5
+52.0 cmd /pos
+58.0 look 0 -5
+58.5 shot fl_07_back_marker.bmp
+59.0 cmd /pos
+<!-- TODO(persistence_flight): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/persistence_flight.asm -->
