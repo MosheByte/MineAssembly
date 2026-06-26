@@ -18,19 +18,19 @@
 # GIF: sunset pan from the beach, 36 frames (every 4th frame) while turning 70 degrees in 6 s.
 #
 # All aerial cameras stay below the cloud layer (y 110) so no cloud slab crosses the frame.
-world showcase 42 creative <!-- draft rev 20 -->
-0.2 cmd /time set noon <!-- draft rev 21 -->
-0.2 cmd /weather clear <!-- draft rev 22 -->
-0.4 hidehud on <!-- draft rev 23 -->
+world showcase 42 creative
+0.2 cmd /time set noon
+0.2 cmd /weather clear
+0.4 hidehud on
 # 1 swamp (ground: no flight yet, the player lands before the shot)
-0.5  cmd /tp 500 125 0 <!-- draft rev 25 -->
-0.5  look 225 -8 <!-- draft rev 26 -->
-7.0  shot sc_01_swamp.bmp <!-- draft rev 27 -->
+0.5  cmd /tp 500 125 0
+0.5  look 225 -8
+7.0  shot sc_01_swamp.bmp
 # flight on for every other camera
-7.1  cmd /fly <!-- draft rev 29 -->
+7.1  cmd /fly
 # 2 + 3 lake in the forest
-7.1  pos 1000.5 100 -1500.5 <!-- draft rev 31 -->
-7.1  look 270 -40 <!-- draft rev 32 -->
+7.1  pos 1000.5 100 -1500.5
+7.1  look 270 -40
 11.5 cmd /time set noon
 12.0 shot sc_02_lake.bmp
 12.1 look 180 -30
@@ -76,5 +76,3 @@ world showcase 42 creative <!-- draft rev 20 -->
 43.4 pos 0.5 29 5.5
 43.4 look 0 -20
 46.0 shot sc_10_cave.bmp
-<!-- TODO(showcase): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/showcase.asm -->
