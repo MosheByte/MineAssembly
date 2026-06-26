@@ -3,17 +3,17 @@
 # should be the same everywhere (~22 blocks); float32 positions lose it.
 #
 # Run:  mabuild scenario tests/scenarios/persistence_precision.txt --tag qa_persistence
-world persist_prec 5 creative <!-- draft rev 5 -->
+world persist_prec 5 creative
 
-0.3  cmd /time set noon <!-- draft rev 7 -->
-0.3  cmd /weather clear <!-- draft rev 8 -->
-0.5  cmd /fly <!-- draft rev 9 -->
-0.5  look 90 0 <!-- draft rev 10 -->
-1.0  cmd /tp 0.5 140 0.5 <!-- draft rev 11 -->
-4.0  cmd /pos <!-- draft rev 12 -->
-4.0  key W down <!-- draft rev 13 -->
-6.0  key W up <!-- draft rev 14 -->
-6.5  cmd /pos <!-- draft rev 15 -->
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.5  cmd /fly
+0.5  look 90 0
+1.0  cmd /tp 0.5 140 0.5
+4.0  cmd /pos
+4.0  key W down
+6.0  key W up
+6.5  cmd /pos
 7.0  cmd /tp 1000000.5 140 0.5
 10.0 cmd /pos
 10.0 key W down
@@ -37,5 +37,3 @@ world persist_prec 5 creative <!-- draft rev 5 -->
 28.0 key W down
 30.0 key W up
 30.5 cmd /pos
-<!-- TODO(persistence_precision): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/persistence_precision.asm -->
