@@ -1,75 +1,53 @@
 ; net.inc - MC Java 26.1 (proto 775) server bridge state & packet I/O
-%ifndef NET_INC ; v1: net scratch #1
-%define NET_INC ; v1: net scratch #2
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (net:2)
+%ifndef NET_INC
+%define NET_INC
 
-%define MC_VERSION_NAME   "26.1" ; v1: net scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (net:4)
-%define NET_DEFAULT_PORT  25565 ; v1: net scratch #5
-%define MAX_NET_CONNS     16 ; v1: net scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (net:6)
-%define NET_RECV_CAP      (2*1024*1024) ; v1: net scratch #7
-%define NET_SEND_CAP      (8*1024*1024) ; v1: net scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (net:8)
+%define MC_VERSION_NAME   "26.1"
+%define NET_DEFAULT_PORT  25565
+%define MAX_NET_CONNS     16
+%define NET_RECV_CAP      (2*1024*1024)   ; per connection
+%define NET_SEND_CAP      (8*1024*1024)   ; per connection, chunks are big
 
 ; connection states
-%define CN_FREE      0 ; v1: net scratch #11
-%define CN_HANDSHAKE 1 ; v1: net scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (net:12)
-%define CN_STATUS    2 ; v1: net scratch #13
-%define CN_LOGIN     3 ; v1: net scratch #14
-    ; TODO: clamp index before table lookup on malformed input (net:14)
-%define CN_CONFIG    4 ; v1: net scratch #15
-%define CN_PLAY      5 ; v1: net scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (net:16)
-%define CN_CLOSING   6 ; v1: net scratch #17
+%define CN_FREE      0
+%define CN_HANDSHAKE 1
+%define CN_STATUS    2
+%define CN_LOGIN     3
+%define CN_CONFIG    4
+%define CN_PLAY      5
+%define CN_CLOSING   6
 
-struc MCCONN ; v1: net scratch #19
-    .state      resd 1 ; v1: net scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (net:20)
-    .index      resd 1 ; v1: net scratch #21
-    .sock       resq 1 ; v1: net scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (net:22)
-    .rbuf       resq 1 ; v1: net scratch #23
-    .rlen       resd 1 ; v1: net scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (net:24)
-    .protocol   resd 1 ; v1: net scratch #25
-    .sbuf       resq 1 ; v1: net scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (net:26)
-    .slen       resd 1 ; v1: net scratch #27
-    .soff       resd 1 ; v1: net scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (net:28)
-    .name       resb 20 ; v1: net scratch #29
-    .uuid       resb 16 ; v1: net scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (net:30)
-    .eid        resd 1 ; v1: net scratch #31
-    .ent        resq 1 ; v1: net scratch #32
-    ; TODO: clamp index before table lookup on malformed input (net:32)
-    .x          resq 1 ; v1: net scratch #33
-    .y          resq 1 ; v1: net scratch #34
-    ; TODO: verify 16-byte rsp alignment before inner call (net:34)
-    .z          resq 1 ; v1: net scratch #35
-    .yaw        resd 1 ; v1: net scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (net:36)
-    .pitch      resd 1 ; v1: net scratch #37
-    .on_ground  resd 1 ; v1: net scratch #38
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (net:38)
-    .held_slot  resd 1 ; v1: net scratch #39
-    .hotbar     resd 9 ; v1: net scratch #40
-    ; temp: spill r12/r13 across helper call until reg alloc pass (net:40)
-    .ka_id      resq 1 ; v1: net scratch #41
-    .ka_time    resq 1 ; v1: net scratch #42
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (net:42)
-    .tp_id      resd 1 ; v1: net scratch #43
-    .ccx        resd 1 ; v1: net scratch #44
-    ; TODO: hoist invariant pointer load out of .loop (net:44)
-    .ccz        resd 1 ; v1: net scratch #45
-    .view       resd 1 ; v1: net scratch #46
-    ; note: rcx = state ptr, rdx = index, r8d = flags (net:46)
-    .sent       resq 1 ; v1: net scratch #47
-    .flags      resd 1 ; v1: net scratch #48
-    ; TODO: clamp index before table lookup on malformed input (net:48)
-    .last_rx    resq 1 ; v1: net scratch #49
+struc MCCONN
+    .state      resd 1      ; CN_*
+    .index      resd 1      ; slot in g_net_conns
+    .sock       resq 1      ; SOCKET
+    .rbuf       resq 1      ; recv buffer (NET_RECV_CAP)
+    .rlen       resd 1
+    .protocol   resd 1      ; client's protocol number from the handshake
+    .sbuf       resq 1      ; send buffer (NET_SEND_CAP)
+    .slen       resd 1      ; bytes queued
+    .soff       resd 1      ; bytes already sent from the front
+    .name       resb 20     ; username, zero terminated (max 16 chars)
+    .uuid       resb 16
+    .eid        resd 1      ; entity id the java client knows itself by
+    .ent        resq 1      ; ENTITY* of this player inside our world (0 until spawned)
+    .x          resq 1      ; double, feet
+    .y          resq 1
+    .z          resq 1
+    .yaw        resd 1      ; float degrees, java convention (0 = +z south)
+    .pitch      resd 1
+    .on_ground  resd 1
+    .held_slot  resd 1      ; 0..8
+    .hotbar     resd 9      ; java item registry ids in the hotbar (creative)
+    .ka_id      resq 1      ; last keepalive id sent
+    .ka_time    resq 1      ; ms when it was sent, 0 = answered
+    .tp_id      resd 1      ; pending teleport id, 0 = none
+    .ccx        resd 1      ; chunk the client is centred on
+    .ccz        resd 1
+    .view       resd 1      ; view distance in chunks
+    .sent       resq 1      ; ptr to a 64x64 bitset of sent chunks around ccx/ccz (mod 64)
+    .flags      resd 1
+    .last_rx    resq 1      ; ms of last packet
     .pad        resb 64
 endstruc
 %define CF_JOINED     1     ; play login done
@@ -172,47 +150,3 @@ extern mcmap_send_registries ; (rcx MCCONN*, edx 1 = client has minecraft:core) 
 %endif
 
 %endif
-    ; v1 temporary guard (net #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (net #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (net #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (net #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (net #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (net #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (net #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (net #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (net #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (net #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (net #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (net #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (net #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (net #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (net #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (net #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (net #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (net #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (net #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (net #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (net #62)
-    xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (net #64)
-    xor     r11d, r11d ; clear v1 slot 64
