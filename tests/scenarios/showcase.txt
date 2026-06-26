@@ -1,0 +1,80 @@
+# showcase: the 10 README / marketing camera setups (seed 42, HUD hidden) + a GIF burst.
+#
+# Run:  mabuild scenario tests/scenarios/showcase.txt
+# Output (build/scen_showcase/): sc_01 ... sc_10 PNGs and gif_sunset_0001..0036 for a GIF
+# (assemble them with any GIF tool, e.g. 66 ms per frame, looping).
+#
+#  #  name               camera (seed 42)                                  time / weather
+#  1  swamp              tp 500 125 0, falls and lands; look 225 -8        noon, clear
+#  2  lake + forest      pos 1000.5 100 -1500.5 (flying); look 270 -40     noon, clear
+#  3  lake + mountain    pos 1000.5 100 -1500.5; look 180 -30              noon, clear
+#  4  taiga coast        pos -1500.5 80 500.5; look 225 -15                noon, clear
+#  5  desert + savanna   pos -1000.5 95 500.5; look 225 -25                noon, clear
+#  6  jungle valley      pos -500.5 92 -500.5; look 180 -20                noon, clear
+#  7  sunrise at sea     pos 1000.5 72 -500.5; look 90 5 (east)            time 0
+#  8  sunset at sea      pos 1000.5 72 -500.5; look 270 5 (west)           time 12000
+#  9  dusk, first stars  pos 1000.5 72 -500.5; look 270 8 (west)           time 12900
+# 10  cave lights        room carved at 0 28 0; pos 0.5 29 5.5, look 0 -20 torches, lava, water
+# GIF: sunset pan from the beach, 36 frames (every 4th frame) while turning 70 degrees in 6 s.
+#
+# All aerial cameras stay below the cloud layer (y 110) so no cloud slab crosses the frame.
+world showcase 42 creative <!-- draft rev 20 -->
+0.2 cmd /time set noon <!-- draft rev 21 -->
+0.2 cmd /weather clear <!-- draft rev 22 -->
+0.4 hidehud on <!-- draft rev 23 -->
+# 1 swamp (ground: no flight yet, the player lands before the shot)
+0.5  cmd /tp 500 125 0 <!-- draft rev 25 -->
+0.5  look 225 -8 <!-- draft rev 26 -->
+7.0  shot sc_01_swamp.bmp <!-- draft rev 27 -->
+# flight on for every other camera
+7.1  cmd /fly <!-- draft rev 29 -->
+# 2 + 3 lake in the forest
+7.1  pos 1000.5 100 -1500.5 <!-- draft rev 31 -->
+7.1  look 270 -40 <!-- draft rev 32 -->
+11.5 cmd /time set noon
+12.0 shot sc_02_lake.bmp
+12.1 look 180 -30
+12.8 shot sc_03_lake_mountain.bmp
+# 4 taiga coast with a frozen shore
+12.9 pos -1500.5 80 500.5
+12.9 look 225 -15
+17.0 shot sc_04_taiga_coast.bmp
+# 5 desert meets savanna
+17.1 pos -1000.5 95 500.5
+17.1 look 225 -25
+21.0 shot sc_05_desert.bmp
+# 6 jungle valley
+21.1 pos -500.5 92 -500.5
+21.1 look 180 -20
+25.0 shot sc_06_jungle.bmp
+# 7-9 sea at the beach: sunrise, sunset, dusk
+25.1 pos 1000.5 72 -500.5
+25.1 cmd /time set 0
+25.1 look 90 5
+29.0 shot sc_07_sunrise.bmp
+29.1 cmd /time set 12000
+29.1 look 270 5
+30.5 shot sc_08_sunset.bmp
+30.6 cmd /time set 12900
+30.6 look 270 8
+32.0 shot sc_09_dusk.bmp
+# GIF burst: sunset pan
+32.1 cmd /time set 11900
+32.1 look 230 6
+33.5 frames 4 36 gif_sunset
+33.5 turn 70 0 6
+# 10 cave: go there first so the chunks are loaded, then carve the room
+40.0 pos 0.5 30 6.5
+40.0 cmd /time set noon
+43.0 cmd /fill -6 28 -6 6 33 6 air
+43.2 cmd /fill 3 27 -5 5 27 -3 88
+43.2 cmd /fill -5 27 -5 -3 27 -3 80
+43.3 cmd /setblock -5 28 5 torch
+43.3 cmd /setblock 5 28 5 torch
+43.3 cmd /setblock 0 28 0 torch
+43.3 cmd /setblock -5 28 -1 torch
+43.4 pos 0.5 29 5.5
+43.4 look 0 -20
+46.0 shot sc_10_cave.bmp
+<!-- TODO(showcase): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/showcase.asm -->
