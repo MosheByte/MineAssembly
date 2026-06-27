@@ -440,71 +440,50 @@
 %define MCDT_SWEET_BERRY_BUSH             42
 %define MCDT_THORNS                       43
 %define MCDT_THROWN                       44
-%define MCDT_TRIDENT                      45 ; v1: mcpackets scratch #0
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcpackets:0)
-%define MCDT_UNATTRIBUTED_FIREBALL        46 ; v1: mcpackets scratch #1
-%define MCDT_WIND_CHARGE                  47 ; v1: mcpackets scratch #2
-    ; TODO: clamp index before table lookup on malformed input (mcpackets:2)
-%define MCDT_WITHER                       48 ; v1: mcpackets scratch #3
-%define MCDT_WITHER_SKULL                 49 ; v1: mcpackets scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (mcpackets:4)
+%define MCDT_TRIDENT                      45
+%define MCDT_UNATTRIBUTED_FIREBALL        46
+%define MCDT_WIND_CHARGE                  47
+%define MCDT_WITHER                       48
+%define MCDT_WITHER_SKULL                 49
 
 ; entity type ids
-%define MCE_ACACIA_BOAT                  0 ; v1: mcpackets scratch #7
-%define MCE_ACACIA_CHEST_BOAT            1 ; v1: mcpackets scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcpackets:8)
-%define MCE_ALLAY                        2 ; v1: mcpackets scratch #9
-%define MCE_AREA_EFFECT_CLOUD            3 ; v1: mcpackets scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (mcpackets:10)
-%define MCE_ARMADILLO                    4 ; v1: mcpackets scratch #11
-%define MCE_ARMOR_STAND                  5 ; v1: mcpackets scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcpackets:12)
-%define MCE_ARROW                        6 ; v1: mcpackets scratch #13
-%define MCE_AXOLOTL                      7 ; v1: mcpackets scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcpackets:14)
-%define MCE_BAMBOO_CHEST_RAFT            8 ; v1: mcpackets scratch #15
-%define MCE_BAMBOO_RAFT                  9 ; v1: mcpackets scratch #16
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mcpackets:16)
-%define MCE_BAT                          10 ; v1: mcpackets scratch #17
-%define MCE_BEE                          11 ; v1: mcpackets scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcpackets:18)
-%define MCE_BIRCH_BOAT                   12 ; v1: mcpackets scratch #19
-%define MCE_BIRCH_CHEST_BOAT             13 ; v1: mcpackets scratch #20
-    ; TODO: clamp index before table lookup on malformed input (mcpackets:20)
-%define MCE_BLAZE                        14 ; v1: mcpackets scratch #21
-%define MCE_BLOCK_DISPLAY                15 ; v1: mcpackets scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (mcpackets:22)
-%define MCE_BOGGED                       16 ; v1: mcpackets scratch #23
-%define MCE_BREEZE                       17 ; v1: mcpackets scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcpackets:24)
-%define MCE_BREEZE_WIND_CHARGE           18 ; v1: mcpackets scratch #25
-%define MCE_CAMEL                        19 ; v1: mcpackets scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (mcpackets:26)
-%define MCE_CAMEL_HUSK                   20 ; v1: mcpackets scratch #27
-%define MCE_CAT                          21 ; v1: mcpackets scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcpackets:28)
-%define MCE_CAVE_SPIDER                  22 ; v1: mcpackets scratch #29
-%define MCE_CHERRY_BOAT                  23 ; v1: mcpackets scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcpackets:30)
-%define MCE_CHERRY_CHEST_BOAT            24 ; v1: mcpackets scratch #31
-%define MCE_CHEST_MINECART               25 ; v1: mcpackets scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mcpackets:32)
-%define MCE_CHICKEN                      26 ; v1: mcpackets scratch #33
-%define MCE_COD                          27 ; v1: mcpackets scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcpackets:34)
-%define MCE_COPPER_GOLEM                 28 ; v1: mcpackets scratch #35
-%define MCE_COMMAND_BLOCK_MINECART       29 ; v1: mcpackets scratch #36
-    ; TODO: clamp index before table lookup on malformed input (mcpackets:36)
-%define MCE_COW                          30 ; v1: mcpackets scratch #37
-%define MCE_CREAKING                     31 ; v1: mcpackets scratch #38
-    ; TODO: verify 16-byte rsp alignment before inner call (mcpackets:38)
-%define MCE_CREEPER                      32 ; v1: mcpackets scratch #39
-%define MCE_DARK_OAK_BOAT                33 ; v1: mcpackets scratch #40
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcpackets:40)
-%define MCE_DARK_OAK_CHEST_BOAT          34 ; v1: mcpackets scratch #41
-%define MCE_DOLPHIN                      35 ; v1: mcpackets scratch #42
-    ; TODO: hoist invariant pointer load out of .loop (mcpackets:42)
-%define MCE_DONKEY                       36 ; v1: mcpackets scratch #43
+%define MCE_ACACIA_BOAT                  0
+%define MCE_ACACIA_CHEST_BOAT            1
+%define MCE_ALLAY                        2
+%define MCE_AREA_EFFECT_CLOUD            3
+%define MCE_ARMADILLO                    4
+%define MCE_ARMOR_STAND                  5
+%define MCE_ARROW                        6
+%define MCE_AXOLOTL                      7
+%define MCE_BAMBOO_CHEST_RAFT            8
+%define MCE_BAMBOO_RAFT                  9
+%define MCE_BAT                          10
+%define MCE_BEE                          11
+%define MCE_BIRCH_BOAT                   12
+%define MCE_BIRCH_CHEST_BOAT             13
+%define MCE_BLAZE                        14
+%define MCE_BLOCK_DISPLAY                15
+%define MCE_BOGGED                       16
+%define MCE_BREEZE                       17
+%define MCE_BREEZE_WIND_CHARGE           18
+%define MCE_CAMEL                        19
+%define MCE_CAMEL_HUSK                   20
+%define MCE_CAT                          21
+%define MCE_CAVE_SPIDER                  22
+%define MCE_CHERRY_BOAT                  23
+%define MCE_CHERRY_CHEST_BOAT            24
+%define MCE_CHEST_MINECART               25
+%define MCE_CHICKEN                      26
+%define MCE_COD                          27
+%define MCE_COPPER_GOLEM                 28
+%define MCE_COMMAND_BLOCK_MINECART       29
+%define MCE_COW                          30
+%define MCE_CREAKING                     31
+%define MCE_CREEPER                      32
+%define MCE_DARK_OAK_BOAT                33
+%define MCE_DARK_OAK_CHEST_BOAT          34
+%define MCE_DOLPHIN                      35
+%define MCE_DONKEY                       36
 %define MCE_DRAGON_FIREBALL              37
 %define MCE_DROWNED                      38
 %define MCE_EGG                          39
@@ -627,57 +606,3 @@
 %define MCE_FISHING_BOBBER               156
 
 %endif
-    ; v1 temporary guard (mcpackets #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (mcpackets #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (mcpackets #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (mcpackets #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (mcpackets #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (mcpackets #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (mcpackets #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (mcpackets #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (mcpackets #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (mcpackets #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (mcpackets #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (mcpackets #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (mcpackets #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (mcpackets #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (mcpackets #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (mcpackets #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (mcpackets #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (mcpackets #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (mcpackets #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (mcpackets #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (mcpackets #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (mcpackets #63)
-    xor     r11d, r11d ; clear v1 slot 63
-    ; v1 temporary guard (mcpackets #65)
-    xor     r11d, r11d ; clear v1 slot 65
-    ; v1 temporary guard (mcpackets #67)
-    xor     r11d, r11d ; clear v1 slot 67
-    ; v1 temporary guard (mcpackets #69)
-    xor     r11d, r11d ; clear v1 slot 69
-    ; v1 temporary guard (mcpackets #71)
-    xor     r11d, r11d ; clear v1 slot 71
-    ; v1 temporary guard (mcpackets #73)
-    xor     r11d, r11d ; clear v1 slot 73
