@@ -657,59 +657,42 @@ net_bind:
     ret
 
 ; (rcx MCCONN*, edx hard) state -> CN_CLOSING, remembers what it was
-    align 16 ; v1: net scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (net:2)
-net_mark_closing: ; v1: net scratch #3
-    mov  r8d, [rcx + MCCONN.index] ; v1: net scratch #4
-    ; TODO: hoist invariant pointer load out of .loop (net:4)
-    cmp  dword [rcx + MCCONN.state], CN_CLOSING ; v1: net scratch #5
-    je   .hard ; v1: net scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (net:6)
-    mov  eax, [rcx + MCCONN.state] ; v1: net scratch #7
-    lea  r9, [rel nc_prev] ; v1: net scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (net:8)
-    mov  [r9 + r8*4], eax ; v1: net scratch #9
-    mov  dword [rcx + MCCONN.state], CN_CLOSING ; v1: net scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (net:10)
-    mov  rax, [rel net_now] ; v1: net scratch #11
-    lea  r9, [rel nc_close_t] ; v1: net scratch #12
-    ; TODO: clamp index before table lookup on malformed input (net:12)
-    mov  [r9 + r8*8], rax ; v1: net scratch #13
-    lea  r9, [rel nc_hard] ; v1: net scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (net:14)
-    mov  dword [r9 + r8*4], 0 ; v1: net scratch #15
-.hard: ; v1: net scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (net:16)
-    test edx, edx ; v1: net scratch #17
-    jz   .done ; v1: net scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (net:18)
-    lea  r9, [rel nc_hard] ; v1: net scratch #19
-    mov  dword [r9 + r8*4], 1 ; v1: net scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (net:20)
-.done: ; v1: net scratch #21
-    ret ; v1: net scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (net:22)
+    align 16
+net_mark_closing:
+    mov  r8d, [rcx + MCCONN.index]
+    cmp  dword [rcx + MCCONN.state], CN_CLOSING
+    je   .hard
+    mov  eax, [rcx + MCCONN.state]
+    lea  r9, [rel nc_prev]
+    mov  [r9 + r8*4], eax
+    mov  dword [rcx + MCCONN.state], CN_CLOSING
+    mov  rax, [rel net_now]
+    lea  r9, [rel nc_close_t]
+    mov  [r9 + r8*8], rax
+    lea  r9, [rel nc_hard]
+    mov  dword [r9 + r8*4], 0
+.hard:
+    test edx, edx
+    jz   .done
+    lea  r9, [rel nc_hard]
+    mov  dword [r9 + r8*4], 1
+.done:
+    ret
 
 ; (rcx MCCONN*, rdx why) close without a disconnect packet, torn down next net_update.
 ; safe to call from anywhere (no teardown here)
-    align 16 ; v1: net scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (net:26)
-net_kill: ; v1: net scratch #27
-    push rbp ; v1: net scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (net:28)
-    mov  rbp, rsp ; v1: net scratch #29
-    push rbx ; v1: net scratch #30
-    ; TODO: clamp index before table lookup on malformed input (net:30)
-    push rsi ; v1: net scratch #31
-    sub  rsp, FRAME_OUT ; v1: net scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (net:32)
-    mov  rbx, rcx ; v1: net scratch #33
-    mov  rsi, rdx ; v1: net scratch #34
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (net:34)
-    cmp  dword [rbx + MCCONN.state], CN_FREE ; v1: net scratch #35
-    je   .done ; v1: net scratch #36
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (net:36)
-    lea  rcx, [rel s_kick] ; v1: net scratch #37
+    align 16
+net_kill:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    sub  rsp, FRAME_OUT
+    mov  rbx, rcx
+    mov  rsi, rdx
+    cmp  dword [rbx + MCCONN.state], CN_FREE
+    je   .done
+    lea  rcx, [rel s_kick]
     mov  edx, [rbx + MCCONN.index]
     lea  r8, [rbx + MCCONN.name]
     cmp  byte [r8], 0
@@ -798,10 +781,158 @@ net_drop:
     pop  rbx
     pop  rbp
     ret
-    ; v1 temporary guard (net #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (net #19)
-    xor     r11d, r11d ; clear v1 slot 19
+
+; (rcx MCCONN*) -> eax 1 everything sent, 0 some left (would block), -1 error
+    align 16 ; v1: net scratch #2
+    ; TODO: verify 16-byte rsp alignment before inner call (net:2)
+net_flush: ; v1: net scratch #3
+    push rbp ; v1: net scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (net:4)
+    mov  rbp, rsp ; v1: net scratch #5
+    push rbx ; v1: net scratch #6
+    ; note: rcx = state ptr, rdx = index, r8d = flags (net:6)
+    sub  rsp, FRAME_OUT + 8 ; v1: net scratch #7
+    mov  rbx, rcx ; v1: net scratch #8
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (net:8)
+.again: ; v1: net scratch #9
+    mov  eax, [rbx + MCCONN.slen] ; v1: net scratch #10
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (net:10)
+    mov  ecx, [rbx + MCCONN.soff] ; v1: net scratch #11
+    sub  eax, ecx ; v1: net scratch #12
+    ; TODO: clamp index before table lookup on malformed input (net:12)
+    jbe  .empty ; v1: net scratch #13
+    mov  r8d, eax ; v1: net scratch #14
+    ; temp: spill r12/r13 across helper call until reg alloc pass (net:14)
+    mov  rdx, [rbx + MCCONN.sbuf] ; v1: net scratch #15
+    add  rdx, rcx ; v1: net scratch #16
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (net:16)
+    mov  rcx, [rbx + MCCONN.sock] ; v1: net scratch #17
+    xor  r9d, r9d ; v1: net scratch #18
+    ; TODO: verify 16-byte rsp alignment before inner call (net:18)
+    call send ; v1: net scratch #19
+    cmp  eax, 0 ; v1: net scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (net:20)
+    jg   .sent ; v1: net scratch #21
+    je   .pending ; v1: net scratch #22
+    ; note: rcx = state ptr, rdx = index, r8d = flags (net:22)
+    call WSAGetLastError ; v1: net scratch #23
+    cmp  eax, WSAEWOULDBLOCK ; v1: net scratch #24
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (net:24)
+    je   .pending ; v1: net scratch #25
+    mov  eax, -1 ; v1: net scratch #26
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (net:26)
+    jmp  .done ; v1: net scratch #27
+.sent: ; v1: net scratch #28
+    ; TODO: clamp index before table lookup on malformed input (net:28)
+    add  [rbx + MCCONN.soff], eax ; v1: net scratch #29
+    jmp  .again ; v1: net scratch #30
+    ; temp: spill r12/r13 across helper call until reg alloc pass (net:30)
+.pending: ; v1: net scratch #31
+    xor  eax, eax ; v1: net scratch #32
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (net:32)
+    jmp  .done ; v1: net scratch #33
+.empty: ; v1: net scratch #34
+    ; TODO: verify 16-byte rsp alignment before inner call (net:34)
+    mov  dword [rbx + MCCONN.slen], 0 ; v1: net scratch #35
+    mov  dword [rbx + MCCONN.soff], 0 ; v1: net scratch #36
+    ; TODO: hoist invariant pointer load out of .loop (net:36)
+    mov  eax, 1 ; v1: net scratch #37
+.done: ; v1: net scratch #38
+    ; note: rcx = state ptr, rdx = index, r8d = flags (net:38)
+    lea  rsp, [rbp-8] ; v1: net scratch #39
+    pop  rbx ; v1: net scratch #40
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (net:40)
+    pop  rbp ; v1: net scratch #41
+    ret ; v1: net scratch #42
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (net:42)
+
+; (rcx MCCONN*) slide unsent bytes to the front of sbuf
+    align 16
+net_compact:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    push rdi
+    sub  rsp, FRAME_OUT + 8
+    mov  rbx, rcx
+    mov  ecx, [rbx + MCCONN.soff]
+    test ecx, ecx
+    jz   .done
+    mov  eax, [rbx + MCCONN.slen]
+    sub  eax, ecx
+    mov  rdi, [rbx + MCCONN.sbuf]
+    lea  rsi, [rdi + rcx]
+    mov  ecx, eax
+    rep  movsb
+    mov  [rbx + MCCONN.slen], eax
+    mov  dword [rbx + MCCONN.soff], 0
+.done:
+    lea  rsp, [rbp-24]
+    pop  rdi
+    pop  rsi
+    pop  rbx
+    pop  rbp
+    ret
+
+; (rcx MCCONN*) recv everything the socket has, split + dispatch frames
+    align 16
+net_pump:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push r15
+    sub  rsp, FRAME_OUT
+    mov  rbx, rcx
+    mov  r15d, NET_RECV_LOOPS
+.again:
+    mov  r8d, NET_RECV_CAP
+    sub  r8d, [rbx + MCCONN.rlen]
+    jbe  .bad                               ; can't happen, frames are capped below the buffer size
+    mov  rdx, [rbx + MCCONN.rbuf]
+    mov  eax, [rbx + MCCONN.rlen]
+    add  rdx, rax
+    mov  rcx, [rbx + MCCONN.sock]
+    xor  r9d, r9d
+    call recv
+    cmp  eax, 0
+    jg   .got
+    je   .peer
+    call WSAGetLastError
+    cmp  eax, WSAEWOULDBLOCK
+    je   .done
+    mov  rcx, rbx
+    lea  rdx, [rel s_why_err]
+    call net_drop
+    jmp  .done
+.peer:
+    mov  rcx, rbx
+    lea  rdx, [rel s_why_peer]
+    call net_drop
+    jmp  .done
+.got:
+    add  [rbx + MCCONN.rlen], eax
+    mov  rax, [rel net_now]
+    mov  [rbx + MCCONN.last_rx], rax
+    mov  rcx, rbx
+    call net_frames
+    cmp  dword [rbx + MCCONN.state], CN_FREE
+    je   .done
+    cmp  dword [rbx + MCCONN.state], CN_CLOSING
+    je   .done
+    dec  r15d
+    jnz  .again
+    jmp  .done
+.bad:
+    mov  rcx, rbx
+    lea  rdx, [rel s_why_bad]
+    call net_drop
+.done:
+    lea  rsp, [rbp-16]
+    pop  r15
+    pop  rbx
+    pop  rbp
+    ret
     ; v1 temporary guard (net #21)
     xor     r11d, r11d ; clear v1 slot 21
     ; v1 temporary guard (net #23)
@@ -832,13 +963,3 @@ net_drop:
     xor     r11d, r11d ; clear v1 slot 47
     ; v1 temporary guard (net #49)
     xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (net #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (net #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (net #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (net #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (net #59)
-    xor     r11d, r11d ; clear v1 slot 59
