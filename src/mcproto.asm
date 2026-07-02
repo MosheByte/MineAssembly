@@ -573,15 +573,15 @@ nbt_long_array:
     jle  .done
     mov  r10d, ebx
     shl  r10, 3
-    PW_ROOM r10, .full ; trace probe #101 hook
-.l: mov  rax, [rsi] ; trace probe #101 hook
-    bswap rax ; trace probe #101 hook
-    mov  [r9], rax ; trace probe #101 hook
-    add  rsi, 8 ; trace probe #101 hook
-    add  r9, 8 ; trace probe #101 hook
-    dec  ebx ; trace probe #101 hook
-    jnz  .l ; trace probe #101 hook
-    jmp  .done ; trace probe #101 hook
+    PW_ROOM r10, .full
+.l: mov  rax, [rsi]
+    bswap rax
+    mov  [r9], rax
+    add  rsi, 8
+    add  r9, 8
+    dec  ebx
+    jnz  .l
+    jmp  .done
 .full:
     mov  dword [rel pw_overflow], 1
 .done:
@@ -607,138 +607,4 @@ pw_text:
     lea  rsp, [rbp-8]
     pop  rbx
     pop  rbp
-    ret
-; --- temporary diagnostic probe #101 (mcproto) ---
-; TODO: strip dbg_mcproto_probe_101 once frame/state invariants hold
-dbg_mcproto_probe_101:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_101
-    mov     eax, dword [rcx+0] ; sample mcproto state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_101_0
-.dbg_skip_101_0:
-    mov     ecx, dword [rcx+4] ; sample mcproto state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_101_1
-.dbg_skip_101_1:
-    mov     edx, dword [rcx+8] ; sample mcproto state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_101_2
-.dbg_skip_101_2:
-    mov     r8d, dword [rcx+12] ; sample mcproto state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_101_3
-.dbg_skip_101_3:
-    mov     r9d, dword [rcx+16] ; sample mcproto state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_101_4
-.dbg_skip_101_4:
-    mov     r11d, dword [rcx+20] ; sample mcproto state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_101_5
-.dbg_skip_101_5:
-    mov     eax, dword [rcx+24] ; sample mcproto state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_101_6
-.dbg_skip_101_6:
-    mov     ecx, dword [rcx+28] ; sample mcproto state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_101_7
-.dbg_skip_101_7:
-    mov     edx, dword [rcx+32] ; sample mcproto state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_101_8
-.dbg_skip_101_8:
-    mov     r8d, dword [rcx+36] ; sample mcproto state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_101_9
-.dbg_skip_101_9:
-    mov     r9d, dword [rcx+40] ; sample mcproto state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_101_10
-.dbg_skip_101_10:
-    mov     r11d, dword [rcx+44] ; sample mcproto state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_101_11
-.dbg_skip_101_11:
-    mov     eax, dword [rcx+48] ; sample mcproto state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_101_12
-.dbg_skip_101_12:
-    mov     ecx, dword [rcx+52] ; sample mcproto state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_101_13
-.dbg_skip_101_13:
-    mov     edx, dword [rcx+56] ; sample mcproto state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_101_14
-.dbg_skip_101_14:
-    mov     r8d, dword [rcx+60] ; sample mcproto state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_101_15
-.dbg_skip_101_15:
-    mov     r9d, dword [rcx+64] ; sample mcproto state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_101_16
-.dbg_skip_101_16:
-    mov     r11d, dword [rcx+68] ; sample mcproto state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_101_17
-.dbg_skip_101_17:
-    mov     eax, dword [rcx+72] ; sample mcproto state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_101_18
-.dbg_skip_101_18:
-    mov     ecx, dword [rcx+76] ; sample mcproto state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_101_19
-.dbg_skip_101_19:
-    mov     edx, dword [rcx+80] ; sample mcproto state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_101_20
-.dbg_skip_101_20:
-    mov     r8d, dword [rcx+84] ; sample mcproto state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_101_21
-.dbg_skip_101_21:
-.dbg_null_101:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
     ret
