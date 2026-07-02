@@ -4,68 +4,50 @@
 ; big endian, varints 7 bits a byte low group first, strings varint length +
 ; utf-8. nbt strings are java "modified utf-8" (u16 length, astral chars as
 ; surrogate pairs) or emoji in chat kill the client.
-%define IMPL_MCPROTO ; v1: mcproto scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcproto:6)
-%include "common.inc" ; v1: mcproto scratch #7
-%include "net.inc" ; v1: mcproto scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (mcproto:8)
-%include "mcpackets.inc" ; v1: mcproto scratch #9
+%define IMPL_MCPROTO
+%include "common.inc"
+%include "net.inc"
+%include "mcpackets.inc"
 
-%define PW_CAP          (4*1024*1024) ; v1: mcproto scratch #11
+%define PW_CAP          (4*1024*1024)
 
-%define TAG_END         0 ; v1: mcproto scratch #13
-%define TAG_BYTE        1 ; v1: mcproto scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcproto:14)
-%define TAG_INT         3 ; v1: mcproto scratch #15
-%define TAG_STRING      8 ; v1: mcproto scratch #16
-    ; TODO: clamp index before table lookup on malformed input (mcproto:16)
-%define TAG_COMPOUND    10 ; v1: mcproto scratch #17
-%define TAG_LONG_ARRAY  12 ; v1: mcproto scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mcproto:18)
+%define TAG_END         0
+%define TAG_BYTE        1
+%define TAG_INT         3
+%define TAG_STRING      8
+%define TAG_COMPOUND    10
+%define TAG_LONG_ARRAY  12
 
-%define NAME_MAX        16 ; v1: mcproto scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (mcproto:20)
+%define NAME_MAX        16
 
 ; PROC without the global
-%macro LPROC 1-2 0 ; v1: mcproto scratch #23
-    align 16 ; v1: mcproto scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcproto:24)
-%1: ; v1: mcproto scratch #25
-    push rbp ; v1: mcproto scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcproto:26)
-    mov  rbp, rsp ; v1: mcproto scratch #27
-    push rbx ; v1: mcproto scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcproto:28)
-    push rsi ; v1: mcproto scratch #29
-    push rdi ; v1: mcproto scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (mcproto:30)
-    push r12 ; v1: mcproto scratch #31
-    push r13 ; v1: mcproto scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcproto:32)
-    push r14 ; v1: mcproto scratch #33
-    push r15 ; v1: mcproto scratch #34
-    ; TODO: clamp index before table lookup on malformed input (mcproto:34)
-    sub  rsp, (((%2)+15) & ~15) + FRAME_OUT + 8 ; v1: mcproto scratch #35
-%endmacro ; v1: mcproto scratch #36
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mcproto:36)
+%macro LPROC 1-2 0
+    align 16
+%1:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    push rdi
+    push r12
+    push r13
+    push r14
+    push r15
+    sub  rsp, (((%2)+15) & ~15) + FRAME_OUT + 8
+%endmacro
 
 ; PW_ROOM n, fail: reserve n bytes in g_pw -> r9 = where to write, len already
 ; bumped. no room -> jumps to fail. trashes rax rdx r8 r9
-%macro PW_ROOM 2 ; v1: mcproto scratch #40
-    ; TODO: verify 16-byte rsp alignment before inner call (mcproto:40)
-    lea  rdx, [rel g_pw] ; v1: mcproto scratch #41
-    mov  eax, [rdx+PKTW.len] ; v1: mcproto scratch #42
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcproto:42)
-    lea  r8, [rax+%1] ; v1: mcproto scratch #43
-    mov  r9d, [rdx+PKTW.cap] ; v1: mcproto scratch #44
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcproto:44)
-    cmp  r8, r9 ; v1: mcproto scratch #45
-    ja   %2 ; v1: mcproto scratch #46
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcproto:46)
-    mov  [rdx+PKTW.len], r8d ; v1: mcproto scratch #47
-    mov  r9, [rdx+PKTW.buf] ; v1: mcproto scratch #48
-    ; TODO: hoist invariant pointer load out of .loop (mcproto:48)
-    add  r9, rax ; v1: mcproto scratch #49
+%macro PW_ROOM 2
+    lea  rdx, [rel g_pw]
+    mov  eax, [rdx+PKTW.len]
+    lea  r8, [rax+%1]
+    mov  r9d, [rdx+PKTW.cap]
+    cmp  r8, r9
+    ja   %2
+    mov  [rdx+PKTW.len], r8d
+    mov  r9, [rdx+PKTW.buf]
+    add  r9, rax
 %endmacro
 
 ; PR_NEED n, fail: rcx = PKTR*. rax = where to read, p already moved.
@@ -305,37 +287,218 @@ LEAF pw_position
     mov  rcx, rax
     jmp  pw_i64
 
-    ; v1 temporary guard (mcproto #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (mcproto #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (mcproto #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (mcproto #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (mcproto #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (mcproto #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (mcproto #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (mcproto #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (mcproto #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (mcproto #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (mcproto #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (mcproto #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (mcproto #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (mcproto #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (mcproto #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (mcproto #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (mcproto #50)
-    xor     r11d, r11d ; clear v1 slot 50
+LEAF pw_uuid ; v1: mcproto scratch #0
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcproto:0)
+    mov  edx, 16 ; v1: mcproto scratch #1
+    jmp  pw_bytes ; v1: mcproto scratch #2
+    ; TODO: clamp index before table lookup on malformed input (mcproto:2)
+
+    global pw_bytes ; v1: mcproto scratch #4
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mcproto:4)
+    align 16 ; v1: mcproto scratch #5
+pw_bytes: ; v1: mcproto scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (mcproto:6)
+    push rbp ; v1: mcproto scratch #7
+    mov  rbp, rsp ; v1: mcproto scratch #8
+    ; TODO: hoist invariant pointer load out of .loop (mcproto:8)
+    push rsi ; v1: mcproto scratch #9
+    push rdi ; v1: mcproto scratch #10
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mcproto:10)
+    sub  rsp, FRAME_OUT ; v1: mcproto scratch #11
+    mov  rsi, rcx ; v1: mcproto scratch #12
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcproto:12)
+    mov  r10, rdx ; v1: mcproto scratch #13
+    test r10, r10 ; v1: mcproto scratch #14
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcproto:14)
+    jz   .done ; v1: mcproto scratch #15
+    PW_ROOM r10, .full ; v1: mcproto scratch #16
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcproto:16)
+    mov  rdi, r9 ; v1: mcproto scratch #17
+    mov  rcx, r10 ; v1: mcproto scratch #18
+    ; TODO: clamp index before table lookup on malformed input (mcproto:18)
+    rep  movsb ; v1: mcproto scratch #19
+    jmp  .done ; v1: mcproto scratch #20
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mcproto:20)
+.full: ; v1: mcproto scratch #21
+    mov  dword [rel pw_overflow], 1 ; v1: mcproto scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (mcproto:22)
+.done: ; v1: mcproto scratch #23
+    lea  rsp, [rbp-16] ; v1: mcproto scratch #24
+    ; TODO: hoist invariant pointer load out of .loop (mcproto:24)
+    pop  rdi ; v1: mcproto scratch #25
+    pop  rsi ; v1: mcproto scratch #26
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mcproto:26)
+    pop  rbp ; v1: mcproto scratch #27
+    ret ; v1: mcproto scratch #28
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcproto:28)
+
+    global pw_string ; v1: mcproto scratch #30
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcproto:30)
+    align 16 ; v1: mcproto scratch #31
+pw_string: ; v1: mcproto scratch #32
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcproto:32)
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    push rsi
+    sub  rsp, FRAME_OUT
+    mov  rbx, rcx
+    xor  esi, esi
+    test rbx, rbx
+    jz   .len
+.l: cmp  byte [rbx+rsi], 0
+    je   .len
+    inc  esi
+    jmp  .l
+.len:
+    mov  ecx, esi
+    call pw_varint
+    mov  rcx, rbx
+    mov  edx, esi
+    call pw_bytes
+    lea  rsp, [rbp-16]
+    pop  rsi
+    pop  rbx
+    pop  rbp
+    ret
+
+; nbt
+
+; (rcx zstr) u16 length + modified utf-8. 4 byte sequences become surrogate
+; pairs (6 bytes), output capped at 65535
+LPROC nbt_putstr
+    mov  rsi, rcx
+    xor  ebx, ebx
+    test rsi, rsi
+    jz   .sized
+.l: cmp  byte [rsi+rbx], 0
+    je   .sized
+    inc  rbx
+    jmp  .l
+.sized:
+    lea  r10, [rbx+rbx*2]           ; worst case is 1.5x, keep it simple
+    shr  r10, 1
+    add  r10, 2
+    PW_ROOM r10, .full
+    lea  rdi, [r9+2]
+    mov  r12, rdi                   ; start of the bytes
+    lea  r13, [rsi+rbx]             ; input end
+.ch:
+    cmp  rsi, r13
+    jae  .fin
+    movzx eax, byte [rsi]
+    cmp  eax, 0xF0
+    jb   .plain
+    cmp  eax, 0xF8
+    jae  .plain
+    lea  rdx, [rsi+4]
+    cmp  rdx, r13
+    ja   .plain
+    movzx ecx, byte [rsi+1]
+    movzx edx, byte [rsi+2]
+    movzx r8d, byte [rsi+3]
+    mov  r9d, ecx
+    or   r9d, edx
+    or   r9d, r8d
+    mov  r11d, ecx
+    and  r11d, edx
+    and  r11d, r8d
+    and  r9d, 0x40                  ; continuation bytes are 10xxxxxx
+    jnz  .plain
+    test r11d, 0x80
+    jz   .plain
+    and  eax, 7
+    shl  eax, 18
+    and  ecx, 0x3F
+    shl  ecx, 12
+    or   eax, ecx
+    and  edx, 0x3F
+    shl  edx, 6
+    or   eax, edx
+    and  r8d, 0x3F
+    or   eax, r8d
+    sub  eax, 0x10000
+    jb   .plain
+    mov  rdx, rdi
+    sub  rdx, r12
+    add  rdx, 6
+    cmp  rdx, 65535
+    ja   .fin
+    mov  r14d, eax
+    shr  eax, 10
+    add  eax, 0xD800
+    call .cesu
+    mov  eax, r14d
+    and  eax, 0x3FF
+    add  eax, 0xDC00
+    call .cesu
+    add  rsi, 4
+    jmp  .ch
+.plain:
+    mov  rdx, rdi
+    sub  rdx, r12
+    cmp  rdx, 65535
+    jae  .fin
+    mov  al, [rsi]
+    mov  [rdi], al
+    inc  rdi
+    inc  rsi
+    jmp  .ch
+.fin:
+    mov  rax, rdi
+    sub  rax, r12
+    rol  ax, 8
+    mov  [r12-2], ax
+    ; give back what the worst case reserved and we didn't use
+    mov  rax, rdi
+    lea  rdx, [rel g_pw]
+    sub  rax, [rdx+PKTW.buf]
+    mov  [rdx+PKTW.len], eax
+    jmp  .done
+.full:
+    mov  dword [rel pw_overflow], 1
+    jmp  .done
+; eax = utf-16 unit -> 3 bytes at rdi
+.cesu:
+    mov  ecx, eax
+    shr  ecx, 12
+    or   ecx, 0xE0
+    mov  [rdi], cl
+    mov  ecx, eax
+    shr  ecx, 6
+    and  ecx, 0x3F
+    or   ecx, 0x80
+    mov  [rdi+1], cl
+    and  eax, 0x3F
+    or   eax, 0x80
+    mov  [rdi+2], al
+    add  rdi, 3
+    ret
+    ; v1 temporary guard (mcproto #17)
+    xor     r11d, r11d ; clear v1 slot 17
+    ; v1 temporary guard (mcproto #19)
+    xor     r11d, r11d ; clear v1 slot 19
+    ; v1 temporary guard (mcproto #21)
+    xor     r11d, r11d ; clear v1 slot 21
+    ; v1 temporary guard (mcproto #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (mcproto #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (mcproto #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (mcproto #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (mcproto #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (mcproto #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (mcproto #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (mcproto #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (mcproto #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (mcproto #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (mcproto #43)
+    xor     r11d, r11d ; clear v1 slot 43
