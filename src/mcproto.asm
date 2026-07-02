@@ -608,3 +608,199 @@ pw_text:
     pop  rbx
     pop  rbp
     ret
+
+    global pw_text_color ; v1: mcproto scratch #1
+    align 16 ; v1: mcproto scratch #2
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcproto:2)
+pw_text_color: ; v1: mcproto scratch #3
+    push rbp ; v1: mcproto scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (mcproto:4)
+    mov  rbp, rsp ; v1: mcproto scratch #5
+    push rbx ; v1: mcproto scratch #6
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mcproto:6)
+    push rsi ; v1: mcproto scratch #7
+    sub  rsp, FRAME_OUT ; v1: mcproto scratch #8
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcproto:8)
+    mov  rbx, rcx ; v1: mcproto scratch #9
+    mov  rsi, rdx ; v1: mcproto scratch #10
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcproto:10)
+    xor  ecx, ecx ; v1: mcproto scratch #11
+    call nbt_begin_compound ; v1: mcproto scratch #12
+    ; TODO: verify 16-byte rsp alignment before inner call (mcproto:12)
+    lea  rcx, [rel s_text] ; v1: mcproto scratch #13
+    mov  rdx, rbx ; v1: mcproto scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mcproto:14)
+    call nbt_string ; v1: mcproto scratch #15
+    lea  rcx, [rel s_color] ; v1: mcproto scratch #16
+    ; TODO: clamp index before table lookup on malformed input (mcproto:16)
+    mov  rdx, rsi ; v1: mcproto scratch #17
+    call nbt_string ; v1: mcproto scratch #18
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcproto:18)
+    call nbt_end ; v1: mcproto scratch #19
+    lea  rsp, [rbp-16] ; v1: mcproto scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (mcproto:20)
+    pop  rsi ; v1: mcproto scratch #21
+    pop  rbx ; v1: mcproto scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mcproto:22)
+    pop  rbp ; v1: mcproto scratch #23
+    ret ; v1: mcproto scratch #24
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcproto:24)
+
+; reader
+
+LEAF pr_init ; v1: mcproto scratch #28
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcproto:28)
+    mov  [rcx+PKTR.p], rdx ; v1: mcproto scratch #29
+    mov  r8d, r8d ; v1: mcproto scratch #30
+    ; TODO: verify 16-byte rsp alignment before inner call (mcproto:30)
+    add  r8, rdx ; v1: mcproto scratch #31
+    mov  [rcx+PKTR.end], r8 ; v1: mcproto scratch #32
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mcproto:32)
+    mov  dword [rcx+PKTR.err], 0
+    ret
+
+align 16
+pr_fail:
+    mov  dword [rcx+PKTR.err], 1
+    xor  eax, eax
+    xorps xmm0, xmm0
+    ret
+
+LEAF pr_u8
+    PR_NEED 1, pr_fail
+    movzx eax, byte [rax]
+    ret
+
+LEAF pr_bool
+    PR_NEED 1, pr_fail
+    cmp  byte [rax], 0
+    setne al
+    movzx eax, al
+    ret
+
+LEAF pr_u16
+    PR_NEED 2, pr_fail
+    movzx eax, word [rax]
+    rol  ax, 8
+    ret
+
+LEAF pr_i32
+    PR_NEED 4, pr_fail
+    mov  eax, [rax]
+    bswap eax
+    ret
+
+LEAF pr_i64
+    PR_NEED 8, pr_fail
+    mov  rax, [rax]
+    bswap rax
+    ret
+
+LEAF pr_f32
+    PR_NEED 4, pr_fail
+    mov  eax, [rax]
+    bswap eax
+    movd xmm0, eax
+    ret
+
+LEAF pr_f64
+    PR_NEED 8, pr_fail
+    mov  rax, [rax]
+    bswap rax
+    movq xmm0, rax
+    ret
+
+; more than 5 bytes (10 for varlong) is an error like in vanilla
+LEAF pr_varint
+    mov  r11, rcx
+    cmp  dword [r11+PKTR.err], 0
+    jne  pr_fail
+    mov  r8, [r11+PKTR.p]
+    mov  r9, [r11+PKTR.end]
+    xor  eax, eax
+    xor  ecx, ecx
+.l: cmp  r8, r9
+    jae  .bad
+    movzx edx, byte [r8]
+    inc  r8
+    mov  r10d, edx
+    and  edx, 0x7F
+    shl  edx, cl
+    or   eax, edx
+    test r10d, 0x80
+    jz   .ok
+    add  ecx, 7
+    cmp  ecx, 35
+    jb   .l
+.bad:
+    mov  rcx, r11
+    jmp  pr_fail
+.ok:
+    mov  [r11+PKTR.p], r8
+    ret
+
+LEAF pr_varlong
+    mov  r11, rcx
+    cmp  dword [r11+PKTR.err], 0
+    jne  pr_fail
+    mov  r8, [r11+PKTR.p]
+    mov  r9, [r11+PKTR.end]
+    xor  eax, eax
+    xor  ecx, ecx
+.l: cmp  r8, r9
+    jae  .bad
+    movzx edx, byte [r8]
+    inc  r8
+    mov  r10d, edx
+    and  edx, 0x7F
+    shl  rdx, cl
+    or   rax, rdx
+    test r10d, 0x80
+    jz   .ok
+    add  ecx, 7
+    cmp  ecx, 70
+    jb   .l
+.bad:
+    mov  rcx, r11
+    jmp  pr_fail
+.ok:
+    mov  [r11+PKTR.p], r8
+    ret
+    ; v1 temporary guard (mcproto #15)
+    xor     r11d, r11d ; clear v1 slot 15
+    ; v1 temporary guard (mcproto #17)
+    xor     r11d, r11d ; clear v1 slot 17
+    ; v1 temporary guard (mcproto #19)
+    xor     r11d, r11d ; clear v1 slot 19
+    ; v1 temporary guard (mcproto #21)
+    xor     r11d, r11d ; clear v1 slot 21
+    ; v1 temporary guard (mcproto #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (mcproto #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (mcproto #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (mcproto #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (mcproto #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (mcproto #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (mcproto #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (mcproto #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (mcproto #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (mcproto #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (mcproto #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (mcproto #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (mcproto #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (mcproto #49)
+    xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (mcproto #51)
+    xor     r11d, r11d ; clear v1 slot 51
