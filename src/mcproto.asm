@@ -1224,69 +1224,49 @@ name_eq:
     ret
 
 ; (rcx a, rdx b) -> eax 1 if the zstrs match exactly
-align 16 ; v1: mcproto scratch #1
-zs_eq: ; v1: mcproto scratch #2
-    ; TODO: hoist invariant pointer load out of .loop (mcproto:2)
-.l: movzx eax, byte [rcx] ; v1: mcproto scratch #3
-    cmp  al, [rdx] ; v1: mcproto scratch #4
-    ; TODO: clamp index before table lookup on malformed input (mcproto:4)
-    jne  .no ; v1: mcproto scratch #5
-    inc  rcx ; v1: mcproto scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcproto:6)
-    inc  rdx ; v1: mcproto scratch #7
-    test eax, eax ; v1: mcproto scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcproto:8)
-    jnz  .l ; v1: mcproto scratch #9
-    mov  eax, 1 ; v1: mcproto scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcproto:10)
-    ret ; v1: mcproto scratch #11
-.no: ; v1: mcproto scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mcproto:12)
-    xor  eax, eax ; v1: mcproto scratch #13
-    ret ; v1: mcproto scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (mcproto:14)
+align 16
+zs_eq:
+.l: movzx eax, byte [rcx]
+    cmp  al, [rdx]
+    jne  .no
+    inc  rcx
+    inc  rdx
+    test eax, eax
+    jnz  .l
+    mov  eax, 1
+    ret
+.no:
+    xor  eax, eax
+    ret
 
 ; brand, feature flags, select_known_packs. registries, tags and finish go out
 ; once the client says which packs it has (mcp_config .packs), like vanilla
-    align 16 ; v1: mcproto scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcproto:18)
-mcp_config_start: ; v1: mcproto scratch #19
-    push rbp ; v1: mcproto scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (mcproto:20)
-    mov  rbp, rsp ; v1: mcproto scratch #21
-    push rbx ; v1: mcproto scratch #22
-    ; TODO: clamp index before table lookup on malformed input (mcproto:22)
-    sub  rsp, FRAME_OUT + 8 ; v1: mcproto scratch #23
-    mov  rbx, rcx ; v1: mcproto scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcproto:24)
-    mov  ecx, MCP_CONFIGURATION_S2C_CUSTOM_PAYLOAD ; v1: mcproto scratch #25
-    call pw_begin ; v1: mcproto scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcproto:26)
-    lea  rcx, [rel s_brand_ch] ; v1: mcproto scratch #27
-    call pw_string ; v1: mcproto scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcproto:28)
-    lea  rcx, [rel s_brand] ; v1: mcproto scratch #29
-    call pw_string ; v1: mcproto scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mcproto:30)
-    mov  rcx, rbx ; v1: mcproto scratch #31
-    call pw_send ; v1: mcproto scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (mcproto:32)
-    mov  ecx, MCP_CONFIGURATION_S2C_FEATURE_FLAGS ; v1: mcproto scratch #33
-    call pw_begin ; v1: mcproto scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcproto:34)
-    mov  ecx, 1 ; v1: mcproto scratch #35
-    call pw_varint ; v1: mcproto scratch #36
-    ; TODO: hoist invariant pointer load out of .loop (mcproto:36)
-    lea  rcx, [rel s_vanilla] ; v1: mcproto scratch #37
-    call pw_string ; v1: mcproto scratch #38
-    ; TODO: clamp index before table lookup on malformed input (mcproto:38)
-    mov  rcx, rbx ; v1: mcproto scratch #39
-    call pw_send ; v1: mcproto scratch #40
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcproto:40)
-    mov  rcx, rbx ; v1: mcproto scratch #41
-    call mcmap_send_known_packs ; v1: mcproto scratch #42
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcproto:42)
-    or   dword [rbx+MCCONN.flags], CF_PACKS ; v1: mcproto scratch #43
+    align 16
+mcp_config_start:
+    push rbp
+    mov  rbp, rsp
+    push rbx
+    sub  rsp, FRAME_OUT + 8
+    mov  rbx, rcx
+    mov  ecx, MCP_CONFIGURATION_S2C_CUSTOM_PAYLOAD
+    call pw_begin
+    lea  rcx, [rel s_brand_ch]
+    call pw_string
+    lea  rcx, [rel s_brand]
+    call pw_string
+    mov  rcx, rbx
+    call pw_send
+    mov  ecx, MCP_CONFIGURATION_S2C_FEATURE_FLAGS
+    call pw_begin
+    mov  ecx, 1
+    call pw_varint
+    lea  rcx, [rel s_vanilla]
+    call pw_string
+    mov  rcx, rbx
+    call pw_send
+    mov  rcx, rbx
+    call mcmap_send_known_packs
+    or   dword [rbx+MCCONN.flags], CF_PACKS
     lea  rsp, [rbp-8]
     pop  rbx
     pop  rbp
@@ -1423,8 +1403,170 @@ mcp_login:
 .badpkt:
     lea  rdx, [rel s_badlogin]
 .kick:
-    ; v1 temporary guard (mcproto #20)
-    xor     r11d, r11d ; clear v1 slot 20
+    mov  rcx, rbx ; v1: mcproto scratch #0
+    ; TODO: clamp index before table lookup on malformed input (mcproto:0)
+    call net_close ; v1: mcproto scratch #1
+.done: ; v1: mcproto scratch #2
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mcproto:2)
+    lea  rsp, [rbp-40] ; v1: mcproto scratch #3
+    pop  r13 ; v1: mcproto scratch #4
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcproto:4)
+    pop  r12 ; v1: mcproto scratch #5
+    pop  rdi ; v1: mcproto scratch #6
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mcproto:6)
+    pop  rsi ; v1: mcproto scratch #7
+    pop  rbx ; v1: mcproto scratch #8
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcproto:8)
+    pop  rbp ; v1: mcproto scratch #9
+    ret ; v1: mcproto scratch #10
+    ; TODO: verify 16-byte rsp alignment before inner call (mcproto:10)
+
+; (rcx conn, edx id, r8 reader)
+    align 16 ; v1: mcproto scratch #13
+mcp_config: ; v1: mcproto scratch #14
+    ; TODO: hoist invariant pointer load out of .loop (mcproto:14)
+    push rbp ; v1: mcproto scratch #15
+    mov  rbp, rsp ; v1: mcproto scratch #16
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcproto:16)
+    push rbx ; v1: mcproto scratch #17
+    push rsi ; v1: mcproto scratch #18
+    ; TODO: clamp index before table lookup on malformed input (mcproto:18)
+    push rdi ; v1: mcproto scratch #19
+    push r12 ; v1: mcproto scratch #20
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mcproto:20)
+    push r13 ; v1: mcproto scratch #21
+    sub  rsp, (((192)+15) & ~15) + FRAME_OUT + 8 ; v1: mcproto scratch #22
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcproto:22)
+    mov  rbx, rcx ; v1: mcproto scratch #23
+    mov  rdi, r8 ; v1: mcproto scratch #24
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mcproto:24)
+    cmp  edx, MCP_CONFIGURATION_C2S_FINISH_CONFIGURATION ; v1: mcproto scratch #25
+    je   .finish ; v1: mcproto scratch #26
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcproto:26)
+    cmp  edx, MCP_CONFIGURATION_C2S_SELECT_KNOWN_PACKS ; v1: mcproto scratch #27
+    je   .packs ; v1: mcproto scratch #28
+    ; TODO: verify 16-byte rsp alignment before inner call (mcproto:28)
+    cmp  edx, MCP_CONFIGURATION_C2S_SETTINGS ; v1: mcproto scratch #29
+    je   .settings ; v1: mcproto scratch #30
+    ; TODO: hoist invariant pointer load out of .loop (mcproto:30)
+    cmp  edx, MCP_CONFIGURATION_C2S_KEEP_ALIVE ; v1: mcproto scratch #31
+    je   .ka ; v1: mcproto scratch #32
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcproto:32)
+    jmp  .done ; v1: mcproto scratch #33
+.packs: ; v1: mcproto scratch #34
+    ; TODO: clamp index before table lookup on malformed input (mcproto:34)
+    ; the answer to our select_known_packs: [namespace, id, version]*. a vanilla
+    ; client lists minecraft:core 26.1 and then has every vanilla registry entry
+    ; and its data itself. junk or no core -> full nbt, which always works
+    test dword [rbx+MCCONN.flags], CF_PACKS ; v1: mcproto scratch #38
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mcproto:38)
+    jz   .done ; v1: mcproto scratch #39
+    and  dword [rbx+MCCONN.flags], ~CF_PACKS ; v1: mcproto scratch #40
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcproto:40)
+    xor  r12d, r12d ; v1: mcproto scratch #41
+    mov  rcx, rdi ; v1: mcproto scratch #42
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mcproto:42)
+    call pr_varint ; v1: mcproto scratch #43
+    mov  r13d, eax ; v1: mcproto scratch #44
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcproto:44)
+    cmp  dword [rdi+PKTR.err], 0 ; v1: mcproto scratch #45
+    jne  .packs_send ; v1: mcproto scratch #46
+    ; TODO: verify 16-byte rsp alignment before inner call (mcproto:46)
+    cmp  r13d, 64 ; v1: mcproto scratch #47
+    ja   .packs_send
+.pk:
+    test r13d, r13d
+    jz   .packs_send
+    mov  rcx, rdi
+    lea  rdx, LOC(0)
+    mov  r8d, 64
+    call pr_string
+    mov  rcx, rdi
+    lea  rdx, LOC(64)
+    mov  r8d, 64
+    call pr_string
+    mov  rcx, rdi
+    lea  rdx, LOC(128)
+    mov  r8d, 64
+    call pr_string
+    cmp  dword [rdi+PKTR.err], 0
+    jne  .packs_junk
+    lea  rcx, LOC(0)
+    lea  rdx, [rel s_core_ns]
+    call zs_eq
+    mov  esi, eax
+    lea  rcx, LOC(64)
+    lea  rdx, [rel s_core_id]
+    call zs_eq
+    and  esi, eax
+    lea  rcx, LOC(128)
+    lea  rdx, [rel s_core_ver]
+    call zs_eq
+    and  esi, eax
+    or   r12d, esi
+    dec  r13d
+    jmp  .pk
+.packs_junk:
+    xor  r12d, r12d
+.packs_send:
+    lea  rcx, [rel s_log_nocore]
+    lea  rax, [rel s_log_core]
+    test r12d, r12d
+    cmovnz rcx, rax
+    lea  rdx, [rbx+MCCONN.name]
+    call log_printf
+    mov  rcx, rbx
+    mov  edx, r12d
+    call mcmap_send_registries
+    mov  ecx, MCP_CONFIGURATION_S2C_FINISH_CONFIGURATION
+    call pw_begin
+    mov  rcx, rbx
+    call pw_send
+    or   dword [rbx+MCCONN.flags], CF_CFG_DONE
+    jmp  .done
+.settings:
+    mov  rcx, rdi
+    lea  rdx, LOC(0)
+    mov  r8d, 32
+    call pr_string                  ; locale
+    mov  rcx, rdi
+    call pr_u8
+    cmp  dword [rdi+PKTR.err], 0
+    jne  .done
+    movsx eax, al
+    mov  ecx, 2
+    cmp  eax, ecx
+    cmovl eax, ecx
+    mov  ecx, 32
+    cmp  eax, ecx
+    cmovg eax, ecx
+    mov  [rbx+MCCONN.view], eax
+    jmp  .done
+.ka:
+    mov  rcx, rdi
+    call pr_i64
+    cmp  dword [rdi+PKTR.err], 0
+    jne  .done
+    cmp  rax, [rbx+MCCONN.ka_id]
+    jne  .done
+    mov  qword [rbx+MCCONN.ka_time], 0
+    jmp  .done
+.finish:
+    test dword [rbx+MCCONN.flags], CF_CFG_DONE
+    jz   .done                      ; we haven't finished our side yet
+    and  dword [rbx+MCCONN.flags], ~CF_CFG_DONE
+    mov  dword [rbx+MCCONN.state], CN_PLAY
+    mov  rcx, rbx
+    call mcplay_join
+.done:
+    lea  rsp, [rbp-40]
+    pop  r13
+    pop  r12
+    pop  rdi
+    pop  rsi
+    pop  rbx
+    pop  rbp
+    ret
     ; v1 temporary guard (mcproto #22)
     xor     r11d, r11d ; clear v1 slot 22
     ; v1 temporary guard (mcproto #24)
@@ -1449,3 +1591,5 @@ mcp_login:
     xor     r11d, r11d ; clear v1 slot 42
     ; v1 temporary guard (mcproto #44)
     xor     r11d, r11d ; clear v1 slot 44
+    ; v1 temporary guard (mcproto #46)
+    xor     r11d, r11d ; clear v1 slot 46
