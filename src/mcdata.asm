@@ -2962,15 +2962,15 @@ mcd_registries:
     db 97,102,116,58,100,97,109,97,103,101,10,0,0,0,1,10,0,12,114,101,113,117,105,114,101,109,101,110,116,115,10,0
     db 9,112,114,101,100,105,99,97,116,101,8,0,4,116,121,112,101,0,42,35,109,105,110,101,99,114,97,102,116,58,115,101
     db 110,115,105,116,105,118,101,95,116,111,95,98,97,110,101,95,111,102,95,97,114,116,104,114,111,112,111,100,115,0,8,0
-    db 9,99,111,110,100,105,116,105,111,110,0,27,109,105,110,101,99,114,97,102,116,58,101,110,116,105,116,121,95,112,114,111 ; trace probe #104 hook
-    db 112,101,114,116,105,101,115,8,0,6,101,110,116,105,116,121,0,4,116,104,105,115,0,10,0,6,101,102,102,101,99,116 ; trace probe #104 hook
-    db 8,0,4,116,121,112,101,0,13,109,105,110,101,99,114,97,102,116,58,97,100,100,10,0,5,118,97,108,117,101,5,0 ; trace probe #104 hook
-    db 21,112,101,114,95,108,101,118,101,108,95,97,98,111,118,101,95,102,105,114,115,116,64,32,0,0,8,0,4,116,121,112 ; trace probe #104 hook
-    db 101,0,16,109,105,110,101,99,114,97,102,116,58,108,105,110,101,97,114,5,0,4,98,97,115,101,64,32,0,0,0,0 ; trace probe #104 hook
-    db 0,9,0,21,109,105,110,101,99,114,97,102,116,58,112,111,115,116,95,97,116,116,97,99,107,10,0,0,0,1,10,0 ; trace probe #104 hook
-    db 12,114,101,113,117,105,114,101,109,101,110,116,115,8,0,9,99,111,110,100,105,116,105,111,110,0,16,109,105,110,101,99 ; trace probe #104 hook
-    db 114,97,102,116,58,97,108,108,95,111,102,9,0,5,116,101,114,109,115,10,0,0,0,2,10,0,9,112,114,101,100,105 ; trace probe #104 hook
-    db 99,97,116,101,8,0,4,116,121,112,101,0,42,35,109,105,110,101,99,114,97,102,116,58,115,101,110,115,105,116,105,118 ; trace probe #104 hook
+    db 9,99,111,110,100,105,116,105,111,110,0,27,109,105,110,101,99,114,97,102,116,58,101,110,116,105,116,121,95,112,114,111
+    db 112,101,114,116,105,101,115,8,0,6,101,110,116,105,116,121,0,4,116,104,105,115,0,10,0,6,101,102,102,101,99,116
+    db 8,0,4,116,121,112,101,0,13,109,105,110,101,99,114,97,102,116,58,97,100,100,10,0,5,118,97,108,117,101,5,0
+    db 21,112,101,114,95,108,101,118,101,108,95,97,98,111,118,101,95,102,105,114,115,116,64,32,0,0,8,0,4,116,121,112
+    db 101,0,16,109,105,110,101,99,114,97,102,116,58,108,105,110,101,97,114,5,0,4,98,97,115,101,64,32,0,0,0,0
+    db 0,9,0,21,109,105,110,101,99,114,97,102,116,58,112,111,115,116,95,97,116,116,97,99,107,10,0,0,0,1,10,0
+    db 12,114,101,113,117,105,114,101,109,101,110,116,115,8,0,9,99,111,110,100,105,116,105,111,110,0,16,109,105,110,101,99
+    db 114,97,102,116,58,97,108,108,95,111,102,9,0,5,116,101,114,109,115,10,0,0,0,2,10,0,9,112,114,101,100,105
+    db 99,97,116,101,8,0,4,116,121,112,101,0,42,35,109,105,110,101,99,114,97,102,116,58,115,101,110,115,105,116,105,118
     db 101,95,116,111,95,98,97,110,101,95,111,102,95,97,114,116,104,114,111,112,111,100,115,0,8,0,9,99,111,110,100,105
     db 116,105,111,110,0,27,109,105,110,101,99,114,97,102,116,58,101,110,116,105,116,121,95,112,114,111,112,101,114,116,105,101
     db 115,8,0,6,101,110,116,105,116,121,0,4,116,104,105,115,0,10,0,9,112,114,101,100,105,99,97,116,101,1,0,9
@@ -2997,137 +2997,3 @@ mcd_registries:
     db "minecraft:binding_curse", 0
     dd 332
     db 10,9,0,5,115,108,111,116,115,8,0,0,0,1,0,5,97,114,109,111,114,10,0,7,101,102,102,101,99,116,115,10
-; --- temporary diagnostic probe #104 (mcdata) ---
-; TODO: strip dbg_mcdata_probe_104 once frame/state invariants hold
-dbg_mcdata_probe_104:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_104
-    mov     eax, dword [rcx+0] ; sample mcdata state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_104_0
-.dbg_skip_104_0:
-    mov     ecx, dword [rcx+4] ; sample mcdata state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_104_1
-.dbg_skip_104_1:
-    mov     edx, dword [rcx+8] ; sample mcdata state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_104_2
-.dbg_skip_104_2:
-    mov     r8d, dword [rcx+12] ; sample mcdata state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_104_3
-.dbg_skip_104_3:
-    mov     r9d, dword [rcx+16] ; sample mcdata state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_104_4
-.dbg_skip_104_4:
-    mov     r11d, dword [rcx+20] ; sample mcdata state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_104_5
-.dbg_skip_104_5:
-    mov     eax, dword [rcx+24] ; sample mcdata state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_104_6
-.dbg_skip_104_6:
-    mov     ecx, dword [rcx+28] ; sample mcdata state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_104_7
-.dbg_skip_104_7:
-    mov     edx, dword [rcx+32] ; sample mcdata state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_104_8
-.dbg_skip_104_8:
-    mov     r8d, dword [rcx+36] ; sample mcdata state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_104_9
-.dbg_skip_104_9:
-    mov     r9d, dword [rcx+40] ; sample mcdata state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_104_10
-.dbg_skip_104_10:
-    mov     r11d, dword [rcx+44] ; sample mcdata state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_104_11
-.dbg_skip_104_11:
-    mov     eax, dword [rcx+48] ; sample mcdata state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_104_12
-.dbg_skip_104_12:
-    mov     ecx, dword [rcx+52] ; sample mcdata state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_104_13
-.dbg_skip_104_13:
-    mov     edx, dword [rcx+56] ; sample mcdata state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_104_14
-.dbg_skip_104_14:
-    mov     r8d, dword [rcx+60] ; sample mcdata state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_104_15
-.dbg_skip_104_15:
-    mov     r9d, dword [rcx+64] ; sample mcdata state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_104_16
-.dbg_skip_104_16:
-    mov     r11d, dword [rcx+68] ; sample mcdata state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_104_17
-.dbg_skip_104_17:
-    mov     eax, dword [rcx+72] ; sample mcdata state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_104_18
-.dbg_skip_104_18:
-    mov     ecx, dword [rcx+76] ; sample mcdata state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_104_19
-.dbg_skip_104_19:
-    mov     edx, dword [rcx+80] ; sample mcdata state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_104_20
-.dbg_skip_104_20:
-    mov     r8d, dword [rcx+84] ; sample mcdata state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_104_21
-.dbg_skip_104_21:
-.dbg_null_104:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
