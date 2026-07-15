@@ -4887,15 +4887,15 @@ mcd_tags:
     dw 997, 1020, 1019, 1018, 1017, 1024, 1023, 1022, 1021, 1065, 1066, 1067, 1068, 1069, 1070, 1071, 1072, 1073, 1074, 1075, 1076, 1077, 1078, 1079
     dw 1080, 1049, 1050, 1052, 1051, 1053, 1054, 1056, 1055, 1057, 1058, 1060, 1059, 1061, 1062, 1064, 1063, 1159, 376, 378, 377, 380, 1081, 1082
     dw 1083, 1084, 1085, 1086, 1087, 1088, 1089, 1090, 1091, 1092, 1093, 1094, 1095, 1096, 1097, 1098, 1099, 1100, 1101, 1102, 1103, 1104, 849, 850
-    dw 851, 855, 852, 856, 853, 857, 854, 858, 350, 351, 355, 352, 356, 353, 357, 354, 358, 341, 342, 346, 343, 347, 344, 348 ; trace probe #105 hook
-    dw 345, 349 ; trace probe #105 hook
-    db "minecraft:mineable/shovel", 0 ; trace probe #105 hook
-    dw 36 ; trace probe #105 hook
-    dw 281, 9, 10, 11, 208, 8, 40, 373, 37, 39, 278, 276, 286, 666, 287, 1121, 59, 1122, 38, 41, 726, 727, 728, 729 ; trace probe #105 hook
-    dw 730, 731, 732, 733, 734, 735, 736, 737, 738, 739, 740, 741 ; trace probe #105 hook
-    db "minecraft:mob_interactable_doors", 0 ; trace probe #105 hook
-    dw 20 ; trace probe #105 hook
-    dw 220, 646, 647, 648, 649, 651, 652, 899, 900, 653, 654, 650, 1049, 1050, 1052, 1051, 1053, 1054, 1056, 1055 ; trace probe #105 hook
+    dw 851, 855, 852, 856, 853, 857, 854, 858, 350, 351, 355, 352, 356, 353, 357, 354, 358, 341, 342, 346, 343, 347, 344, 348
+    dw 345, 349
+    db "minecraft:mineable/shovel", 0
+    dw 36
+    dw 281, 9, 10, 11, 208, 8, 40, 373, 37, 39, 278, 276, 286, 666, 287, 1121, 59, 1122, 38, 41, 726, 727, 728, 729
+    dw 730, 731, 732, 733, 734, 735, 736, 737, 738, 739, 740, 741
+    db "minecraft:mob_interactable_doors", 0
+    dw 20
+    dw 220, 646, 647, 648, 649, 651, 652, 899, 900, 653, 654, 650, 1049, 1050, 1052, 1051, 1053, 1054, 1056, 1055
     db "minecraft:mooshrooms_spawnable_on", 0
     dw 1
     dw 373
@@ -4922,137 +4922,3 @@ mcd_tags:
     dw 1062, 1064, 1063, 1081, 1082, 1083, 1084, 1085, 1086, 1087, 1088, 1097, 1098, 1099, 1100, 1101, 1102, 1103, 1104
     db "minecraft:nether_carver_replaceables", 0
     dw 25
-; --- temporary diagnostic probe #105 (mcdata) ---
-; TODO: strip dbg_mcdata_probe_105 once frame/state invariants hold
-dbg_mcdata_probe_105:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_105
-    mov     eax, dword [rcx+0] ; sample mcdata state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_105_0
-.dbg_skip_105_0:
-    mov     ecx, dword [rcx+4] ; sample mcdata state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_105_1
-.dbg_skip_105_1:
-    mov     edx, dword [rcx+8] ; sample mcdata state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_105_2
-.dbg_skip_105_2:
-    mov     r8d, dword [rcx+12] ; sample mcdata state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_105_3
-.dbg_skip_105_3:
-    mov     r9d, dword [rcx+16] ; sample mcdata state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_105_4
-.dbg_skip_105_4:
-    mov     r11d, dword [rcx+20] ; sample mcdata state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_105_5
-.dbg_skip_105_5:
-    mov     eax, dword [rcx+24] ; sample mcdata state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_105_6
-.dbg_skip_105_6:
-    mov     ecx, dword [rcx+28] ; sample mcdata state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_105_7
-.dbg_skip_105_7:
-    mov     edx, dword [rcx+32] ; sample mcdata state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_105_8
-.dbg_skip_105_8:
-    mov     r8d, dword [rcx+36] ; sample mcdata state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_105_9
-.dbg_skip_105_9:
-    mov     r9d, dword [rcx+40] ; sample mcdata state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_105_10
-.dbg_skip_105_10:
-    mov     r11d, dword [rcx+44] ; sample mcdata state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_105_11
-.dbg_skip_105_11:
-    mov     eax, dword [rcx+48] ; sample mcdata state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_105_12
-.dbg_skip_105_12:
-    mov     ecx, dword [rcx+52] ; sample mcdata state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_105_13
-.dbg_skip_105_13:
-    mov     edx, dword [rcx+56] ; sample mcdata state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_105_14
-.dbg_skip_105_14:
-    mov     r8d, dword [rcx+60] ; sample mcdata state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_105_15
-.dbg_skip_105_15:
-    mov     r9d, dword [rcx+64] ; sample mcdata state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_105_16
-.dbg_skip_105_16:
-    mov     r11d, dword [rcx+68] ; sample mcdata state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_105_17
-.dbg_skip_105_17:
-    mov     eax, dword [rcx+72] ; sample mcdata state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_105_18
-.dbg_skip_105_18:
-    mov     ecx, dword [rcx+76] ; sample mcdata state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_105_19
-.dbg_skip_105_19:
-    mov     edx, dword [rcx+80] ; sample mcdata state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_105_20
-.dbg_skip_105_20:
-    mov     r8d, dword [rcx+84] ; sample mcdata state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_105_21
-.dbg_skip_105_21:
-.dbg_null_105:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
