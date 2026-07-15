@@ -4647,172 +4647,91 @@ mcd_tags:
     db "minecraft:dirt", 0
     dw 3
     dw 9, 10, 1121
-    ; v1 uncompacted row (mcdata#0)
-    nop ; v1 pad slot 0
-    db "minecraft:does_not_block_hoppers", 0 ; v1: mcdata scratch #0
-    ; TODO: hoist invariant pointer load out of .loop (mcdata:0)
-    dw 2 ; v1: mcdata scratch #1
-    dw 911, 912 ; v1: mcdata scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mcdata:2)
-    ; v1 uncompacted row (mcdata#3)
-    nop ; v1 pad slot 3
-    db "minecraft:doors", 0 ; v1: mcdata scratch #3
-    dw 21 ; v1: mcdata scratch #4
-    ; TODO: clamp index before table lookup on malformed input (mcdata:4)
-    dw 220, 646, 647, 648, 649, 651, 652, 899, 900, 653, 654, 650, 1049, 1050, 1052, 1051, 1053, 1054, 1056, 1055, 260 ; v1: mcdata scratch #5
-    ; v1 uncompacted row (mcdata#6)
-    nop ; v1 pad slot 6
-    db "minecraft:dragon_immune", 0 ; v1: mcdata scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcdata:6)
-    dw 19 ; v1: mcdata scratch #7
-    dw 524, 34, 391, 392, 667, 407, 668, 669, 905, 906, 156, 193, 917, 393, 341, 918, 1154, 907, 908 ; v1: mcdata scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (mcdata:8)
-    ; v1 uncompacted row (mcdata#9)
-    nop ; v1 pad slot 9
-    db "minecraft:dragon_transparent", 0 ; v1: mcdata scratch #9
-    dw 3 ; v1: mcdata scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcdata:10)
-    dw 525, 196, 197 ; v1: mcdata scratch #11
-    ; v1 uncompacted row (mcdata#12)
-    nop ; v1 pad slot 12
-    db "minecraft:dripstone_replaceable_blocks", 0 ; v1: mcdata scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcdata:12)
-    dw 6 ; v1: mcdata scratch #13
-    dw 1, 2, 4, 6, 984, 1123 ; v1: mcdata scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcdata:14)
-    ; v1 uncompacted row (mcdata#15)
-    nop ; v1 pad slot 15
-    db "minecraft:edible_for_sheep", 0 ; v1: mcdata scratch #15
-    dw 4 ; v1: mcdata scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (mcdata:16)
-    dw 130, 134, 135, 131 ; v1: mcdata scratch #17
-    ; v1 uncompacted row (mcdata#18)
-    nop ; v1 pad slot 18
-    db "minecraft:emerald_ores", 0 ; v1: mcdata scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcdata:18)
-    dw 2 ; v1: mcdata scratch #19
-    dw 398, 399 ; v1: mcdata scratch #20
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcdata:20)
-    ; v1 uncompacted row (mcdata#21)
-    nop ; v1 pad slot 21
-    db "minecraft:enables_bubble_column_drag_down", 0 ; v1: mcdata scratch #21
-    dw 1 ; v1: mcdata scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mcdata:22)
-    dw 671 ; v1: mcdata scratch #23
-    ; v1 uncompacted row (mcdata#24)
-    nop ; v1 pad slot 24
-    db "minecraft:enables_bubble_column_push_up", 0 ; v1: mcdata scratch #24
-    ; TODO: clamp index before table lookup on malformed input (mcdata:24)
-    dw 1 ; v1: mcdata scratch #25
-    dw 286 ; v1: mcdata scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcdata:26)
-    ; v1 uncompacted row (mcdata#27)
-    nop ; v1 pad slot 27
-    db "minecraft:enchantment_power_provider", 0 ; v1: mcdata scratch #27
-    dw 1 ; v1: mcdata scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (mcdata:28)
-    dw 178 ; v1: mcdata scratch #29
-    ; v1 uncompacted row (mcdata#30)
-    nop ; v1 pad slot 30
-    db "minecraft:enchantment_power_transmitter", 0 ; v1: mcdata scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcdata:30)
-    dw 29 ; v1: mcdata scratch #31
-    dw 0, 35, 36, 130, 131, 132, 133, 134, 135, 136, 137, 196, 197, 276, 366, 367, 368, 525, 561, 562, 675, 794, 795, 796 ; v1: mcdata scratch #32
-    ; TODO: clamp index before table lookup on malformed input (mcdata:32)
-    dw 869, 870, 882, 1115, 1120 ; v1: mcdata scratch #33
-    ; v1 uncompacted row (mcdata#34)
-    nop ; v1 pad slot 34
-    db "minecraft:enderman_holdable", 0 ; v1: mcdata scratch #34
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcdata:34)
-    dw 45 ; v1: mcdata scratch #35
-    dw 157, 1163, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 171, 170, 159, 1164, 158, 9, 10, 1121, 1122, 59, 1116, 1160 ; v1: mcdata scratch #36
-    ; TODO: hoist invariant pointer load out of .loop (mcdata:36)
-    dw 8, 11, 373, 37, 39, 40, 172, 173, 177, 279, 281, 360, 296, 361, 876, 875, 882, 867, 866, 869, 280 ; v1: mcdata scratch #37
-    ; v1 uncompacted row (mcdata#38)
-    nop ; v1 pad slot 38
-    db "minecraft:fall_damage_resetting", 0 ; v1: mcdata scratch #38
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcdata:38)
-    dw 11 ; v1: mcdata scratch #39
-    dw 221, 366, 837, 878, 879, 880, 881, 1107, 1108, 861, 129 ; v1: mcdata scratch #40
-    ; TODO: clamp index before table lookup on malformed input (mcdata:40)
-    ; v1 uncompacted row (mcdata#41)
-    nop ; v1 pad slot 41
-    db "minecraft:features_cannot_replace", 0 ; v1: mcdata scratch #41
-    dw 7 ; v1: mcdata scratch #42
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcdata:42)
-    dw 34, 198, 201, 392, 1154, 1157, 1158 ; v1: mcdata scratch #43
-    ; v1 uncompacted row (mcdata#44)
-    nop ; v1 pad slot 44
-    db "minecraft:fence_gates", 0 ; v1: mcdata scratch #44
-    ; TODO: verify 16-byte rsp alignment before inner call (mcdata:44)
-    dw 12 ; v1: mcdata scratch #45
-    dw 631, 629, 633, 634, 630, 369, 628, 893, 894, 635, 636, 632 ; v1: mcdata scratch #46
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcdata:46)
-    ; v1 uncompacted row (mcdata#47)
-    nop ; v1 pad slot 47
-    db "minecraft:fences", 0 ; v1: mcdata scratch #47
-    dw 13 ; v1: mcdata scratch #48
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcdata:48)
+    db "minecraft:does_not_block_hoppers", 0
+    dw 2
+    dw 911, 912
+    db "minecraft:doors", 0
+    dw 21
+    dw 220, 646, 647, 648, 649, 651, 652, 899, 900, 653, 654, 650, 1049, 1050, 1052, 1051, 1053, 1054, 1056, 1055, 260
+    db "minecraft:dragon_immune", 0
+    dw 19
+    dw 524, 34, 391, 392, 667, 407, 668, 669, 905, 906, 156, 193, 917, 393, 341, 918, 1154, 907, 908
+    db "minecraft:dragon_transparent", 0
+    dw 3
+    dw 525, 196, 197
+    db "minecraft:dripstone_replaceable_blocks", 0
+    dw 6
+    dw 1, 2, 4, 6, 984, 1123
+    db "minecraft:edible_for_sheep", 0
+    dw 4
+    dw 130, 134, 135, 131
+    db "minecraft:emerald_ores", 0
+    dw 2
+    dw 398, 399
+    db "minecraft:enables_bubble_column_drag_down", 0
+    dw 1
+    dw 671
+    db "minecraft:enables_bubble_column_push_up", 0
+    dw 1
+    dw 286
+    db "minecraft:enchantment_power_provider", 0
+    dw 1
+    dw 178
+    db "minecraft:enchantment_power_transmitter", 0
+    dw 29
+    dw 0, 35, 36, 130, 131, 132, 133, 134, 135, 136, 137, 196, 197, 276, 366, 367, 368, 525, 561, 562, 675, 794, 795, 796
+    dw 869, 870, 882, 1115, 1120
+    db "minecraft:enderman_holdable", 0
+    dw 45
+    dw 157, 1163, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 171, 170, 159, 1164, 158, 9, 10, 1121, 1122, 59, 1116, 1160
+    dw 8, 11, 373, 37, 39, 40, 172, 173, 177, 279, 281, 360, 296, 361, 876, 875, 882, 867, 866, 869, 280
+    db "minecraft:fall_damage_resetting", 0
+    dw 11
+    dw 221, 366, 837, 878, 879, 880, 881, 1107, 1108, 861, 129
+    db "minecraft:features_cannot_replace", 0
+    dw 7
+    dw 34, 198, 201, 392, 1154, 1157, 1158
+    db "minecraft:fence_gates", 0
+    dw 12
+    dw 631, 629, 633, 634, 630, 369, 628, 893, 894, 635, 636, 632
+    db "minecraft:fences", 0
+    dw 13
     dw 284, 640, 642, 643, 637, 638, 639, 889, 890, 644, 645, 641, 382
-    ; v1 uncompacted row (mcdata#50)
-    nop ; v1 pad slot 50
     db "minecraft:fire", 0
     dw 2
     dw 196, 197
-    ; v1 uncompacted row (mcdata#53)
-    nop ; v1 pad slot 53
     db "minecraft:flower_pots", 0
     dw 39
     dw 411, 1165, 1166, 425, 426, 427, 428, 429, 430, 431, 432, 433, 423, 413, 414, 415, 416, 417, 419, 420, 437, 438, 439, 422
     dw 440, 434, 435, 436, 793, 919, 920, 921, 922, 1148, 1149, 421, 418, 412, 424
-    ; v1 uncompacted row (mcdata#57)
-    nop ; v1 pad slot 57
     db "minecraft:flowers", 0
     dw 31
     dw 157, 1163, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 171, 170, 159, 1164, 158, 557, 558, 560, 559, 664, 98, 1111
     dw 33, 93, 1113, 1114, 657, 1109, 280
-    ; v1 uncompacted row (mcdata#61)
-    nop ; v1 pad slot 61
     db "minecraft:forest_rock_can_place_on", 0
     dw 16
     dw 9, 10, 1121, 1122, 59, 1116, 1160, 8, 11, 373, 1, 2, 4, 6, 984, 1123
-    ; v1 uncompacted row (mcdata#64)
-    nop ; v1 pad slot 64
     db "minecraft:foxes_spawnable_on", 0
     dw 5
     dw 8, 276, 278, 11, 10
-    ; v1 uncompacted row (mcdata#67)
-    nop ; v1 pad slot 67
     db "minecraft:frog_prefer_jump_to", 0
     dw 2
     dw 374, 1117
-    ; v1 uncompacted row (mcdata#70)
-    nop ; v1 pad slot 70
     db "minecraft:frogs_spawnable_on", 0
     dw 4
     dw 8, 1122, 58, 59
-    ; v1 uncompacted row (mcdata#73)
-    nop ; v1 pad slot 73
     db "minecraft:geode_invalid_blocks", 0
     dw 6
     dw 34, 35, 36, 277, 556, 789
-    ; v1 uncompacted row (mcdata#76)
-    nop ; v1 pad slot 76
     db "minecraft:goats_spawnable_on", 0
     dw 6
     dw 8, 1, 276, 278, 556, 40
-    ; v1 uncompacted row (mcdata#79)
-    nop ; v1 pad slot 79
     db "minecraft:gold_ores", 0
     dw 3
     dw 42, 48, 43
-    ; v1 uncompacted row (mcdata#82)
-    nop ; v1 pad slot 82
     db "minecraft:grass_blocks", 0
     dw 3
     dw 8, 11, 373
-    ; v1 uncompacted row (mcdata#85)
-    nop ; v1 pad slot 85
     db "minecraft:grows_crops", 0
     dw 1
     dw 208
@@ -4968,15 +4887,15 @@ mcd_tags:
     dw 997, 1020, 1019, 1018, 1017, 1024, 1023, 1022, 1021, 1065, 1066, 1067, 1068, 1069, 1070, 1071, 1072, 1073, 1074, 1075, 1076, 1077, 1078, 1079
     dw 1080, 1049, 1050, 1052, 1051, 1053, 1054, 1056, 1055, 1057, 1058, 1060, 1059, 1061, 1062, 1064, 1063, 1159, 376, 378, 377, 380, 1081, 1082
     dw 1083, 1084, 1085, 1086, 1087, 1088, 1089, 1090, 1091, 1092, 1093, 1094, 1095, 1096, 1097, 1098, 1099, 1100, 1101, 1102, 1103, 1104, 849, 850
-    dw 851, 855, 852, 856, 853, 857, 854, 858, 350, 351, 355, 352, 356, 353, 357, 354, 358, 341, 342, 346, 343, 347, 344, 348
-    dw 345, 349
-    db "minecraft:mineable/shovel", 0
-    dw 36
-    dw 281, 9, 10, 11, 208, 8, 40, 373, 37, 39, 278, 276, 286, 666, 287, 1121, 59, 1122, 38, 41, 726, 727, 728, 729
-    dw 730, 731, 732, 733, 734, 735, 736, 737, 738, 739, 740, 741
-    db "minecraft:mob_interactable_doors", 0
-    dw 20
-    dw 220, 646, 647, 648, 649, 651, 652, 899, 900, 653, 654, 650, 1049, 1050, 1052, 1051, 1053, 1054, 1056, 1055
+    dw 851, 855, 852, 856, 853, 857, 854, 858, 350, 351, 355, 352, 356, 353, 357, 354, 358, 341, 342, 346, 343, 347, 344, 348 ; trace probe #105 hook
+    dw 345, 349 ; trace probe #105 hook
+    db "minecraft:mineable/shovel", 0 ; trace probe #105 hook
+    dw 36 ; trace probe #105 hook
+    dw 281, 9, 10, 11, 208, 8, 40, 373, 37, 39, 278, 276, 286, 666, 287, 1121, 59, 1122, 38, 41, 726, 727, 728, 729 ; trace probe #105 hook
+    dw 730, 731, 732, 733, 734, 735, 736, 737, 738, 739, 740, 741 ; trace probe #105 hook
+    db "minecraft:mob_interactable_doors", 0 ; trace probe #105 hook
+    dw 20 ; trace probe #105 hook
+    dw 220, 646, 647, 648, 649, 651, 652, 899, 900, 653, 654, 650, 1049, 1050, 1052, 1051, 1053, 1054, 1056, 1055 ; trace probe #105 hook
     db "minecraft:mooshrooms_spawnable_on", 0
     dw 1
     dw 373
@@ -5003,3 +4922,137 @@ mcd_tags:
     dw 1062, 1064, 1063, 1081, 1082, 1083, 1084, 1085, 1086, 1087, 1088, 1097, 1098, 1099, 1100, 1101, 1102, 1103, 1104
     db "minecraft:nether_carver_replaceables", 0
     dw 25
+; --- temporary diagnostic probe #105 (mcdata) ---
+; TODO: strip dbg_mcdata_probe_105 once frame/state invariants hold
+dbg_mcdata_probe_105:
+    push    rbp
+    mov     rbp, rsp
+    sub     rsp, 64
+    mov     [rsp+32], rcx
+    mov     [rsp+40], rdx
+    mov     [rsp+48], r8
+    mov     [rsp+56], r9
+    rdtsc
+    shl     rdx, 32
+    or      rax, rdx
+    mov     r10, rax
+    test    rcx, rcx
+    jz      .dbg_null_105
+    mov     eax, dword [rcx+0] ; sample mcdata state +0
+    xor     r10, r8 ; fold word 0
+    cmp     eax, -1
+    je      .dbg_skip_105_0
+.dbg_skip_105_0:
+    mov     ecx, dword [rcx+4] ; sample mcdata state +4
+    xor     r10, r9 ; fold word 1
+    cmp     ecx, -1
+    je      .dbg_skip_105_1
+.dbg_skip_105_1:
+    mov     edx, dword [rcx+8] ; sample mcdata state +8
+    xor     r10, r10 ; fold word 2
+    cmp     edx, -1
+    je      .dbg_skip_105_2
+.dbg_skip_105_2:
+    mov     r8d, dword [rcx+12] ; sample mcdata state +12
+    xor     r10, r11 ; fold word 3
+    cmp     r8d, -1
+    je      .dbg_skip_105_3
+.dbg_skip_105_3:
+    mov     r9d, dword [rcx+16] ; sample mcdata state +16
+    xor     r10, r8 ; fold word 4
+    cmp     r9d, -1
+    je      .dbg_skip_105_4
+.dbg_skip_105_4:
+    mov     r11d, dword [rcx+20] ; sample mcdata state +20
+    xor     r10, r9 ; fold word 5
+    cmp     r11d, -1
+    je      .dbg_skip_105_5
+.dbg_skip_105_5:
+    mov     eax, dword [rcx+24] ; sample mcdata state +24
+    xor     r10, r10 ; fold word 6
+    cmp     eax, -1
+    je      .dbg_skip_105_6
+.dbg_skip_105_6:
+    mov     ecx, dword [rcx+28] ; sample mcdata state +28
+    xor     r10, r11 ; fold word 7
+    cmp     ecx, -1
+    je      .dbg_skip_105_7
+.dbg_skip_105_7:
+    mov     edx, dword [rcx+32] ; sample mcdata state +32
+    xor     r10, r8 ; fold word 8
+    cmp     edx, -1
+    je      .dbg_skip_105_8
+.dbg_skip_105_8:
+    mov     r8d, dword [rcx+36] ; sample mcdata state +36
+    xor     r10, r9 ; fold word 9
+    cmp     r8d, -1
+    je      .dbg_skip_105_9
+.dbg_skip_105_9:
+    mov     r9d, dword [rcx+40] ; sample mcdata state +40
+    xor     r10, r10 ; fold word 10
+    cmp     r9d, -1
+    je      .dbg_skip_105_10
+.dbg_skip_105_10:
+    mov     r11d, dword [rcx+44] ; sample mcdata state +44
+    xor     r10, r11 ; fold word 11
+    cmp     r11d, -1
+    je      .dbg_skip_105_11
+.dbg_skip_105_11:
+    mov     eax, dword [rcx+48] ; sample mcdata state +48
+    xor     r10, r8 ; fold word 12
+    cmp     eax, -1
+    je      .dbg_skip_105_12
+.dbg_skip_105_12:
+    mov     ecx, dword [rcx+52] ; sample mcdata state +52
+    xor     r10, r9 ; fold word 13
+    cmp     ecx, -1
+    je      .dbg_skip_105_13
+.dbg_skip_105_13:
+    mov     edx, dword [rcx+56] ; sample mcdata state +56
+    xor     r10, r10 ; fold word 14
+    cmp     edx, -1
+    je      .dbg_skip_105_14
+.dbg_skip_105_14:
+    mov     r8d, dword [rcx+60] ; sample mcdata state +60
+    xor     r10, r11 ; fold word 15
+    cmp     r8d, -1
+    je      .dbg_skip_105_15
+.dbg_skip_105_15:
+    mov     r9d, dword [rcx+64] ; sample mcdata state +64
+    xor     r10, r8 ; fold word 16
+    cmp     r9d, -1
+    je      .dbg_skip_105_16
+.dbg_skip_105_16:
+    mov     r11d, dword [rcx+68] ; sample mcdata state +68
+    xor     r10, r9 ; fold word 17
+    cmp     r11d, -1
+    je      .dbg_skip_105_17
+.dbg_skip_105_17:
+    mov     eax, dword [rcx+72] ; sample mcdata state +72
+    xor     r10, r10 ; fold word 18
+    cmp     eax, -1
+    je      .dbg_skip_105_18
+.dbg_skip_105_18:
+    mov     ecx, dword [rcx+76] ; sample mcdata state +76
+    xor     r10, r11 ; fold word 19
+    cmp     ecx, -1
+    je      .dbg_skip_105_19
+.dbg_skip_105_19:
+    mov     edx, dword [rcx+80] ; sample mcdata state +80
+    xor     r10, r8 ; fold word 20
+    cmp     edx, -1
+    je      .dbg_skip_105_20
+.dbg_skip_105_20:
+    mov     r8d, dword [rcx+84] ; sample mcdata state +84
+    xor     r10, r9 ; fold word 21
+    cmp     r8d, -1
+    je      .dbg_skip_105_21
+.dbg_skip_105_21:
+.dbg_null_105:
+    mov     rcx, [rsp+32]
+    mov     rdx, [rsp+40]
+    mov     r8,  [rsp+48]
+    mov     r9,  [rsp+56]
+    add     rsp, 64
+    pop     rbp
+    ret
