@@ -4097,168 +4097,65 @@ mcd_registries:
     db 101,0,32,106,117,107,101,98,111,120,95,115,111,110,103,46,109,105,110,101,99,114,97,102,116,46,111,116,104,101,114,115
     db 105,100,101,0,3,0,17,99,111,109,112,97,114,97,116,111,114,95,111,117,116,112,117,116,0,0,0,14,0
     db "minecraft:pigstep", 0
-    ; v1 uncompacted row (mcdata#0)
-    nop ; v1 pad slot 0
-    dd 153 ; v1: mcdata scratch #0
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcdata:0)
-    ; v1 uncompacted row (mcdata#1)
-    nop ; v1 pad slot 1
-    db 10,8,0,11,115,111,117,110,100,95,101,118,101,110,116,0,28,109,105,110,101,99,114,97,102,116,58,109,117,115,105,99 ; v1: mcdata scratch #1
-    ; v1 uncompacted row (mcdata#2)
-    nop ; v1 pad slot 2
-    db 95,100,105,115,99,46,112,105,103,115,116,101,112,5,0,17,108,101,110,103,116,104,95,105,110,95,115,101,99,111,110,100 ; v1: mcdata scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcdata:2)
-    ; v1 uncompacted row (mcdata#3)
-    nop ; v1 pad slot 3
-    db 115,67,21,0,0,10,0,11,100,101,115,99,114,105,112,116,105,111,110,8,0,9,116,114,97,110,115,108,97,116,101,0 ; v1: mcdata scratch #3
-    ; v1 uncompacted row (mcdata#4)
-    nop ; v1 pad slot 4
-    db 30,106,117,107,101,98,111,120,95,115,111,110,103,46,109,105,110,101,99,114,97,102,116,46,112,105,103,115,116,101,112,0 ; v1: mcdata scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcdata:4)
-    ; v1 uncompacted row (mcdata#5)
-    nop ; v1 pad slot 5
-    db 3,0,17,99,111,109,112,97,114,97,116,111,114,95,111,117,116,112,117,116,0,0,0,13,0 ; v1: mcdata scratch #5
-    ; v1 uncompacted row (mcdata#6)
-    nop ; v1 pad slot 6
-    db "minecraft:precipice", 0 ; v1: mcdata scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcdata:6)
-    ; v1 uncompacted row (mcdata#7)
-    nop ; v1 pad slot 7
-    dd 157 ; v1: mcdata scratch #7
-    ; v1 uncompacted row (mcdata#8)
-    nop ; v1 pad slot 8
-    db 10,8,0,11,115,111,117,110,100,95,101,118,101,110,116,0,30,109,105,110,101,99,114,97,102,116,58,109,117,115,105,99 ; v1: mcdata scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mcdata:8)
-    ; v1 uncompacted row (mcdata#9)
-    nop ; v1 pad slot 9
-    db 95,100,105,115,99,46,112,114,101,99,105,112,105,99,101,5,0,17,108,101,110,103,116,104,95,105,110,95,115,101,99,111 ; v1: mcdata scratch #9
-    ; v1 uncompacted row (mcdata#10)
-    nop ; v1 pad slot 10
-    db 110,100,115,67,149,128,0,10,0,11,100,101,115,99,114,105,112,116,105,111,110,8,0,9,116,114,97,110,115,108,97,116 ; v1: mcdata scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (mcdata:10)
-    ; v1 uncompacted row (mcdata#11)
-    nop ; v1 pad slot 11
-    db 101,0,32,106,117,107,101,98,111,120,95,115,111,110,103,46,109,105,110,101,99,114,97,102,116,46,112,114,101,99,105,112 ; v1: mcdata scratch #11
-    ; v1 uncompacted row (mcdata#12)
-    nop ; v1 pad slot 12
-    db 105,99,101,0,3,0,17,99,111,109,112,97,114,97,116,111,114,95,111,117,116,112,117,116,0,0,0,13,0 ; v1: mcdata scratch #12
-    ; TODO: clamp index before table lookup on malformed input (mcdata:12)
-    ; v1 uncompacted row (mcdata#13)
-    nop ; v1 pad slot 13
-    db "minecraft:relic", 0 ; v1: mcdata scratch #13
-    ; v1 uncompacted row (mcdata#14)
-    nop ; v1 pad slot 14
-    dd 149 ; v1: mcdata scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (mcdata:14)
-    ; v1 uncompacted row (mcdata#15)
-    nop ; v1 pad slot 15
-    db 10,8,0,11,115,111,117,110,100,95,101,118,101,110,116,0,26,109,105,110,101,99,114,97,102,116,58,109,117,115,105,99 ; v1: mcdata scratch #15
-    ; v1 uncompacted row (mcdata#16)
-    nop ; v1 pad slot 16
-    db 95,100,105,115,99,46,114,101,108,105,99,5,0,17,108,101,110,103,116,104,95,105,110,95,115,101,99,111,110,100,115,67 ; v1: mcdata scratch #16
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcdata:16)
-    ; v1 uncompacted row (mcdata#17)
-    nop ; v1 pad slot 17
-    db 90,0,0,10,0,11,100,101,115,99,114,105,112,116,105,111,110,8,0,9,116,114,97,110,115,108,97,116,101,0,28,106 ; v1: mcdata scratch #17
-    ; v1 uncompacted row (mcdata#18)
-    nop ; v1 pad slot 18
-    db 117,107,101,98,111,120,95,115,111,110,103,46,109,105,110,101,99,114,97,102,116,46,114,101,108,105,99,0,3,0,17,99 ; v1: mcdata scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcdata:18)
-    ; v1 uncompacted row (mcdata#19)
-    nop ; v1 pad slot 19
-    db 111,109,112,97,114,97,116,111,114,95,111,117,116,112,117,116,0,0,0,14,0 ; v1: mcdata scratch #19
-    ; v1 uncompacted row (mcdata#20)
-    nop ; v1 pad slot 20
-    db "minecraft:stal", 0 ; v1: mcdata scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcdata:20)
-    ; v1 uncompacted row (mcdata#21)
-    nop ; v1 pad slot 21
-    dd 147 ; v1: mcdata scratch #21
-    ; v1 uncompacted row (mcdata#22)
-    nop ; v1 pad slot 22
-    db 10,8,0,11,115,111,117,110,100,95,101,118,101,110,116,0,25,109,105,110,101,99,114,97,102,116,58,109,117,115,105,99 ; v1: mcdata scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcdata:22)
-    ; v1 uncompacted row (mcdata#23)
-    nop ; v1 pad slot 23
-    db 95,100,105,115,99,46,115,116,97,108,5,0,17,108,101,110,103,116,104,95,105,110,95,115,101,99,111,110,100,115,67,22 ; v1: mcdata scratch #23
-    ; v1 uncompacted row (mcdata#24)
-    nop ; v1 pad slot 24
-    db 0,0,10,0,11,100,101,115,99,114,105,112,116,105,111,110,8,0,9,116,114,97,110,115,108,97,116,101,0,27,106,117 ; v1: mcdata scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mcdata:24)
-    ; v1 uncompacted row (mcdata#25)
-    nop ; v1 pad slot 25
-    db 107,101,98,111,120,95,115,111,110,103,46,109,105,110,101,99,114,97,102,116,46,115,116,97,108,0,3,0,17,99,111,109 ; v1: mcdata scratch #25
-    ; v1 uncompacted row (mcdata#26)
-    nop ; v1 pad slot 26
-    db 112,97,114,97,116,111,114,95,111,117,116,112,117,116,0,0,0,8,0 ; v1: mcdata scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (mcdata:26)
-    ; v1 uncompacted row (mcdata#27)
-    nop ; v1 pad slot 27
-    db "minecraft:strad", 0 ; v1: mcdata scratch #27
-    ; v1 uncompacted row (mcdata#28)
-    nop ; v1 pad slot 28
-    dd 149 ; v1: mcdata scratch #28
-    ; TODO: clamp index before table lookup on malformed input (mcdata:28)
-    ; v1 uncompacted row (mcdata#29)
-    nop ; v1 pad slot 29
-    db 10,8,0,11,115,111,117,110,100,95,101,118,101,110,116,0,26,109,105,110,101,99,114,97,102,116,58,109,117,115,105,99 ; v1: mcdata scratch #29
-    ; v1 uncompacted row (mcdata#30)
-    nop ; v1 pad slot 30
-    db 95,100,105,115,99,46,115,116,114,97,100,5,0,17,108,101,110,103,116,104,95,105,110,95,115,101,99,111,110,100,115,67 ; v1: mcdata scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (mcdata:30)
-    ; v1 uncompacted row (mcdata#31)
-    nop ; v1 pad slot 31
-    db 60,0,0,10,0,11,100,101,115,99,114,105,112,116,105,111,110,8,0,9,116,114,97,110,115,108,97,116,101,0,28,106 ; v1: mcdata scratch #31
-    ; v1 uncompacted row (mcdata#32)
-    nop ; v1 pad slot 32
-    db 117,107,101,98,111,120,95,115,111,110,103,46,109,105,110,101,99,114,97,102,116,46,115,116,114,97,100,0,3,0,17,99 ; v1: mcdata scratch #32
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcdata:32)
-    ; v1 uncompacted row (mcdata#33)
-    nop ; v1 pad slot 33
-    db 111,109,112,97,114,97,116,111,114,95,111,117,116,112,117,116,0,0,0,9,0 ; v1: mcdata scratch #33
-    ; v1 uncompacted row (mcdata#34)
-    nop ; v1 pad slot 34
-    db "minecraft:tears", 0 ; v1: mcdata scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcdata:34)
-    ; v1 uncompacted row (mcdata#35)
-    nop ; v1 pad slot 35
-    dd 149 ; v1: mcdata scratch #35
-    ; v1 uncompacted row (mcdata#36)
-    nop ; v1 pad slot 36
-    db 10,8,0,11,115,111,117,110,100,95,101,118,101,110,116,0,26,109,105,110,101,99,114,97,102,116,58,109,117,115,105,99 ; v1: mcdata scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcdata:36)
-    ; v1 uncompacted row (mcdata#37)
-    nop ; v1 pad slot 37
-    db 95,100,105,115,99,46,116,101,97,114,115,5,0,17,108,101,110,103,116,104,95,105,110,95,115,101,99,111,110,100,115,67 ; v1: mcdata scratch #37
-    ; v1 uncompacted row (mcdata#38)
-    nop ; v1 pad slot 38
-    db 47,0,0,10,0,11,100,101,115,99,114,105,112,116,105,111,110,8,0,9,116,114,97,110,115,108,97,116,101,0,28,106 ; v1: mcdata scratch #38
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcdata:38)
-    ; v1 uncompacted row (mcdata#39)
-    nop ; v1 pad slot 39
-    db 117,107,101,98,111,120,95,115,111,110,103,46,109,105,110,101,99,114,97,102,116,46,116,101,97,114,115,0,3,0,17,99 ; v1: mcdata scratch #39
-    ; v1 uncompacted row (mcdata#40)
-    nop ; v1 pad slot 40
-    db 111,109,112,97,114,97,116,111,114,95,111,117,116,112,117,116,0,0,0,10,0 ; v1: mcdata scratch #40
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mcdata:40)
-    db "minecraft:wait", 0 ; v1: mcdata scratch #41
-    dd 147 ; v1: mcdata scratch #42
-    db 10,8,0,11,115,111,117,110,100,95,101,118,101,110,116,0,25,109,105,110,101,99,114,97,102,116,58,109,117,115,105,99 ; v1: mcdata scratch #43
-    db 95,100,105,115,99,46,119,97,105,116,5,0,17,108,101,110,103,116,104,95,105,110,95,115,101,99,111,110,100,115,67,110 ; v1: mcdata scratch #44
-    db 0,0,10,0,11,100,101,115,99,114,105,112,116,105,111,110,8,0,9,116,114,97,110,115,108,97,116,101,0,27,106,117 ; v1: mcdata scratch #45
-    db 107,101,98,111,120,95,115,111,110,103,46,109,105,110,101,99,114,97,102,116,46,119,97,105,116,0,3,0,17,99,111,109 ; v1: mcdata scratch #46
-    db 112,97,114,97,116,111,114,95,111,117,116,112,117,116,0,0,0,12,0 ; v1: mcdata scratch #47
-    db "minecraft:ward", 0 ; v1: mcdata scratch #48
-    dd 147 ; v1: mcdata scratch #49
-    db 10,8,0,11,115,111,117,110,100,95,101,118,101,110,116,0,25,109,105,110,101,99,114,97,102,116,58,109,117,115,105,99 ; v1: mcdata scratch #50
-    db 95,100,105,115,99,46,119,97,114,100,5,0,17,108,101,110,103,116,104,95,105,110,95,115,101,99,111,110,100,115,67,123 ; v1: mcdata scratch #51
-    db 0,0,10,0,11,100,101,115,99,114,105,112,116,105,111,110,8,0,9,116,114,97,110,115,108,97,116,101,0,27,106,117 ; v1: mcdata scratch #52
-    db 107,101,98,111,120,95,115,111,110,103,46,109,105,110,101,99,114,97,102,116,46,119,97,114,100,0,3,0,17,99,111,109 ; v1: mcdata scratch #53
-    db 112,97,114,97,116,111,114,95,111,117,116,112,117,116,0,0,0,10,0 ; v1: mcdata scratch #54
-    db "minecraft:instrument", 0 ; v1: mcdata scratch #55
-    dw 8 ; v1: mcdata scratch #56
-    db "minecraft:admire_goat_horn", 0 ; v1: mcdata scratch #57
-    dd 147 ; v1: mcdata scratch #58
+    dd 153
+    db 10,8,0,11,115,111,117,110,100,95,101,118,101,110,116,0,28,109,105,110,101,99,114,97,102,116,58,109,117,115,105,99
+    db 95,100,105,115,99,46,112,105,103,115,116,101,112,5,0,17,108,101,110,103,116,104,95,105,110,95,115,101,99,111,110,100
+    db 115,67,21,0,0,10,0,11,100,101,115,99,114,105,112,116,105,111,110,8,0,9,116,114,97,110,115,108,97,116,101,0
+    db 30,106,117,107,101,98,111,120,95,115,111,110,103,46,109,105,110,101,99,114,97,102,116,46,112,105,103,115,116,101,112,0
+    db 3,0,17,99,111,109,112,97,114,97,116,111,114,95,111,117,116,112,117,116,0,0,0,13,0
+    db "minecraft:precipice", 0
+    dd 157
+    db 10,8,0,11,115,111,117,110,100,95,101,118,101,110,116,0,30,109,105,110,101,99,114,97,102,116,58,109,117,115,105,99
+    db 95,100,105,115,99,46,112,114,101,99,105,112,105,99,101,5,0,17,108,101,110,103,116,104,95,105,110,95,115,101,99,111
+    db 110,100,115,67,149,128,0,10,0,11,100,101,115,99,114,105,112,116,105,111,110,8,0,9,116,114,97,110,115,108,97,116
+    db 101,0,32,106,117,107,101,98,111,120,95,115,111,110,103,46,109,105,110,101,99,114,97,102,116,46,112,114,101,99,105,112
+    db 105,99,101,0,3,0,17,99,111,109,112,97,114,97,116,111,114,95,111,117,116,112,117,116,0,0,0,13,0
+    db "minecraft:relic", 0
+    dd 149
+    db 10,8,0,11,115,111,117,110,100,95,101,118,101,110,116,0,26,109,105,110,101,99,114,97,102,116,58,109,117,115,105,99
+    db 95,100,105,115,99,46,114,101,108,105,99,5,0,17,108,101,110,103,116,104,95,105,110,95,115,101,99,111,110,100,115,67
+    db 90,0,0,10,0,11,100,101,115,99,114,105,112,116,105,111,110,8,0,9,116,114,97,110,115,108,97,116,101,0,28,106
+    db 117,107,101,98,111,120,95,115,111,110,103,46,109,105,110,101,99,114,97,102,116,46,114,101,108,105,99,0,3,0,17,99
+    db 111,109,112,97,114,97,116,111,114,95,111,117,116,112,117,116,0,0,0,14,0
+    db "minecraft:stal", 0
+    dd 147
+    db 10,8,0,11,115,111,117,110,100,95,101,118,101,110,116,0,25,109,105,110,101,99,114,97,102,116,58,109,117,115,105,99
+    db 95,100,105,115,99,46,115,116,97,108,5,0,17,108,101,110,103,116,104,95,105,110,95,115,101,99,111,110,100,115,67,22
+    db 0,0,10,0,11,100,101,115,99,114,105,112,116,105,111,110,8,0,9,116,114,97,110,115,108,97,116,101,0,27,106,117
+    db 107,101,98,111,120,95,115,111,110,103,46,109,105,110,101,99,114,97,102,116,46,115,116,97,108,0,3,0,17,99,111,109
+    db 112,97,114,97,116,111,114,95,111,117,116,112,117,116,0,0,0,8,0
+    db "minecraft:strad", 0
+    dd 149
+    db 10,8,0,11,115,111,117,110,100,95,101,118,101,110,116,0,26,109,105,110,101,99,114,97,102,116,58,109,117,115,105,99
+    db 95,100,105,115,99,46,115,116,114,97,100,5,0,17,108,101,110,103,116,104,95,105,110,95,115,101,99,111,110,100,115,67
+    db 60,0,0,10,0,11,100,101,115,99,114,105,112,116,105,111,110,8,0,9,116,114,97,110,115,108,97,116,101,0,28,106
+    db 117,107,101,98,111,120,95,115,111,110,103,46,109,105,110,101,99,114,97,102,116,46,115,116,114,97,100,0,3,0,17,99
+    db 111,109,112,97,114,97,116,111,114,95,111,117,116,112,117,116,0,0,0,9,0
+    db "minecraft:tears", 0
+    dd 149
+    db 10,8,0,11,115,111,117,110,100,95,101,118,101,110,116,0,26,109,105,110,101,99,114,97,102,116,58,109,117,115,105,99
+    db 95,100,105,115,99,46,116,101,97,114,115,5,0,17,108,101,110,103,116,104,95,105,110,95,115,101,99,111,110,100,115,67
+    db 47,0,0,10,0,11,100,101,115,99,114,105,112,116,105,111,110,8,0,9,116,114,97,110,115,108,97,116,101,0,28,106
+    db 117,107,101,98,111,120,95,115,111,110,103,46,109,105,110,101,99,114,97,102,116,46,116,101,97,114,115,0,3,0,17,99
+    db 111,109,112,97,114,97,116,111,114,95,111,117,116,112,117,116,0,0,0,10,0
+    db "minecraft:wait", 0
+    dd 147
+    db 10,8,0,11,115,111,117,110,100,95,101,118,101,110,116,0,25,109,105,110,101,99,114,97,102,116,58,109,117,115,105,99
+    db 95,100,105,115,99,46,119,97,105,116,5,0,17,108,101,110,103,116,104,95,105,110,95,115,101,99,111,110,100,115,67,110
+    db 0,0,10,0,11,100,101,115,99,114,105,112,116,105,111,110,8,0,9,116,114,97,110,115,108,97,116,101,0,27,106,117
+    db 107,101,98,111,120,95,115,111,110,103,46,109,105,110,101,99,114,97,102,116,46,119,97,105,116,0,3,0,17,99,111,109
+    db 112,97,114,97,116,111,114,95,111,117,116,112,117,116,0,0,0,12,0
+    db "minecraft:ward", 0
+    dd 147
+    db 10,8,0,11,115,111,117,110,100,95,101,118,101,110,116,0,25,109,105,110,101,99,114,97,102,116,58,109,117,115,105,99
+    db 95,100,105,115,99,46,119,97,114,100,5,0,17,108,101,110,103,116,104,95,105,110,95,115,101,99,111,110,100,115,67,123
+    db 0,0,10,0,11,100,101,115,99,114,105,112,116,105,111,110,8,0,9,116,114,97,110,115,108,97,116,101,0,27,106,117
+    db 107,101,98,111,120,95,115,111,110,103,46,109,105,110,101,99,114,97,102,116,46,119,97,114,100,0,3,0,17,99,111,109
+    db 112,97,114,97,116,111,114,95,111,117,116,112,117,116,0,0,0,10,0
+    db "minecraft:instrument", 0
+    dw 8
+    db "minecraft:admire_goat_horn", 0
+    dd 147
     db 10,8,0,11,115,111,117,110,100,95,101,118,101,110,116,0,32,109,105,110,101,99,114,97,102,116,58,105,116,101,109,46
     db 103,111,97,116,95,104,111,114,110,46,115,111,117,110,100,46,52,5,0,5,114,97,110,103,101,67,128,0,0,10,0,11
     db 100,101,115,99,114,105,112,116,105,111,110,8,0,9,116,114,97,110,115,108,97,116,101,0,37,105,110,115,116,114,117,109
@@ -4475,3 +4372,350 @@ mcd_registries:
     db 51,51,0,3,0,5,116,105,99,107,115,0,0,92,90,8,0,5,118,97,108,117,101,0,9,35,99,99,101,52,55,101
     db 51,51,0,3,0,5,116,105,99,107,115,0,0,92,205,8,0,5,118,97,108,117,101,0,9,35,98,49,101,55,56,55
     db 51,51,0,0,10,0,27,109,105,110,101,99,114,97,102,116,58,118,105,115,117,97,108,47,115,116,97,114,95,97,110,103
+    ; v1 uncompacted row (mcdata#0)
+    nop ; v1 pad slot 0
+    db 108,101,9,0,9,107,101,121,102,114,97,109,101,115,10,0,0,0,2,3,0,5,116,105,99,107,115,0,0,23,112,5 ; v1: mcdata scratch #0
+    ; TODO: verify 16-byte rsp alignment before inner call (mcdata:0)
+    ; v1 uncompacted row (mcdata#1)
+    nop ; v1 pad slot 1
+    db 0,5,118,97,108,117,101,67,180,0,0,0,3,0,5,116,105,99,107,115,0,0,23,112,5,0,5,118,97,108,117,101 ; v1: mcdata scratch #1
+    ; v1 uncompacted row (mcdata#2)
+    nop ; v1 pad slot 2
+    db 0,0,0,0,0,10,0,4,101,97,115,101,9,0,12,99,117,98,105,99,95,98,101,122,105,101,114,5,0,0,0,4 ; v1: mcdata scratch #2
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcdata:2)
+    ; v1 uncompacted row (mcdata#3)
+    nop ; v1 pad slot 3
+    db 62,185,88,16,62,118,200,180,63,35,83,248,63,66,77,211,0,0,10,0,28,109,105,110,101,99,114,97,102,116,58,118 ; v1: mcdata scratch #3
+    ; v1 uncompacted row (mcdata#4)
+    nop ; v1 pad slot 4
+    db 105,115,117,97,108,47,99,108,111,117,100,95,99,111,108,111,114,9,0,9,107,101,121,102,114,97,109,101,115,10,0,0 ; v1: mcdata scratch #4
+    ; TODO: clamp index before table lookup on malformed input (mcdata:4)
+    ; v1 uncompacted row (mcdata#5)
+    nop ; v1 pad slot 5
+    db 0,4,3,0,5,116,105,99,107,115,0,0,0,133,3,0,5,118,97,108,117,101,255,255,255,255,0,3,0,5,116,105 ; v1: mcdata scratch #5
+    ; v1 uncompacted row (mcdata#6)
+    nop ; v1 pad slot 6
+    db 99,107,115,0,0,46,91,3,0,5,118,97,108,117,101,255,255,255,255,0,3,0,5,116,105,99,107,115,0,0,53,102 ; v1: mcdata scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (mcdata:6)
+    ; v1 uncompacted row (mcdata#7)
+    nop ; v1 pad slot 7
+    db 3,0,5,118,97,108,117,101,255,25,25,38,0,3,0,5,116,105,99,107,115,0,0,87,58,3,0,5,118,97,108,117 ; v1: mcdata scratch #7
+    ; v1 uncompacted row (mcdata#8)
+    nop ; v1 pad slot 8
+    db 101,255,25,25,38,0,8,0,8,109,111,100,105,102,105,101,114,0,8,109,117,108,116,105,112,108,121,0,0,0 ; v1: mcdata scratch #8
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcdata:8)
+    ; v1 uncompacted row (mcdata#9)
+    nop ; v1 pad slot 9
+    db "minecraft:early_game", 0 ; v1: mcdata scratch #9
+    ; v1 uncompacted row (mcdata#10)
+    nop ; v1 pad slot 10
+    dd 31 ; v1: mcdata scratch #10
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mcdata:10)
+    ; v1 uncompacted row (mcdata#11)
+    nop ; v1 pad slot 11
+    db 10,8,0,5,99,108,111,99,107,0,19,109,105,110,101,99,114,97,102,116,58,111,118,101,114,119,111,114,108,100,0 ; v1: mcdata scratch #11
+    ; v1 uncompacted row (mcdata#12)
+    nop ; v1 pad slot 12
+    db "minecraft:moon", 0 ; v1: mcdata scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mcdata:12)
+    ; v1 uncompacted row (mcdata#13)
+    nop ; v1 pad slot 13
+    dd 393 ; v1: mcdata scratch #13
+    ; v1 uncompacted row (mcdata#14)
+    nop ; v1 pad slot 14
+    db 10,3,0,12,112,101,114,105,111,100,95,116,105,99,107,115,0,2,238,0,8,0,5,99,108,111,99,107,0,19,109,105 ; v1: mcdata scratch #14
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcdata:14)
+    ; v1 uncompacted row (mcdata#15)
+    nop ; v1 pad slot 15
+    db 110,101,99,114,97,102,116,58,111,118,101,114,119,111,114,108,100,10,0,6,116,114,97,99,107,115,10,0,27,109,105,110 ; v1: mcdata scratch #15
+    ; v1 uncompacted row (mcdata#16)
+    nop ; v1 pad slot 16
+    db 101,99,114,97,102,116,58,118,105,115,117,97,108,47,109,111,111,110,95,112,104,97,115,101,9,0,9,107,101,121,102,114 ; v1: mcdata scratch #16
+    ; TODO: verify 16-byte rsp alignment before inner call (mcdata:16)
+    ; v1 uncompacted row (mcdata#17)
+    nop ; v1 pad slot 17
+    db 97,109,101,115,10,0,0,0,8,3,0,5,116,105,99,107,115,0,0,0,0,8,0,5,118,97,108,117,101,0,9,102 ; v1: mcdata scratch #17
+    ; v1 uncompacted row (mcdata#18)
+    nop ; v1 pad slot 18
+    db 117,108,108,95,109,111,111,110,0,3,0,5,116,105,99,107,115,0,0,93,192,8,0,5,118,97,108,117,101,0,14,119 ; v1: mcdata scratch #18
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcdata:18)
+    ; v1 uncompacted row (mcdata#19)
+    nop ; v1 pad slot 19
+    db 97,110,105,110,103,95,103,105,98,98,111,117,115,0,3,0,5,116,105,99,107,115,0,0,187,128,8,0,5,118,97,108 ; v1: mcdata scratch #19
+    ; v1 uncompacted row (mcdata#20)
+    nop ; v1 pad slot 20
+    db 117,101,0,13,116,104,105,114,100,95,113,117,97,114,116,101,114,0,3,0,5,116,105,99,107,115,0,1,25,64,8,0 ; v1: mcdata scratch #20
+    ; TODO: clamp index before table lookup on malformed input (mcdata:20)
+    ; v1 uncompacted row (mcdata#21)
+    nop ; v1 pad slot 21
+    db 5,118,97,108,117,101,0,15,119,97,110,105,110,103,95,99,114,101,115,99,101,110,116,0,3,0,5,116,105,99,107,115 ; v1: mcdata scratch #21
+    ; v1 uncompacted row (mcdata#22)
+    nop ; v1 pad slot 22
+    db 0,1,119,0,8,0,5,118,97,108,117,101,0,8,110,101,119,95,109,111,111,110,0,3,0,5,116,105,99,107,115,0 ; v1: mcdata scratch #22
+    ; TODO: hoist invariant pointer load out of .loop (mcdata:22)
+    ; v1 uncompacted row (mcdata#23)
+    nop ; v1 pad slot 23
+    db 1,212,192,8,0,5,118,97,108,117,101,0,15,119,97,120,105,110,103,95,99,114,101,115,99,101,110,116,0,3,0,5 ; v1: mcdata scratch #23
+    ; v1 uncompacted row (mcdata#24)
+    nop ; v1 pad slot 24
+    db 116,105,99,107,115,0,2,50,128,8,0,5,118,97,108,117,101,0,13,102,105,114,115,116,95,113,117,97,114,116,101,114 ; v1: mcdata scratch #24
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcdata:24)
+    ; v1 uncompacted row (mcdata#25)
+    nop ; v1 pad slot 25
+    db 0,3,0,5,116,105,99,107,115,0,2,144,64,8,0,5,118,97,108,117,101,0,14,119,97,120,105,110,103,95,103,105 ; v1: mcdata scratch #25
+    ; v1 uncompacted row (mcdata#26)
+    nop ; v1 pad slot 26
+    db 98,98,111,117,115,0,0,0,0 ; v1: mcdata scratch #26
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mcdata:26)
+    ; v1 uncompacted row (mcdata#27)
+    nop ; v1 pad slot 27
+    db "minecraft:villager_schedule", 0 ; v1: mcdata scratch #27
+    ; v1 uncompacted row (mcdata#28)
+    nop ; v1 pad slot 28
+    dd 50 ; v1: mcdata scratch #28
+    db 10,3,0,12,112,101,114,105,111,100,95,116,105,99,107,115,0,0,93,192,8,0,5,99,108,111,99,107,0,19,109,105 ; v1: mcdata scratch #29
+    db 110,101,99,114,97,102,116,58,111,118,101,114,119,111,114,108,100,0 ; v1: mcdata scratch #30
+    db 0 ; v1: mcdata scratch #31
+
+; update_tags, the vanilla tag set from mcmeta 26.1 (not sent: minecraft:villager_trade, minecraft:worldgen/configured_feature, minecraft:worldgen/flat_level_generator_preset, minecraft:worldgen/structure, minecraft:worldgen/world_preset).
+; dw registry count, per registry: name, dw tag count, per tag: name, dw n, dw ids[n]
+mcd_tags: ; v1: mcdata scratch #35
+    dw 15 ; v1: mcdata scratch #36
+    db "minecraft:banner_pattern", 0 ; v1: mcdata scratch #37
+    dw 11 ; v1: mcdata scratch #38
+    db "minecraft:no_item_required", 0 ; v1: mcdata scratch #39
+    dw 32 ; v1: mcdata scratch #40
+    dw 26, 27, 28, 29, 31, 38, 35, 37, 32, 36, 34, 33, 25, 5, 30, 39, 40, 41, 42, 7, 10, 9, 8, 3 ; v1: mcdata scratch #41
+    dw 23, 19, 17, 20, 18, 1, 14, 15 ; v1: mcdata scratch #42
+    db "minecraft:pattern_item/bordure_indented", 0 ; v1: mcdata scratch #43
+    dw 1 ; v1: mcdata scratch #44
+    dw 6 ; v1: mcdata scratch #45
+    db "minecraft:pattern_item/creeper", 0 ; v1: mcdata scratch #46
+    dw 1 ; v1: mcdata scratch #47
+    dw 4 ; v1: mcdata scratch #48
+    db "minecraft:pattern_item/field_masoned", 0 ; v1: mcdata scratch #49
+    dw 1 ; v1: mcdata scratch #50
+    dw 2 ; v1: mcdata scratch #51
+    db "minecraft:pattern_item/flow", 0 ; v1: mcdata scratch #52
+    dw 1 ; v1: mcdata scratch #53
+    dw 11 ; v1: mcdata scratch #54
+    db "minecraft:pattern_item/flower", 0 ; v1: mcdata scratch #55
+    dw 1 ; v1: mcdata scratch #56
+    dw 12 ; v1: mcdata scratch #57
+    db "minecraft:pattern_item/globe", 0 ; v1: mcdata scratch #58
+    dw 1 ; v1: mcdata scratch #59
+    dw 13 ; v1: mcdata scratch #60
+    db "minecraft:pattern_item/guster", 0 ; v1: mcdata scratch #61
+    dw 1 ; v1: mcdata scratch #62
+    dw 16 ; v1: mcdata scratch #63
+    db "minecraft:pattern_item/mojang", 0 ; v1: mcdata scratch #64
+    dw 1 ; v1: mcdata scratch #65
+    dw 21 ; v1: mcdata scratch #66
+    db "minecraft:pattern_item/piglin", 0
+    dw 1
+    dw 22
+    db "minecraft:pattern_item/skull", 0
+    dw 1
+    dw 24
+    db "minecraft:block", 0
+    dw 248
+    db "minecraft:acacia_logs", 0
+    dw 4
+    dw 53, 75, 64, 83
+    db "minecraft:air", 0
+    dw 3
+    dw 0, 794, 795
+    db "minecraft:all_hanging_signs", 0
+    dw 24
+    dw 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 255, 256, 254, 257
+    db "minecraft:all_signs", 0
+    dw 48
+    dw 210, 211, 212, 213, 215, 216, 217, 901, 902, 218, 219, 214, 224, 225, 226, 227, 229, 230, 231, 903, 904, 232, 233, 228
+    dw 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 255, 256, 254, 257
+    db "minecraft:ancient_city_replaceable", 0
+    dw 12
+    dw 1123, 1136, 1132, 1138, 1134, 1137, 1135, 1139, 1124, 1141, 1142, 147
+    db "minecraft:animals_spawnable_on", 0
+    dw 1
+    dw 8
+    db "minecraft:anvil", 0
+    dw 3
+    dw 467, 468, 469
+    db "minecraft:armadillo_spawnable_on", 0
+    dw 10
+    dw 8, 554, 484, 488, 485, 498, 496, 492, 39, 10
+    db "minecraft:axolotls_spawnable_on", 0
+    dw 1
+    dw 281
+    db "minecraft:azalea_grows_on", 0
+    dw 32
+    dw 9, 10, 1121, 1122, 59, 1116, 1160, 8, 11, 373, 37, 39, 38, 554, 484, 485, 486, 487, 488, 489, 490, 491, 492, 493
+    dw 494, 495, 496, 497, 498, 499, 278, 1000
+    db "minecraft:azalea_root_replaceable", 0
+    dw 39
+    dw 1, 2, 4, 6, 984, 1123, 9, 10, 1121, 1122, 59, 1116, 1160, 8, 11, 373, 554, 484, 485, 486, 487, 488, 489, 490
+    dw 491, 492, 493, 494, 495, 496, 497, 498, 499, 39, 281, 40, 37, 278, 1000
+    db "minecraft:badlands_terracotta", 0
+    dw 7
+    dw 554, 484, 488, 485, 498, 496, 492
+    db "minecraft:bamboo_blocks", 0
+    dw 2
+    dw 60, 70
+    db "minecraft:banners", 0
+    dw 32
+    dw 563, 564, 565, 566, 567, 568, 569, 570, 571, 572, 573, 574, 575, 576, 577, 578, 579, 580, 581, 582, 583, 584, 585, 586
+    dw 587, 588, 589, 590, 591, 592, 593, 594
+    db "minecraft:bars", 0
+    dw 9
+    dw 341, 342, 346, 343, 347, 344, 348, 345, 349
+    db "minecraft:base_stone_nether", 0
+    dw 3
+    dw 285, 288, 924
+    db "minecraft:base_stone_overworld", 0
+    dw 6
+    dw 1, 2, 4, 6, 984, 1123
+    db "minecraft:bats_spawnable_on", 0
+    dw 6
+    dw 1, 2, 4, 6, 984, 1123
+    db "minecraft:beacon_base_blocks", 0
+    dw 5
+    dw 915, 403, 205, 174, 175
+    db "minecraft:beds", 0
+    dw 16
+    dw 124, 125, 121, 122, 119, 117, 123, 113, 118, 115, 112, 111, 116, 120, 110, 114
+    db "minecraft:bee_attractive", 0
+    dw 29
+    dw 157, 1163, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 171, 170, 159, 557, 558, 560, 559, 664, 98, 1111, 33, 93
+    dw 1113, 1114, 657, 1109, 280
+    db "minecraft:bee_growables", 0
+    dw 11
+    dw 665, 441, 442, 207, 365, 364, 662, 663, 861, 1107, 1108
+    db "minecraft:beehives", 0
+    dw 2
+    dw 911, 912
+    db "minecraft:beneath_bamboo_podzol_replaceable", 0
+    dw 10
+    dw 9, 10, 1121, 1122, 59, 1116, 1160, 8, 11, 373
+    db "minecraft:beneath_tree_podzol_replaceable", 0
+    dw 10
+    dw 9, 10, 1121, 1122, 59, 1116, 1160, 8, 11, 373
+    db "minecraft:birch_logs", 0
+    dw 4
+    dw 51, 73, 62, 81
+    db "minecraft:blocks_wind_charge_explosions", 0
+    dw 2
+    dw 524, 34
+    db "minecraft:buttons", 0
+    dw 14
+    dw 443, 444, 445, 446, 447, 449, 450, 897, 898, 451, 452, 448, 275, 939
+    db "minecraft:camel_sand_step_sound_blocks", 0
+    dw 19
+    dw 37, 39, 38, 726, 727, 728, 729, 730, 731, 732, 733, 734, 735, 736, 737, 738, 739, 740, 741
+    db "minecraft:camels_spawnable_on", 0
+    dw 3
+    dw 37, 39, 38
+    db "minecraft:campfires", 0
+    dw 2
+    dw 859, 860
+    db "minecraft:can_glide_through", 0
+    dw 7
+    dw 366, 880, 881, 878, 879, 1108, 1107
+    db "minecraft:candle_cakes", 0
+    dw 17
+    dw 961, 962, 963, 964, 965, 966, 967, 968, 969, 970, 971, 972, 973, 974, 975, 976, 977
+    db "minecraft:candles", 0
+    dw 17
+    dw 944, 945, 946, 947, 948, 949, 950, 951, 952, 953, 954, 955, 956, 957, 958, 959, 960
+    db "minecraft:cannot_replace_below_tree_trunk", 0
+    dw 8
+    dw 9, 10, 1121, 1122, 59, 1116, 1160, 11
+    db "minecraft:cannot_support_kelp", 0
+    dw 1
+    dw 671
+    db "minecraft:cannot_support_seagrass", 0
+    dw 1
+    dw 671
+    db "minecraft:cannot_support_snow_layer", 0
+    dw 3
+    dw 277, 556, 524
+    db "minecraft:cauldrons", 0
+    dw 4
+    dw 387, 388, 389, 390
+    db "minecraft:cave_vines", 0
+    dw 2
+    dw 1108, 1107
+    db "minecraft:ceiling_hanging_signs", 0
+    dw 12
+    dw 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245
+    db "minecraft:chains", 0
+    dw 9
+    dw 350, 351, 355, 352, 356, 353, 357, 354, 358
+    db "minecraft:cherry_logs", 0
+    dw 4
+    dw 54, 76, 65, 84
+    db "minecraft:climbable", 0
+    dw 9
+    dw 221, 366, 837, 878, 879, 880, 881, 1107, 1108
+    db "minecraft:coal_ores", 0
+    dw 2
+    dw 46, 47
+    db "minecraft:combination_step_sound_blocks", 0
+    dw 23
+    dw 538, 539, 540, 541, 542, 543, 544, 545, 546, 547, 548, 549, 550, 551, 552, 553, 1112, 1161, 276, 870, 869, 882, 368
+    db "minecraft:completes_find_tree_tutorial", 0
+    dw 57
+    dw 55, 77, 66, 85, 56, 20, 67, 86, 49, 71, 68, 79, 53, 75, 64, 83, 51, 73, 62, 81, 52, 74, 63, 82
+    dw 50, 72, 61, 80, 57, 78, 69, 87, 54, 76, 65, 84, 871, 872, 873, 874, 862, 863, 864, 865, 91, 88, 89, 95
+    dw 94, 92, 90, 97, 98, 96, 93, 672, 868
+    db "minecraft:concrete_powder", 0
+    dw 16
+    dw 726, 727, 728, 729, 730, 731, 732, 733, 734, 735, 736, 737, 738, 739, 740, 741
+    db "minecraft:convertable_to_mud", 0
+    dw 3
+    dw 9, 10, 1121
+    db "minecraft:copper", 0
+    dw 8
+    dw 1007, 1008, 1009, 1010, 1033, 1035, 1034, 1036
+    db "minecraft:copper_chests", 0
+    dw 8
+    dw 1081, 1082, 1083, 1084, 1085, 1086, 1087, 1088
+    db "minecraft:copper_golem_statues", 0
+    dw 8
+    dw 1089, 1090, 1091, 1092, 1093, 1094, 1095, 1096
+    db "minecraft:copper_ores", 0
+    dw 2
+    dw 1011, 1012
+    db "minecraft:coral_blocks", 0
+    dw 5
+    dw 753, 754, 755, 756, 757
+    db "minecraft:coral_plants", 0
+    dw 5
+    dw 763, 764, 765, 766, 767
+    db "minecraft:corals", 0
+    dw 10
+    dw 763, 764, 765, 766, 767, 773, 774, 775, 776, 777
+    db "minecraft:crimson_stems", 0
+    dw 4
+    dw 871, 872, 873, 874
+    db "minecraft:crops", 0
+    dw 8
+    dw 665, 441, 442, 207, 365, 364, 662, 663
+    db "minecraft:crystal_sound_blocks", 0
+    dw 2
+    dw 978, 979
+    db "minecraft:dampens_vibrations", 0
+    dw 32
+    dw 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 538, 539, 540, 541, 542, 543, 544, 545
+    dw 546, 547, 548, 549, 550, 551, 552, 553
+    db "minecraft:dark_oak_logs", 0
+    dw 4
+    dw 55, 77, 66, 85
+    db "minecraft:deepslate_ore_replaceables", 0
+    dw 2
+    dw 1123, 984
+    db "minecraft:diamond_ores", 0
+    dw 2
+    dw 203, 204
+    db "minecraft:dirt", 0
+    dw 3
+    dw 9, 10, 1121
