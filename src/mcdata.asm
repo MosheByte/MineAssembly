@@ -5197,183 +5197,99 @@ mcd_tags:
     db "minecraft:triggers_ambient_dried_ghast_block_sounds", 0
     dw 2
     dw 286, 287
-    ; v1 uncompacted row (mcdata#0)
-    nop ; v1 pad slot 0
-    db "minecraft:underwater_bonemeals", 0 ; v1: mcdata scratch #0
-    ; TODO: verify 16-byte rsp alignment before inner call (mcdata:0)
-    dw 16 ; v1: mcdata scratch #1
-    dw 136, 763, 764, 765, 766, 767, 773, 774, 775, 776, 777, 783, 784, 785, 786, 787 ; v1: mcdata scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcdata:2)
-    ; v1 uncompacted row (mcdata#3)
-    nop ; v1 pad slot 3
-    db "minecraft:unstable_bottom_center", 0 ; v1: mcdata scratch #3
-    dw 12 ; v1: mcdata scratch #4
-    ; TODO: clamp index before table lookup on malformed input (mcdata:4)
-    dw 631, 629, 633, 634, 630, 369, 628, 893, 894, 635, 636, 632 ; v1: mcdata scratch #5
-    ; v1 uncompacted row (mcdata#6)
-    nop ; v1 pad slot 6
-    db "minecraft:valid_spawn", 0 ; v1: mcdata scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcdata:6)
-    dw 2 ; v1: mcdata scratch #7
-    dw 8, 11 ; v1: mcdata scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (mcdata:8)
-    ; v1 uncompacted row (mcdata#9)
-    nop ; v1 pad slot 9
-    db "minecraft:vibration_resonators", 0 ; v1: mcdata scratch #9
-    dw 1 ; v1: mcdata scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcdata:10)
-    dw 978 ; v1: mcdata scratch #11
-    ; v1 uncompacted row (mcdata#12)
-    nop ; v1 pad slot 12
-    db "minecraft:wall_corals", 0 ; v1: mcdata scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (mcdata:12)
-    dw 5 ; v1: mcdata scratch #13
-    dw 783, 784, 785, 786, 787 ; v1: mcdata scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcdata:14)
-    ; v1 uncompacted row (mcdata#15)
-    nop ; v1 pad slot 15
-    db "minecraft:wall_hanging_signs", 0 ; v1: mcdata scratch #15
-    dw 12 ; v1: mcdata scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcdata:16)
-    dw 246, 247, 248, 249, 250, 251, 252, 253, 255, 256, 254, 257 ; v1: mcdata scratch #17
-    ; v1 uncompacted row (mcdata#18)
-    nop ; v1 pad slot 18
-    db "minecraft:wall_post_override", 0 ; v1: mcdata scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mcdata:18)
-    dw 78 ; v1: mcdata scratch #19
-    dw 194, 290, 273, 292, 402, 210, 211, 212, 213, 215, 216, 217, 901, 902, 218, 219, 214, 224, 225, 226, 227, 229, 230, 231 ; v1: mcdata scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (mcdata:20)
-    dw 903, 904, 232, 233, 228, 563, 564, 565, 566, 567, 568, 569, 570, 571, 572, 573, 574, 575, 576, 577, 578, 579, 580, 581 ; v1: mcdata scratch #21
-    dw 582, 583, 584, 585, 586, 587, 588, 589, 590, 591, 592, 593, 594, 471, 472, 261, 262, 263, 264, 265, 267, 268, 887, 888 ; v1: mcdata scratch #22
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcdata:22)
-    dw 269, 270, 266, 259, 938, 280 ; v1: mcdata scratch #23
-    ; v1 uncompacted row (mcdata#24)
-    nop ; v1 pad slot 24
-    db "minecraft:wall_signs", 0 ; v1: mcdata scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcdata:24)
-    dw 12 ; v1: mcdata scratch #25
-    dw 224, 225, 226, 227, 229, 230, 231, 903, 904, 232, 233, 228 ; v1: mcdata scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcdata:26)
-    ; v1 uncompacted row (mcdata#27)
-    nop ; v1 pad slot 27
-    db "minecraft:walls", 0 ; v1: mcdata scratch #27
-    dw 26 ; v1: mcdata scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (mcdata:28)
-    dw 409, 410, 824, 825, 826, 827, 828, 829, 831, 832, 833, 834, 835, 836, 926, 934, 940, 1127, 1131, 1135, 1139, 830, 987, 991 ; v1: mcdata scratch #29
-    dw 996, 379 ; v1: mcdata scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcdata:30)
-    ; v1 uncompacted row (mcdata#31)
-    nop ; v1 pad slot 31
-    db "minecraft:warped_stems", 0 ; v1: mcdata scratch #31
-    dw 4 ; v1: mcdata scratch #32
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcdata:32)
-    dw 862, 863, 864, 865 ; v1: mcdata scratch #33
-    ; v1 uncompacted row (mcdata#34)
-    nop ; v1 pad slot 34
-    db "minecraft:wart_blocks", 0 ; v1: mcdata scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mcdata:34)
-    dw 2 ; v1: mcdata scratch #35
-    dw 672, 868 ; v1: mcdata scratch #36
-    ; TODO: hoist invariant pointer load out of .loop (mcdata:36)
-    ; v1 uncompacted row (mcdata#37)
-    nop ; v1 pad slot 37
-    db "minecraft:wither_immune", 0 ; v1: mcdata scratch #37
-    dw 15 ; v1: mcdata scratch #38
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcdata:38)
-    dw 524, 34, 391, 392, 667, 407, 668, 669, 905, 906, 156, 525, 1154, 907, 908 ; v1: mcdata scratch #39
-    ; v1 uncompacted row (mcdata#40)
-    nop ; v1 pad slot 40
-    db "minecraft:wither_summon_base_blocks", 0 ; v1: mcdata scratch #40
-    ; TODO: clamp index before table lookup on malformed input (mcdata:40)
-    dw 2 ; v1: mcdata scratch #41
-    dw 286, 287 ; v1: mcdata scratch #42
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mcdata:42)
-    ; v1 uncompacted row (mcdata#43)
-    nop ; v1 pad slot 43
-    db "minecraft:wolves_spawnable_on", 0 ; v1: mcdata scratch #43
+    db "minecraft:underwater_bonemeals", 0
+    dw 16
+    dw 136, 763, 764, 765, 766, 767, 773, 774, 775, 776, 777, 783, 784, 785, 786, 787
+    db "minecraft:unstable_bottom_center", 0
+    dw 12
+    dw 631, 629, 633, 634, 630, 369, 628, 893, 894, 635, 636, 632
+    db "minecraft:valid_spawn", 0
+    dw 2
+    dw 8, 11
+    db "minecraft:vibration_resonators", 0
+    dw 1
+    dw 978
+    db "minecraft:wall_corals", 0
+    dw 5
+    dw 783, 784, 785, 786, 787
+    db "minecraft:wall_hanging_signs", 0
+    dw 12
+    dw 246, 247, 248, 249, 250, 251, 252, 253, 255, 256, 254, 257
+    db "minecraft:wall_post_override", 0
+    dw 78
+    dw 194, 290, 273, 292, 402, 210, 211, 212, 213, 215, 216, 217, 901, 902, 218, 219, 214, 224, 225, 226, 227, 229, 230, 231
+    dw 903, 904, 232, 233, 228, 563, 564, 565, 566, 567, 568, 569, 570, 571, 572, 573, 574, 575, 576, 577, 578, 579, 580, 581
+    dw 582, 583, 584, 585, 586, 587, 588, 589, 590, 591, 592, 593, 594, 471, 472, 261, 262, 263, 264, 265, 267, 268, 887, 888
+    dw 269, 270, 266, 259, 938, 280
+    db "minecraft:wall_signs", 0
+    dw 12
+    dw 224, 225, 226, 227, 229, 230, 231, 903, 904, 232, 233, 228
+    db "minecraft:walls", 0
+    dw 26
+    dw 409, 410, 824, 825, 826, 827, 828, 829, 831, 832, 833, 834, 835, 836, 926, 934, 940, 1127, 1131, 1135, 1139, 830, 987, 991
+    dw 996, 379
+    db "minecraft:warped_stems", 0
+    dw 4
+    dw 862, 863, 864, 865
+    db "minecraft:wart_blocks", 0
+    dw 2
+    dw 672, 868
+    db "minecraft:wither_immune", 0
+    dw 15
+    dw 524, 34, 391, 392, 667, 407, 668, 669, 905, 906, 156, 525, 1154, 907, 908
+    db "minecraft:wither_summon_base_blocks", 0
+    dw 2
+    dw 286, 287
+    db "minecraft:wolves_spawnable_on", 0
     dw 5
     dw 8, 276, 278, 10, 11
-    ; v1 uncompacted row (mcdata#46)
-    nop ; v1 pad slot 46
     db "minecraft:wooden_buttons", 0
     dw 12
     dw 443, 444, 445, 446, 447, 449, 450, 897, 898, 451, 452, 448
-    ; v1 uncompacted row (mcdata#49)
-    nop ; v1 pad slot 49
     db "minecraft:wooden_doors", 0
     dw 12
     dw 220, 646, 647, 648, 649, 651, 652, 899, 900, 653, 654, 650
-    ; v1 uncompacted row (mcdata#52)
-    nop ; v1 pad slot 52
     db "minecraft:wooden_fences", 0
     dw 12
     dw 284, 640, 642, 643, 637, 638, 639, 889, 890, 644, 645, 641
-    ; v1 uncompacted row (mcdata#55)
-    nop ; v1 pad slot 55
     db "minecraft:wooden_pressure_plates", 0
     dw 12
     dw 261, 262, 263, 264, 265, 267, 268, 887, 888, 269, 270, 266
-    ; v1 uncompacted row (mcdata#58)
-    nop ; v1 pad slot 58
     db "minecraft:wooden_shelves", 0
     dw 12
     dw 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191
-    ; v1 uncompacted row (mcdata#61)
-    nop ; v1 pad slot 61
     db "minecraft:wooden_slabs", 0
     dw 12
     dw 599, 600, 601, 602, 603, 605, 606, 885, 886, 607, 608, 604
-    ; v1 uncompacted row (mcdata#64)
-    nop ; v1 pad slot 64
     db "minecraft:wooden_stairs", 0
     dw 12
     dw 200, 404, 405, 406, 516, 518, 519, 895, 896, 520, 521, 517
-    ; v1 uncompacted row (mcdata#67)
-    nop ; v1 pad slot 67
     db "minecraft:wooden_trapdoors", 0
     dw 12
     dw 320, 318, 322, 323, 319, 316, 317, 891, 892, 324, 325, 321
-    ; v1 uncompacted row (mcdata#70)
-    nop ; v1 pad slot 70
     db "minecraft:wool", 0
     dw 16
     dw 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155
-    ; v1 uncompacted row (mcdata#73)
-    nop ; v1 pad slot 73
     db "minecraft:wool_carpets", 0
     dw 16
     dw 538, 539, 540, 541, 542, 543, 544, 545, 546, 547, 548, 549, 550, 551, 552, 553
-    ; v1 uncompacted row (mcdata#76)
-    nop ; v1 pad slot 76
     db "minecraft:damage_type", 0
     dw 33
-    ; v1 uncompacted row (mcdata#78)
-    nop ; v1 pad slot 78
     db "minecraft:always_hurts_ender_dragons", 0
     dw 4
     dw 15, 9, 35, 1
-    ; v1 uncompacted row (mcdata#81)
-    nop ; v1 pad slot 81
     db "minecraft:always_kills_armor_stands", 0
     dw 5
     dw 0, 45, 14, 49, 47
-    ; v1 uncompacted row (mcdata#84)
-    nop ; v1 pad slot 84
     db "minecraft:always_most_significant_fall", 0
     dw 1
     dw 32
-    ; v1 uncompacted row (mcdata#87)
-    nop ; v1 pad slot 87
     db "minecraft:always_triggers_silverfish", 0
     dw 1
     dw 27
-    ; v1 uncompacted row (mcdata#90)
-    nop ; v1 pad slot 90
     db "minecraft:avoids_guardian_thorns", 0
     dw 6
     dw 27, 43, 15, 9, 35, 1
-    ; v1 uncompacted row (mcdata#93)
-    nop ; v1 pad slot 93
     db "minecraft:burn_from_stepping", 0
     dw 2
     dw 3, 20
@@ -5556,3 +5472,366 @@ mcd_tags:
     db "minecraft:arthropod", 0
     dw 5
     dw 11, 42, 114, 124, 22
+    ; v1 uncompacted row (mcdata#0)
+    nop ; v1 pad slot 0
+    db "minecraft:axolotl_always_hostiles", 0 ; v1: mcdata scratch #0
+    ; TODO: hoist invariant pointer load out of .loop (mcdata:0)
+    dw 3 ; v1: mcdata scratch #1
+    dw 38, 63, 40 ; v1: mcdata scratch #2
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mcdata:2)
+    ; v1 uncompacted row (mcdata#3)
+    nop ; v1 pad slot 3
+    db "minecraft:axolotl_hunt_targets", 0 ; v1: mcdata scratch #3
+    dw 7 ; v1: mcdata scratch #4
+    ; TODO: verify 16-byte rsp alignment before inner call (mcdata:4)
+    dw 136, 107, 110, 27, 127, 61, 130 ; v1: mcdata scratch #5
+    ; v1 uncompacted row (mcdata#6)
+    nop ; v1 pad slot 6
+    db "minecraft:beehive_inhabitors", 0 ; v1: mcdata scratch #6
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcdata:6)
+    dw 1 ; v1: mcdata scratch #7
+    dw 11 ; v1: mcdata scratch #8
+    ; TODO: hoist invariant pointer load out of .loop (mcdata:8)
+    ; v1 uncompacted row (mcdata#9)
+    nop ; v1 pad slot 9
+    db "minecraft:boat", 0 ; v1: mcdata scratch #9
+    dw 10 ; v1: mcdata scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcdata:10)
+    dw 89, 125, 12, 74, 0, 23, 33, 94, 81, 9 ; v1: mcdata scratch #11
+    ; v1 uncompacted row (mcdata#12)
+    nop ; v1 pad slot 12
+    db "minecraft:burn_in_daylight", 0 ; v1: mcdata scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mcdata:12)
+    dw 10 ; v1: mcdata scratch #13
+    dw 115, 128, 146, 16, 150, 151, 153, 38, 152, 99 ; v1: mcdata scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcdata:14)
+    ; v1 uncompacted row (mcdata#15)
+    nop ; v1 pad slot 15
+    db "minecraft:can_breathe_under_water", 0 ; v1: mcdata scratch #15
+    dw 32 ; v1: mcdata scratch #16
+    ; TODO: clamp index before table lookup on malformed input (mcdata:16)
+    dw 115, 128, 146, 116, 16, 97, 151, 20, 150, 153, 154, 149, 38, 67, 152, 145, 99, 7, 55, 63, 40, 137, 61, 27 ; v1: mcdata scratch #17
+    dw 107, 110, 127, 136, 130, 5, 28, 88 ; v1: mcdata scratch #18
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcdata:18)
+    ; v1 uncompacted row (mcdata#19)
+    nop ; v1 pad slot 19
+    db "minecraft:can_equip_harness", 0 ; v1: mcdata scratch #19
+    dw 1 ; v1: mcdata scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mcdata:20)
+    dw 58 ; v1: mcdata scratch #21
+    ; v1 uncompacted row (mcdata#22)
+    nop ; v1 pad slot 22
+    db "minecraft:can_equip_saddle", 0 ; v1: mcdata scratch #22
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mcdata:22)
+    dw 11 ; v1: mcdata scratch #23
+    dw 66, 116, 151, 36, 87, 100, 129, 19, 20, 88, 152 ; v1: mcdata scratch #24
+    ; TODO: clamp index before table lookup on malformed input (mcdata:24)
+    ; v1 uncompacted row (mcdata#25)
+    nop ; v1 pad slot 25
+    db "minecraft:can_float_while_ridden", 0 ; v1: mcdata scratch #25
+    dw 6 ; v1: mcdata scratch #26
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcdata:26)
+    dw 66, 151, 87, 36, 19, 20 ; v1: mcdata scratch #27
+    ; v1 uncompacted row (mcdata#28)
+    nop ; v1 pad slot 28
+    db "minecraft:can_turn_in_boats", 0 ; v1: mcdata scratch #28
+    ; TODO: hoist invariant pointer load out of .loop (mcdata:28)
+    dw 1 ; v1: mcdata scratch #29
+    dw 17 ; v1: mcdata scratch #30
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mcdata:30)
+    ; v1 uncompacted row (mcdata#31)
+    nop ; v1 pad slot 31
+    db "minecraft:can_wear_horse_armor", 0 ; v1: mcdata scratch #31
+    dw 2 ; v1: mcdata scratch #32
+    ; TODO: verify 16-byte rsp alignment before inner call (mcdata:32)
+    dw 66, 151 ; v1: mcdata scratch #33
+    ; v1 uncompacted row (mcdata#34)
+    nop ; v1 pad slot 34
+    db "minecraft:can_wear_nautilus_armor", 0 ; v1: mcdata scratch #34
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcdata:34)
+    dw 2 ; v1: mcdata scratch #35
+    dw 88, 152 ; v1: mcdata scratch #36
+    ; TODO: hoist invariant pointer load out of .loop (mcdata:36)
+    ; v1 uncompacted row (mcdata#37)
+    nop ; v1 pad slot 37
+    db "minecraft:candidate_for_iron_golem_gift", 0 ; v1: mcdata scratch #37
+    dw 2 ; v1: mcdata scratch #38
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcdata:38)
+    dw 139, 28 ; v1: mcdata scratch #39
+    ; v1 uncompacted row (mcdata#40)
+    nop ; v1 pad slot 40
+    db "minecraft:cannot_be_age_locked", 0 ; v1: mcdata scratch #40
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mcdata:40)
+    dw 3 ; v1: mcdata scratch #41
+    dw 151, 116, 139 ; v1: mcdata scratch #42
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcdata:42)
+    ; v1 uncompacted row (mcdata#43)
+    nop ; v1 pad slot 43
+    db "minecraft:cannot_be_pushed_onto_boats", 0 ; v1: mcdata scratch #43
+    dw 13 ; v1: mcdata scratch #44
+    ; TODO: clamp index before table lookup on malformed input (mcdata:44)
+    dw 155, 40, 27, 107, 110, 136, 35, 127, 61, 130, 31, 88, 152 ; v1: mcdata scratch #45
+    ; v1 uncompacted row (mcdata#46)
+    nop ; v1 pad slot 46
+    db "minecraft:deflects_projectiles", 0 ; v1: mcdata scratch #46
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcdata:46)
+    dw 1 ; v1: mcdata scratch #47
+    dw 17 ; v1: mcdata scratch #48
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mcdata:48)
+    ; v1 uncompacted row (mcdata#49)
+    nop ; v1 pad slot 49
+    db "minecraft:dismounts_underwater", 0 ; v1: mcdata scratch #49
+    dw 13 ; v1: mcdata scratch #50
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mcdata:50)
+    dw 19, 26, 36, 58, 66, 78, 87, 100, 109, 124, 129, 134, 151 ; v1: mcdata scratch #51
+    ; v1 uncompacted row (mcdata#52)
+    nop ; v1 pad slot 52
+    db "minecraft:fall_damage_immune", 0
+    dw 18
+    dw 28, 70, 121, 112, 2, 10, 11, 14, 21, 26, 57, 58, 99, 80, 91, 98, 145, 17
+    ; v1 uncompacted row (mcdata#55)
+    nop ; v1 pad slot 55
+    db "minecraft:followable_friendly_mobs", 0
+    dw 25
+    dw 4, 11, 19, 21, 26, 30, 36, 54, 62, 58, 66, 116, 78, 87, 91, 96, 98, 100, 104, 108, 111, 119, 129, 139
+    dw 148
+    ; v1 uncompacted row (mcdata#59)
+    nop ; v1 pad slot 59
+    db "minecraft:freeze_hurts_extra_types", 0
+    dw 3
+    dw 129, 14, 80
+    ; v1 uncompacted row (mcdata#62)
+    nop ; v1 pad slot 62
+    db "minecraft:freeze_immune_entity_types", 0
+    dw 4
+    dw 128, 104, 121, 145
+    ; v1 uncompacted row (mcdata#65)
+    nop ; v1 pad slot 65
+    db "minecraft:frog_food", 0
+    dw 2
+    dw 117, 80
+    ; v1 uncompacted row (mcdata#68)
+    nop ; v1 pad slot 68
+    db "minecraft:ignores_poison_and_regen", 0
+    dw 17
+    dw 115, 128, 146, 116, 16, 97, 151, 20, 150, 153, 154, 149, 38, 67, 152, 145, 99
+    ; v1 uncompacted row (mcdata#71)
+    nop ; v1 pad slot 71
+    db "minecraft:illager", 0
+    dw 4
+    dw 46, 68, 103, 140
+    ; v1 uncompacted row (mcdata#74)
+    nop ; v1 pad slot 74
+    db "minecraft:illager_friends", 0
+    dw 4
+    dw 46, 68, 103, 140
+    ; v1 uncompacted row (mcdata#77)
+    nop ; v1 pad slot 77
+    db "minecraft:immune_to_infested", 0
+    dw 1
+    dw 114
+    ; v1 uncompacted row (mcdata#80)
+    nop ; v1 pad slot 80
+    db "minecraft:immune_to_oozing", 0
+    dw 1
+    dw 117
+    ; v1 uncompacted row (mcdata#83)
+    nop ; v1 pad slot 83
+    db "minecraft:impact_projectiles", 0
+    dw 12
+    dw 6, 123, 53, 120, 52, 118, 39, 135, 37, 147, 143, 18
+    ; v1 uncompacted row (mcdata#86)
+    nop ; v1 pad slot 86
+    db "minecraft:inverted_healing_and_harm", 0
+    dw 17
+    dw 115, 128, 146, 116, 16, 97, 151, 20, 150, 153, 154, 149, 38, 67, 152, 145, 99
+    ; v1 uncompacted row (mcdata#89)
+    nop ; v1 pad slot 89
+    db "minecraft:nautilus_hostiles", 0
+    dw 1
+    dw 107
+    ; v1 uncompacted row (mcdata#92)
+    nop ; v1 pad slot 92
+    db "minecraft:no_anger_from_wind_charge", 0
+    dw 9
+    dw 17, 115, 16, 128, 150, 67, 124, 22, 117
+    db "minecraft:non_controlling_rider", 0
+    dw 2
+    dw 117, 80
+    db "minecraft:not_scary_for_pufferfish", 0
+    dw 13
+    dw 137, 63, 40, 27, 107, 110, 136, 35, 127, 61, 130, 88, 152
+    db "minecraft:powder_snow_walkable_mobs", 0
+    dw 4
+    dw 108, 42, 114, 54
+    db "minecraft:raiders", 0
+    dw 6
+    dw 46, 103, 109, 140, 68, 144
+    db "minecraft:redirectable_projectile", 0
+    dw 3
+    dw 52, 143, 18
+    db "minecraft:sensitive_to_bane_of_arthropods", 0
+    dw 5
+    dw 11, 42, 114, 124, 22
+    db "minecraft:sensitive_to_impaling", 0
+    dw 14
+    dw 137, 7, 63, 40, 27, 107, 110, 136, 35, 127, 61, 130, 88, 152
+    db "minecraft:sensitive_to_smite", 0
+    dw 17
+    dw 115, 128, 146, 116, 16, 97, 151, 20, 150, 153, 154, 149, 38, 67, 152, 145, 99
+    db "minecraft:skeletons", 0
+    dw 6
+    dw 115, 128, 146, 116, 16, 97
+    db "minecraft:undead", 0
+    dw 17
+    dw 115, 128, 146, 116, 16, 97, 151, 20, 150, 153, 154, 149, 38, 67, 152, 145, 99
+    db "minecraft:wither_friends", 0
+    dw 17
+    dw 115, 128, 146, 116, 16, 97, 151, 20, 150, 153, 154, 149, 38, 67, 152, 145, 99
+    db "minecraft:zombies", 0
+    dw 9
+    dw 151, 20, 150, 153, 154, 149, 38, 67, 152
+    db "minecraft:fluid", 0
+    dw 6
+    db "minecraft:bubble_column_can_occupy", 0
+    dw 1
+    dw 2
+    db "minecraft:lava", 0
+    dw 2
+    dw 4, 3
+    db "minecraft:supports_frogspawn", 0
+    dw 1
+    dw 2
+    db "minecraft:supports_lily_pad", 0
+    dw 1
+    dw 2
+    db "minecraft:supports_sugar_cane_adjacently", 0
+    dw 2
+    dw 2, 1
+    db "minecraft:water", 0
+    dw 2
+    dw 2, 1
+    db "minecraft:game_event", 0
+    dw 5
+    db "minecraft:allay_can_listen", 0
+    dw 1
+    dw 33
+    db "minecraft:ignore_vibrations_sneaking", 0
+    dw 6
+    dw 26, 36, 41, 42, 29, 28
+    db "minecraft:shrieker_can_listen", 0
+    dw 1
+    dw 37
+    db "minecraft:vibrations", 0
+    dw 55
+    dw 1, 2, 3, 5, 6, 7, 8, 0, 4, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 24
+    dw 25, 26, 27, 28, 32, 33, 34, 35, 36, 38, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53
+    dw 54, 55, 56, 57, 58, 59, 23
+    db "minecraft:warden_can_listen", 0
+    dw 56
+    dw 1, 2, 3, 5, 6, 7, 8, 0, 4, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 24
+    dw 25, 26, 27, 28, 32, 33, 34, 35, 36, 38, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53
+    dw 54, 55, 56, 57, 58, 59, 39, 37
+    db "minecraft:instrument", 0
+    dw 3
+    db "minecraft:goat_horns", 0
+    dw 8
+    dw 4, 6, 5, 3, 0, 1, 7, 2
+    db "minecraft:regular_goat_horns", 0
+    dw 4
+    dw 4, 6, 5, 3
+    db "minecraft:screaming_goat_horns", 0
+    dw 4
+    dw 0, 1, 7, 2
+    db "minecraft:item", 0
+    dw 207
+    db "minecraft:acacia_logs", 0
+    dw 4
+    dw 138, 175, 152, 163
+    db "minecraft:anvil", 0
+    dw 3
+    dw 479, 480, 481
+    db "minecraft:armadillo_food", 0
+    dw 1
+    dw 1123
+    db "minecraft:arrows", 0
+    dw 3
+    dw 896, 1294, 1293
+    db "minecraft:axes", 0
+    dw 7
+    dw 940, 925, 930, 945, 915, 935, 920
+    db "minecraft:axolotl_food", 0
+    dw 1
+    dw 1023
+    db "minecraft:bamboo_blocks", 0
+    dw 2
+    dw 147, 170
+    db "minecraft:banners", 0
+    dw 16
+    dw 1267, 1268, 1269, 1270, 1271, 1272, 1273, 1274, 1275, 1276, 1277, 1278, 1279, 1280, 1281, 1282
+    db "minecraft:bars", 0
+    dw 9
+    dw 391, 392, 396, 393, 397, 394, 398, 395, 399
+    db "minecraft:beacon_payment_items", 0
+    dw 5
+    dw 910, 900, 899, 909, 905
+    db "minecraft:beds", 0
+    dw 16
+    dw 1101, 1102, 1098, 1099, 1096, 1094, 1100, 1090, 1095, 1092, 1089, 1088, 1093, 1097, 1087, 1091
+    db "minecraft:bee_food", 0
+    dw 29
+    dw 229, 231, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 525, 526, 528, 527, 246, 192, 206, 57, 187
+    dw 259, 260, 326, 247, 342
+    db "minecraft:birch_logs", 0
+    dw 4
+    dw 136, 173, 150, 161
+    db "minecraft:boats", 0
+    dw 20
+    dw 864, 866, 868, 870, 872, 876, 878, 880, 882, 874, 865, 867, 869, 871, 873, 877, 879, 881, 883, 875
+    db "minecraft:book_cloning_target", 0
+    dw 1
+    dw 1221
+    db "minecraft:bookshelf_books", 0
+    dw 5
+    dw 1030, 1222, 1245, 1221, 1308
+    db "minecraft:breaks_decorated_pots", 0
+    dw 37
+    dw 937, 922, 927, 942, 912, 932, 917, 940, 925, 930, 945, 915, 935, 920, 939, 924, 929, 944, 914, 934, 919, 938, 923, 928
+    dw 943, 913, 933, 918, 941, 926, 931, 946, 916, 936, 921, 1332, 1224
+    db "minecraft:brewing_fuel", 0
+    dw 1
+    dw 1125
+    db "minecraft:bundles", 0
+    dw 17
+    dw 1037, 1053, 1049, 1050, 1047, 1045, 1051, 1041, 1046, 1043, 1040, 1039, 1044, 1048, 1052, 1042, 1038
+    db "minecraft:buttons", 0
+    dw 14
+    dw 752, 753, 754, 755, 756, 758, 759, 762, 763, 760, 761, 757, 750, 751
+    db "minecraft:camel_food", 0
+    dw 1
+    dw 341
+    db "minecraft:camel_husk_food", 0
+    dw 1
+    dw 1253
+    db "minecraft:candles", 0
+    dw 17
+    dw 1399, 1400, 1401, 1402, 1403, 1404, 1405, 1406, 1407, 1408, 1409, 1410, 1411, 1412, 1413, 1414, 1415
+    db "minecraft:cat_collar_dyes", 0
+    dw 16
+    dw 1067, 1068, 1069, 1070, 1071, 1072, 1073, 1074, 1075, 1076, 1077, 1078, 1079, 1080, 1081, 1082
+    db "minecraft:cat_food", 0
+    dw 2
+    dw 1058, 1059
+    db "minecraft:cauldron_can_remove_dye", 0
+    dw 6
+    dw 955, 956, 957, 958, 1261, 891
+    db "minecraft:chains", 0
+    dw 9
+    dw 400, 401, 405, 402, 406, 403, 407, 404, 408
+    db "minecraft:cherry_logs", 0
+    dw 4
+    dw 139, 176, 153, 164
+    db "minecraft:chest_armor", 0
+    dw 7
+    dw 956, 960, 964, 976, 968, 972, 980
+    db "minecraft:chest_boats", 0
