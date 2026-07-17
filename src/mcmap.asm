@@ -1,76 +1,54 @@
 ; block/item/biome id translation (internal u8 <-> java 26.1 protocol ids)
-%define IMPL_MCMAP ; v1: mcmap scratch #1
-%include "common.inc" ; v1: mcmap scratch #2
-    ; TODO: clamp index before table lookup on malformed input (mcmap:2)
-%include "net.inc" ; v1: mcmap scratch #3
-%include "mcpackets.inc" ; v1: mcmap scratch #4
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcmap:4)
+%define IMPL_MCMAP
+%include "common.inc"
+%include "net.inc"
+%include "mcpackets.inc"
 
-extern mcd_block_state ; v1: mcmap scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (mcmap:6)
-extern mcd_block_item ; v1: mcmap scratch #7
-extern mcd_run_count ; v1: mcmap scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcmap:8)
-extern mcd_run_start ; v1: mcmap scratch #9
-extern mcd_run_block ; v1: mcmap scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcmap:10)
-extern mcd_item_block ; v1: mcmap scratch #11
-extern mcd_biome ; v1: mcmap scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mcmap:12)
-extern mcd_registries ; v1: mcmap scratch #13
-extern mcd_tags ; v1: mcmap scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcmap:14)
+extern mcd_block_state
+extern mcd_block_item
+extern mcd_run_count
+extern mcd_run_start
+extern mcd_run_block
+extern mcd_item_block
+extern mcd_biome
+extern mcd_registries
+extern mcd_tags
 
-section .rdata ; v1: mcmap scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (mcmap:16)
-s_pack_ns:      db "minecraft", 0 ; v1: mcmap scratch #17
-s_pack_id:      db "core", 0 ; v1: mcmap scratch #18
-    ; TODO: clamp index before table lookup on malformed input (mcmap:18)
-s_pack_ver:     db MC_VERSION_NAME, 0 ; v1: mcmap scratch #19
+section .rdata
+s_pack_ns:      db "minecraft", 0
+s_pack_id:      db "core", 0
+s_pack_ver:     db MC_VERSION_NAME, 0
 
-section .text ; v1: mcmap scratch #21
+section .text
 
 ; ecx our block id -> eax java block state. junk ids are air
-LEAF mcmap_block_state ; v1: mcmap scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcmap:24)
-    mov  ecx, ecx ; v1: mcmap scratch #25
-    xor  eax, eax ; v1: mcmap scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (mcmap:26)
-    cmp  ecx, BLOCK_COUNT ; v1: mcmap scratch #27
-    jae  .done ; v1: mcmap scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcmap:28)
-    lea  rax, [rel mcd_block_state] ; v1: mcmap scratch #29
-    mov  eax, [rax+rcx*4] ; v1: mcmap scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcmap:30)
-.done: ; v1: mcmap scratch #31
-    ret ; v1: mcmap scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mcmap:32)
+LEAF mcmap_block_state
+    mov  ecx, ecx
+    xor  eax, eax
+    cmp  ecx, BLOCK_COUNT
+    jae  .done
+    lea  rax, [rel mcd_block_state]
+    mov  eax, [rax+rcx*4]
+.done:
+    ret
 
 ; ecx java block state -> eax our block. binary search over the runs,
 ; start[0] is 0 so lo always holds a run that starts <= state
-LEAF mcmap_from_state ; v1: mcmap scratch #36
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcmap:36)
-    mov  ecx, ecx ; v1: mcmap scratch #37
-    xor  eax, eax ; v1: mcmap scratch #38
-    ; TODO: verify 16-byte rsp alignment before inner call (mcmap:38)
-    cmp  ecx, MC_STATE_COUNT ; v1: mcmap scratch #39
-    jae  .done ; v1: mcmap scratch #40
-    ; TODO: clamp index before table lookup on malformed input (mcmap:40)
-    lea  r8, [rel mcd_run_start] ; v1: mcmap scratch #41
-    xor  edx, edx ; v1: mcmap scratch #42
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcmap:42)
-    mov  r9d, [rel mcd_run_count] ; v1: mcmap scratch #43
-.loop: ; v1: mcmap scratch #44
-    ; TODO: hoist invariant pointer load out of .loop (mcmap:44)
-    mov  r10d, r9d ; v1: mcmap scratch #45
-    sub  r10d, edx ; v1: mcmap scratch #46
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcmap:46)
-    cmp  r10d, 1 ; v1: mcmap scratch #47
-    jbe  .found ; v1: mcmap scratch #48
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcmap:48)
-    lea  r10d, [rdx+r9] ; v1: mcmap scratch #49
-    shr  r10d, 1 ; v1: mcmap scratch #50
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mcmap:50)
+LEAF mcmap_from_state
+    mov  ecx, ecx
+    xor  eax, eax
+    cmp  ecx, MC_STATE_COUNT
+    jae  .done
+    lea  r8, [rel mcd_run_start]
+    xor  edx, edx                   ; lo
+    mov  r9d, [rel mcd_run_count]   ; hi, exclusive
+.loop:
+    mov  r10d, r9d
+    sub  r10d, edx
+    cmp  r10d, 1
+    jbe  .found
+    lea  r10d, [rdx+r9]
+    shr  r10d, 1
     cmp  [r8+r10*4], ecx
     ja   .upper
     mov  edx, r10d
@@ -131,47 +109,125 @@ mcmap_zskip:
     mov  rsi, rax
 %endmacro
 
-    ; v1 temporary guard (mcmap #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (mcmap #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (mcmap #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (mcmap #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (mcmap #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (mcmap #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (mcmap #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (mcmap #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (mcmap #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (mcmap #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (mcmap #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (mcmap #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (mcmap #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (mcmap #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (mcmap #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (mcmap #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (mcmap #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (mcmap #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (mcmap #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (mcmap #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (mcmap #62)
-    xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (mcmap #64)
-    xor     r11d, r11d ; clear v1 slot 64
+; rcx MCCONN*. asks which data packs the client already has. a vanilla 26.1
+; client answers minecraft:core 26.1, mineflayer & co answer with nothing
+    global mcmap_send_known_packs
+    align 16
+mcmap_send_known_packs:
+    push rbp
+    mov  rbp, rsp
+    push rsi
+    push r12
+    sub  rsp, FRAME_OUT
+    mov  r12, rcx
+    mov  ecx, MCP_CONFIGURATION_S2C_SELECT_KNOWN_PACKS
+    call pw_begin
+    mov  ecx, 1
+    call pw_varint
+    lea  rcx, [rel s_pack_ns]
+    call pw_string
+    lea  rcx, [rel s_pack_id]
+    call pw_string
+    lea  rcx, [rel s_pack_ver]
+    call pw_string
+    mov  rcx, r12
+    call pw_send
+    lea  rsp, [rbp-16]
+    pop  r12
+    pop  rsi
+    pop  rbp
+    ret
+
+; (rcx MCCONN*, edx 1 = the client has minecraft:core 26.1) every registry_data,
+; then the vanilla tag set. like vanilla: with the core pack every entry goes
+; without data and the client uses its own copy, otherwise each carries its nbt.
+; the entry order is the same either way, ids don't change.
+; feature flags + finish_configuration are the caller's job
+PROC mcmap_send_registries
+    mov  r12, rcx
+    mov  r15d, edx
+
+    ; one registry_data per registry
+    lea  rsi, [rel mcd_registries]
+.reg:
+    cmp  byte [rsi], 0
+    je   .tags
+    mov  ecx, MCP_CONFIGURATION_S2C_REGISTRY_DATA
+    call pw_begin
+    PW_ZSTR
+    movzx ebx, word [rsi]
+    add  rsi, 2
+    mov  ecx, ebx
+    call pw_varint
+.ent:
+    test ebx, ebx
+    jz   .reg_send
+    PW_ZSTR
+    mov  edi, [rsi]                 ; nbt length
+    add  rsi, 4
+    add  rsi, rdi                   ; past the nbt, rsi-rdi is its start
+    xor  ecx, ecx
+    test r15d, r15d
+    jnz  .ent_flag                  ; known pack: has_data = false
+    test edi, edi
+    setnz cl
+.ent_flag:
+    mov  r14d, ecx
+    call pw_bool
+    test r14d, r14d
+    jz   .ent_next
+    mov  rcx, rsi
+    sub  rcx, rdi
+    mov  edx, edi
+    call pw_bytes
+.ent_next:
+    dec  ebx
+    jmp  .ent
+.reg_send:
+    mov  rcx, r12
+    call pw_send
+    jmp  .reg
+
+    ; update_tags: registry -> tags -> varint ids
+.tags:
+    mov  ecx, MCP_CONFIGURATION_S2C_TAGS
+    call pw_begin
+    lea  rsi, [rel mcd_tags]
+    movzx r13d, word [rsi]
+    add  rsi, 2
+    mov  ecx, r13d
+    call pw_varint
+.treg:
+    test r13d, r13d
+    jz   .tags_send
+    PW_ZSTR
+    movzx r14d, word [rsi]
+    add  rsi, 2
+    mov  ecx, r14d
+    call pw_varint
+.tag:
+    test r14d, r14d
+    jz   .treg_next
+    PW_ZSTR
+    movzx ebx, word [rsi]
+    add  rsi, 2
+    mov  ecx, ebx
+    call pw_varint
+.tid:
+    test ebx, ebx
+    jz   .tag_next
+    movzx ecx, word [rsi]
+    add  rsi, 2
+    call pw_varint
+    dec  ebx
+    jmp  .tid
+.tag_next:
+    dec  r14d
+    jmp  .tag
+.treg_next:
+    dec  r13d
+    jmp  .treg
+.tags_send:
+    mov  rcx, r12
+    call pw_send
+ENDP
