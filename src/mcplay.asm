@@ -494,57 +494,40 @@ PROC mcplay_encode_chunk, 640
     jnz  .hmo
     ret
 
-.sections: ; v1: mcplay scratch #1
-    movzx ecx, byte [rbx+CHUNK.biome+8+8*16] ; v1: mcplay scratch #2
-    ; TODO: hoist invariant pointer load out of .loop (mcplay:2)
-    call mcmap_biome ; v1: mcplay scratch #3
-    mov  [rel pl_cur_biome], eax ; v1: mcplay scratch #4
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcplay:4)
-    mov  r14, rdi ; v1: mcplay scratch #5
-    lea  rdx, [rel pl_secbuf] ; v1: mcplay scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (mcplay:6)
-    lea  rcx, [rel pl_bedrock_sec] ; v1: mcplay scratch #7
-    call pl_enc_sec ; v1: mcplay scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mcplay:8)
-    mov  r12d, 3 ; v1: mcplay scratch #9
-.stone: ; v1: mcplay scratch #10
-    ; TODO: clamp index before table lookup on malformed input (mcplay:10)
-    lea  rcx, [rel pl_stone_sec] ; v1: mcplay scratch #11
-    mov  rdx, rax ; v1: mcplay scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcplay:12)
-    call pl_enc_sec ; v1: mcplay scratch #13
-    dec  r12d ; v1: mcplay scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcplay:14)
-    jnz  .stone ; v1: mcplay scratch #15
-    xor  r12d, r12d ; v1: mcplay scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcplay:16)
-.ours: ; v1: mcplay scratch #17
-    mov  ecx, r12d ; v1: mcplay scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (mcplay:18)
-    shl  ecx, 12 ; v1: mcplay scratch #19
-    lea  rcx, [rbx+rcx+CHUNK_BLOCKS] ; v1: mcplay scratch #20
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcplay:20)
-    mov  rdx, rax ; v1: mcplay scratch #21
-    call pl_enc_sec ; v1: mcplay scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (mcplay:22)
-    inc  r12d ; v1: mcplay scratch #23
-    cmp  r12d, SECTIONS ; v1: mcplay scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mcplay:24)
-    jb   .ours ; v1: mcplay scratch #25
-    mov  r12d, (MC_WORLD_HEIGHT/16) - SECTIONS - 4 ; v1: mcplay scratch #26
-    ; TODO: clamp index before table lookup on malformed input (mcplay:26)
-.air: ; v1: mcplay scratch #27
-    lea  rcx, [rel pl_air_sec] ; v1: mcplay scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcplay:28)
-    mov  rdx, rax ; v1: mcplay scratch #29
-    call pl_enc_sec ; v1: mcplay scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcplay:30)
-    dec  r12d ; v1: mcplay scratch #31
-    jnz  .air ; v1: mcplay scratch #32
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcplay:32)
-    lea  rsi, [rel pl_secbuf] ; v1: mcplay scratch #33
-    sub  rax, rsi ; v1: mcplay scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (mcplay:34)
+.sections:
+    movzx ecx, byte [rbx+CHUNK.biome+8+8*16]
+    call mcmap_biome
+    mov  [rel pl_cur_biome], eax
+    mov  r14, rdi                   ; park the packet cursor, sections need their length first
+    lea  rdx, [rel pl_secbuf]
+    lea  rcx, [rel pl_bedrock_sec]  ; y -64
+    call pl_enc_sec
+    mov  r12d, 3
+.stone:
+    lea  rcx, [rel pl_stone_sec]
+    mov  rdx, rax
+    call pl_enc_sec
+    dec  r12d
+    jnz  .stone
+    xor  r12d, r12d
+.ours:
+    mov  ecx, r12d
+    shl  ecx, 12
+    lea  rcx, [rbx+rcx+CHUNK_BLOCKS]
+    mov  rdx, rax
+    call pl_enc_sec
+    inc  r12d
+    cmp  r12d, SECTIONS
+    jb   .ours
+    mov  r12d, (MC_WORLD_HEIGHT/16) - SECTIONS - 4
+.air:
+    lea  rcx, [rel pl_air_sec]
+    mov  rdx, rax
+    call pl_enc_sec
+    dec  r12d
+    jnz  .air
+    lea  rsi, [rel pl_secbuf]
+    sub  rax, rsi
     mov  r12, rax
     mov  rdi, r14
     mov  ecx, r12d
@@ -745,12 +728,272 @@ LPROC pl_has_chunk
 .done:
     mov  eax, r12d
 ENDP
-    ; v1 temporary guard (mcplay #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (mcplay #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (mcplay #21)
-    xor     r11d, r11d ; clear v1 slot 21
+
+; rcx conn -> eax chunk x, edx chunk z of its feet
+align 16 ; v1: mcplay scratch #2
+    ; TODO: hoist invariant pointer load out of .loop (mcplay:2)
+pl_conn_chunk: ; v1: mcplay scratch #3
+    movsd xmm0, [rcx+MCCONN.x] ; v1: mcplay scratch #4
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mcplay:4)
+    roundsd xmm0, xmm0, 1 ; v1: mcplay scratch #5
+    cvttsd2si eax, xmm0 ; v1: mcplay scratch #6
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mcplay:6)
+    sar  eax, 4 ; v1: mcplay scratch #7
+    movsd xmm1, [rcx+MCCONN.z] ; v1: mcplay scratch #8
+    ; TODO: clamp index before table lookup on malformed input (mcplay:8)
+    roundsd xmm1, xmm1, 1 ; v1: mcplay scratch #9
+    cvttsd2si edx, xmm1 ; v1: mcplay scratch #10
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcplay:10)
+    sar  edx, 4 ; v1: mcplay scratch #11
+    ret ; v1: mcplay scratch #12
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcplay:12)
+
+; send g_pw to every joined java player except rcx (0 = nobody)
+LPROC pl_bcast ; v1: mcplay scratch #15
+    mov  r12, rcx ; v1: mcplay scratch #16
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcplay:16)
+    lea  rbx, [rel g_net_conns] ; v1: mcplay scratch #17
+    xor  esi, esi ; v1: mcplay scratch #18
+    ; TODO: verify 16-byte rsp alignment before inner call (mcplay:18)
+.l: ; v1: mcplay scratch #19
+    cmp  rbx, r12 ; v1: mcplay scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (mcplay:20)
+    je   .n ; v1: mcplay scratch #21
+    mov  rcx, rbx ; v1: mcplay scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mcplay:22)
+    call pl_ready ; v1: mcplay scratch #23
+    test eax, eax ; v1: mcplay scratch #24
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mcplay:24)
+    jz   .n ; v1: mcplay scratch #25
+    mov  rcx, rbx ; v1: mcplay scratch #26
+    ; TODO: clamp index before table lookup on malformed input (mcplay:26)
+    call pw_send ; v1: mcplay scratch #27
+.n: ; v1: mcplay scratch #28
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcplay:28)
+    add  rbx, MCCONN_size ; v1: mcplay scratch #29
+    inc  esi ; v1: mcplay scratch #30
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcplay:30)
+    cmp  esi, MAX_NET_CONNS ; v1: mcplay scratch #31
+    jb   .l ; v1: mcplay scratch #32
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcplay:32)
+ENDP ; v1: mcplay scratch #33
+
+; -> rax host display name
+align 16 ; v1: mcplay scratch #36
+    ; TODO: verify 16-byte rsp alignment before inner call (mcplay:36)
+pl_host_name: ; v1: mcplay scratch #37
+    lea  rax, [rel g_net_host_name] ; v1: mcplay scratch #38
+    ; TODO: hoist invariant pointer load out of .loop (mcplay:38)
+    cmp  byte [rax], 0 ; v1: mcplay scratch #39
+    jne  .r ; v1: mcplay scratch #40
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mcplay:40)
+    lea  rax, [rel s_hostdef] ; v1: mcplay scratch #41
+.r: ret ; v1: mcplay scratch #42
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mcplay:42)
+
+LPROC pl_host_refresh ; v1: mcplay scratch #44
+    ; TODO: clamp index before table lookup on malformed input (mcplay:44)
+    lea  rsi, [rel g_player] ; v1: mcplay scratch #45
+    lea  rdi, [rel pl_hraw] ; v1: mcplay scratch #46
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcplay:46)
+    xor  ebx, ebx ; v1: mcplay scratch #47
+    mov  eax, [rsi+PLAYER.x] ; v1: mcplay scratch #48
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcplay:48)
+    cmp  eax, [rdi] ; v1: mcplay scratch #49
+    setne cl ; v1: mcplay scratch #50
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcplay:50)
+    or   bl, cl
+    mov  [rdi], eax
+    mov  eax, [rsi+PLAYER.y]
+    cmp  eax, [rdi+4]
+    setne cl
+    or   bl, cl
+    mov  [rdi+4], eax
+    mov  eax, [rsi+PLAYER.z]
+    cmp  eax, [rdi+8]
+    setne cl
+    or   bl, cl
+    mov  [rdi+8], eax
+    mov  eax, [rsi+PLAYER.yaw]
+    cmp  eax, [rdi+12]
+    setne cl
+    or   bl, cl
+    mov  [rdi+12], eax
+    mov  eax, [rsi+PLAYER.pitch]
+    cmp  eax, [rdi+16]
+    setne cl
+    or   bl, cl
+    mov  [rdi+16], eax
+    cvtss2sd xmm0, [rsi+PLAYER.x]
+    movsd [rel pl_hpos], xmm0
+    cvtss2sd xmm0, [rsi+PLAYER.y]
+    movsd [rel pl_hpos+8], xmm0
+    cvtss2sd xmm0, [rsi+PLAYER.z]
+    movsd [rel pl_hpos+16], xmm0
+    movss xmm0, [rsi+PLAYER.yaw]    ; ours looks -z at 0, java +z
+    addss xmm0, [rel c_180]
+    movss [rel pl_hrot], xmm0
+    xorps xmm0, xmm0
+    subss xmm0, [rsi+PLAYER.pitch]  ; ours + is up
+    movss [rel pl_hrot+4], xmm0
+    mov  eax, [rsi+PLAYER.on_ground]
+    mov  [rel pl_hground], eax
+    mov  dword [rel pl_hvalid], 1
+    mov  eax, ebx
+ENDP
+
+; (ecx eid, rdx uuid, r8 double[3], r9 java yaw/pitch) -> spawn_entity in g_pw
+LPROC pl_pw_spawn
+    mov  ebx, ecx
+    mov  rsi, rdx
+    mov  rdi, r8
+    mov  r12, r9
+    mov  ecx, MCP_PLAY_S2C_SPAWN_ENTITY
+    call pw_begin
+    mov  ecx, ebx
+    call pw_varint
+    mov  rcx, rsi
+    call pw_uuid
+    mov  ecx, MCE_PLAYER
+    call pw_varint
+    movsd xmm0, [rdi]
+    call pw_f64
+    movsd xmm0, [rdi+8]
+    call pw_f64
+    movsd xmm0, [rdi+16]
+    call pw_f64
+    xor  ecx, ecx                   ; velocity, lpvec3 zero is one byte
+    call pw_u8
+    movss xmm0, [r12+4]
+    call pl_angle
+    mov  ecx, eax
+    call pw_u8
+    movss xmm0, [r12]
+    call pl_angle
+    mov  ecx, eax
+    call pw_u8
+    movss xmm0, [r12]               ; head
+    call pl_angle
+    mov  ecx, eax
+    call pw_u8
+    xor  ecx, ecx
+    call pw_varint
+ENDP
+
+; (ecx eid, rdx except conn, r8 double[3], r9 java yaw/pitch, ARG5 on ground)
+; teleport + head rotation to everyone but except
+LPROC pl_send_move
+    mov  ebx, ecx
+    mov  r13, rdx
+    mov  rdi, r8
+    mov  r12, r9
+    mov  ecx, MCP_PLAY_S2C_ENTITY_TELEPORT
+    call pw_begin
+    mov  ecx, ebx
+    call pw_varint
+    movsd xmm0, [rdi]
+    call pw_f64
+    movsd xmm0, [rdi+8]
+    call pw_f64
+    movsd xmm0, [rdi+16]
+    call pw_f64
+    mov  esi, 3
+.vel:
+    xorps xmm0, xmm0
+    call pw_f64
+    dec  esi
+    jnz  .vel
+    movss xmm0, [r12]
+    call pw_f32
+    movss xmm0, [r12+4]
+    call pw_f32
+    xor  ecx, ecx                   ; all absolute
+    call pw_i32
+    mov  ecx, ARG5
+    call pw_bool
+    mov  rcx, r13
+    call pl_bcast
+    mov  ecx, MCP_PLAY_S2C_ENTITY_HEAD_ROTATION
+    call pw_begin
+    mov  ecx, ebx
+    call pw_varint
+    movss xmm0, [r12]
+    call pl_angle
+    mov  ecx, eax
+    call pw_u8
+    mov  rcx, r13
+    call pl_bcast
+ENDP
+
+; (rcx uuid, rdx name, r8d gamemode) one player_info entry for actions add|gamemode|listed
+LPROC pl_pw_info_entry
+    mov  rbx, rdx
+    mov  esi, r8d
+    call pw_uuid
+    mov  rcx, rbx
+    call pw_string
+    xor  ecx, ecx                   ; no properties
+    call pw_varint
+    mov  ecx, esi
+    call pw_varint
+    mov  ecx, 1
+    call pw_bool
+ENDP
+
+; (rcx conn) entity view of a java player for pl_pw_spawn: eid, uuid, pos, rot
+LPROC pl_pw_spawn_conn
+    mov  rbx, rcx
+    mov  ecx, [rbx+MCCONN.eid]
+    lea  rdx, [rbx+MCCONN.uuid]
+    lea  r8, [rbx+MCCONN.x]
+    lea  r9, [rbx+MCCONN.yaw]
+    call pl_pw_spawn
+ENDP
+
+; (rcx conn, edx x, r8d y, r9d z) block_change with whatever is really there
+LPROC pl_resync, 16
+    mov  rbx, rcx
+    mov  esi, edx
+    mov  edi, r8d
+    mov  r12d, r9d
+    mov  ecx, esi
+    mov  edx, edi
+    mov  r8d, r12d
+    call pl_state_at
+    mov  r13d, eax
+    mov  ecx, MCP_PLAY_S2C_BLOCK_CHANGE
+    call pw_begin
+    mov  ecx, esi
+    mov  edx, edi
+    mov  r8d, r12d
+    call pw_position
+    mov  ecx, r13d
+    call pw_varint
+    mov  rcx, rbx
+    call pw_send
+ENDP
+
+LPROC pl_state_at
+    call pl_init_luts
+    cmp  edx, 0
+    jl   .rock
+    cmp  edx, CHUNK_H
+    jge  .air
+    call world_get_block
+    movzx eax, al
+    lea  rdx, [rel pl_lut_state]
+    mov  eax, [rdx+rax*4]
+    jmp  .done
+.rock:
+    mov  eax, [rel pl_lut_state + B_STONE*4]
+    cmp  edx, MC_WORLD_MIN_Y
+    jne  .done
+    mov  eax, [rel pl_lut_state + B_BEDROCK*4]
+    jmp  .done
+.air:
+    xor  eax, eax
+.done:
+ENDP
     ; v1 temporary guard (mcplay #23)
     xor     r11d, r11d ; clear v1 slot 23
     ; v1 temporary guard (mcplay #25)
@@ -787,3 +1030,11 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 55
     ; v1 temporary guard (mcplay #57)
     xor     r11d, r11d ; clear v1 slot 57
+    ; v1 temporary guard (mcplay #59)
+    xor     r11d, r11d ; clear v1 slot 59
+    ; v1 temporary guard (mcplay #61)
+    xor     r11d, r11d ; clear v1 slot 61
+    ; v1 temporary guard (mcplay #63)
+    xor     r11d, r11d ; clear v1 slot 63
+    ; v1 temporary guard (mcplay #65)
+    xor     r11d, r11d ; clear v1 slot 65
