@@ -971,3 +971,346 @@ LPROC pl_state_at
     xor  eax, eax
 .done:
 ENDP
+
+; (rcx conn, edx sequence)
+LPROC pl_ack ; v1: mcplay scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mcplay:2)
+    mov  rbx, rcx ; v1: mcplay scratch #3
+    mov  esi, edx ; v1: mcplay scratch #4
+    ; TODO: verify 16-byte rsp alignment before inner call (mcplay:4)
+    mov  ecx, MCP_PLAY_S2C_ACKNOWLEDGE_PLAYER_DIGGING ; v1: mcplay scratch #5
+    call pw_begin ; v1: mcplay scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (mcplay:6)
+    mov  ecx, esi ; v1: mcplay scratch #7
+    call pw_varint ; v1: mcplay scratch #8
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcplay:8)
+    mov  rcx, rbx ; v1: mcplay scratch #9
+    call pw_send ; v1: mcplay scratch #10
+    ; TODO: clamp index before table lookup on malformed input (mcplay:10)
+ENDP ; v1: mcplay scratch #11
+
+; (rcx conn or 0 = all) world time + the overworld clock
+LPROC pl_send_time ; v1: mcplay scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mcplay:14)
+    mov  rbx, rcx ; v1: mcplay scratch #15
+    mov  ecx, MCP_PLAY_S2C_UPDATE_TIME ; v1: mcplay scratch #16
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcplay:16)
+    call pw_begin ; v1: mcplay scratch #17
+    mov  rcx, [rel g_world_time] ; v1: mcplay scratch #18
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcplay:18)
+    call pw_i64 ; v1: mcplay scratch #19
+    mov  ecx, 1 ; v1: mcplay scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mcplay:20)
+    call pw_varint ; v1: mcplay scratch #21
+    mov  ecx, MCCLOCK_OVERWORLD ; v1: mcplay scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (mcplay:22)
+    call pw_varint ; v1: mcplay scratch #23
+    mov  rax, [rel g_world_time] ; v1: mcplay scratch #24
+    ; TODO: hoist invariant pointer load out of .loop (mcplay:24)
+    xor  edx, edx ; v1: mcplay scratch #25
+    mov  ecx, DAY_LENGTH ; v1: mcplay scratch #26
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcplay:26)
+    div  rcx ; v1: mcplay scratch #27
+    mov  rax, [rel g_world_time] ; v1: mcplay scratch #28
+    ; TODO: clamp index before table lookup on malformed input (mcplay:28)
+    sub  rax, rdx ; v1: mcplay scratch #29
+    mov  ecx, [rel g_time_of_day] ; v1: mcplay scratch #30
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mcplay:30)
+    add  rcx, rax ; v1: mcplay scratch #31
+    call pw_varlong ; v1: mcplay scratch #32
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcplay:32)
+    xorps xmm0, xmm0 ; v1: mcplay scratch #33
+    call pw_f32 ; v1: mcplay scratch #34
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcplay:34)
+    movss xmm0, [rel c_one] ; v1: mcplay scratch #35
+    call pw_f32 ; v1: mcplay scratch #36
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mcplay:36)
+    test rbx, rbx ; v1: mcplay scratch #37
+    jz   .all ; v1: mcplay scratch #38
+    ; TODO: verify 16-byte rsp alignment before inner call (mcplay:38)
+    mov  rcx, rbx ; v1: mcplay scratch #39
+    call pw_send ; v1: mcplay scratch #40
+    ; TODO: hoist invariant pointer load out of .loop (mcplay:40)
+    jmp  .done ; v1: mcplay scratch #41
+.all: ; v1: mcplay scratch #42
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcplay:42)
+    xor  ecx, ecx ; v1: mcplay scratch #43
+    call pl_bcast
+.done:
+ENDP
+
+; (rcx text, rdx colour name or 0, r8 conn or 0 = everyone) system chat
+LPROC pl_say
+    mov  rbx, r8
+    test rdx, rdx
+    jnz  .col
+    mov  rsi, rcx
+    mov  ecx, MCP_PLAY_S2C_SYSTEM_CHAT
+    call pw_begin
+    mov  rcx, rsi
+    call pw_text
+    jmp  .tail
+.col:
+    mov  rsi, rcx
+    mov  rdi, rdx
+    mov  ecx, MCP_PLAY_S2C_SYSTEM_CHAT
+    call pw_begin
+    mov  rcx, rsi
+    mov  rdx, rdi
+    call pw_text_color
+.tail:
+    xor  ecx, ecx
+    call pw_bool
+    test rbx, rbx
+    jz   .all
+    mov  rcx, rbx
+    call pw_send
+    jmp  .done
+.all:
+    xor  ecx, ecx
+    call pl_bcast
+.done:
+ENDP
+
+; (rcx dst 256, rdx src) copy dropping control chars and our \f colour codes
+LPROC pl_clean
+    mov  r8d, 255
+.l:
+    movzx eax, byte [rdx]
+    test eax, eax
+    jz   .end
+    inc  rdx
+    cmp  eax, 12
+    jne  .nf
+    cmp  byte [rdx], 0
+    je   .end
+    inc  rdx                        ; skip the colour digit
+    jmp  .l
+.nf:
+    cmp  eax, 32
+    jb   .l
+    mov  [rcx], al
+    inc  rcx
+    dec  r8d
+    jnz  .l
+.end:
+    mov  byte [rcx], 0
+ENDP
+
+; chunk streaming
+
+; (rcx conn, rdx CHUNK*)
+LPROC pl_send_chunk
+    mov  rbx, rcx
+    mov  rsi, rdx
+    lea  rdi, [rel pl_pkt]
+    mov  ecx, MCP_PLAY_S2C_MAP_CHUNK
+    call pl_wvar
+    lea  r12, [rel pl_pkt]
+    mov  r13, rdi
+    sub  r13, r12                   ; id length
+    mov  rcx, rsi
+    mov  rdx, rdi
+    call mcplay_encode_chunk
+    add  eax, r13d
+    mov  rcx, rbx
+    mov  rdx, r12
+    mov  r8d, eax
+    call net_send_frame
+ENDP
+
+; (rcx conn, edx budget) move the centre, drop what fell out, send what's
+; missing nearest first
+LPROC pl_stream, 48
+    mov  rbx, rcx
+    mov  r15d, edx
+    mov  rcx, rbx
+    call pl_conn_chunk
+    mov  r12d, eax
+    mov  r13d, edx
+    cmp  r12d, [rbx+MCCONN.ccx]
+    jne  .moved
+    cmp  r13d, [rbx+MCCONN.ccz]
+    je   .send
+.moved:
+    mov  ecx, MCP_PLAY_S2C_UPDATE_VIEW_POSITION
+    call pw_begin
+    mov  ecx, r12d
+    call pw_varint
+    mov  ecx, r13d
+    call pw_varint
+    mov  rcx, rbx
+    call pw_send
+    mov  esi, [rbx+MCCONN.view]
+    neg  esi                        ; dz
+.uz:
+    mov  edi, [rbx+MCCONN.view]
+    neg  edi                        ; dx
+.ux:
+    mov  eax, [rbx+MCCONN.ccx]
+    add  eax, edi
+    mov  LOC(0), eax                ; old chunk x
+    mov  eax, [rbx+MCCONN.ccz]
+    add  eax, esi
+    mov  LOC(4), eax
+    mov  eax, LOC(0)
+    sub  eax, r12d
+    cdq
+    xor  eax, edx
+    sub  eax, edx
+    cmp  eax, [rbx+MCCONN.view]
+    ja   .drop
+    mov  eax, LOC(4)
+    sub  eax, r13d
+    cdq
+    xor  eax, edx
+    sub  eax, edx
+    cmp  eax, [rbx+MCCONN.view]
+    jbe  .keep
+.drop:
+    mov  rcx, rbx
+    mov  edx, LOC(0)
+    mov  r8d, LOC(4)
+    call pl_bitp
+    test [rax], cl
+    jz   .keep
+    not  ecx
+    and  [rax], cl
+    mov  ecx, MCP_PLAY_S2C_UNLOAD_CHUNK
+    call pw_begin
+    mov  ecx, LOC(4)                ; z first on this one
+    call pw_i32
+    mov  ecx, LOC(0)
+    call pw_i32
+    mov  rcx, rbx
+    call pw_send
+.keep:
+    inc  edi
+    cmp  edi, [rbx+MCCONN.view]
+    jle  .ux
+    inc  esi
+    cmp  esi, [rbx+MCCONN.view]
+    jle  .uz
+    mov  [rbx+MCCONN.ccx], r12d
+    mov  [rbx+MCCONN.ccz], r13d
+
+.send:
+    xor  r14d, r14d                 ; sent
+    mov  dword LOC(8), 0            ; batch started
+    mov  dword LOC(12), 0           ; ring
+.ring:
+    mov  esi, LOC(12)
+    neg  esi
+.rz:
+    mov  edi, LOC(12)
+    neg  edi
+.rx:
+    mov  eax, edi                   ; only the ring itself: max(|dx|,|dz|) == d
+    cdq
+    xor  eax, edx
+    sub  eax, edx
+    mov  ecx, eax
+    mov  eax, esi
+    cdq
+    xor  eax, edx
+    sub  eax, edx
+    cmp  eax, ecx
+    cmovl eax, ecx
+    cmp  eax, LOC(12)
+    jne  .next
+    cmp  r14d, r15d
+    jae  .fin
+    mov  eax, [rbx+MCCONN.slen]     ; still queued, net kills us if it overflows
+    sub  eax, [rbx+MCCONN.soff]
+    cmp  eax, SEND_HIGH
+    ja   .fin
+    lea  eax, [r12d+edi]
+    mov  LOC(0), eax
+    lea  eax, [r13d+esi]
+    mov  LOC(4), eax
+    mov  rcx, rbx
+    mov  edx, LOC(0)
+    mov  r8d, LOC(4)
+    call pl_bitp
+    test [rax], cl
+    jnz  .next
+    mov  LOC(16), rax
+    mov  LOC(24), ecx
+    mov  ecx, LOC(0)
+    mov  edx, LOC(4)
+    call world_get_chunk
+    test rax, rax
+    jz   .next
+    cmp  dword [rax+CHUNK.state], CS_LIT
+    jb   .next
+    mov  LOC(32), rax
+    cmp  dword LOC(8), 0
+    jne  .started
+    mov  dword LOC(8), 1
+    mov  ecx, MCP_PLAY_S2C_CHUNK_BATCH_START
+    call pw_begin
+    mov  rcx, rbx
+    call pw_send
+.started:
+    mov  rcx, rbx
+    mov  rdx, LOC(32)
+    call pl_send_chunk
+    mov  rax, LOC(16)
+    mov  ecx, LOC(24)
+    or   [rax], cl
+    inc  r14d
+.next:
+    inc  edi
+    cmp  edi, LOC(12)
+    jle  .rx
+    inc  esi
+    cmp  esi, LOC(12)
+    jle  .rz
+    ; v1 temporary guard (mcplay #20)
+    xor     r11d, r11d ; clear v1 slot 20
+    ; v1 temporary guard (mcplay #22)
+    xor     r11d, r11d ; clear v1 slot 22
+    ; v1 temporary guard (mcplay #24)
+    xor     r11d, r11d ; clear v1 slot 24
+    ; v1 temporary guard (mcplay #26)
+    xor     r11d, r11d ; clear v1 slot 26
+    ; v1 temporary guard (mcplay #28)
+    xor     r11d, r11d ; clear v1 slot 28
+    ; v1 temporary guard (mcplay #30)
+    xor     r11d, r11d ; clear v1 slot 30
+    ; v1 temporary guard (mcplay #32)
+    xor     r11d, r11d ; clear v1 slot 32
+    ; v1 temporary guard (mcplay #34)
+    xor     r11d, r11d ; clear v1 slot 34
+    ; v1 temporary guard (mcplay #36)
+    xor     r11d, r11d ; clear v1 slot 36
+    ; v1 temporary guard (mcplay #38)
+    xor     r11d, r11d ; clear v1 slot 38
+    ; v1 temporary guard (mcplay #40)
+    xor     r11d, r11d ; clear v1 slot 40
+    ; v1 temporary guard (mcplay #42)
+    xor     r11d, r11d ; clear v1 slot 42
+    ; v1 temporary guard (mcplay #44)
+    xor     r11d, r11d ; clear v1 slot 44
+    ; v1 temporary guard (mcplay #46)
+    xor     r11d, r11d ; clear v1 slot 46
+    ; v1 temporary guard (mcplay #48)
+    xor     r11d, r11d ; clear v1 slot 48
+    ; v1 temporary guard (mcplay #50)
+    xor     r11d, r11d ; clear v1 slot 50
+    ; v1 temporary guard (mcplay #52)
+    xor     r11d, r11d ; clear v1 slot 52
+    ; v1 temporary guard (mcplay #54)
+    xor     r11d, r11d ; clear v1 slot 54
+    ; v1 temporary guard (mcplay #56)
+    xor     r11d, r11d ; clear v1 slot 56
+    ; v1 temporary guard (mcplay #58)
+    xor     r11d, r11d ; clear v1 slot 58
+    ; v1 temporary guard (mcplay #60)
+    xor     r11d, r11d ; clear v1 slot 60
+    ; v1 temporary guard (mcplay #62)
+    xor     r11d, r11d ; clear v1 slot 62
+    ; v1 temporary guard (mcplay #64)
+    xor     r11d, r11d ; clear v1 slot 64
+    ; v1 temporary guard (mcplay #66)
+    xor     r11d, r11d ; clear v1 slot 66
