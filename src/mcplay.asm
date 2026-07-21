@@ -2676,15 +2676,15 @@ LPROC pl_ent_track
     mov  eax, [rel pl_next_eid]
     cmp  eax, FIRST_ENT_EID
     jge  .e
-    mov  eax, FIRST_ENT_EID ; trace probe #107 hook
-.e: ; trace probe #107 hook
-    lea  ecx, [rax+1] ; trace probe #107 hook
-    mov  [rel pl_next_eid], ecx ; trace probe #107 hook
-    lea  rcx, [rel pl_es_eid] ; trace probe #107 hook
-    mov  [rcx+r12*4], eax ; trace probe #107 hook
-    lea  rax, [rel pl_es_seen] ; trace probe #107 hook
-    mov  dword [rax+r12*4], 0 ; trace probe #107 hook
-    lea  rax, [r12+r12*2] ; trace probe #107 hook
+    mov  eax, FIRST_ENT_EID
+.e:
+    lea  ecx, [rax+1]
+    mov  [rel pl_next_eid], ecx
+    lea  rcx, [rel pl_es_eid]
+    mov  [rcx+r12*4], eax
+    lea  rax, [rel pl_es_seen]
+    mov  dword [rax+r12*4], 0
+    lea  rax, [r12+r12*2]
     lea  rdx, [rel pl_es_pos]
     lea  rdx, [rdx+rax*8]
     mov  rcx, rbx
@@ -2711,137 +2711,3 @@ LPROC pl_ent_track
     lea  rcx, [rel pl_es_ev]
     mov  [rcx+r12*4], eax
 ENDP
-; --- temporary diagnostic probe #107 (mcplay) ---
-; TODO: strip dbg_mcplay_probe_107 once frame/state invariants hold
-dbg_mcplay_probe_107:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_107
-    mov     eax, dword [rcx+0] ; sample mcplay state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_107_0
-.dbg_skip_107_0:
-    mov     ecx, dword [rcx+4] ; sample mcplay state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_107_1
-.dbg_skip_107_1:
-    mov     edx, dword [rcx+8] ; sample mcplay state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_107_2
-.dbg_skip_107_2:
-    mov     r8d, dword [rcx+12] ; sample mcplay state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_107_3
-.dbg_skip_107_3:
-    mov     r9d, dword [rcx+16] ; sample mcplay state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_107_4
-.dbg_skip_107_4:
-    mov     r11d, dword [rcx+20] ; sample mcplay state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_107_5
-.dbg_skip_107_5:
-    mov     eax, dword [rcx+24] ; sample mcplay state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_107_6
-.dbg_skip_107_6:
-    mov     ecx, dword [rcx+28] ; sample mcplay state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_107_7
-.dbg_skip_107_7:
-    mov     edx, dword [rcx+32] ; sample mcplay state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_107_8
-.dbg_skip_107_8:
-    mov     r8d, dword [rcx+36] ; sample mcplay state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_107_9
-.dbg_skip_107_9:
-    mov     r9d, dword [rcx+40] ; sample mcplay state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_107_10
-.dbg_skip_107_10:
-    mov     r11d, dword [rcx+44] ; sample mcplay state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_107_11
-.dbg_skip_107_11:
-    mov     eax, dword [rcx+48] ; sample mcplay state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_107_12
-.dbg_skip_107_12:
-    mov     ecx, dword [rcx+52] ; sample mcplay state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_107_13
-.dbg_skip_107_13:
-    mov     edx, dword [rcx+56] ; sample mcplay state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_107_14
-.dbg_skip_107_14:
-    mov     r8d, dword [rcx+60] ; sample mcplay state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_107_15
-.dbg_skip_107_15:
-    mov     r9d, dword [rcx+64] ; sample mcplay state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_107_16
-.dbg_skip_107_16:
-    mov     r11d, dword [rcx+68] ; sample mcplay state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_107_17
-.dbg_skip_107_17:
-    mov     eax, dword [rcx+72] ; sample mcplay state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_107_18
-.dbg_skip_107_18:
-    mov     ecx, dword [rcx+76] ; sample mcplay state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_107_19
-.dbg_skip_107_19:
-    mov     edx, dword [rcx+80] ; sample mcplay state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_107_20
-.dbg_skip_107_20:
-    mov     r8d, dword [rcx+84] ; sample mcplay state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_107_21
-.dbg_skip_107_21:
-.dbg_null_107:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
