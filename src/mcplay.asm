@@ -2712,72 +2712,51 @@ LPROC pl_ent_track
     mov  [rcx+r12*4], eax
 ENDP
 
-LPROC pl_ent_forget ; v1: mcplay scratch #1
-    mov  ebx, ecx ; v1: mcplay scratch #2
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcplay:2)
-    lea  rax, [rel pl_es_jt] ; v1: mcplay scratch #3
-    mov  dword [rax+rbx*4], 0 ; v1: mcplay scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (mcplay:4)
-    lea  rax, [rel pl_es_seen] ; v1: mcplay scratch #5
-    mov  esi, [rax+rbx*4] ; v1: mcplay scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcplay:6)
-    mov  dword [rax+rbx*4], 0 ; v1: mcplay scratch #7
-    test esi, esi ; v1: mcplay scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcplay:8)
-    jz   .done ; v1: mcplay scratch #9
-    lea  rax, [rel pl_es_eid] ; v1: mcplay scratch #10
-    ; TODO: clamp index before table lookup on malformed input (mcplay:10)
-    mov  ecx, [rax+rbx*4] ; v1: mcplay scratch #11
-    call pl_pw_destroy ; v1: mcplay scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcplay:12)
-    mov  ecx, esi ; v1: mcplay scratch #13
-    call pl_send_mask ; v1: mcplay scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mcplay:14)
-.done: ; v1: mcplay scratch #15
-ENDP ; v1: mcplay scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (mcplay:16)
+LPROC pl_ent_forget
+    mov  ebx, ecx
+    lea  rax, [rel pl_es_jt]
+    mov  dword [rax+rbx*4], 0
+    lea  rax, [rel pl_es_seen]
+    mov  esi, [rax+rbx*4]
+    mov  dword [rax+rbx*4], 0
+    test esi, esi
+    jz   .done
+    lea  rax, [rel pl_es_eid]
+    mov  ecx, [rax+rbx*4]
+    call pl_pw_destroy
+    mov  ecx, esi
+    call pl_send_mask
+.done:
+ENDP
 
 ; (rcx ENTITY*, edx our type) -> eax bitmask of java clients that should have it:
 ; its chunk is loaded on their side and inside min(view, tracking range)
-LPROC pl_ent_want, 16 ; v1: mcplay scratch #20
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcplay:20)
-    mov  rbx, rcx ; v1: mcplay scratch #21
-    lea  rax, [rel pl_jrange] ; v1: mcplay scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (mcplay:22)
-    mov  eax, [rax+rdx*4] ; v1: mcplay scratch #23
-    mov  LOC(0), eax ; v1: mcplay scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcplay:24)
-    movss xmm0, [rbx+ENTITY.x] ; v1: mcplay scratch #25
-    roundss xmm0, xmm0, 1 ; v1: mcplay scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcplay:26)
-    cvttss2si r12d, xmm0 ; v1: mcplay scratch #27
-    sar  r12d, 4 ; v1: mcplay scratch #28
-    ; TODO: clamp index before table lookup on malformed input (mcplay:28)
-    movss xmm0, [rbx+ENTITY.z] ; v1: mcplay scratch #29
-    roundss xmm0, xmm0, 1 ; v1: mcplay scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcplay:30)
-    cvttss2si r13d, xmm0 ; v1: mcplay scratch #31
-    sar  r13d, 4 ; v1: mcplay scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mcplay:32)
-    xor  r14d, r14d ; v1: mcplay scratch #33
-    lea  rsi, [rel g_net_conns] ; v1: mcplay scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (mcplay:34)
-    xor  edi, edi ; v1: mcplay scratch #35
-.l: ; v1: mcplay scratch #36
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcplay:36)
-    cmp  dword [rsi+MCCONN.state], CN_PLAY ; v1: mcplay scratch #37
-    jne  .n ; v1: mcplay scratch #38
-    ; TODO: verify 16-byte rsp alignment before inner call (mcplay:38)
-    test dword [rsi+MCCONN.flags], CF_SPAWNED ; v1: mcplay scratch #39
-    jz   .n ; v1: mcplay scratch #40
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcplay:40)
-    mov  ecx, [rsi+MCCONN.view] ; v1: mcplay scratch #41
-    cmp  ecx, LOC(0) ; v1: mcplay scratch #42
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mcplay:42)
-    cmovg ecx, LOC(0) ; v1: mcplay scratch #43
-    mov  eax, r12d ; v1: mcplay scratch #44
-    ; TODO: clamp index before table lookup on malformed input (mcplay:44)
-    sub  eax, [rsi+MCCONN.ccx] ; v1: mcplay scratch #45
+LPROC pl_ent_want, 16
+    mov  rbx, rcx
+    lea  rax, [rel pl_jrange]
+    mov  eax, [rax+rdx*4]
+    mov  LOC(0), eax
+    movss xmm0, [rbx+ENTITY.x]
+    roundss xmm0, xmm0, 1
+    cvttss2si r12d, xmm0
+    sar  r12d, 4
+    movss xmm0, [rbx+ENTITY.z]
+    roundss xmm0, xmm0, 1
+    cvttss2si r13d, xmm0
+    sar  r13d, 4
+    xor  r14d, r14d
+    lea  rsi, [rel g_net_conns]
+    xor  edi, edi
+.l:
+    cmp  dword [rsi+MCCONN.state], CN_PLAY
+    jne  .n
+    test dword [rsi+MCCONN.flags], CF_SPAWNED
+    jz   .n
+    mov  ecx, [rsi+MCCONN.view]
+    cmp  ecx, LOC(0)
+    cmovg ecx, LOC(0)
+    mov  eax, r12d
+    sub  eax, [rsi+MCCONN.ccx]
     cdq
     xor  eax, edx
     sub  eax, edx
@@ -3007,6 +2986,302 @@ LPROC pl_ent_update, 64
     jnz  .nodeath
     mov  ecx, MCP_PLAY_S2C_ENTITY_STATUS
     call pw_begin
+    mov  ecx, r14d ; v1: mcplay scratch #0
+    ; TODO: verify 16-byte rsp alignment before inner call (mcplay:0)
+    call pw_i32 ; v1: mcplay scratch #1
+    mov  ecx, 3 ; v1: mcplay scratch #2
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mcplay:2)
+    call pw_u8 ; v1: mcplay scratch #3
+    mov  ecx, r15d ; v1: mcplay scratch #4
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcplay:4)
+    call pl_send_mask ; v1: mcplay scratch #5
+.nodeath: ; v1: mcplay scratch #6
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mcplay:6)
+    test edi, EV_COLLECT ; v1: mcplay scratch #7
+    jz   .nocollect ; v1: mcplay scratch #8
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcplay:8)
+    test esi, EV_COLLECT ; v1: mcplay scratch #9
+    jnz  .nocollect ; v1: mcplay scratch #10
+    ; TODO: hoist invariant pointer load out of .loop (mcplay:10)
+    mov  ecx, MCP_PLAY_S2C_COLLECT ; v1: mcplay scratch #11
+    call pw_begin ; v1: mcplay scratch #12
+    ; TODO: clamp index before table lookup on malformed input (mcplay:12)
+    mov  ecx, r14d ; v1: mcplay scratch #13
+    call pw_varint ; v1: mcplay scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcplay:14)
+    mov  ecx, HOST_EID ; v1: mcplay scratch #15
+    call pw_varint ; v1: mcplay scratch #16
+    ; TODO: verify 16-byte rsp alignment before inner call (mcplay:16)
+    movzx ecx, byte [rbx+ENTITY.item+STACK.count] ; v1: mcplay scratch #17
+    call pw_varint ; v1: mcplay scratch #18
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mcplay:18)
+    mov  ecx, r15d ; v1: mcplay scratch #19
+    call pl_send_mask ; v1: mcplay scratch #20
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcplay:20)
+.nocollect: ; v1: mcplay scratch #21
+    mov  eax, edi ; v1: mcplay scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mcplay:22)
+    shr  eax, 8 ; v1: mcplay scratch #23
+    mov  ecx, esi ; v1: mcplay scratch #24
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcplay:24)
+    shr  ecx, 8 ; v1: mcplay scratch #25
+    cmp  eax, ecx ; v1: mcplay scratch #26
+    ; TODO: hoist invariant pointer load out of .loop (mcplay:26)
+    jbe  .done ; v1: mcplay scratch #27
+    mov  ecx, MCP_PLAY_S2C_HURT_ANIMATION ; v1: mcplay scratch #28
+    ; TODO: clamp index before table lookup on malformed input (mcplay:28)
+    call pw_begin ; v1: mcplay scratch #29
+    mov  ecx, r14d ; v1: mcplay scratch #30
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mcplay:30)
+    call pw_varint ; v1: mcplay scratch #31
+    xorps xmm0, xmm0 ; v1: mcplay scratch #32
+    ; TODO: verify 16-byte rsp alignment before inner call (mcplay:32)
+    call pw_f32 ; v1: mcplay scratch #33
+    mov  ecx, r15d ; v1: mcplay scratch #34
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mcplay:34)
+    call pl_send_mask ; v1: mcplay scratch #35
+.done: ; v1: mcplay scratch #36
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mcplay:36)
+ENDP ; v1: mcplay scratch #37
+
+LPROC pl_ents_tick ; v1: mcplay scratch #39
+    call mcplay_count ; v1: mcplay scratch #40
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mcplay:40)
+    test eax, eax ; v1: mcplay scratch #41
+    jnz  .some ; v1: mcplay scratch #42
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mcplay:42)
+    lea  rdi, [rel pl_es_jt]        ; nobody to tell, start over when someone joins
+    xor  eax, eax
+    mov  ecx, MAX_ENTITIES
+    rep  stosd
+    lea  rdi, [rel pl_es_seen]
+    mov  ecx, MAX_ENTITIES
+    rep  stosd
+    jmp  .done
+.some:
+    call pl_init_luts
+    xor  r12d, r12d
+.l:
+    mov  ebx, r12d
+    shl  ebx, 7
+    lea  rax, [rel g_entities]
+    add  rbx, rax
+    movzx ecx, byte [rbx+ENTITY.type]
+    xor  esi, esi                   ; java type + 1 it should be
+    cmp  ecx, ENT_REMOTE
+    ja   .typed
+    lea  rax, [rel pl_jtype]
+    mov  esi, [rax+rcx*4]
+.typed:
+    lea  rax, [rel pl_es_jt]
+    mov  eax, [rax+r12*4]
+    test eax, eax
+    jz   .fresh
+    cmp  eax, esi
+    jne  .kill
+    lea  rax, [rel pl_es_age]
+    mov  ecx, [rbx+ENTITY.age]
+    cmp  ecx, [rax+r12*4]
+    jge  .tracked
+.kill:
+    mov  ecx, r12d
+    call pl_ent_forget
+.fresh:
+    test esi, esi
+    jz   .next
+    mov  ecx, r12d
+    mov  rdx, rbx
+    mov  r8d, esi
+    call pl_ent_track
+.tracked:
+    lea  rax, [rel pl_es_age]
+    mov  ecx, [rbx+ENTITY.age]
+    mov  [rax+r12*4], ecx
+    lea  rax, [rel pl_es_seen]
+    mov  r14d, [rax+r12*4]
+    mov  rcx, rbx
+    movzx edx, byte [rbx+ENTITY.type]
+    call pl_ent_want
+    mov  r13d, eax
+    ; dying mobs and items flying into the host: no fresh spawns
+    mov  rcx, rbx
+    call pl_ent_ev
+    test eax, EV_DEAD|EV_COLLECT
+    jz   .wantok
+    and  r13d, r14d
+.wantok:
+    mov  r15d, r13d
+    not  r15d
+    and  r15d, r14d                 ; out of range now
+    jz   .stay
+    lea  rax, [rel pl_es_eid]
+    mov  ecx, [rax+r12*4]
+    call pl_pw_destroy
+    mov  ecx, r15d
+    call pl_send_mask
+.stay:
+    mov  r8d, r13d
+    and  r8d, r14d
+    mov  ecx, r12d
+    mov  rdx, rbx
+    call pl_ent_update
+    mov  r15d, r14d
+    not  r15d
+    and  r15d, r13d                 ; came into range
+    jz   .seen
+    mov  ecx, r12d
+    mov  rdx, rbx
+    mov  r8d, esi
+    call pl_pw_ent_spawn
+    mov  ecx, r15d
+    call pl_send_mask
+    mov  ecx, r12d
+    mov  rdx, rbx
+    call pl_pw_ent_meta
+    test eax, eax
+    jz   .seen
+    mov  ecx, r15d
+    call pl_send_mask
+.seen:
+    lea  rax, [rel pl_es_seen]
+    mov  [rax+r12*4], r13d
+.next:
+    inc  r12d
+    cmp  r12d, MAX_ENTITIES
+    jb   .l
+.done:
+ENDP
+
+; tick
+
+; rcx conn: our ENTITY follows them
+LPROC pl_sync_ent
+    mov  rbx, rcx
+    mov  rcx, [rbx+MCCONN.ent]
+    mov  edx, [rbx+MCCONN.index]
+    call pl_own_ent
+    test rax, rax
+    jnz  .have
+    cmp  dword [rel g_world_active], 0
+    je   .done
+    cvtsd2ss xmm1, [rbx+MCCONN.x]
+    cvtsd2ss xmm2, [rbx+MCCONN.y]
+    cvtsd2ss xmm3, [rbx+MCCONN.z]
+    mov  ecx, ENT_REMOTE
+    call entity_spawn
+    test rax, rax
+    jz   .gone
+    mov  ecx, [rbx+MCCONN.index]
+    mov  [rax+ENTITY.variant], cl
+    or   byte [rax+ENTITY.flags], EF_PERSIST
+.have:
+    mov  [rbx+MCCONN.ent], rax
+    mov  ecx, [rbx+MCCONN.view]     ; chunkmgr keeps chunks loaded this far around us
+    mov  [rax+ENTITY.timer], ecx
+    mov  ecx, [rax+ENTITY.x]
+    mov  [rax+ENTITY.prev_x], ecx
+    mov  ecx, [rax+ENTITY.y]
+    mov  [rax+ENTITY.prev_y], ecx
+    mov  ecx, [rax+ENTITY.z]
+    mov  [rax+ENTITY.prev_z], ecx
+    cvtsd2ss xmm0, [rbx+MCCONN.x]
+    movss [rax+ENTITY.x], xmm0
+    cvtsd2ss xmm0, [rbx+MCCONN.y]
+    movss [rax+ENTITY.y], xmm0
+    cvtsd2ss xmm0, [rbx+MCCONN.z]
+    movss [rax+ENTITY.z], xmm0
+    mov  ecx, [rax+ENTITY.yaw]
+    mov  [rax+ENTITY.item], ecx     ; mobs_render lerps body yaw from here
+    movss xmm0, [rbx+MCCONN.yaw]
+    subss xmm0, [rel c_180]
+    movss [rax+ENTITY.yaw], xmm0
+    movss [rax+ENTITY.head_yaw], xmm0
+    xorps xmm0, xmm0
+    subss xmm0, [rbx+MCCONN.pitch]
+    movss [rax+ENTITY.pitch], xmm0
+    and  byte [rax+ENTITY.flags], ~EF_ON_GROUND
+    cmp  dword [rbx+MCCONN.on_ground], 0
+    je   .done
+    or   byte [rax+ENTITY.flags], EF_ON_GROUND
+    jmp  .done
+.gone:
+    mov  qword [rbx+MCCONN.ent], 0
+.done:
+ENDP
+
+; () 20 hz
+PROC mcplay_tick, 32
+    inc  dword [rel pl_ticks]
+    call time_ms
+    mov  r15, rax                   ; now
+    mov  dword LOC(0), 0            ; time sync this tick
+    mov  eax, [rel pl_ticks]
+    xor  edx, edx
+    mov  ecx, TICKS_PER_SEC
+    div  ecx
+    test edx, edx
+    jnz  .nt
+    mov  dword LOC(0), 1
+.nt:
+    lea  rbx, [rel g_net_conns]
+    xor  r12d, r12d
+.l:
+    mov  rcx, rbx
+    call pl_ready
+    test eax, eax
+    jz   .n
+    ; keepalive
+    mov  rax, [rbx+MCCONN.ka_time]
+    test rax, rax
+    jz   .ka_idle
+    mov  rcx, r15
+    sub  rcx, rax
+    cmp  rcx, KA_TIMEOUT
+    jbe  .ka_ok
+    mov  rcx, rbx
+    lea  rdx, [rel s_timeout]
+    call net_close
+    jmp  .n
+.ka_idle:
+    mov  rcx, r15
+    sub  rcx, [rbx+MCCONN.ka_id]
+    cmp  rcx, KA_EVERY
+    jb   .ka_ok
+    mov  [rbx+MCCONN.ka_id], r15
+    mov  [rbx+MCCONN.ka_time], r15
+    mov  ecx, MCP_PLAY_S2C_KEEP_ALIVE
+    call pw_begin
+    mov  rcx, r15
+    call pw_i64
+    mov  rcx, rbx
+    call pw_send
+.ka_ok:
+    cmp  dword [rel g_world_active], 0
+    je   .n
+    mov  rcx, rbx
+    mov  edx, CHUNKS_PER_TICK
+    call pl_stream
+    cmp  dword LOC(0), 0
+    je   .nosync
+    mov  rcx, rbx
+    call pl_send_time
+.nosync:
+    lea  rax, [rel pl_moved]
+    cmp  byte [rax+r12], 0
+    je   .still
+    mov  byte [rax+r12], 0
+    mov  ecx, [rbx+MCCONN.eid]
+    mov  rdx, rbx
+    lea  r8, [rbx+MCCONN.x]
+    lea  r9, [rbx+MCCONN.yaw]
+    mov  eax, [rbx+MCCONN.on_ground]
+    mov  [rsp+32], rax
+    call pl_send_move
+.still:
+    mov  rcx, rbx
+    call pl_sync_ent
+.n:
+    add  rbx, MCCONN_size
     ; v1 temporary guard (mcplay #21)
     xor     r11d, r11d ; clear v1 slot 21
     ; v1 temporary guard (mcplay #23)
@@ -3035,3 +3310,5 @@ LPROC pl_ent_update, 64
     xor     r11d, r11d ; clear v1 slot 45
     ; v1 temporary guard (mcplay #47)
     xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (mcplay #49)
+    xor     r11d, r11d ; clear v1 slot 49
