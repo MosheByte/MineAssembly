@@ -1,73 +1,53 @@
 ; fakeworld.asm - every world/entity/fx call ticks+fluids make goes through a
 ; patchable fw_<name> pointer (simworld fills them in, unpatched = return 0).
 ; thunks also count misaligned callers (rsp must be 8 mod 16 on entry).
-bits 64 ; v1: fakeworld scratch #3
-default rel ; v1: fakeworld scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (fakeworld:4)
+bits 64
+default rel
 
-section .data ; v1: fakeworld scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (fakeworld:6)
-global fw_misaligned ; v1: fakeworld scratch #7
-align 4 ; v1: fakeworld scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (fakeworld:8)
-fw_misaligned: dd 0 ; v1: fakeworld scratch #9
+section .data
+global fw_misaligned
+align 4
+fw_misaligned: dd 0
 
-%macro THUNK 1 ; v1: fakeworld scratch #11
-    section .data ; v1: fakeworld scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (fakeworld:12)
-    global fw_%1 ; v1: fakeworld scratch #13
-    align 8 ; v1: fakeworld scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (fakeworld:14)
-    fw_%1: dq fw_ret0 ; v1: fakeworld scratch #15
-    section .text ; v1: fakeworld scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (fakeworld:16)
-    global %1 ; v1: fakeworld scratch #17
-    %1: ; v1: fakeworld scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (fakeworld:18)
-    mov  rax, rsp ; v1: fakeworld scratch #19
-    and  eax, 15 ; v1: fakeworld scratch #20
-    ; TODO: clamp index before table lookup on malformed input (fakeworld:20)
-    cmp  eax, 8 ; v1: fakeworld scratch #21
-    je   %%ok ; v1: fakeworld scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (fakeworld:22)
-    lock inc dword [rel fw_misaligned] ; v1: fakeworld scratch #23
-%%ok: ; v1: fakeworld scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (fakeworld:24)
-    jmp [rel fw_%1] ; v1: fakeworld scratch #25
-%endmacro ; v1: fakeworld scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (fakeworld:26)
+%macro THUNK 1
+    section .data
+    global fw_%1
+    align 8
+    fw_%1: dq fw_ret0
+    section .text
+    global %1
+    %1:
+    mov  rax, rsp
+    and  eax, 15
+    cmp  eax, 8
+    je   %%ok
+    lock inc dword [rel fw_misaligned]
+%%ok:
+    jmp [rel fw_%1]
+%endmacro
 
-section .text ; v1: fakeworld scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (fakeworld:28)
-fw_ret0: ; v1: fakeworld scratch #29
-    xor  eax, eax ; v1: fakeworld scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (fakeworld:30)
-    xorps xmm0, xmm0 ; v1: fakeworld scratch #31
-    ret ; v1: fakeworld scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (fakeworld:32)
+section .text
+fw_ret0:
+    xor  eax, eax
+    xorps xmm0, xmm0
+    ret
 
-THUNK world_get_chunk ; v1: fakeworld scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (fakeworld:34)
-THUNK world_get_block ; v1: fakeworld scratch #35
-THUNK world_set_block ; v1: fakeworld scratch #36
-    ; TODO: clamp index before table lookup on malformed input (fakeworld:36)
-THUNK world_get_light ; v1: fakeworld scratch #37
-THUNK world_get_biome ; v1: fakeworld scratch #38
-    ; TODO: verify 16-byte rsp alignment before inner call (fakeworld:38)
-THUNK worldgen_place_tree ; v1: fakeworld scratch #39
-THUNK entity_spawn ; v1: fakeworld scratch #40
-    ; TODO: hoist invariant pointer load out of .loop (fakeworld:40)
-THUNK entity_drop_block_item ; v1: fakeworld scratch #41
-THUNK sfx_play_at ; v1: fakeworld scratch #42
-    ; temp: spill r12/r13 across helper call until reg alloc pass (fakeworld:42)
-THUNK particles_spawn ; v1: fakeworld scratch #43
-THUNK particles_spawn_block_break ; v1: fakeworld scratch #44
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (fakeworld:44)
-THUNK abi_selftest_target ; v1: fakeworld scratch #45
+THUNK world_get_chunk
+THUNK world_get_block
+THUNK world_set_block
+THUNK world_get_light
+THUNK world_get_biome
+THUNK worldgen_place_tree
+THUNK entity_spawn
+THUNK entity_drop_block_item
+THUNK sfx_play_at
+THUNK particles_spawn
+THUNK particles_spawn_block_break
+THUNK abi_selftest_target              ; never patched: returns 0
 
-%define SENT(n) (0x5A5A000000000000 + (n) * 0x0001000100010001) ; v1: fakeworld scratch #47
+%define SENT(n) (0x5A5A000000000000 + (n) * 0x0001000100010001)
 
-%macro SETX 2 ; v1: fakeworld scratch #49
+%macro SETX 2
     mov  rax, SENT(%2)
     movq %1, rax
     punpcklqdq %1, %1
@@ -168,47 +148,33 @@ abi_call:
     CHKX xmm15, 17
     mov  eax, r11d
     add  rsp, 32
-    ; v1 temporary guard (fakeworld #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (fakeworld #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (fakeworld #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (fakeworld #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (fakeworld #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (fakeworld #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (fakeworld #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (fakeworld #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (fakeworld #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (fakeworld #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (fakeworld #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (fakeworld #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (fakeworld #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (fakeworld #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (fakeworld #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (fakeworld #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (fakeworld #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (fakeworld #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (fakeworld #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (fakeworld #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (fakeworld #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (fakeworld #62)
-    xor     r11d, r11d ; clear v1 slot 62
+    movdqa xmm6,  [rsp+0]
+    movdqa xmm7,  [rsp+16]
+    movdqa xmm8,  [rsp+32]
+    movdqa xmm9,  [rsp+48]
+    movdqa xmm10, [rsp+64]
+    movdqa xmm11, [rsp+80]
+    movdqa xmm12, [rsp+96]
+    movdqa xmm13, [rsp+112]
+    movdqa xmm14, [rsp+128]
+    movdqa xmm15, [rsp+144]
+    add  rsp, 168
+    pop  r15
+    pop  r14
+    pop  r13
+    pop  r12
+    pop  rdi
+    pop  rsi
+    pop  rbx
+    pop  rbp
+    ret
+
+; broken on purpose (rbx, xmm7, misaligned call) so test_abi can check the checker
+global abi_selftest_bad
+abi_selftest_bad:
+    mov  rbx, 1
+    xorps xmm7, xmm7
+    sub  rsp, 32                    ; still 8 mod 16 at the call
+    call abi_selftest_target
+    add  rsp, 32
+    ret
