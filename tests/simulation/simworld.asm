@@ -1,67 +1,48 @@
 ; simworld.asm - fake world for ticks/fluids. uses real CHUNK buffers (same layout
 ; as the engine) so ticks_peek_block's direct reads and the callbacks agree.
 ; chunks only exist inside [cmin,cmax], max 32 wide; buffers get pooled across sw_new.
-%define IMPL_SIMWORLD ; v1: simworld scratch #3
-%include "common.inc" ; v1: simworld scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (simworld:4)
-%include "testlib.inc" ; v1: simworld scratch #5
-%include "../simulation/simworld.inc" ; v1: simworld scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (simworld:6)
+%define IMPL_SIMWORLD
+%include "common.inc"
+%include "testlib.inc"
+%include "../simulation/simworld.inc"
 
-extern fw_world_get_chunk, fw_world_get_block, fw_world_set_block ; v1: simworld scratch #8
-    ; TODO: clamp index before table lookup on malformed input (simworld:8)
-extern fw_world_get_light, fw_world_get_biome, fw_worldgen_place_tree ; v1: simworld scratch #9
-extern fw_entity_spawn, fw_entity_drop_block_item, fw_sfx_play_at ; v1: simworld scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (simworld:10)
-extern fw_particles_spawn, fw_particles_spawn_block_break ; v1: simworld scratch #11
+extern fw_world_get_chunk, fw_world_get_block, fw_world_set_block
+extern fw_world_get_light, fw_world_get_biome, fw_worldgen_place_tree
+extern fw_entity_spawn, fw_entity_drop_block_item, fw_sfx_play_at
+extern fw_particles_spawn, fw_particles_spawn_block_break
 
-%define GRID_W      32 ; v1: simworld scratch #13
-%define POOL_MAX    (GRID_W*GRID_W) ; v1: simworld scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (simworld:14)
-%define REC_CAP     65536 ; v1: simworld scratch #15
-%define SPAWN_CAP   8192 ; v1: simworld scratch #16
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (simworld:16)
-%define LIGHT_CAP   128 ; v1: simworld scratch #17
+%define GRID_W      32
+%define POOL_MAX    (GRID_W*GRID_W)
+%define REC_CAP     65536               ; past this we still count, just don't store
+%define SPAWN_CAP   8192
+%define LIGHT_CAP   128
 
 ; cut-down copy of the blocks.asm flags, just what the sim rules look at
-%define FL_ROCK  (BF_SOLID | BF_OPAQUE | BF_SELECTABLE) ; v1: simworld scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (simworld:20)
-%define FL_DECOR (BF_CUTOUT | BF_SUPPORT | BF_SELECTABLE) ; v1: simworld scratch #21
-%define FL_PLANT (FL_DECOR | BF_PLANT | BF_FLAMMABLE) ; v1: simworld scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (simworld:22)
+%define FL_ROCK  (BF_SOLID | BF_OPAQUE | BF_SELECTABLE)
+%define FL_DECOR (BF_CUTOUT | BF_SUPPORT | BF_SELECTABLE)
+%define FL_PLANT (FL_DECOR | BF_PLANT | BF_FLAMMABLE)
 
-section .rdata ; v1: simworld scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (simworld:24)
-align 16 ; v1: simworld scratch #25
-sw_flag_tab: ; v1: simworld scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (simworld:26)
-%assign i 0 ; v1: simworld scratch #27
-%rep 256 ; v1: simworld scratch #28
-    ; TODO: clamp index before table lookup on malformed input (simworld:28)
-  %if i == B_AIR ; v1: simworld scratch #29
-    dw BF_REPLACEABLE ; v1: simworld scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (simworld:30)
-  %elif i == B_STONE || i == B_GRASS || i == B_DIRT || i == B_COBBLE || i == 5 || i == B_BEDROCK || i == B_LOG || i == B_BIRCH_LOG || i == B_PINE_LOG || i == B_OBSIDIAN || i == B_SNOWY_GRASS || i == B_MOSS || i == B_FARMLAND || i == 16 || i == 17 || i == 20 ; v1: simworld scratch #31
-    dw FL_ROCK ; v1: simworld scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (simworld:32)
-  %elif i >= B_TERRACOTTA && i <= B_TERRACOTTA_LAST ; v1: simworld scratch #33
-    dw FL_ROCK ; v1: simworld scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (simworld:34)
-  %elif i == B_SAND || i == B_GRAVEL || i == B_RED_SAND ; v1: simworld scratch #35
-    dw FL_ROCK | BF_GRAVITY ; v1: simworld scratch #36
-    ; temp: spill r12/r13 across helper call until reg alloc pass (simworld:36)
-  %elif i == B_LEAVES || i == B_BIRCH_LEAVES || i == B_PINE_LEAVES || (i >= B_LEAVES_P && i <= B_PINE_LEAVES_P) ; v1: simworld scratch #37
-    dw BF_SOLID | BF_CUTOUT | BF_SELECTABLE | BF_LEAVES | BF_FLAMMABLE | BF_CULL_SAME ; v1: simworld scratch #38
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (simworld:38)
-  %elif i == B_GLASS ; v1: simworld scratch #39
-    dw BF_SOLID | BF_CUTOUT | BF_SELECTABLE | BF_CULL_SAME ; v1: simworld scratch #40
-    ; TODO: verify 16-byte rsp alignment before inner call (simworld:40)
-  %elif i == B_ICE ; v1: simworld scratch #41
-    dw BF_SOLID | BF_TRANSLUCENT | BF_SELECTABLE | BF_CULL_SAME ; v1: simworld scratch #42
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (simworld:42)
-  %elif i == B_CACTUS ; v1: simworld scratch #43
-    dw BF_SOLID | BF_CUTOUT | BF_SUPPORT | BF_SELECTABLE ; v1: simworld scratch #44
-    ; TODO: clamp index before table lookup on malformed input (simworld:44)
+section .rdata
+align 16
+sw_flag_tab:
+%assign i 0
+%rep 256
+  %if i == B_AIR
+    dw BF_REPLACEABLE
+  %elif i == B_STONE || i == B_GRASS || i == B_DIRT || i == B_COBBLE || i == 5 || i == B_BEDROCK || i == B_LOG || i == B_BIRCH_LOG || i == B_PINE_LOG || i == B_OBSIDIAN || i == B_SNOWY_GRASS || i == B_MOSS || i == B_FARMLAND || i == 16 || i == 17 || i == 20
+    dw FL_ROCK
+  %elif i >= B_TERRACOTTA && i <= B_TERRACOTTA_LAST
+    dw FL_ROCK
+  %elif i == B_SAND || i == B_GRAVEL || i == B_RED_SAND
+    dw FL_ROCK | BF_GRAVITY
+  %elif i == B_LEAVES || i == B_BIRCH_LEAVES || i == B_PINE_LEAVES || (i >= B_LEAVES_P && i <= B_PINE_LEAVES_P)
+    dw BF_SOLID | BF_CUTOUT | BF_SELECTABLE | BF_LEAVES | BF_FLAMMABLE | BF_CULL_SAME
+  %elif i == B_GLASS
+    dw BF_SOLID | BF_CUTOUT | BF_SELECTABLE | BF_CULL_SAME
+  %elif i == B_ICE
+    dw BF_SOLID | BF_TRANSLUCENT | BF_SELECTABLE | BF_CULL_SAME
+  %elif i == B_CACTUS
+    dw BF_SOLID | BF_CUTOUT | BF_SUPPORT | BF_SELECTABLE
   %elif i == B_LANTERN
     dw BF_SOLID | BF_CUTOUT | BF_SELECTABLE
   %elif i == B_TORCH || i == B_MUSHROOM_RED || i == B_MUSHROOM_BROWN || i == B_REEDS
@@ -138,6 +119,175 @@ sw_breaks_n:    resd 1
 sw_light_n:     resd 1
 sw_light:       resd 4*LIGHT_CAP        ; x, y, z, light
 
+section .text ; v1: simworld scratch #0
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (simworld:0)
+
+PROC sw_once, 0 ; v1: simworld scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (simworld:2)
+    mov  dword [rel sw_inited], 1 ; v1: simworld scratch #3
+    lea  rsi, [rel sw_flag_tab] ; v1: simworld scratch #4
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (simworld:4)
+    lea  rdi, [rel blk_flags] ; v1: simworld scratch #5
+    mov  ecx, 256 ; v1: simworld scratch #6
+    ; TODO: clamp index before table lookup on malformed input (simworld:6)
+    rep  movsw ; v1: simworld scratch #7
+    lea  rsi, [rel sw_drop_tab] ; v1: simworld scratch #8
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (simworld:8)
+    lea  rdi, [rel blk_drop] ; v1: simworld scratch #9
+    lea  rdx, [rel blk_drop_count] ; v1: simworld scratch #10
+    ; note: rcx = state ptr, rdx = index, r8d = flags (simworld:10)
+    xor  ecx, ecx ; v1: simworld scratch #11
+.drop: ; v1: simworld scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (simworld:12)
+    movzx eax, byte [rsi+rcx] ; v1: simworld scratch #13
+    mov  [rdi+rcx], al ; v1: simworld scratch #14
+    ; TODO: verify 16-byte rsp alignment before inner call (simworld:14)
+    test eax, eax ; v1: simworld scratch #15
+    setnz al ; v1: simworld scratch #16
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (simworld:16)
+    mov  [rdx+rcx], al ; v1: simworld scratch #17
+    inc  ecx ; v1: simworld scratch #18
+    ; temp: spill r12/r13 across helper call until reg alloc pass (simworld:18)
+    cmp  ecx, 256 ; v1: simworld scratch #19
+    jb   .drop ; v1: simworld scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (simworld:20)
+    mov  ecx, REC_CAP*16 ; v1: simworld scratch #21
+    call t_alloc ; v1: simworld scratch #22
+    ; TODO: clamp index before table lookup on malformed input (simworld:22)
+    mov  [rel sw_drops], rax ; v1: simworld scratch #23
+    mov  ecx, SPAWN_CAP*32 ; v1: simworld scratch #24
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (simworld:24)
+    call t_alloc ; v1: simworld scratch #25
+    mov  [rel sw_spawns], rax ; v1: simworld scratch #26
+    ; note: rcx = state ptr, rdx = index, r8d = flags (simworld:26)
+    mov  ecx, REC_CAP*16 ; v1: simworld scratch #27
+    call t_alloc ; v1: simworld scratch #28
+    ; TODO: hoist invariant pointer load out of .loop (simworld:28)
+    mov  [rel sw_trees], rax ; v1: simworld scratch #29
+    mov  ecx, REC_CAP*16 ; v1: simworld scratch #30
+    ; TODO: verify 16-byte rsp alignment before inner call (simworld:30)
+    call t_alloc ; v1: simworld scratch #31
+    mov  [rel sw_sounds], rax ; v1: simworld scratch #32
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (simworld:32)
+    mov  ecx, REC_CAP*16 ; v1: simworld scratch #33
+    call t_alloc
+    mov  [rel sw_breaks], rax
+    call ticks_init
+ENDP
+
+; wipes everything incl. the scheduler; rng reseeded to 12345 so runs are repeatable
+PROC sw_new, 0
+    mov  r12d, ecx
+    mov  r13d, edx
+    mov  r14d, r8d
+    mov  r15d, r9d
+    cmp  dword [rel sw_inited], 0
+    jne  .ready
+    call sw_once
+.ready:
+    mov  [rel sw_cmin], r12d
+    mov  [rel sw_cmax], r13d
+    mov  eax, r13d
+    sub  eax, r12d
+    cmp  eax, GRID_W
+    jb   .size_ok
+    inc  dword [rel sw_errors]          ; too wide: clamp
+    lea  eax, [r12d+GRID_W-1]
+    mov  [rel sw_cmax], eax
+.size_ok:
+    mov  [rel sw_def_light], r14d
+    mov  [rel sw_entities], r15d
+    lea  rdi, [rel sw_grid]
+    xor  eax, eax
+    mov  ecx, GRID_W*GRID_W
+    rep  stosq
+    mov  [rel sw_nchunks], eax
+    mov  [rel sw_pool_used], eax
+    mov  [rel sw_sets], eax
+    mov  [rel sw_errors], eax
+    mov  [rel sw_drops_n], eax
+    mov  [rel sw_spawns_n], eax
+    mov  [rel sw_trees_n], eax
+    mov  [rel sw_sounds_n], eax
+    mov  [rel sw_particles_n], eax
+    mov  [rel sw_smoke_n], eax
+    mov  [rel sw_breaks_n], eax
+    mov  [rel sw_light_n], eax
+    mov  [rel sw_tree_fn], rax
+    mov  dword [rel sw_biome], 3
+%macro HOOK 2.nolist
+    lea  rax, [rel %2]
+    mov  [rel fw_%1], rax
+%endmacro
+    HOOK world_get_chunk, sw_chunk
+    HOOK world_get_block, sw_get
+    HOOK world_set_block, sw_set
+    HOOK world_get_light, sw_cb_light
+    HOOK world_get_biome, sw_cb_biome
+    HOOK worldgen_place_tree, sw_cb_tree
+    HOOK entity_spawn, sw_cb_spawn
+    HOOK entity_drop_block_item, sw_cb_drop
+    HOOK sfx_play_at, sw_cb_sfx
+    HOOK particles_spawn, sw_cb_particle
+    HOOK particles_spawn_block_break, sw_cb_break
+    call ticks_clear
+    mov  dword [rel g_chunk_count], 0
+    mov  qword [rel ticks_rng], 12345
+ENDP
+
+; doubles as world_get_chunk, so asking for a chunk creates it
+PROC sw_chunk, 0
+    xor  eax, eax
+    cmp  ecx, [rel sw_cmin]
+    jl   .done
+    cmp  ecx, [rel sw_cmax]
+    jg   .done
+    cmp  edx, [rel sw_cmin]
+    jl   .done
+    cmp  edx, [rel sw_cmax]
+    jg   .done
+    mov  r12d, ecx
+    mov  r13d, edx
+    mov  eax, ecx
+    sub  eax, [rel sw_cmin]
+    shl  eax, 5
+    mov  r8d, edx
+    sub  r8d, [rel sw_cmin]
+    add  eax, r8d
+    lea  r14, [rel sw_grid]
+    lea  r14, [r14+rax*8]
+    mov  rax, [r14]
+    test rax, rax
+    jnz  .done
+    mov  ecx, [rel sw_pool_used]
+    cmp  ecx, [rel sw_pool_count]
+    jb   .reuse
+    mov  ecx, CHUNK_BYTES
+    call t_alloc
+    mov  ecx, [rel sw_pool_count]
+    lea  rdx, [rel sw_pool]
+    mov  [rdx+rcx*8], rax
+    inc  dword [rel sw_pool_count]
+    mov  rbx, rax
+    jmp  .got
+.reuse:
+    lea  rdx, [rel sw_pool]
+    mov  rbx, [rdx+rcx*8]
+    mov  rdi, rbx
+    xor  eax, eax
+    mov  ecx, CHUNK_BYTES/8
+    rep  stosq
+.got:
+    inc  dword [rel sw_pool_used]
+    mov  [rbx+CHUNK.cx], r12d
+    mov  [rbx+CHUNK.cz], r13d
+    mov  dword [rbx+CHUNK.state], CS_READY
+    mov  eax, [rel sw_nchunks]
+    mov  [rbx+CHUNK.slot], eax
+    inc  dword [rel sw_nchunks]
+    mov  [r14], rbx
+    ; v1 temporary guard (simworld #17)
+    xor     r11d, r11d ; clear v1 slot 17
     ; v1 temporary guard (simworld #19)
     xor     r11d, r11d ; clear v1 slot 19
     ; v1 temporary guard (simworld #21)
@@ -180,9 +330,3 @@ sw_light:       resd 4*LIGHT_CAP        ; x, y, z, light
     xor     r11d, r11d ; clear v1 slot 57
     ; v1 temporary guard (simworld #59)
     xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (simworld #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (simworld #63)
-    xor     r11d, r11d ; clear v1 slot 63
-    ; v1 temporary guard (simworld #65)
-    xor     r11d, r11d ; clear v1 slot 65
