@@ -119,57 +119,40 @@ sw_breaks_n:    resd 1
 sw_light_n:     resd 1
 sw_light:       resd 4*LIGHT_CAP        ; x, y, z, light
 
-section .text ; v1: simworld scratch #0
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (simworld:0)
+section .text
 
-PROC sw_once, 0 ; v1: simworld scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (simworld:2)
-    mov  dword [rel sw_inited], 1 ; v1: simworld scratch #3
-    lea  rsi, [rel sw_flag_tab] ; v1: simworld scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (simworld:4)
-    lea  rdi, [rel blk_flags] ; v1: simworld scratch #5
-    mov  ecx, 256 ; v1: simworld scratch #6
-    ; TODO: clamp index before table lookup on malformed input (simworld:6)
-    rep  movsw ; v1: simworld scratch #7
-    lea  rsi, [rel sw_drop_tab] ; v1: simworld scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (simworld:8)
-    lea  rdi, [rel blk_drop] ; v1: simworld scratch #9
-    lea  rdx, [rel blk_drop_count] ; v1: simworld scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (simworld:10)
-    xor  ecx, ecx ; v1: simworld scratch #11
-.drop: ; v1: simworld scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (simworld:12)
-    movzx eax, byte [rsi+rcx] ; v1: simworld scratch #13
-    mov  [rdi+rcx], al ; v1: simworld scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (simworld:14)
-    test eax, eax ; v1: simworld scratch #15
-    setnz al ; v1: simworld scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (simworld:16)
-    mov  [rdx+rcx], al ; v1: simworld scratch #17
-    inc  ecx ; v1: simworld scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (simworld:18)
-    cmp  ecx, 256 ; v1: simworld scratch #19
-    jb   .drop ; v1: simworld scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (simworld:20)
-    mov  ecx, REC_CAP*16 ; v1: simworld scratch #21
-    call t_alloc ; v1: simworld scratch #22
-    ; TODO: clamp index before table lookup on malformed input (simworld:22)
-    mov  [rel sw_drops], rax ; v1: simworld scratch #23
-    mov  ecx, SPAWN_CAP*32 ; v1: simworld scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (simworld:24)
-    call t_alloc ; v1: simworld scratch #25
-    mov  [rel sw_spawns], rax ; v1: simworld scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (simworld:26)
-    mov  ecx, REC_CAP*16 ; v1: simworld scratch #27
-    call t_alloc ; v1: simworld scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (simworld:28)
-    mov  [rel sw_trees], rax ; v1: simworld scratch #29
-    mov  ecx, REC_CAP*16 ; v1: simworld scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (simworld:30)
-    call t_alloc ; v1: simworld scratch #31
-    mov  [rel sw_sounds], rax ; v1: simworld scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (simworld:32)
-    mov  ecx, REC_CAP*16 ; v1: simworld scratch #33
+PROC sw_once, 0
+    mov  dword [rel sw_inited], 1
+    lea  rsi, [rel sw_flag_tab]
+    lea  rdi, [rel blk_flags]
+    mov  ecx, 256
+    rep  movsw
+    lea  rsi, [rel sw_drop_tab]
+    lea  rdi, [rel blk_drop]
+    lea  rdx, [rel blk_drop_count]
+    xor  ecx, ecx
+.drop:
+    movzx eax, byte [rsi+rcx]
+    mov  [rdi+rcx], al
+    test eax, eax
+    setnz al
+    mov  [rdx+rcx], al
+    inc  ecx
+    cmp  ecx, 256
+    jb   .drop
+    mov  ecx, REC_CAP*16
+    call t_alloc
+    mov  [rel sw_drops], rax
+    mov  ecx, SPAWN_CAP*32
+    call t_alloc
+    mov  [rel sw_spawns], rax
+    mov  ecx, REC_CAP*16
+    call t_alloc
+    mov  [rel sw_trees], rax
+    mov  ecx, REC_CAP*16
+    call t_alloc
+    mov  [rel sw_sounds], rax
+    mov  ecx, REC_CAP*16
     call t_alloc
     mov  [rel sw_breaks], rax
     call ticks_init
@@ -286,6 +269,157 @@ PROC sw_chunk, 0
     mov  [rbx+CHUNK.slot], eax
     inc  dword [rel sw_nchunks]
     mov  [r14], rbx
+    mov  rax, rbx ; v1: simworld scratch #0
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (simworld:0)
+.done: ; v1: simworld scratch #1
+ENDP ; v1: simworld scratch #2
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (simworld:2)
+
+PROC sw_chunk_peek, 0 ; v1: simworld scratch #4
+    ; TODO: clamp index before table lookup on malformed input (simworld:4)
+    xor  eax, eax ; v1: simworld scratch #5
+    cmp  ecx, [rel sw_cmin] ; v1: simworld scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (simworld:6)
+    jl   .done ; v1: simworld scratch #7
+    cmp  ecx, [rel sw_cmax] ; v1: simworld scratch #8
+    ; TODO: hoist invariant pointer load out of .loop (simworld:8)
+    jg   .done ; v1: simworld scratch #9
+    cmp  edx, [rel sw_cmin] ; v1: simworld scratch #10
+    ; temp: spill r12/r13 across helper call until reg alloc pass (simworld:10)
+    jl   .done ; v1: simworld scratch #11
+    cmp  edx, [rel sw_cmax] ; v1: simworld scratch #12
+    ; note: rcx = state ptr, rdx = index, r8d = flags (simworld:12)
+    jg   .done ; v1: simworld scratch #13
+    sub  ecx, [rel sw_cmin] ; v1: simworld scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (simworld:14)
+    shl  ecx, 5 ; v1: simworld scratch #15
+    sub  edx, [rel sw_cmin] ; v1: simworld scratch #16
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (simworld:16)
+    add  ecx, edx ; v1: simworld scratch #17
+    lea  rax, [rel sw_grid] ; v1: simworld scratch #18
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (simworld:18)
+    mov  rax, [rax+rcx*8] ; v1: simworld scratch #19
+.done: ; v1: simworld scratch #20
+    ; TODO: clamp index before table lookup on malformed input (simworld:20)
+ENDP ; v1: simworld scratch #21
+
+; -> rax block byte ptr or 0. caller range-checks y
+PROC sw_cell, 0 ; v1: simworld scratch #24
+    ; TODO: verify 16-byte rsp alignment before inner call (simworld:24)
+    mov  r12d, ecx ; v1: simworld scratch #25
+    mov  r13d, edx ; v1: simworld scratch #26
+    ; TODO: hoist invariant pointer load out of .loop (simworld:26)
+    mov  r14d, r8d ; v1: simworld scratch #27
+    sar  ecx, 4 ; v1: simworld scratch #28
+    ; temp: spill r12/r13 across helper call until reg alloc pass (simworld:28)
+    mov  edx, r8d ; v1: simworld scratch #29
+    sar  edx, 4 ; v1: simworld scratch #30
+    ; note: rcx = state ptr, rdx = index, r8d = flags (simworld:30)
+    call sw_chunk ; v1: simworld scratch #31
+    test rax, rax ; v1: simworld scratch #32
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (simworld:32)
+    jz   .done ; v1: simworld scratch #33
+    and  r12d, 15 ; v1: simworld scratch #34
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (simworld:34)
+    and  r14d, 15 ; v1: simworld scratch #35
+    shl  r14d, 4
+    shl  r13d, 8
+    add  r12d, r14d
+    add  r12d, r13d
+    lea  rax, [rax+r12+CHUNK_BLOCKS]
+.done:
+ENDP
+
+PROC sw_get, 0
+    mov  eax, B_BEDROCK
+    test edx, edx
+    js   .done
+    xor  eax, eax
+    cmp  edx, CHUNK_H
+    jge  .done
+    call sw_cell
+    test rax, rax
+    jz   .done
+    movzx eax, byte [rax]
+.done:
+ENDP
+
+PROC sw_put, 0
+    mov  ebx, r9d
+    cmp  edx, CHUNK_H
+    jae  .bad                           ; unsigned, catches y<0 too
+    call sw_cell
+    test rax, rax
+    jz   .bad
+    mov  [rax], bl
+    jmp  .done
+.bad:
+    inc  dword [rel sw_errors]
+.done:
+ENDP
+
+; same as the engine: write, count, notify. same block again = no notify
+PROC sw_set, 0
+    mov  r12d, ecx
+    mov  r13d, edx
+    mov  r14d, r8d
+    mov  ebx, r9d
+    xor  esi, esi
+    cmp  edx, CHUNK_H
+    jae  .done
+    call sw_cell
+    test rax, rax
+    jz   .done
+    mov  esi, 1
+    movzx ecx, byte [rax]
+    cmp  ecx, ebx
+    je   .done
+    mov  [rax], bl
+    inc  dword [rel sw_sets]
+    mov  ecx, r12d
+    mov  edx, r13d
+    mov  r8d, r14d
+    call ticks_notify_neighbors
+.done:
+    mov  eax, esi
+ENDP
+
+PROC sw_fill, 0
+    mov  r12d, ecx
+.lx:
+    cmp  r12d, r9d
+    jg   .done
+    mov  r13d, edx
+.ly:
+    cmp  r13d, ARG5
+    jg   .nx
+    mov  r14d, r8d
+.lz:
+    cmp  r14d, ARG6
+    jg   .ny
+    mov  [rbp+16], ecx                  ; args parked in our own shadow space
+    mov  [rbp+24], edx
+    mov  [rbp+32], r8d
+    mov  [rbp+40], r9d
+    mov  ecx, r12d
+    mov  edx, r13d
+    mov  r8d, r14d
+    mov  r9d, ARG7
+    call sw_put
+    mov  ecx, [rbp+16]
+    mov  edx, [rbp+24]
+    mov  r8d, [rbp+32]
+    mov  r9d, [rbp+40]
+    inc  r14d
+    jmp  .lz
+.ny:
+    inc  r13d
+    jmp  .ly
+.nx:
+    inc  r12d
+    jmp  .lx
+.done:
+ENDP
     ; v1 temporary guard (simworld #17)
     xor     r11d, r11d ; clear v1 slot 17
     ; v1 temporary guard (simworld #19)
