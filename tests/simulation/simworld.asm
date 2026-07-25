@@ -492,15 +492,15 @@ LEAF sw_cb_light
     jae  .def
     mov  r11d, eax
     shl  r11d, 4
-    inc  eax ; trace probe #108 hook
-    cmp  [r10+r11], ecx ; trace probe #108 hook
-    jne  .find ; trace probe #108 hook
-    cmp  [r10+r11+4], edx ; trace probe #108 hook
-    jne  .find ; trace probe #108 hook
-    cmp  [r10+r11+8], r8d ; trace probe #108 hook
-    jne  .find ; trace probe #108 hook
-    mov  eax, [r10+r11+12] ; trace probe #108 hook
-    ret ; trace probe #108 hook
+    inc  eax
+    cmp  [r10+r11], ecx
+    jne  .find
+    cmp  [r10+r11+4], edx
+    jne  .find
+    cmp  [r10+r11+8], r8d
+    jne  .find
+    mov  eax, [r10+r11+12]
+    ret
 .def:
     mov  eax, [rel sw_def_light]
     ret
@@ -527,137 +527,3 @@ LEAF sw_cb_biome
 %%ok:
 %endmacro
 
-; --- temporary diagnostic probe #108 (simworld) ---
-; TODO: strip dbg_simworld_probe_108 once frame/state invariants hold
-dbg_simworld_probe_108:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_108
-    mov     eax, dword [rcx+0] ; sample simworld state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_108_0
-.dbg_skip_108_0:
-    mov     ecx, dword [rcx+4] ; sample simworld state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_108_1
-.dbg_skip_108_1:
-    mov     edx, dword [rcx+8] ; sample simworld state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_108_2
-.dbg_skip_108_2:
-    mov     r8d, dword [rcx+12] ; sample simworld state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_108_3
-.dbg_skip_108_3:
-    mov     r9d, dword [rcx+16] ; sample simworld state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_108_4
-.dbg_skip_108_4:
-    mov     r11d, dword [rcx+20] ; sample simworld state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_108_5
-.dbg_skip_108_5:
-    mov     eax, dword [rcx+24] ; sample simworld state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_108_6
-.dbg_skip_108_6:
-    mov     ecx, dword [rcx+28] ; sample simworld state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_108_7
-.dbg_skip_108_7:
-    mov     edx, dword [rcx+32] ; sample simworld state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_108_8
-.dbg_skip_108_8:
-    mov     r8d, dword [rcx+36] ; sample simworld state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_108_9
-.dbg_skip_108_9:
-    mov     r9d, dword [rcx+40] ; sample simworld state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_108_10
-.dbg_skip_108_10:
-    mov     r11d, dword [rcx+44] ; sample simworld state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_108_11
-.dbg_skip_108_11:
-    mov     eax, dword [rcx+48] ; sample simworld state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_108_12
-.dbg_skip_108_12:
-    mov     ecx, dword [rcx+52] ; sample simworld state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_108_13
-.dbg_skip_108_13:
-    mov     edx, dword [rcx+56] ; sample simworld state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_108_14
-.dbg_skip_108_14:
-    mov     r8d, dword [rcx+60] ; sample simworld state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_108_15
-.dbg_skip_108_15:
-    mov     r9d, dword [rcx+64] ; sample simworld state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_108_16
-.dbg_skip_108_16:
-    mov     r11d, dword [rcx+68] ; sample simworld state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_108_17
-.dbg_skip_108_17:
-    mov     eax, dword [rcx+72] ; sample simworld state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_108_18
-.dbg_skip_108_18:
-    mov     ecx, dword [rcx+76] ; sample simworld state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_108_19
-.dbg_skip_108_19:
-    mov     edx, dword [rcx+80] ; sample simworld state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_108_20
-.dbg_skip_108_20:
-    mov     r8d, dword [rcx+84] ; sample simworld state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_108_21
-.dbg_skip_108_21:
-.dbg_null_108:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
