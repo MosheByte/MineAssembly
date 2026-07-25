@@ -527,56 +527,41 @@ LEAF sw_cb_biome
 %%ok:
 %endmacro
 
-LEAF sw_cb_drop ; v1: simworld scratch #0
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (simworld:0)
-    REC4 sw_drops, sw_drops_n ; v1: simworld scratch #1
-    ret ; v1: simworld scratch #2
-    ; TODO: hoist invariant pointer load out of .loop (simworld:2)
+LEAF sw_cb_drop
+    REC4 sw_drops, sw_drops_n
+    ret
 
-LEAF sw_cb_break ; v1: simworld scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (simworld:4)
-    REC4 sw_breaks, sw_breaks_n ; v1: simworld scratch #5
-    ret ; v1: simworld scratch #6
-    ; TODO: clamp index before table lookup on malformed input (simworld:6)
+LEAF sw_cb_break
+    REC4 sw_breaks, sw_breaks_n
+    ret
 
 ; pos comes in xmm1-3, stored as raw float bits
-LEAF sw_cb_sfx ; v1: simworld scratch #9
-    movd edx, xmm1 ; v1: simworld scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (simworld:10)
-    movd r8d, xmm2 ; v1: simworld scratch #11
-    movd r9d, xmm3 ; v1: simworld scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (simworld:12)
-    REC4 sw_sounds, sw_sounds_n ; v1: simworld scratch #13
-    ret ; v1: simworld scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (simworld:14)
+LEAF sw_cb_sfx
+    movd edx, xmm1
+    movd r8d, xmm2
+    movd r9d, xmm3
+    REC4 sw_sounds, sw_sounds_n
+    ret
 
 ; only counted, the stack args aren't looked at
-LEAF sw_cb_particle ; v1: simworld scratch #17
-    inc  dword [rel sw_particles_n] ; v1: simworld scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (simworld:18)
-    cmp  ecx, PT_SMOKE ; v1: simworld scratch #19
-    jne  .r ; v1: simworld scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (simworld:20)
-    inc  dword [rel sw_smoke_n] ; v1: simworld scratch #21
-.r: ; v1: simworld scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (simworld:22)
-    ret ; v1: simworld scratch #23
+LEAF sw_cb_particle
+    inc  dword [rel sw_particles_n]
+    cmp  ecx, PT_SMOKE
+    jne  .r
+    inc  dword [rel sw_smoke_n]
+.r:
+    ret
 
-PROC sw_cb_tree, 0 ; v1: simworld scratch #25
-    REC4 sw_trees, sw_trees_n ; v1: simworld scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (simworld:26)
-    mov  rax, [rel sw_tree_fn] ; v1: simworld scratch #27
-    test rax, rax ; v1: simworld scratch #28
-    ; TODO: clamp index before table lookup on malformed input (simworld:28)
-    jz   .done ; v1: simworld scratch #29
-    call rax ; v1: simworld scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (simworld:30)
-.done: ; v1: simworld scratch #31
-ENDP ; v1: simworld scratch #32
-    ; temp: spill r12/r13 across helper call until reg alloc pass (simworld:32)
+PROC sw_cb_tree, 0
+    REC4 sw_trees, sw_trees_n
+    mov  rax, [rel sw_tree_fn]
+    test rax, rax
+    jz   .done
+    call rax                            ; REC4 left ecx/edx/r8d alone
+.done:
+ENDP
 
-PROC sw_cb_spawn, 0 ; v1: simworld scratch #34
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (simworld:34)
+PROC sw_cb_spawn, 0
     mov  eax, [rel sw_spawns_n]
     inc  dword [rel sw_spawns_n]
     xor  ebx, ebx
@@ -678,33 +663,78 @@ PROC sw_count_box, 0
 .done:
     mov  eax, esi
 ENDP
-    ; v1 temporary guard (simworld #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (simworld #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (simworld #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (simworld #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (simworld #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (simworld #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (simworld #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (simworld #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (simworld #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (simworld #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (simworld #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (simworld #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (simworld #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (simworld #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (simworld #43)
-    xor     r11d, r11d ; clear v1 slot 43
+
+; only sees the first REC_CAP, sw_drops_n can be bigger
+LEAF sw_count_drops
+    mov  r8d, [rel sw_drops_n]
+    cmp  r8d, REC_CAP
+    jbe  .n_ok
+    mov  r8d, REC_CAP
+.n_ok:
+    mov  r9, [rel sw_drops]
+    xor  eax, eax
+    xor  edx, edx
+.l:
+    cmp  edx, r8d
+    jae  .r
+    mov  r10d, edx
+    shl  r10d, 4
+    inc  edx
+    cmp  ecx, -1
+    je   .hit
+    cmp  [r9+r10+12], ecx
+    jne  .l
+.hit:
+    inc  eax
+    jmp  .l
+.r:
+    ret
+
+LEAF sw_find_drop
+    mov  r10d, [rel sw_drops_n]
+    cmp  r10d, REC_CAP
+    jbe  .n_ok
+    mov  r10d, REC_CAP
+.n_ok:
+    mov  r11, [rel sw_drops]
+.l:
+    test r10d, r10d
+    jz   .no
+    dec  r10d
+    mov  eax, r10d
+    shl  eax, 4
+    cmp  [r11+rax], ecx
+    jne  .l
+    cmp  [r11+rax+4], edx
+    jne  .l
+    cmp  [r11+rax+8], r8d
+    jne  .l
+    cmp  [r11+rax+12], r9d
+    jne  .l
+    mov  eax, 1
+    ret
+.no:
+    xor  eax, eax
+    ret
+
+LEAF sw_count_sounds
+    mov  r8d, [rel sw_sounds_n]
+    cmp  r8d, REC_CAP
+    jbe  .n_ok
+    mov  r8d, REC_CAP
+.n_ok:
+    mov  r9, [rel sw_sounds]
+    xor  eax, eax
+    xor  edx, edx
+.l:
+    cmp  edx, r8d
+    jae  .r
+    mov  r10d, edx
+    shl  r10d, 4
+    inc  edx
+    cmp  [r9+r10], ecx
+    jne  .l
+    inc  eax
+    jmp  .l
+.r:
+    ret
