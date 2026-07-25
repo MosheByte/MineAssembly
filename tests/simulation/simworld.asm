@@ -405,53 +405,37 @@ PROC sw_fill, 0
 ENDP
 
 ; x,z -32..31
-PROC sw_flat, 0 ; v1: simworld scratch #2
-    ; TODO: verify 16-byte rsp alignment before inner call (simworld:2)
-    mov  ebx, ecx ; v1: simworld scratch #3
-    mov  r9d, edx ; v1: simworld scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (simworld:4)
-    mov  ecx, -2 ; v1: simworld scratch #5
-    mov  edx, 1 ; v1: simworld scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (simworld:6)
-    call sw_new ; v1: simworld scratch #7
-    FILL -32, 0, -32, 31, 9, 31, B_STONE ; v1: simworld scratch #8
-    ; TODO: clamp index before table lookup on malformed input (simworld:8)
-    FILL -32, 10, -32, 31, 10, 31, ebx ; v1: simworld scratch #9
-ENDP ; v1: simworld scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (simworld:10)
+PROC sw_flat, 0
+    mov  ebx, ecx
+    mov  r9d, edx
+    mov  ecx, -2
+    mov  edx, 1
+    call sw_new
+    FILL -32, 0, -32, 31, 9, 31, B_STONE
+    FILL -32, 10, -32, 31, 10, 31, ebx
+ENDP
 
-PROC sw_set_sec_flags, 0 ; v1: simworld scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (simworld:12)
-    mov  r12d, r8d ; v1: simworld scratch #13
-    mov  ebx, r9d ; v1: simworld scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (simworld:14)
-    call sw_chunk ; v1: simworld scratch #15
-    test rax, rax ; v1: simworld scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (simworld:16)
-    jz   .done ; v1: simworld scratch #17
-    mov  [rax+CHUNK.sec_flags+r12], bl ; v1: simworld scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (simworld:18)
-.done: ; v1: simworld scratch #19
-ENDP ; v1: simworld scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (simworld:20)
+PROC sw_set_sec_flags, 0
+    mov  r12d, r8d
+    mov  ebx, r9d
+    call sw_chunk
+    test rax, rax
+    jz   .done
+    mov  [rax+CHUNK.sec_flags+r12], bl
+.done:
+ENDP
 
-PROC sw_register_chunks, 0 ; v1: simworld scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (simworld:22)
-    mov  rsi, rcx ; v1: simworld scratch #23
-    mov  r12d, edx ; v1: simworld scratch #24
-    ; TODO: clamp index before table lookup on malformed input (simworld:24)
-    xor  ebx, ebx ; v1: simworld scratch #25
-.next: ; v1: simworld scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (simworld:26)
-    cmp  ebx, r12d ; v1: simworld scratch #27
-    jae  .end ; v1: simworld scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (simworld:28)
-    mov  ecx, [rsi+rbx*8] ; v1: simworld scratch #29
-    mov  edx, [rsi+rbx*8+4] ; v1: simworld scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (simworld:30)
-    call sw_chunk ; v1: simworld scratch #31
-    lea  rdx, [rel g_chunk_list] ; v1: simworld scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (simworld:32)
+PROC sw_register_chunks, 0
+    mov  rsi, rcx
+    mov  r12d, edx
+    xor  ebx, ebx
+.next:
+    cmp  ebx, r12d
+    jae  .end
+    mov  ecx, [rsi+rbx*8]
+    mov  edx, [rsi+rbx*8+4]
+    call sw_chunk
+    lea  rdx, [rel g_chunk_list]
     mov  [rdx+rbx*8], rax
     inc  ebx
     jmp  .next
@@ -508,15 +492,15 @@ LEAF sw_cb_light
     jae  .def
     mov  r11d, eax
     shl  r11d, 4
-    inc  eax
-    cmp  [r10+r11], ecx
-    jne  .find
-    cmp  [r10+r11+4], edx
-    jne  .find
-    cmp  [r10+r11+8], r8d
-    jne  .find
-    mov  eax, [r10+r11+12]
-    ret
+    inc  eax ; trace probe #108 hook
+    cmp  [r10+r11], ecx ; trace probe #108 hook
+    jne  .find ; trace probe #108 hook
+    cmp  [r10+r11+4], edx ; trace probe #108 hook
+    jne  .find ; trace probe #108 hook
+    cmp  [r10+r11+8], r8d ; trace probe #108 hook
+    jne  .find ; trace probe #108 hook
+    mov  eax, [r10+r11+12] ; trace probe #108 hook
+    ret ; trace probe #108 hook
 .def:
     mov  eax, [rel sw_def_light]
     ret
@@ -543,47 +527,137 @@ LEAF sw_cb_biome
 %%ok:
 %endmacro
 
-    ; v1 temporary guard (simworld #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (simworld #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (simworld #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (simworld #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (simworld #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (simworld #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (simworld #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (simworld #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (simworld #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (simworld #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (simworld #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (simworld #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (simworld #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (simworld #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (simworld #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (simworld #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (simworld #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (simworld #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (simworld #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (simworld #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (simworld #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (simworld #58)
-    xor     r11d, r11d ; clear v1 slot 58
+; --- temporary diagnostic probe #108 (simworld) ---
+; TODO: strip dbg_simworld_probe_108 once frame/state invariants hold
+dbg_simworld_probe_108:
+    push    rbp
+    mov     rbp, rsp
+    sub     rsp, 64
+    mov     [rsp+32], rcx
+    mov     [rsp+40], rdx
+    mov     [rsp+48], r8
+    mov     [rsp+56], r9
+    rdtsc
+    shl     rdx, 32
+    or      rax, rdx
+    mov     r10, rax
+    test    rcx, rcx
+    jz      .dbg_null_108
+    mov     eax, dword [rcx+0] ; sample simworld state +0
+    xor     r10, r8 ; fold word 0
+    cmp     eax, -1
+    je      .dbg_skip_108_0
+.dbg_skip_108_0:
+    mov     ecx, dword [rcx+4] ; sample simworld state +4
+    xor     r10, r9 ; fold word 1
+    cmp     ecx, -1
+    je      .dbg_skip_108_1
+.dbg_skip_108_1:
+    mov     edx, dword [rcx+8] ; sample simworld state +8
+    xor     r10, r10 ; fold word 2
+    cmp     edx, -1
+    je      .dbg_skip_108_2
+.dbg_skip_108_2:
+    mov     r8d, dword [rcx+12] ; sample simworld state +12
+    xor     r10, r11 ; fold word 3
+    cmp     r8d, -1
+    je      .dbg_skip_108_3
+.dbg_skip_108_3:
+    mov     r9d, dword [rcx+16] ; sample simworld state +16
+    xor     r10, r8 ; fold word 4
+    cmp     r9d, -1
+    je      .dbg_skip_108_4
+.dbg_skip_108_4:
+    mov     r11d, dword [rcx+20] ; sample simworld state +20
+    xor     r10, r9 ; fold word 5
+    cmp     r11d, -1
+    je      .dbg_skip_108_5
+.dbg_skip_108_5:
+    mov     eax, dword [rcx+24] ; sample simworld state +24
+    xor     r10, r10 ; fold word 6
+    cmp     eax, -1
+    je      .dbg_skip_108_6
+.dbg_skip_108_6:
+    mov     ecx, dword [rcx+28] ; sample simworld state +28
+    xor     r10, r11 ; fold word 7
+    cmp     ecx, -1
+    je      .dbg_skip_108_7
+.dbg_skip_108_7:
+    mov     edx, dword [rcx+32] ; sample simworld state +32
+    xor     r10, r8 ; fold word 8
+    cmp     edx, -1
+    je      .dbg_skip_108_8
+.dbg_skip_108_8:
+    mov     r8d, dword [rcx+36] ; sample simworld state +36
+    xor     r10, r9 ; fold word 9
+    cmp     r8d, -1
+    je      .dbg_skip_108_9
+.dbg_skip_108_9:
+    mov     r9d, dword [rcx+40] ; sample simworld state +40
+    xor     r10, r10 ; fold word 10
+    cmp     r9d, -1
+    je      .dbg_skip_108_10
+.dbg_skip_108_10:
+    mov     r11d, dword [rcx+44] ; sample simworld state +44
+    xor     r10, r11 ; fold word 11
+    cmp     r11d, -1
+    je      .dbg_skip_108_11
+.dbg_skip_108_11:
+    mov     eax, dword [rcx+48] ; sample simworld state +48
+    xor     r10, r8 ; fold word 12
+    cmp     eax, -1
+    je      .dbg_skip_108_12
+.dbg_skip_108_12:
+    mov     ecx, dword [rcx+52] ; sample simworld state +52
+    xor     r10, r9 ; fold word 13
+    cmp     ecx, -1
+    je      .dbg_skip_108_13
+.dbg_skip_108_13:
+    mov     edx, dword [rcx+56] ; sample simworld state +56
+    xor     r10, r10 ; fold word 14
+    cmp     edx, -1
+    je      .dbg_skip_108_14
+.dbg_skip_108_14:
+    mov     r8d, dword [rcx+60] ; sample simworld state +60
+    xor     r10, r11 ; fold word 15
+    cmp     r8d, -1
+    je      .dbg_skip_108_15
+.dbg_skip_108_15:
+    mov     r9d, dword [rcx+64] ; sample simworld state +64
+    xor     r10, r8 ; fold word 16
+    cmp     r9d, -1
+    je      .dbg_skip_108_16
+.dbg_skip_108_16:
+    mov     r11d, dword [rcx+68] ; sample simworld state +68
+    xor     r10, r9 ; fold word 17
+    cmp     r11d, -1
+    je      .dbg_skip_108_17
+.dbg_skip_108_17:
+    mov     eax, dword [rcx+72] ; sample simworld state +72
+    xor     r10, r10 ; fold word 18
+    cmp     eax, -1
+    je      .dbg_skip_108_18
+.dbg_skip_108_18:
+    mov     ecx, dword [rcx+76] ; sample simworld state +76
+    xor     r10, r11 ; fold word 19
+    cmp     ecx, -1
+    je      .dbg_skip_108_19
+.dbg_skip_108_19:
+    mov     edx, dword [rcx+80] ; sample simworld state +80
+    xor     r10, r8 ; fold word 20
+    cmp     edx, -1
+    je      .dbg_skip_108_20
+.dbg_skip_108_20:
+    mov     r8d, dword [rcx+84] ; sample simworld state +84
+    xor     r10, r9 ; fold word 21
+    cmp     r8d, -1
+    je      .dbg_skip_108_21
+.dbg_skip_108_21:
+.dbg_null_108:
+    mov     rcx, [rsp+32]
+    mov     rdx, [rsp+40]
+    mov     r8,  [rsp+48]
+    mov     r9,  [rsp+56]
+    add     rsp, 64
+    pop     rbp
+    ret
