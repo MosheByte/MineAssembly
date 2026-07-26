@@ -108,53 +108,38 @@ PROC abi_ticks, 0
     jnz  .l
 ENDP
 
-PROC case_checker_detects_violations ; v1: test_abi scratch #0
-    ; TODO: clamp index before table lookup on malformed input (test_abi:0)
-    TEST "abi: checker detects violations" ; v1: test_abi scratch #1
-    W_NEW -2, 1 ; v1: test_abi scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_abi:2)
-    mov  dword [rel fw_misaligned], 0 ; v1: test_abi scratch #3
-    lea  rcx, [rel abi_selftest_bad] ; v1: test_abi scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_abi:4)
-    xor  edx, edx ; v1: test_abi scratch #5
-    xor  r8d, r8d ; v1: test_abi scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (test_abi:6)
-    xor  r9d, r9d ; v1: test_abi scratch #7
-    mov  qword [rsp+32], 0 ; v1: test_abi scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_abi:8)
-    call abi_call ; v1: test_abi scratch #9
-    CHECK_EQ32 eax, (1 << 0) | (1 << 9), "probe reports rbx + xmm7" ; v1: test_abi scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (test_abi:10)
-    CHECK_EQ32 [rel fw_misaligned], 1, "misaligned call counted" ; v1: test_abi scratch #11
-    mov  dword [rel fw_misaligned], 0 ; v1: test_abi scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_abi:12)
-ENDP ; v1: test_abi scratch #13
+PROC case_checker_detects_violations
+    TEST "abi: checker detects violations"
+    W_NEW -2, 1
+    mov  dword [rel fw_misaligned], 0
+    lea  rcx, [rel abi_selftest_bad]
+    xor  edx, edx
+    xor  r8d, r8d
+    xor  r9d, r9d
+    mov  qword [rsp+32], 0
+    call abi_call
+    CHECK_EQ32 eax, (1 << 0) | (1 << 9), "probe reports rbx + xmm7"
+    CHECK_EQ32 [rel fw_misaligned], 1, "misaligned call counted"
+    mov  dword [rel fw_misaligned], 0
+ENDP
 
-PROC case_scheduler_entry_points ; v1: test_abi scratch #15
-    TEST "abi: scheduler entry points" ; v1: test_abi scratch #16
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_abi:16)
-    mov  dword [rel fw_misaligned], 0 ; v1: test_abi scratch #17
-    FLAT B_STONE ; v1: test_abi scratch #18
-    ; TODO: clamp index before table lookup on malformed input (test_abi:18)
-    ABI  ticks_init ; v1: test_abi scratch #19
-    ABI  ticks_clear ; v1: test_abi scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_abi:20)
-    xor  r12d, r12d ; v1: test_abi scratch #21
-.sched: ; v1: test_abi scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_abi:22)
-    lea  r13, [r12-100] ; v1: test_abi scratch #23
-    mov  r14, r12 ; v1: test_abi scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (test_abi:24)
-    neg  r14 ; v1: test_abi scratch #25
-    imul eax, r12d, 7 ; v1: test_abi scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_abi:26)
-    xor  edx, edx ; v1: test_abi scratch #27
-    mov  ecx, 13 ; v1: test_abi scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (test_abi:28)
-    div  ecx ; v1: test_abi scratch #29
-    mov  r15d, edx ; v1: test_abi scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_abi:30)
-    ABI  ticks_schedule, r13, 20, r14, r15 ; v1: test_abi scratch #31
+PROC case_scheduler_entry_points
+    TEST "abi: scheduler entry points"
+    mov  dword [rel fw_misaligned], 0
+    FLAT B_STONE
+    ABI  ticks_init
+    ABI  ticks_clear
+    xor  r12d, r12d
+.sched:
+    lea  r13, [r12-100]
+    mov  r14, r12
+    neg  r14
+    imul eax, r12d, 7
+    xor  edx, edx
+    mov  ecx, 13
+    div  ecx
+    mov  r15d, edx                      ; delay i*7 % 13, just to mix up the heap
+    ABI  ticks_schedule, r13, 20, r14, r15
     inc  r12d
     cmp  r12d, 200
     jb   .sched
@@ -273,55 +258,135 @@ PROC case_block_rules_paths
     dec  r12d
     jnz  .rt2
     DAYLIGHT 0.0
-    ; v1 temporary guard (test_abi #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (test_abi #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (test_abi #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (test_abi #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (test_abi #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (test_abi #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (test_abi #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (test_abi #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (test_abi #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (test_abi #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (test_abi #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (test_abi #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (test_abi #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (test_abi #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (test_abi #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (test_abi #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (test_abi #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (test_abi #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (test_abi #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (test_abi #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (test_abi #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (test_abi #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (test_abi #59)
-    xor     r11d, r11d ; clear v1 slot 59
-    ; v1 temporary guard (test_abi #61)
-    xor     r11d, r11d ; clear v1 slot 61
-    ; v1 temporary guard (test_abi #63)
-    xor     r11d, r11d ; clear v1 slot 63
-    ; v1 temporary guard (test_abi #65)
-    xor     r11d, r11d ; clear v1 slot 65
+    CHECK_BLK 6, 11, 6, B_WATER, "ice melted"
+    CHECK_BLK 8, 10, 8, B_DIRT, "covered grass died"
+    call abi_settle
+    CHECK_ALIGNED
+ENDP
+
+PROC case_fluid_paths
+    TEST "abi: fluid paths"
+    mov  dword [rel fw_misaligned], 0
+    FLAT B_STONE
+    FILL -10, 11, -10, 10, 13, 10, B_STONE
+    PUT  4, 13, 0, B_AIR
+    PUT  1, 14, 0, B_TORCH
+    PUT  -1, 14, 0, B_TALL_GRASS
+    ABI  fluid_update, 0, 14, 0         ; still air here, no-op
+    WSET 0, 14, 0, B_WATER
+    call abi_settle
+    PUT  0, 14, 5, B_FLOWER_RED
+    WSET 0, 14, 4, B_LAVA
+    call abi_settle
+    WSET -6, 15, -6, B_LAVA
+    WSET -6, 17, -6, B_WATER
+    call abi_settle
+    WSET 0, 14, 0, B_AIR
+    call abi_settle
+    CHECK_TRUE [rel sw_sounds_n], "mixing made a sound"
+    ; infinite source has to be on open ground. next to a ledge the water only
+    ; runs toward the drop and never fills the gap, which is the intended behaviour
+    FLAT B_STONE
+    WSET -1, 11, 0, B_WATER
+    WSET 1, 11, 0, B_WATER
+    call abi_settle
+    CHECK_BLK 0, 11, 0, B_WATER, "infinite source formed"
+    CHECK_ALIGNED
+ENDP
+
+PROC case_random_tick_walk_and_flow_restart
+    TEST "abi: random tick walk + flow restart"
+    mov  dword [rel fw_misaligned], 0
+    W_NEW -1, 1
+    FILL -16, 9, -16, 31, 9, 31, B_GRASS
+    FILL -16, 10, -16, 31, 10, 31, B_STONE
+    PUT  0, 11, 0, B_WATER
+    PUT  1, 11, 0, B_WATER+1
+    mov  r12d, -1
+.cx:
+    mov  r13d, -1
+.cz:
+    mov  ecx, r12d
+    mov  edx, r13d
+    xor  r8d, r8d
+    mov  r9d, 1
+    call sw_set_sec_flags
+    inc  r13d
+    cmp  r13d, 1
+    jle  .cz
+    inc  r12d
+    cmp  r12d, 1
+    jle  .cx
+    lea  rcx, [rel walk_chunks]
+    mov  edx, 9
+    call sw_register_chunks
+    PLAYER_AT -3.5, 20.0, -7.25
+    mov  ecx, 300
+    call abi_ticks
+    ABI  ticks_random_block, 1, 11, 0
+    call abi_settle
+    CHECK_BLK 7, 11, 0, B_WATER+7, "restarted flow reaches level 7"
+    CHECK_ALIGNED
+ENDP
+
+PROC case_persistent_leaves_and_source_paths
+    TEST "abi: persistent leaves + source paths"
+    mov  dword [rel fw_misaligned], 0
+    FLAT B_GRASS
+    mov  r12d, -3
+.add:
+    PUT  r12d, 11, 0, B_LEAVES
+    ABI  ticks_notify_neighbors, r12, 11, 0     ; pl_add
+    inc  r12d
+    cmp  r12d, 3
+    jle  .add
+    ABI  ticks_notify_neighbors, 0, 11, 0       ; already in the set
+    PUT  5, 11, 3, B_STONE
+    WSET 5, 11, 3, B_AIR
+    call abi_settle
+    CHECK_BLK 0, 11, 0, B_LEAVES, "placed leaf kept"
+    mov  r12d, -3
+.rem:
+    PUT  r12d, 11, 0, B_AIR
+    ABI  ticks_notify_neighbors, r12, 11, 0     ; pl_remove, backward shift
+    inc  r12d
+    cmp  r12d, 3
+    jle  .rem
+    CHECK_EQ32 [rel ticks_pl_count], 0, "leaf set empty again"
+    ABI  ticks_notify_neighbors, 0, 11, 0       ; remove from empty set
+    lea  rax, [rel grow_small]
+    mov  [rel sw_tree_fn], rax
+    PUT  8, 11, 8, B_SAPLING
+    mov  r12d, 300
+.grow:
+    ABI  ticks_random_block, 8, 11, 8
+    cmp  dword [rel sw_trees_n], 0
+    jne  .grown
+    dec  r12d
+    jnz  .grow
+.grown:
+    CHECK_TRUE [rel sw_trees_n], "sapling grew"
+    CHECK_EQ32 [rel ticks_pl_count], 0, "grown leaves are natural"
+    call abi_settle
+    PUT  -8, 11, -8, B_WATER
+    ABI  fluid_source_unsettled, -8, 11, -8
+    ABI  ticks_random_block, -8, 11, -8
+    call abi_settle
+    ABI  fluid_source_unsettled, -8, 11, -8
+    PUT  -8, 20, 8, B_LAVA
+    PUT  -8, 21, 8, B_WATER+1
+    ABI  fluid_source_unsettled, -8, 20, 8
+    ABI  fluid_source_unsettled, 5000, 20, 8
+    ABI  ticks_random_block, -8, 20, 8
+    call abi_settle
+    CHECK_ALIGNED
+ENDP
+
+PROC test_main
+    call case_checker_detects_violations
+    call case_scheduler_entry_points
+    call case_block_rules_paths
+    call case_fluid_paths
+    call case_random_tick_walk_and_flow_restart
+    call case_persistent_leaves_and_source_paths
+ENDP
