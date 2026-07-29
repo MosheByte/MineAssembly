@@ -228,69 +228,49 @@ PROC lava_pocket, 0
     SETTLE
 ENDP
 
-PROC case_water_next_to_lava_source_makes_obsidian ; v1: test_fluids scratch #1
-    TEST "fluids: water beside a lava source -> obsidian" ; v1: test_fluids scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_fluids:2)
-    call flat_world ; v1: test_fluids scratch #3
-    call lava_pocket ; v1: test_fluids scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_fluids:4)
-    WSET 1, 11, 0, B_WATER ; v1: test_fluids scratch #5
-    SETTLE ; v1: test_fluids scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (test_fluids:6)
-    CHECK_BLK 0, 11, 0, B_OBSIDIAN, "lava source hardened" ; v1: test_fluids scratch #7
-    mov  ecx, SFX_FIZZ ; v1: test_fluids scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_fluids:8)
-    call sw_count_sounds ; v1: test_fluids scratch #9
-    CHECK_TRUE eax, "fizz sound played" ; v1: test_fluids scratch #10
-    ; TODO: clamp index before table lookup on malformed input (test_fluids:10)
-    cmp  dword [rel sw_smoke_n], 8 ; v1: test_fluids scratch #11
-    setae al ; v1: test_fluids scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_fluids:12)
-    movzx eax, al ; v1: test_fluids scratch #13
-    CHECK_TRUE eax, ">= 8 smoke particles" ; v1: test_fluids scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (test_fluids:14)
-ENDP ; v1: test_fluids scratch #15
+PROC case_water_next_to_lava_source_makes_obsidian
+    TEST "fluids: water beside a lava source -> obsidian"
+    call flat_world
+    call lava_pocket
+    WSET 1, 11, 0, B_WATER              ; wall -> water
+    SETTLE
+    CHECK_BLK 0, 11, 0, B_OBSIDIAN, "lava source hardened"
+    mov  ecx, SFX_FIZZ
+    call sw_count_sounds
+    CHECK_TRUE eax, "fizz sound played"
+    cmp  dword [rel sw_smoke_n], 8
+    setae al
+    movzx eax, al
+    CHECK_TRUE eax, ">= 8 smoke particles"
+ENDP
 
-PROC case_water_on_top_of_lava_source_makes_obsidian ; v1: test_fluids scratch #17
-    TEST "fluids: water on a lava source -> obsidian" ; v1: test_fluids scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_fluids:18)
-    call flat_world ; v1: test_fluids scratch #19
-    call lava_pocket ; v1: test_fluids scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_fluids:20)
-    WSET 0, 12, 0, B_WATER ; v1: test_fluids scratch #21
-    SETTLE ; v1: test_fluids scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_fluids:22)
-    CHECK_BLK 0, 11, 0, B_OBSIDIAN, "lava source hardened" ; v1: test_fluids scratch #23
-ENDP ; v1: test_fluids scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (test_fluids:24)
+PROC case_water_on_top_of_lava_source_makes_obsidian
+    TEST "fluids: water on a lava source -> obsidian"
+    call flat_world
+    call lava_pocket
+    WSET 0, 12, 0, B_WATER
+    SETTLE
+    CHECK_BLK 0, 11, 0, B_OBSIDIAN, "lava source hardened"
+ENDP
 
-PROC lava_channel, 0 ; v1: test_fluids scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_fluids:26)
-    FILL -1, 11, -1, 4, 12, -1, B_STONE ; v1: test_fluids scratch #27
-    FILL -1, 11, 1, 4, 12, 1, B_STONE ; v1: test_fluids scratch #28
-    ; TODO: clamp index before table lookup on malformed input (test_fluids:28)
-    FILL -1, 11, 0, -1, 12, 0, B_STONE ; v1: test_fluids scratch #29
-    WSET 0, 11, 0, B_LAVA ; v1: test_fluids scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_fluids:30)
-    SETTLE ; v1: test_fluids scratch #31
-    CHECK_BLK 0, 11, 0, B_LAVA, "channel: source" ; v1: test_fluids scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (test_fluids:32)
-    CHECK_BLK 1, 11, 0, B_LAVA+1, "channel: level 1" ; v1: test_fluids scratch #33
-    CHECK_BLK 2, 11, 0, B_LAVA+2, "channel: level 2" ; v1: test_fluids scratch #34
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_fluids:34)
-    CHECK_BLK 3, 11, 0, B_LAVA+3, "channel: level 3" ; v1: test_fluids scratch #35
-ENDP ; v1: test_fluids scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_fluids:36)
+PROC lava_channel, 0
+    FILL -1, 11, -1, 4, 12, -1, B_STONE
+    FILL -1, 11, 1, 4, 12, 1, B_STONE
+    FILL -1, 11, 0, -1, 12, 0, B_STONE
+    WSET 0, 11, 0, B_LAVA
+    SETTLE
+    CHECK_BLK 0, 11, 0, B_LAVA, "channel: source"
+    CHECK_BLK 1, 11, 0, B_LAVA+1, "channel: level 1"
+    CHECK_BLK 2, 11, 0, B_LAVA+2, "channel: level 2"
+    CHECK_BLK 3, 11, 0, B_LAVA+3, "channel: level 3"
+ENDP
 
-PROC case_water_beside_flowing_lava_makes_cobble ; v1: test_fluids scratch #38
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_fluids:38)
-    TEST "fluids: water beside flowing lava -> cobble" ; v1: test_fluids scratch #39
-    call flat_world ; v1: test_fluids scratch #40
-    ; TODO: hoist invariant pointer load out of .loop (test_fluids:40)
-    call lava_channel ; v1: test_fluids scratch #41
-    FILL -32, 11, 2, 31, 11, 31, B_STONE ; v1: test_fluids scratch #42
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_fluids:42)
-    FILL -32, 11, -31, 31, 11, -2, B_STONE ; v1: test_fluids scratch #43
+PROC case_water_beside_flowing_lava_makes_cobble
+    TEST "fluids: water beside flowing lava -> cobble"
+    call flat_world
+    call lava_channel
+    FILL -32, 11, 2, 31, 11, 31, B_STONE    ; walls so the water can't wander off
+    FILL -32, 11, -31, 31, 11, -2, B_STONE
     WSET 4, 11, 0, B_WATER
     SETTLE
     CHECK_BLK 3, 11, 0, B_COBBLE, "flowing lava hardened to cobble"
@@ -365,6 +345,185 @@ PROC case_cactus_and_reeds_dam_water
     CHECK_BLK -2, 11, 0, B_WATER+4, "and around the reeds"
     CHECK_EQ32 [rel sw_breaks_n], 0, "water beside them does not uproot them"
 ENDP
+
+PROC case_bucket_into_lake_stays_put ; v1: test_fluids scratch #1
+    TEST "fluids: bucket into a lake stays put" ; v1: test_fluids scratch #2
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_fluids:2)
+    call flat_world ; v1: test_fluids scratch #3
+    FILL -5, 11, -5, 5, 11, 5, B_WATER ; v1: test_fluids scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (test_fluids:4)
+    WSET 0, 12, 0, B_WATER ; v1: test_fluids scratch #5
+    SETTLE ; v1: test_fluids scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (test_fluids:6)
+    COUNT_BOX -32, 31, 12, 12, -32, 31, B_WATER, B_LAVA_LAST ; v1: test_fluids scratch #7
+    mov  ebx, eax ; v1: test_fluids scratch #8
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_fluids:8)
+    COUNT_BOX 0, 0, 12, 12, 0, 0, B_WATER, B_LAVA_LAST ; v1: test_fluids scratch #9
+    sub  ebx, eax ; v1: test_fluids scratch #10
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_fluids:10)
+    CHECK_EQ32 ebx, 0, "no liquid on the lake except the poured cell" ; v1: test_fluids scratch #11
+    CHECK_BLK 1, 12, 0, B_AIR, "poured water does not spread" ; v1: test_fluids scratch #12
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_fluids:12)
+ENDP ; v1: test_fluids scratch #13
+
+PROC case_unloaded_world_is_a_wall ; v1: test_fluids scratch #15
+    TEST "fluids: the unloaded world is a wall" ; v1: test_fluids scratch #16
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_fluids:16)
+    W_NEW 0, 0 ; v1: test_fluids scratch #17
+    FILL 0, FLOOR, 0, 15, FLOOR, 15, B_STONE ; v1: test_fluids scratch #18
+    ; TODO: clamp index before table lookup on malformed input (test_fluids:18)
+    WSET 0, 11, 0, B_WATER ; v1: test_fluids scratch #19
+    SETTLE ; v1: test_fluids scratch #20
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_fluids:20)
+    CHECK_BLK 1, 11, 0, B_WATER+1, "flows inside the chunk" ; v1: test_fluids scratch #21
+    mov  ecx, -1 ; v1: test_fluids scratch #22
+    ; TODO: hoist invariant pointer load out of .loop (test_fluids:22)
+    xor  edx, edx ; v1: test_fluids scratch #23
+    call sw_chunk_peek ; v1: test_fluids scratch #24
+    ; TODO: verify 16-byte rsp alignment before inner call (test_fluids:24)
+    CHECK_EQ rax, 0, "chunk (-1,0) was never created" ; v1: test_fluids scratch #25
+ENDP ; v1: test_fluids scratch #26
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_fluids:26)
+
+PROC rnd_height, 0 ; v1: test_fluids scratch #28
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_fluids:28)
+    mov  rsi, rcx ; v1: test_fluids scratch #29
+    mov  ebx, edx ; v1: test_fluids scratch #30
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_fluids:30)
+    mov  r12d, r8d
+    call t_rng_next
+    xor  edx, edx
+    div  rbx
+    movzx edi, byte [rsi+rdx]
+    add  edi, 10
+    test r12d, r12d
+    jz   .done
+    call t_rng_float
+    comiss xmm0, [rel f_pit]
+    jae  .done
+    mov  edi, 6                         ; 3% pit
+.done:
+    mov  eax, edi
+ENDP
+
+; drops it on top of the column, -> eax y
+PROC put_source, 0
+    mov  r12d, ecx
+    mov  r13d, edx
+    mov  r14d, r8d
+    call top_y
+    lea  ebx, [rax+1]
+    WSET r12d, ebx, r13d, r14d
+    mov  eax, ebx
+ENDP
+
+PROC case_random_terrain_settles_and_stays_still
+    TEST "fluids: random terrain settles and stays still"
+    mov  ecx, 7
+    call t_rng_seed
+    W_NEW -2, 1
+    mov  r12d, -32
+.lx:
+    mov  r13d, -32
+.lz:
+    lea  rcx, [rel choice_7]
+    mov  edx, 7
+    mov  r8d, 1
+    call rnd_height
+    mov  ebx, eax
+    FILL r12d, 0, r13d, r12d, ebx, r13d, B_STONE
+    inc  r13d
+    cmp  r13d, 32
+    jl   .lz
+    inc  r12d
+    cmp  r12d, 32
+    jl   .lx
+    mov  ecx, 0
+    mov  edx, 0
+    mov  r8d, B_WATER
+    call put_source
+    mov  ecx, 8
+    mov  edx, -6
+    mov  r8d, B_WATER
+    call put_source
+    mov  ecx, -10
+    mov  edx, 5
+    mov  r8d, B_WATER
+    call put_source
+    SETTLE 20000
+    mov  ebx, [rel sw_sets]
+    TICK 300
+    CHECK_EQ32 [rel sw_sets], ebx, "settled water must not keep changing"
+    CHECK_EQ32 [rel ticks_pending], 0, "nothing pending"
+ENDP
+
+PROC case_random_terrain_lava_drains_completely
+    TEST "fluids: random terrain lava drains completely"
+    mov  ecx, 99
+    call t_rng_seed
+    W_NEW -2, 1
+    mov  r12d, -32
+.lx:
+    mov  r13d, -32
+.lz:
+    lea  rcx, [rel choice_4]
+    mov  edx, 4
+    xor  r8d, r8d
+    call rnd_height
+    mov  ebx, eax
+    FILL r12d, 0, r13d, r12d, ebx, r13d, B_STONE
+    inc  r13d
+    cmp  r13d, 32
+    jl   .lz
+    inc  r12d
+    cmp  r12d, 32
+    jl   .lx
+    xor  ecx, ecx
+    xor  edx, edx
+    mov  r8d, B_LAVA
+    call put_source
+    mov  r14d, eax
+    mov  ecx, 5
+    mov  edx, 5
+    mov  r8d, B_LAVA
+    call put_source
+    mov  r15d, eax
+    SETTLE 20000
+    WSET 0, r14d, 0, B_AIR
+    WSET 5, r15d, 5, B_AIR
+    SETTLE 20000
+    COUNT_BOX -32, 31, 8, 15, -32, 31, B_WATER, B_LAVA_LAST
+    CHECK_EQ32 eax, 0, "no liquid left anywhere"
+ENDP
+
+PROC test_main
+    call case_water_diamond_radius_7
+    call case_lava_diamond_radius_3_and_slow
+    call case_water_speed_one_cell_per_5_ticks
+    call case_recede_when_source_removed
+    call case_waterfall_off_a_ledge
+    call case_flows_toward_nearest_hole
+    call case_infinite_water_source
+    call case_no_source_over_air
+    call case_water_next_to_lava_source_makes_obsidian
+    call case_water_on_top_of_lava_source_makes_obsidian
+    call case_water_beside_flowing_lava_makes_cobble
+    call case_water_onto_flowing_lava_makes_stone
+    call case_lava_pouring_into_water_makes_stone
+    call case_water_washes_away_torch_and_flowers
+    call case_lava_burns_plants_without_drops
+    call case_cactus_and_reeds_dam_water
+    call case_bucket_into_lake_stays_put
+    call case_unloaded_world_is_a_wall
+    call case_random_terrain_settles_and_stays_still
+    call case_random_terrain_lava_drains_completely
+ENDP
+    ; v1 temporary guard (test_fluids #14)
+    xor     r11d, r11d ; clear v1 slot 14
+    ; v1 temporary guard (test_fluids #16)
+    xor     r11d, r11d ; clear v1 slot 16
+    ; v1 temporary guard (test_fluids #18)
+    xor     r11d, r11d ; clear v1 slot 18
     ; v1 temporary guard (test_fluids #20)
     xor     r11d, r11d ; clear v1 slot 20
     ; v1 temporary guard (test_fluids #22)
@@ -395,5 +554,3 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 46
     ; v1 temporary guard (test_fluids #48)
     xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_fluids #50)
-    xor     r11d, r11d ; clear v1 slot 50
