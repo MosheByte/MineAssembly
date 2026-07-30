@@ -266,54 +266,38 @@ ENDP
 
 ; backward-shift delete is the easy thing to get wrong, so hammer it with dense
 ; clusters and compare against the dumb reference set
-PROC case_persistent_leaf_set_insert_remove_stress ; v1: test_leaves scratch #3
-    TEST "leaves: persistent leaf set stress" ; v1: test_leaves scratch #4
-    ; TODO: hoist invariant pointer load out of .loop (test_leaves:4)
-    mov  ecx, 7 ; v1: test_leaves scratch #5
-    call t_rng_seed ; v1: test_leaves scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_leaves:6)
-    W_NEW -2, 1 ; v1: test_leaves scratch #7
-    mov  ecx, SCELLS*4 ; v1: test_leaves scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_leaves:8)
-    call t_alloc ; v1: test_leaves scratch #9
-    mov  [rel st_cells], rax ; v1: test_leaves scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_leaves:10)
-    mov  ecx, SVOL ; v1: test_leaves scratch #11
-    call t_alloc ; v1: test_leaves scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_leaves:12)
-    mov  [rel st_used], rax ; v1: test_leaves scratch #13
-    mov  ecx, SVOL ; v1: test_leaves scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (test_leaves:14)
-    call t_alloc ; v1: test_leaves scratch #15
-    mov  [rel st_live], rax ; v1: test_leaves scratch #16
-    ; TODO: clamp index before table lookup on malformed input (test_leaves:16)
-    mov  ecx, SCELLS*4 ; v1: test_leaves scratch #17
-    call t_alloc ; v1: test_leaves scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_leaves:18)
-    mov  [rel st_list], rax ; v1: test_leaves scratch #19
-    mov  ecx, SVOL*4 ; v1: test_leaves scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (test_leaves:20)
-    call t_alloc ; v1: test_leaves scratch #21
-    mov  [rel st_pos], rax ; v1: test_leaves scratch #22
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_leaves:22)
-    mov  dword [rel st_n], 0 ; v1: test_leaves scratch #23
-    xor  ebx, ebx ; v1: test_leaves scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_leaves:24)
-.pick: ; v1: test_leaves scratch #25
-    call t_rng_next ; v1: test_leaves scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_leaves:26)
-    xor  edx, edx ; v1: test_leaves scratch #27
-    mov  ecx, SVOL ; v1: test_leaves scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_leaves:28)
-    div  rcx ; v1: test_leaves scratch #29
-    mov  rax, [rel st_used] ; v1: test_leaves scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (test_leaves:30)
-    cmp  byte [rax+rdx], 0 ; v1: test_leaves scratch #31
-    jne  .pick ; v1: test_leaves scratch #32
-    ; TODO: clamp index before table lookup on malformed input (test_leaves:32)
-    mov  byte [rax+rdx], 1 ; v1: test_leaves scratch #33
-    mov  rax, [rel st_cells] ; v1: test_leaves scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_leaves:34)
+PROC case_persistent_leaf_set_insert_remove_stress
+    TEST "leaves: persistent leaf set stress"
+    mov  ecx, 7
+    call t_rng_seed
+    W_NEW -2, 1
+    mov  ecx, SCELLS*4
+    call t_alloc
+    mov  [rel st_cells], rax
+    mov  ecx, SVOL
+    call t_alloc
+    mov  [rel st_used], rax
+    mov  ecx, SVOL
+    call t_alloc
+    mov  [rel st_live], rax
+    mov  ecx, SCELLS*4
+    call t_alloc
+    mov  [rel st_list], rax
+    mov  ecx, SVOL*4
+    call t_alloc
+    mov  [rel st_pos], rax
+    mov  dword [rel st_n], 0
+    xor  ebx, ebx
+.pick:
+    call t_rng_next
+    xor  edx, edx
+    mov  ecx, SVOL
+    div  rcx
+    mov  rax, [rel st_used]
+    cmp  byte [rax+rdx], 0
+    jne  .pick
+    mov  byte [rax+rdx], 1
+    mov  rax, [rel st_cells]
     mov  [rax+rbx*4], edx
     inc  ebx
     cmp  ebx, SCELLS
@@ -429,6 +413,165 @@ PROC case_persistent_leaf_set_insert_remove_stress ; v1: test_leaves scratch #3
     PUT  r12d, 30, r14d, B_LEAVES
     NOTIFY r12d, 30, r14d
     NOTIFY r12d, 30, r14d               ; twice, must not dupe
+    add  ebx, 2 ; v1: test_leaves scratch #0
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_leaves:0)
+    cmp  ebx, PL_MAX ; v1: test_leaves scratch #1
+    jb   .re ; v1: test_leaves scratch #2
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_leaves:2)
+    CHECK_EQ32 [rel ticks_pl_count], PL_MAX, "re-added once each" ; v1: test_leaves scratch #3
+    xor  ebx, ebx ; v1: test_leaves scratch #4
+    ; TODO: clamp index before table lookup on malformed input (test_leaves:4)
+.all: ; v1: test_leaves scratch #5
+    mov  r12d, ebx ; v1: test_leaves scratch #6
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_leaves:6)
+    shr  r12d, 8 ; v1: test_leaves scratch #7
+    sub  r12d, 128 ; v1: test_leaves scratch #8
+    ; TODO: hoist invariant pointer load out of .loop (test_leaves:8)
+    movzx r14d, bl ; v1: test_leaves scratch #9
+    sub  r14d, 128 ; v1: test_leaves scratch #10
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_leaves:10)
+    PUT  r12d, 30, r14d, B_AIR ; v1: test_leaves scratch #11
+    NOTIFY r12d, 30, r14d ; v1: test_leaves scratch #12
+    ; TODO: verify 16-byte rsp alignment before inner call (test_leaves:12)
+    inc  ebx ; v1: test_leaves scratch #13
+    cmp  ebx, PL_MAX ; v1: test_leaves scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_leaves:14)
+    jb   .all ; v1: test_leaves scratch #15
+    CHECK_EQ32 [rel ticks_pl_count], 0, "all removed" ; v1: test_leaves scratch #16
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_leaves:16)
+ENDP ; v1: test_leaves scratch #17
+
+PROC case_leaf_decay_drop_rates ; v1: test_leaves scratch #19
+    TEST "leaves: decay drop rates" ; v1: test_leaves scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_leaves:20)
+    W_NEW -3, 2 ; v1: test_leaves scratch #21
+    mov  qword [rel ticks_rng], 2024 ; v1: test_leaves scratch #22
+    ; TODO: clamp index before table lookup on malformed input (test_leaves:22)
+    xor  ebx, ebx ; v1: test_leaves scratch #23
+    xor  r15d, r15d ; v1: test_leaves scratch #24
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_leaves:24)
+.l: ; v1: test_leaves scratch #25
+    mov  eax, ebx ; v1: test_leaves scratch #26
+    ; TODO: hoist invariant pointer load out of .loop (test_leaves:26)
+    xor  edx, edx ; v1: test_leaves scratch #27
+    mov  ecx, 60 ; v1: test_leaves scratch #28
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_leaves:28)
+    div  ecx
+    lea  r12d, [rdx-30]
+    xor  edx, edx
+    div  ecx
+    lea  r14d, [rdx-30]
+    mov  eax, ebx
+    xor  edx, edx
+    mov  ecx, 3600
+    div  ecx
+    imul eax, eax, 6
+    lea  r13d, [rax+20]                 ; 60x60 layers, 6 apart
+    PUT  r12d, r13d, r14d, B_LEAVES
+    LEAFCHK r12d, r13d, r14d
+    GET  r12d, r13d, r14d
+    test eax, eax
+    jz   .gone
+    inc  r15d
+.gone:
+    inc  ebx
+    cmp  ebx, 4000
+    jb   .l
+    CHECK_EQ32 r15d, 0, "every isolated leaf decayed"
+    mov  ecx, B_SAPLING
+    call sw_count_drops
+    CHECK_RANGE eax, 140, 270, "5% saplings of 4000 (~200)"
+    mov  ecx, I_APPLE
+    call sw_count_drops
+    CHECK_RANGE eax, 6, 40, "0.5% apples of 4000 (~20)"
+ENDP
+
+PROC case_canopy_decays_in_cascade_after_chopping
+    TEST "leaves: canopy decays in a cascade after chopping"
+    FLAT B_STONE
+    FILL 0, 11, 0, 0, 15, 0, B_LOG
+    mov  r12d, -2
+.x:
+    mov  r13d, 14
+.y:
+    mov  r14d, -2
+.z:
+    GET  r12d, r13d, r14d
+    test eax, eax
+    jnz  .nz
+    PUT  r12d, r13d, r14d, B_LEAVES
+.nz:
+    inc  r14d
+    cmp  r14d, 2
+    jle  .z
+    inc  r13d
+    cmp  r13d, 17
+    jle  .y
+    inc  r12d
+    cmp  r12d, 2
+    jle  .x
+    xor  ecx, ecx
+    call chop_trunk
+    COUNT_BOX -2, 2, 14, 17, -2, 2, B_LEAVES, B_LEAVES
+    CHECK_EQ32 eax, 0, "no leaf survived"
+ENDP
+
+PROC case_neighbouring_tree_keeps_its_leaves
+    TEST "leaves: neighbouring tree keeps its leaves"
+    FLAT B_STONE
+    xor  esi, esi                       ; trees at x=0 and 6
+.tree:
+    FILL esi, 11, 0, esi, 15, 0, B_LOG
+    lea  r12d, [rsi-2]
+.x:
+    mov  r14d, -2
+.z:
+    GET  r12d, 16, r14d
+    test eax, eax
+    jnz  .nz
+    PUT  r12d, 16, r14d, B_LEAVES
+.nz:
+    inc  r14d
+    cmp  r14d, 2
+    jle  .z
+    inc  r12d
+    lea  eax, [rsi+2]
+    cmp  r12d, eax
+    jle  .x
+    add  esi, 6
+    cmp  esi, 6
+    jle  .tree
+    xor  ecx, ecx
+    call chop_trunk
+    COUNT_BOX 4, 8, 16, 16, -2, 2, B_LEAVES, B_LEAVES
+    CHECK_EQ32 eax, 25, "second tree keeps all its leaves"
+    COUNT_BOX -2, 1, 16, 16, -2, 2, B_AIR, B_AIR
+    CHECK_EQ32 eax, 20, "first tree's canopy is gone"
+ENDP
+
+PROC case_leaves_near_unloaded_edge_never_decay
+    TEST "leaves: near the unloaded edge they never decay"
+    W_NEW 0, 0
+    PUT  1, 20, 8, B_LEAVES             ; x-4 is unloaded
+    RTICK 1, 20, 8
+    CHECK_BLK 1, 20, 8, B_LEAVES, "leaf at the edge kept"
+    LEAFCHK 1, 20, 8
+    CHECK_BLK 1, 20, 8, B_LEAVES, "even an explicit check keeps it"
+ENDP
+
+PROC test_main
+    call case_leaves_near_log_survive_isolated_decay
+    call case_random_ticks_never_decay_leaves
+    call case_placed_leaves_never_decay
+    call case_sapling_grown_tree_keeps_decaying_leaves
+    call case_persistent_leaf_set_insert_remove_stress
+    call case_leaf_decay_drop_rates
+    call case_canopy_decays_in_cascade_after_chopping
+    call case_neighbouring_tree_keeps_its_leaves
+    call case_leaves_near_unloaded_edge_never_decay
+ENDP
+    ; v1 temporary guard (test_leaves #14)
+    xor     r11d, r11d ; clear v1 slot 14
     ; v1 temporary guard (test_leaves #16)
     xor     r11d, r11d ; clear v1 slot 16
     ; v1 temporary guard (test_leaves #18)
@@ -459,5 +602,3 @@ PROC case_persistent_leaf_set_insert_remove_stress ; v1: test_leaves scratch #3
     xor     r11d, r11d ; clear v1 slot 42
     ; v1 temporary guard (test_leaves #44)
     xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_leaves #46)
-    xor     r11d, r11d ; clear v1 slot 46
