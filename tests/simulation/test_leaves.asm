@@ -148,78 +148,56 @@ PROC case_placed_leaves_never_decay
     WSET -3, 11, 0, B_BIRCH_LEAVES
     CHECK_EQ32 [rel ticks_pl_count], HEDGE_N-1, "species swap keeps the entry"
     LEAFCHK -3, 11, 0
-    CHECK_BLK -3, 11, 0, B_BIRCH_LEAVES, "swapped leaf still persistent" ; v1: test_leaves scratch #0
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_leaves:0)
-    FLAT B_STONE ; v1: test_leaves scratch #1
-    CHECK_EQ32 [rel ticks_pl_count], 0, "new world: empty set" ; v1: test_leaves scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_leaves:2)
-ENDP ; v1: test_leaves scratch #3
+    CHECK_BLK -3, 11, 0, B_BIRCH_LEAVES, "swapped leaf still persistent"
+    FLAT B_STONE
+    CHECK_EQ32 [rel ticks_pl_count], 0, "new world: empty set"
+ENDP
 
-PROC grow_tree, 0 ; v1: test_leaves scratch #5
-    mov  r12d, ecx ; v1: test_leaves scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (test_leaves:6)
-    mov  r13d, edx ; v1: test_leaves scratch #7
-    mov  r14d, r8d ; v1: test_leaves scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_leaves:8)
-    lea  r15d, [r13+5] ; v1: test_leaves scratch #9
-.log: ; v1: test_leaves scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_leaves:10)
-    WSET r12d, r13d, r14d, B_LOG ; v1: test_leaves scratch #11
-    inc  r13d ; v1: test_leaves scratch #12
-    ; TODO: clamp index before table lookup on malformed input (test_leaves:12)
-    cmp  r13d, r15d ; v1: test_leaves scratch #13
-    jl   .log ; v1: test_leaves scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_leaves:14)
-    mov  esi, -2 ; v1: test_leaves scratch #15
-.cx: ; v1: test_leaves scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (test_leaves:16)
-    mov  edi, -2 ; v1: test_leaves scratch #17
-.cz: ; v1: test_leaves scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_leaves:18)
-    mov  eax, esi ; v1: test_leaves scratch #19
-    or   eax, edi ; v1: test_leaves scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_leaves:20)
-    jz   .skip ; v1: test_leaves scratch #21
-    lea  ebx, [r12+rsi] ; v1: test_leaves scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (test_leaves:22)
-    lea  r15d, [r14+rdi] ; v1: test_leaves scratch #23
-    WSET ebx, 15, r15d, B_LEAVES ; v1: test_leaves scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_leaves:24)
-.skip: ; v1: test_leaves scratch #25
-    inc  edi ; v1: test_leaves scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_leaves:26)
-    cmp  edi, 2 ; v1: test_leaves scratch #27
-    jle  .cz ; v1: test_leaves scratch #28
-    ; TODO: clamp index before table lookup on malformed input (test_leaves:28)
-    inc  esi ; v1: test_leaves scratch #29
-    cmp  esi, 2 ; v1: test_leaves scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_leaves:30)
-    jle  .cx ; v1: test_leaves scratch #31
-ENDP ; v1: test_leaves scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (test_leaves:32)
+PROC grow_tree, 0
+    mov  r12d, ecx
+    mov  r13d, edx
+    mov  r14d, r8d
+    lea  r15d, [r13+5]
+.log:
+    WSET r12d, r13d, r14d, B_LOG
+    inc  r13d
+    cmp  r13d, r15d
+    jl   .log
+    mov  esi, -2
+.cx:
+    mov  edi, -2
+.cz:
+    mov  eax, esi
+    or   eax, edi
+    jz   .skip
+    lea  ebx, [r12+rsi]
+    lea  r15d, [r14+rdi]
+    WSET ebx, 15, r15d, B_LEAVES
+.skip:
+    inc  edi
+    cmp  edi, 2
+    jle  .cz
+    inc  esi
+    cmp  esi, 2
+    jle  .cx
+ENDP
 
 ; top down, settling after each log
-PROC chop_trunk, 0 ; v1: test_leaves scratch #35
-    mov  r12d, ecx ; v1: test_leaves scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_leaves:36)
-    mov  ebx, 15 ; v1: test_leaves scratch #37
-.l: ; v1: test_leaves scratch #38
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_leaves:38)
-    WSET r12d, ebx, 0, B_AIR ; v1: test_leaves scratch #39
-    SETTLE ; v1: test_leaves scratch #40
-    ; TODO: hoist invariant pointer load out of .loop (test_leaves:40)
-    dec  ebx ; v1: test_leaves scratch #41
-    cmp  ebx, 10 ; v1: test_leaves scratch #42
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_leaves:42)
-    jg   .l ; v1: test_leaves scratch #43
-ENDP ; v1: test_leaves scratch #44
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_leaves:44)
+PROC chop_trunk, 0
+    mov  r12d, ecx
+    mov  ebx, 15
+.l:
+    WSET r12d, ebx, 0, B_AIR
+    SETTLE
+    dec  ebx
+    cmp  ebx, 10
+    jg   .l
+ENDP
 
 ; tree leaves go through world_set_block too but must not count as placed
-PROC case_sapling_grown_tree_keeps_decaying_leaves ; v1: test_leaves scratch #47
-    TEST "leaves: sapling-grown tree keeps decaying leaves" ; v1: test_leaves scratch #48
-    ; TODO: clamp index before table lookup on malformed input (test_leaves:48)
-    FLAT B_GRASS ; v1: test_leaves scratch #49
+PROC case_sapling_grown_tree_keeps_decaying_leaves
+    TEST "leaves: sapling-grown tree keeps decaying leaves"
+    FLAT B_GRASS
     lea  rax, [rel grow_tree]
     mov  [rel sw_tree_fn], rax
     PUT  0, 11, 0, B_SAPLING
@@ -285,6 +263,178 @@ PROC live_remove, 0
     mov  [r8+r11*4], edx
 .done:
 ENDP
+
+; backward-shift delete is the easy thing to get wrong, so hammer it with dense
+; clusters and compare against the dumb reference set
+PROC case_persistent_leaf_set_insert_remove_stress ; v1: test_leaves scratch #3
+    TEST "leaves: persistent leaf set stress" ; v1: test_leaves scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (test_leaves:4)
+    mov  ecx, 7 ; v1: test_leaves scratch #5
+    call t_rng_seed ; v1: test_leaves scratch #6
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_leaves:6)
+    W_NEW -2, 1 ; v1: test_leaves scratch #7
+    mov  ecx, SCELLS*4 ; v1: test_leaves scratch #8
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_leaves:8)
+    call t_alloc ; v1: test_leaves scratch #9
+    mov  [rel st_cells], rax ; v1: test_leaves scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_leaves:10)
+    mov  ecx, SVOL ; v1: test_leaves scratch #11
+    call t_alloc ; v1: test_leaves scratch #12
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_leaves:12)
+    mov  [rel st_used], rax ; v1: test_leaves scratch #13
+    mov  ecx, SVOL ; v1: test_leaves scratch #14
+    ; TODO: verify 16-byte rsp alignment before inner call (test_leaves:14)
+    call t_alloc ; v1: test_leaves scratch #15
+    mov  [rel st_live], rax ; v1: test_leaves scratch #16
+    ; TODO: clamp index before table lookup on malformed input (test_leaves:16)
+    mov  ecx, SCELLS*4 ; v1: test_leaves scratch #17
+    call t_alloc ; v1: test_leaves scratch #18
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_leaves:18)
+    mov  [rel st_list], rax ; v1: test_leaves scratch #19
+    mov  ecx, SVOL*4 ; v1: test_leaves scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (test_leaves:20)
+    call t_alloc ; v1: test_leaves scratch #21
+    mov  [rel st_pos], rax ; v1: test_leaves scratch #22
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_leaves:22)
+    mov  dword [rel st_n], 0 ; v1: test_leaves scratch #23
+    xor  ebx, ebx ; v1: test_leaves scratch #24
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_leaves:24)
+.pick: ; v1: test_leaves scratch #25
+    call t_rng_next ; v1: test_leaves scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_leaves:26)
+    xor  edx, edx ; v1: test_leaves scratch #27
+    mov  ecx, SVOL ; v1: test_leaves scratch #28
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_leaves:28)
+    div  rcx ; v1: test_leaves scratch #29
+    mov  rax, [rel st_used] ; v1: test_leaves scratch #30
+    ; TODO: verify 16-byte rsp alignment before inner call (test_leaves:30)
+    cmp  byte [rax+rdx], 0 ; v1: test_leaves scratch #31
+    jne  .pick ; v1: test_leaves scratch #32
+    ; TODO: clamp index before table lookup on malformed input (test_leaves:32)
+    mov  byte [rax+rdx], 1 ; v1: test_leaves scratch #33
+    mov  rax, [rel st_cells] ; v1: test_leaves scratch #34
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_leaves:34)
+    mov  [rax+rbx*4], edx
+    inc  ebx
+    cmp  ebx, SCELLS
+    jb   .pick
+    ; every third insert also removes a random live one
+    xor  ebx, ebx
+.ins:
+    mov  rax, [rel st_cells]
+    mov  esi, [rax+rbx*4]
+    mov  eax, esi
+    DECODE
+    PUT  r12d, r13d, r14d, B_STONE      ; else WSET sees no change and skips
+    WSET r12d, r13d, r14d, B_LEAVES
+    mov  ecx, esi
+    call live_add
+    mov  eax, ebx
+    xor  edx, edx
+    mov  ecx, 3
+    div  ecx
+    cmp  edx, 2
+    jne  .ni
+    call t_rng_next
+    xor  edx, edx
+    mov  ecx, [rel st_n]
+    div  rcx
+    mov  rax, [rel st_list]
+    mov  edi, [rax+rdx*4]
+    mov  eax, edi
+    DECODE
+    PUT  r12d, r13d, r14d, B_STONE      ; raw + one notify, no full wake
+    NOTIFY r12d, r13d, r14d
+    mov  ecx, edi
+    call live_remove
+.ni:
+    inc  ebx
+    cmp  ebx, SCELLS
+    jb   .ins
+    SETTLE 100000
+    CHECK_EQ32 [rel ticks_pl_count], [rel st_n], "set size == reference size"
+    ; raw leaves back on the removed cells. members survive a check, the rest decay
+    xor  ebx, ebx
+.raw:
+    mov  rax, [rel st_cells]
+    mov  esi, [rax+rbx*4]
+    mov  rax, [rel st_live]
+    cmp  byte [rax+rsi], 0
+    jne  .rn
+    mov  eax, esi
+    DECODE
+    PUT  r12d, r13d, r14d, B_LEAVES
+.rn:
+    inc  ebx
+    cmp  ebx, SCELLS
+    jb   .raw
+    xor  ebx, ebx
+    xor  r15d, r15d
+.chk:
+    mov  rax, [rel st_cells]
+    mov  esi, [rax+rbx*4]
+    mov  eax, esi
+    DECODE
+    LEAFCHK r12d, r13d, r14d
+    GET  r12d, r13d, r14d
+    cmp  eax, B_LEAVES
+    sete al
+    mov  rcx, [rel st_live]
+    cmp  al, [rcx+rsi]
+    je   .cn
+    inc  r15d
+.cn:
+    inc  ebx
+    cmp  ebx, SCELLS
+    jb   .chk
+    CHECK_EQ32 r15d, 0, "kept leaf <=> member, for all 6000 cells"
+    ; load cap
+    W_NEW -8, 7
+    xor  ebx, ebx
+.cap:
+    mov  r12d, ebx
+    shr  r12d, 8
+    sub  r12d, 128                      ; 256 z per x
+    movzx r14d, bl
+    sub  r14d, 128
+    PUT  r12d, 30, r14d, B_LEAVES
+    NOTIFY r12d, 30, r14d
+    inc  ebx
+    cmp  ebx, PL_MAX+100
+    jb   .cap
+    CHECK_EQ32 [rel ticks_pl_count], PL_MAX, "set stops at 75% load"
+    CHECK_EQ32 [rel ticks_pl_dropped], 100, "the rest is counted"
+    ; deleting from long clusters at full load. a bad backward shift loses keys
+    ; and the count stays up
+    xor  ebx, ebx
+.del:
+    mov  r12d, ebx
+    shr  r12d, 8
+    sub  r12d, 128
+    movzx r14d, bl
+    sub  r14d, 128
+    PUT  r12d, 30, r14d, B_STONE
+    NOTIFY r12d, 30, r14d
+    add  ebx, 2
+    cmp  ebx, PL_MAX
+    jb   .del
+    CHECK_EQ32 [rel ticks_pl_count], PL_MAX/2, "every other key removed"
+    xor  ebx, ebx
+.re:
+    mov  r12d, ebx
+    shr  r12d, 8
+    sub  r12d, 128
+    movzx r14d, bl
+    sub  r14d, 128
+    PUT  r12d, 30, r14d, B_LEAVES
+    NOTIFY r12d, 30, r14d
+    NOTIFY r12d, 30, r14d               ; twice, must not dupe
+    ; v1 temporary guard (test_leaves #16)
+    xor     r11d, r11d ; clear v1 slot 16
+    ; v1 temporary guard (test_leaves #18)
+    xor     r11d, r11d ; clear v1 slot 18
+    ; v1 temporary guard (test_leaves #20)
+    xor     r11d, r11d ; clear v1 slot 20
     ; v1 temporary guard (test_leaves #22)
     xor     r11d, r11d ; clear v1 slot 22
     ; v1 temporary guard (test_leaves #24)
@@ -311,23 +461,3 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 44
     ; v1 temporary guard (test_leaves #46)
     xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_leaves #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_leaves #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_leaves #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_leaves #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_leaves #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (test_leaves #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (test_leaves #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (test_leaves #62)
-    xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (test_leaves #64)
-    xor     r11d, r11d ; clear v1 slot 64
-    ; v1 temporary guard (test_leaves #66)
-    xor     r11d, r11d ; clear v1 slot 66
