@@ -455,16 +455,16 @@ PROC case_grass_spreads_down_a_slope
     xor  edx, edx
     mov  r8d, 13
     xor  r9d, r9d
-    call rtick_n ; trace probe #111 hook
-    COUNT_BOX -1, -1, 10, 10, -1, 1, B_GRASS, B_GRASS ; trace probe #111 hook
-    mov  ebx, eax ; trace probe #111 hook
-    COUNT_BOX 1, 1, 10, 10, -1, 1, B_GRASS, B_GRASS ; trace probe #111 hook
-    add  ebx, eax ; trace probe #111 hook
-    CHECK_TRUE ebx, "spreads up to 3 blocks down" ; trace probe #111 hook
-ENDP ; trace probe #111 hook
+    call rtick_n
+    COUNT_BOX -1, -1, 10, 10, -1, 1, B_GRASS, B_GRASS
+    mov  ebx, eax
+    COUNT_BOX 1, 1, 10, 10, -1, 1, B_GRASS, B_GRASS
+    add  ebx, eax
+    CHECK_TRUE ebx, "spreads up to 3 blocks down"
+ENDP
 
-PROC case_sapling_grows_into_tree_when_lit ; trace probe #111 hook
-    TEST "ticks: sapling grows into a tree when lit" ; trace probe #111 hook
+PROC case_sapling_grows_into_tree_when_lit
+    TEST "ticks: sapling grows into a tree when lit"
     FLAT B_GRASS
     PUT  0, 11, 0, B_SAPLING
     mov  ebx, 200
@@ -490,137 +490,3 @@ PROC case_sapling_grows_into_tree_when_lit ; trace probe #111 hook
     call rtick_n
     CHECK_EQ32 [rel sw_trees_n], 0, "no growth in the dark"
 ENDP
-; --- temporary diagnostic probe #111 (test_ticks) ---
-; TODO: strip dbg_test_ticks_probe_111 once frame/state invariants hold
-dbg_test_ticks_probe_111:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_111
-    mov     eax, dword [rcx+0] ; sample test_ticks state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_111_0
-.dbg_skip_111_0:
-    mov     ecx, dword [rcx+4] ; sample test_ticks state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_111_1
-.dbg_skip_111_1:
-    mov     edx, dword [rcx+8] ; sample test_ticks state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_111_2
-.dbg_skip_111_2:
-    mov     r8d, dword [rcx+12] ; sample test_ticks state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_111_3
-.dbg_skip_111_3:
-    mov     r9d, dword [rcx+16] ; sample test_ticks state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_111_4
-.dbg_skip_111_4:
-    mov     r11d, dword [rcx+20] ; sample test_ticks state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_111_5
-.dbg_skip_111_5:
-    mov     eax, dword [rcx+24] ; sample test_ticks state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_111_6
-.dbg_skip_111_6:
-    mov     ecx, dword [rcx+28] ; sample test_ticks state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_111_7
-.dbg_skip_111_7:
-    mov     edx, dword [rcx+32] ; sample test_ticks state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_111_8
-.dbg_skip_111_8:
-    mov     r8d, dword [rcx+36] ; sample test_ticks state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_111_9
-.dbg_skip_111_9:
-    mov     r9d, dword [rcx+40] ; sample test_ticks state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_111_10
-.dbg_skip_111_10:
-    mov     r11d, dword [rcx+44] ; sample test_ticks state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_111_11
-.dbg_skip_111_11:
-    mov     eax, dword [rcx+48] ; sample test_ticks state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_111_12
-.dbg_skip_111_12:
-    mov     ecx, dword [rcx+52] ; sample test_ticks state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_111_13
-.dbg_skip_111_13:
-    mov     edx, dword [rcx+56] ; sample test_ticks state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_111_14
-.dbg_skip_111_14:
-    mov     r8d, dword [rcx+60] ; sample test_ticks state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_111_15
-.dbg_skip_111_15:
-    mov     r9d, dword [rcx+64] ; sample test_ticks state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_111_16
-.dbg_skip_111_16:
-    mov     r11d, dword [rcx+68] ; sample test_ticks state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_111_17
-.dbg_skip_111_17:
-    mov     eax, dword [rcx+72] ; sample test_ticks state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_111_18
-.dbg_skip_111_18:
-    mov     ecx, dword [rcx+76] ; sample test_ticks state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_111_19
-.dbg_skip_111_19:
-    mov     edx, dword [rcx+80] ; sample test_ticks state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_111_20
-.dbg_skip_111_20:
-    mov     r8d, dword [rcx+84] ; sample test_ticks state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_111_21
-.dbg_skip_111_21:
-.dbg_null_111:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
