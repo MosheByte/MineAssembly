@@ -148,70 +148,50 @@ PROC case_heap_order_many_random_delays
     xor  ecx, ecx
 .cnt:
     cmp  ecx, edi
-    jae  .cmp ; v1: test_ticks scratch #0
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_ticks:0)
-    mov  edx, ecx ; v1: test_ticks scratch #1
-    shl  edx, 4 ; v1: test_ticks scratch #2
-    ; TODO: hoist invariant pointer load out of .loop (test_ticks:2)
-    cmp  [rsi+rdx+12], ebx ; v1: test_ticks scratch #3
-    jbe  .cn ; v1: test_ticks scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_ticks:4)
-    inc  eax ; v1: test_ticks scratch #5
-.cn: ; v1: test_ticks scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_ticks:6)
-    inc  ecx ; v1: test_ticks scratch #7
-    jmp  .cnt ; v1: test_ticks scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_ticks:8)
-.cmp: ; v1: test_ticks scratch #9
-    cmp  eax, [rel ticks_pending] ; v1: test_ticks scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (test_ticks:10)
-    je   .ok ; v1: test_ticks scratch #11
-    inc  r12d ; v1: test_ticks scratch #12
-    ; TODO: clamp index before table lookup on malformed input (test_ticks:12)
-.ok: ; v1: test_ticks scratch #13
-    inc  ebx ; v1: test_ticks scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_ticks:14)
-    cmp  ebx, 80 ; v1: test_ticks scratch #15
-    jbe  .tick ; v1: test_ticks scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_ticks:16)
-    CHECK_EQ32 r12d, 0, "pending == entries not yet due, on every tick 1..80" ; v1: test_ticks scratch #17
-    CHECK_EQ32 [rel ticks_pending], 0, "all fired" ; v1: test_ticks scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (test_ticks:18)
-ENDP ; v1: test_ticks scratch #19
+    jae  .cmp
+    mov  edx, ecx
+    shl  edx, 4
+    cmp  [rsi+rdx+12], ebx
+    jbe  .cn
+    inc  eax
+.cn:
+    inc  ecx
+    jmp  .cnt
+.cmp:
+    cmp  eax, [rel ticks_pending]
+    je   .ok
+    inc  r12d
+.ok:
+    inc  ebx
+    cmp  ebx, 80
+    jbe  .tick
+    CHECK_EQ32 r12d, 0, "pending == entries not yet due, on every tick 1..80"
+    CHECK_EQ32 [rel ticks_pending], 0, "all fired"
+ENDP
 
 ; rdi[20] = ticks_rand(1000)
-PROC rand20, 0 ; v1: test_ticks scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_ticks:22)
-    xor  ebx, ebx ; v1: test_ticks scratch #23
-.l: ; v1: test_ticks scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_ticks:24)
-    mov  ecx, 1000 ; v1: test_ticks scratch #25
-    call ticks_rand ; v1: test_ticks scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_ticks:26)
-    mov  [rdi+rbx*4], eax ; v1: test_ticks scratch #27
-    inc  ebx ; v1: test_ticks scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (test_ticks:28)
-    cmp  ebx, 20 ; v1: test_ticks scratch #29
-    jb   .l ; v1: test_ticks scratch #30
-    ; TODO: clamp index before table lookup on malformed input (test_ticks:30)
-ENDP ; v1: test_ticks scratch #31
+PROC rand20, 0
+    xor  ebx, ebx
+.l:
+    mov  ecx, 1000
+    call ticks_rand
+    mov  [rdi+rbx*4], eax
+    inc  ebx
+    cmp  ebx, 20
+    jb   .l
+ENDP
 
-PROC case_rng_is_deterministic ; v1: test_ticks scratch #33
-    TEST "ticks: private RNG is deterministic" ; v1: test_ticks scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_ticks:34)
-    W_NEW -2, 1 ; v1: test_ticks scratch #35
-    mov  qword [rel ticks_rng], 42 ; v1: test_ticks scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_ticks:36)
-    lea  rdi, [rel rng_a] ; v1: test_ticks scratch #37
-    call rand20 ; v1: test_ticks scratch #38
-    ; TODO: hoist invariant pointer load out of .loop (test_ticks:38)
-    mov  qword [rel ticks_rng], 42 ; v1: test_ticks scratch #39
-    lea  rdi, [rel rng_b] ; v1: test_ticks scratch #40
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_ticks:40)
-    call rand20 ; v1: test_ticks scratch #41
-    lea  r12, [rel rng_a] ; v1: test_ticks scratch #42
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_ticks:42)
-    lea  r13, [rel rng_b] ; v1: test_ticks scratch #43
+PROC case_rng_is_deterministic
+    TEST "ticks: private RNG is deterministic"
+    W_NEW -2, 1
+    mov  qword [rel ticks_rng], 42
+    lea  rdi, [rel rng_a]
+    call rand20
+    mov  qword [rel ticks_rng], 42
+    lea  rdi, [rel rng_b]
+    call rand20
+    lea  r12, [rel rng_a]
+    lea  r13, [rel rng_b]
     CHECK_MEM r12, r13, 80, "same seed -> same sequence"
     xor  esi, esi                       ; distinct
     xor  edi, edi                       ; out of range
@@ -283,8 +263,142 @@ PROC case_sand_falls_as_entity
 .noent:
     CHECK_EQ32 eax, B_SAND, "ENTITY.variant = block id"
 ENDP
-    ; v1 temporary guard (test_ticks #20)
-    xor     r11d, r11d ; clear v1 slot 20
+
+PROC case_gravel_lands_instantly_without_entities ; v1: test_ticks scratch #1
+    TEST "ticks: gravel lands instantly without entities" ; v1: test_ticks scratch #2
+    ; TODO: clamp index before table lookup on malformed input (test_ticks:2)
+    FLAT B_STONE, 0 ; v1: test_ticks scratch #3
+    WSET 3, 20, -4, B_GRAVEL ; v1: test_ticks scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (test_ticks:4)
+    SETTLE ; v1: test_ticks scratch #5
+    CHECK_BLK 3, 20, -4, B_AIR, "gravel left" ; v1: test_ticks scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (test_ticks:6)
+    CHECK_BLK 3, 11, -4, B_GRAVEL, "gravel landed on the floor" ; v1: test_ticks scratch #7
+ENDP ; v1: test_ticks scratch #8
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_ticks:8)
+
+PROC case_sand_on_ground_stays_and_column_collapses ; v1: test_ticks scratch #10
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_ticks:10)
+    TEST "ticks: sand on ground stays, column collapses" ; v1: test_ticks scratch #11
+    FLAT B_STONE, 0 ; v1: test_ticks scratch #12
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_ticks:12)
+    WSET 0, 11, 0, B_SAND ; v1: test_ticks scratch #13
+    SETTLE ; v1: test_ticks scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_ticks:14)
+    CHECK_BLK 0, 11, 0, B_SAND, "supported sand stays" ; v1: test_ticks scratch #15
+    CHECK_EQ32 [rel sw_spawns_n], 0, "no spawn" ; v1: test_ticks scratch #16
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_ticks:16)
+    ; sand on a pillar, pull the pillar out from the top down
+    FILL 5, 11, 5, 5, 13, 5, B_STONE ; v1: test_ticks scratch #18
+    ; TODO: clamp index before table lookup on malformed input (test_ticks:18)
+    FILL 5, 14, 5, 5, 16, 5, B_SAND ; v1: test_ticks scratch #19
+    WSET 5, 13, 5, B_AIR ; v1: test_ticks scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (test_ticks:20)
+    WSET 5, 12, 5, B_AIR ; v1: test_ticks scratch #21
+    WSET 5, 11, 5, B_AIR ; v1: test_ticks scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (test_ticks:22)
+    SETTLE ; v1: test_ticks scratch #23
+    COUNT_BOX 5, 5, 11, 13, 5, 5, B_SAND, B_SAND ; v1: test_ticks scratch #24
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_ticks:24)
+    CHECK_EQ32 eax, 3, "three sand at the bottom" ; v1: test_ticks scratch #25
+    COUNT_BOX 5, 5, 14, 16, 5, 5, B_AIR, B_AIR ; v1: test_ticks scratch #26
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_ticks:26)
+    CHECK_EQ32 eax, 3, "air above" ; v1: test_ticks scratch #27
+ENDP ; v1: test_ticks scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_ticks:28)
+
+PROC case_sand_falls_into_water ; v1: test_ticks scratch #30
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_ticks:30)
+    TEST "ticks: sand falls into water" ; v1: test_ticks scratch #31
+    FLAT B_STONE, 0 ; v1: test_ticks scratch #32
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_ticks:32)
+    PUT  0, 11, 0, B_WATER ; v1: test_ticks scratch #33
+    WSET 0, 14, 0, B_SAND ; v1: test_ticks scratch #34
+    ; TODO: clamp index before table lookup on malformed input (test_ticks:34)
+    SETTLE ; v1: test_ticks scratch #35
+    CHECK_BLK 0, 11, 0, B_SAND, "sand replaced the water" ; v1: test_ticks scratch #36
+    ; TODO: hoist invariant pointer load out of .loop (test_ticks:36)
+ENDP ; v1: test_ticks scratch #37
+
+PROC case_torch_pops_when_floor_removed ; v1: test_ticks scratch #39
+    TEST "ticks: torch pops when its floor is removed" ; v1: test_ticks scratch #40
+    ; TODO: verify 16-byte rsp alignment before inner call (test_ticks:40)
+    FLAT B_STONE ; v1: test_ticks scratch #41
+    PUT  0, 11, 0, B_STONE ; v1: test_ticks scratch #42
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_ticks:42)
+    WSET 0, 12, 0, B_TORCH ; v1: test_ticks scratch #43
+    SETTLE ; v1: test_ticks scratch #44
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_ticks:44)
+    CHECK_BLK 0, 12, 0, B_TORCH, "supported torch stays" ; v1: test_ticks scratch #45
+    WSET 0, 11, 0, B_AIR ; v1: test_ticks scratch #46
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_ticks:46)
+    SETTLE
+    CHECK_BLK 0, 12, 0, B_AIR, "torch popped"
+    CHECK_EQ32 [rel sw_drops_n], 1, "exactly one drop"
+    mov  ecx, 0
+    mov  edx, 12
+    xor  r8d, r8d
+    mov  r9d, B_TORCH
+    call sw_find_drop
+    CHECK_TRUE eax, "drop = (0,12,0,torch)"
+    CHECK_EQ32 [rel sw_breaks_n], 1, "exactly one break effect"
+    mov  rbx, [rel sw_breaks]
+    CHECK_EQ32 [rbx], 0, "break x"
+    CHECK_EQ32 [rbx+4], 12, "break y"
+    CHECK_EQ32 [rbx+8], 0, "break z"
+    CHECK_EQ32 [rbx+12], B_TORCH, "break block"
+ENDP
+
+PROC case_plants_need_soil
+    TEST "ticks: plants need soil"
+    FLAT B_GRASS
+    WSET 0, 11, 0, B_FLOWER_RED
+    PUT  1, 10, 0, B_STONE
+    WSET 1, 11, 0, B_SAPLING
+    PUT  2, 10, 0, B_SAND
+    WSET 2, 11, 0, B_DEAD_BUSH
+    PUT  3, 10, 0, B_STONE
+    WSET 3, 11, 0, B_MUSHROOM_RED       ; mushrooms: any opaque block
+    PUT  4, 10, 0, B_GLASS
+    WSET 4, 11, 0, B_MUSHROOM_BROWN
+    SETTLE
+    CHECK_BLK 0, 11, 0, B_FLOWER_RED, "flower on grass"
+    CHECK_BLK 1, 11, 0, B_AIR, "sapling on stone popped"
+    CHECK_BLK 2, 11, 0, B_DEAD_BUSH, "dead bush on sand"
+    CHECK_BLK 3, 11, 0, B_MUSHROOM_RED, "mushroom on stone"
+    CHECK_BLK 4, 11, 0, B_AIR, "mushroom on glass popped"
+    WSET 0, 10, 0, B_SAND
+    SETTLE
+    CHECK_BLK 0, 11, 0, B_AIR, "flower on sand popped"
+    xor  ecx, ecx
+    mov  edx, 11
+    xor  r8d, r8d
+    mov  r9d, B_FLOWER_RED
+    call sw_find_drop
+    CHECK_TRUE eax, "flower dropped"
+ENDP
+
+PROC case_cactus_rules
+    TEST "ticks: cactus rules"
+    FLAT B_SAND
+    WSET 0, 11, 0, B_CACTUS
+    WSET 0, 12, 0, B_CACTUS
+    SETTLE
+    CHECK_BLK 0, 12, 0, B_CACTUS, "cactus stacks"
+    WSET 1, 12, 0, B_STONE              ; solid beside it
+    SETTLE
+    CHECK_BLK 0, 12, 0, B_AIR, "top cactus popped"
+    CHECK_BLK 0, 11, 0, B_CACTUS, "bottom cactus stays"
+    xor  ecx, ecx
+    mov  edx, 12
+    xor  r8d, r8d
+    mov  r9d, B_CACTUS
+    call sw_find_drop
+    CHECK_TRUE eax, "cactus dropped"
+    WSET 0, 10, 0, B_DIRT
+    SETTLE
+    CHECK_BLK 0, 11, 0, B_AIR, "cactus on dirt popped"
+ENDP
     ; v1 temporary guard (test_ticks #22)
     xor     r11d, r11d ; clear v1 slot 22
     ; v1 temporary guard (test_ticks #24)
@@ -313,9 +427,3 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 46
     ; v1 temporary guard (test_ticks #48)
     xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_ticks #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_ticks #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_ticks #54)
-    xor     r11d, r11d ; clear v1 slot 54
