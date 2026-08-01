@@ -633,60 +633,42 @@ ENDP
 
 ; same for a source placed right before saving. settled oceans/lakes must never
 ; queue anything though
-PROC case_lone_source_restarts_on_random_tick ; v1: test_ticks scratch #3
-    TEST "ticks: lone source restarts on a random tick" ; v1: test_ticks scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_ticks:4)
-    FLAT B_STONE ; v1: test_ticks scratch #5
-    PUT  0, 11, 0, B_WATER ; v1: test_ticks scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (test_ticks:6)
-    CHECK_EQ32 [rel ticks_pending], 0, "frozen source: nothing pending" ; v1: test_ticks scratch #7
-    UNSETTLED 0, 11, 0 ; v1: test_ticks scratch #8
-    ; TODO: clamp index before table lookup on malformed input (test_ticks:8)
-    CHECK_EQ32 eax, 1, "lone source is unsettled" ; v1: test_ticks scratch #9
-    RTICK 0, 11, 0 ; v1: test_ticks scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_ticks:10)
-    CHECK_EQ32 [rel ticks_pending], 1, "random tick queued it" ; v1: test_ticks scratch #11
-    SETTLE ; v1: test_ticks scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (test_ticks:12)
-    CHECK_BLK 7, 11, 0, B_WATER+7, "spread along x" ; v1: test_ticks scratch #13
-    CHECK_BLK 0, 11, -7, B_WATER+7, "spread along -z" ; v1: test_ticks scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_ticks:14)
-    UNSETTLED 0, 11, 0 ; v1: test_ticks scratch #15
-    CHECK_EQ32 eax, 0, "settled source" ; v1: test_ticks scratch #16
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_ticks:16)
-    RTICK 0, 11, 0 ; v1: test_ticks scratch #17
-    CHECK_EQ32 [rel ticks_pending], 0, "settled source queues nothing" ; v1: test_ticks scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_ticks:18)
-    FLAT B_STONE ; v1: test_ticks scratch #19
-    FILL -6, 11, -6, 6, 14, 6, B_STONE ; v1: test_ticks scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_ticks:20)
-    FILL -5, 11, -5, 5, 14, 5, B_WATER ; v1: test_ticks scratch #21
-    mov  r12d, -5 ; v1: test_ticks scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (test_ticks:22)
-.ox: ; v1: test_ticks scratch #23
-    mov  r13d, 11 ; v1: test_ticks scratch #24
-    ; TODO: clamp index before table lookup on malformed input (test_ticks:24)
-.oy: ; v1: test_ticks scratch #25
-    mov  r14d, -5 ; v1: test_ticks scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_ticks:26)
-.oz: ; v1: test_ticks scratch #27
-    RTICK r12d, r13d, r14d ; v1: test_ticks scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (test_ticks:28)
-    inc  r14d ; v1: test_ticks scratch #29
-    cmp  r14d, 5 ; v1: test_ticks scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_ticks:30)
-    jle  .oz ; v1: test_ticks scratch #31
-    inc  r13d ; v1: test_ticks scratch #32
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_ticks:32)
-    cmp  r13d, 14 ; v1: test_ticks scratch #33
-    jle  .oy ; v1: test_ticks scratch #34
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_ticks:34)
-    inc  r12d ; v1: test_ticks scratch #35
-    cmp  r12d, 5 ; v1: test_ticks scratch #36
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_ticks:36)
-    jle  .ox ; v1: test_ticks scratch #37
-    CHECK_EQ32 [rel ticks_pending], 0, "ocean queues nothing" ; v1: test_ticks scratch #38
-    ; TODO: hoist invariant pointer load out of .loop (test_ticks:38)
+PROC case_lone_source_restarts_on_random_tick
+    TEST "ticks: lone source restarts on a random tick"
+    FLAT B_STONE
+    PUT  0, 11, 0, B_WATER
+    CHECK_EQ32 [rel ticks_pending], 0, "frozen source: nothing pending"
+    UNSETTLED 0, 11, 0
+    CHECK_EQ32 eax, 1, "lone source is unsettled"
+    RTICK 0, 11, 0
+    CHECK_EQ32 [rel ticks_pending], 1, "random tick queued it"
+    SETTLE
+    CHECK_BLK 7, 11, 0, B_WATER+7, "spread along x"
+    CHECK_BLK 0, 11, -7, B_WATER+7, "spread along -z"
+    UNSETTLED 0, 11, 0
+    CHECK_EQ32 eax, 0, "settled source"
+    RTICK 0, 11, 0
+    CHECK_EQ32 [rel ticks_pending], 0, "settled source queues nothing"
+    FLAT B_STONE
+    FILL -6, 11, -6, 6, 14, 6, B_STONE
+    FILL -5, 11, -5, 5, 14, 5, B_WATER
+    mov  r12d, -5
+.ox:
+    mov  r13d, 11
+.oy:
+    mov  r14d, -5
+.oz:
+    RTICK r12d, r13d, r14d
+    inc  r14d
+    cmp  r14d, 5
+    jle  .oz
+    inc  r13d
+    cmp  r13d, 14
+    jle  .oy
+    inc  r12d
+    cmp  r12d, 5
+    jle  .ox
+    CHECK_EQ32 [rel ticks_pending], 0, "ocean queues nothing"
     ; open a wall behind its back. only the bottom edge source wakes, because
     ; sources sitting on their own pool never spread sideways (fluid_update agrees).
     ; the upper layers follow once it drains
@@ -758,33 +740,110 @@ ENDP
 
 ; the walk scans a chunk once when it turns active (first seen, or back in the
 ; radius) and restarts its unsettled sources. max 2 scans per tick
-    ; v1 temporary guard (test_ticks #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_ticks #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_ticks #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_ticks #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_ticks #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_ticks #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_ticks #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_ticks #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_ticks #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_ticks #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_ticks #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_ticks #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_ticks #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_ticks #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_ticks #46)
-    xor     r11d, r11d ; clear v1 slot 46
+PROC case_frozen_sources_restart_when_chunk_activates
+    TEST "ticks: frozen sources restart when a chunk activates"
+    W_NEW 0, 12
+    FILL 0, 0, 0, 15, 10, 15, B_STONE
+    FILL 16, 0, 0, 31, 10, 15, B_STONE
+    FILL 32, 0, 0, 47, 10, 15, B_STONE
+    FILL 192, 0, 0, 207, 10, 15, B_STONE
+    PUT  5, 11, 5, B_WATER              ; chunk 0: lone source
+    FILL 16, 11, 0, 31, 14, 15, B_STONE ; chunk 1: full water tank,
+    FILL 17, 11, 1, 30, 14, 14, B_WATER
+    FILL 18, 15, 2, 22, 17, 6, B_STONE  ; lid with a settled lava pool on it
+    FILL 19, 16, 3, 21, 17, 5, B_LAVA
+    PUT  40, 11, 8, B_LAVA              ; chunk 2: lone lava
+    lea  rcx, [rel chunks_0_1_2_12]
+    mov  edx, 4
+    call sw_register_chunks
+    PLAYER_AT 8.0, 20.0, 8.0
+    TICK 1
+    CHECK_EQ32 [rel ticks_pending], 1, "chunks 0 + 1 scanned: the lone water"
+    SETTLE                              ; chunk 2 gets its turn next tick
+    CHECK_BLK 12, 11, 5, B_WATER+7, "water spread"
+    CHECK_BLK 43, 11, 8, B_LAVA+3, "lava spread"
+    CHECK_BLK 20, 16, 4, B_LAVA, "settled lava pool untouched"
+    CHECK_BLK 20, 14, 4, B_WATER, "settled tank untouched"
+    ; walk away, change chunk 0 while it's out of range, come back
+    PLAYER_AT 200.0, 20.0, 8.0
+    TICK 3
+    PUT  2, 11, 13, B_WATER
+    TICK 1
+    CHECK_EQ32 [rel ticks_pending], 0, "out of range: not scanned"
+    PLAYER_AT 8.0, 20.0, 8.0
+    TICK 1
+    CHECK_TRUE [rel ticks_pending], "re-entered chunk was rescanned"
+    SETTLE
+    GET  2, 11, 15
+    CHECK_RANGE eax, B_WATER+1, B_WATER_LAST, "new source flowed"
+    mov  ebx, [rel ticks_pending]
+    PUT  9, 11, 9, B_WATER              ; chunk 0 still active -> no rescan, stays frozen
+    TICK 1
+    CHECK_EQ32 [rel ticks_pending], ebx, "active chunk not rescanned"
+ENDP
+
+PROC case_random_tick_chunk_walk
+    TEST "ticks: random tick chunk walk"
+    W_NEW 0, 12
+    FILL 0, 9, 0, 15, 9, 15, B_GRASS
+    FILL 0, 10, 0, 15, 10, 15, B_STONE  ; covered grass -> dirt shows what got ticked
+    FILL 192, 9, 0, 207, 9, 15, B_GRASS
+    FILL 192, 10, 0, 207, 10, 15, B_STONE
+    mov  ecx, 0
+    xor  edx, edx
+    xor  r8d, r8d
+    mov  r9d, 1
+    call sw_set_sec_flags
+    mov  ecx, 12
+    xor  edx, edx
+    xor  r8d, r8d
+    mov  r9d, 1
+    call sw_set_sec_flags
+    lea  rcx, [rel chunks_0_12]
+    mov  edx, 2
+    call sw_register_chunks
+    PLAYER_AT 8.0, 20.0, 8.0
+    TICK 1500
+    COUNT_BOX 0, 15, 9, 9, 0, 15, B_DIRT, B_DIRT
+    mov  ebx, eax
+    CHECK_RANGE ebx, 41, 256, "near chunk sampled (~280 expected)"
+    COUNT_BOX 192, 207, 9, 9, 0, 15, B_DIRT, B_DIRT
+    CHECK_EQ32 eax, 0, "far chunk never sampled"
+    ; sec_flags 0 = empty section, skipped
+    xor  ecx, ecx
+    xor  edx, edx
+    xor  r8d, r8d
+    xor  r9d, r9d
+    call sw_set_sec_flags
+    TICK 500
+    COUNT_BOX 0, 15, 9, 9, 0, 15, B_DIRT, B_DIRT
+    CHECK_EQ32 eax, ebx, "empty section skipped"
+ENDP
+
+PROC test_main
+    call case_schedule_dedupe_and_due_order
+    call case_rejects_out_of_world_y
+    call case_capacity_and_graceful_drop
+    call case_heap_order_many_random_delays
+    call case_rng_is_deterministic
+    call case_peek_block_bounds
+    call case_sand_falls_as_entity
+    call case_gravel_lands_instantly_without_entities
+    call case_sand_on_ground_stays_and_column_collapses
+    call case_sand_falls_into_water
+    call case_torch_pops_when_floor_removed
+    call case_plants_need_soil
+    call case_cactus_rules
+    call case_reeds_chain_breaks
+    call case_grass_dies_under_opaque_block
+    call case_grass_spreads_to_lit_dirt_only
+    call case_grass_spreads_down_a_slope
+    call case_sapling_grows_into_tree_when_lit
+    call case_reeds_and_cactus_grow_to_three
+    call case_ice_melts_near_light
+    call case_night_stops_grass_and_saplings_unless_torch_lit
+    call case_frozen_flow_restarts_on_random_tick
+    call case_lone_source_restarts_on_random_tick
+    call case_frozen_sources_restart_when_chunk_activates
+    call case_random_tick_chunk_walk
+ENDP
