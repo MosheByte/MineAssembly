@@ -492,58 +492,42 @@ PROC case_sapling_grows_into_tree_when_lit
 ENDP
 
 ; reeds/cactus cap out at 3
-PROC grow_three, 0 ; v1: test_ticks scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_ticks:2)
-    mov  esi, ecx ; v1: test_ticks scratch #3
-    FLAT B_SAND ; v1: test_ticks scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_ticks:4)
-    PUT  0, 11, 0, esi ; v1: test_ticks scratch #5
-    mov  ebx, 3000 ; v1: test_ticks scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_ticks:6)
-.l: ; v1: test_ticks scratch #7
-    mov  r12d, 11 ; v1: test_ticks scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_ticks:8)
-.y: ; v1: test_ticks scratch #9
-    GET  0, r12d, 0 ; v1: test_ticks scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (test_ticks:10)
-    cmp  eax, esi ; v1: test_ticks scratch #11
-    jne  .ny ; v1: test_ticks scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (test_ticks:12)
-    RTICK 0, r12d, 0 ; v1: test_ticks scratch #13
-.ny: ; v1: test_ticks scratch #14
-    ; TODO: clamp index before table lookup on malformed input (test_ticks:14)
-    inc  r12d ; v1: test_ticks scratch #15
-    cmp  r12d, 13 ; v1: test_ticks scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_ticks:16)
-    jle  .y ; v1: test_ticks scratch #17
-    dec  ebx ; v1: test_ticks scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_ticks:18)
-    jnz  .l ; v1: test_ticks scratch #19
-    COUNT_BOX 0, 0, 11, 13, 0, 0, esi, esi ; v1: test_ticks scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_ticks:20)
-    CHECK_EQ32 eax, 3, "grew to three" ; v1: test_ticks scratch #21
-    CHECK_BLK 0, 14, 0, B_AIR, "and not higher" ; v1: test_ticks scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_ticks:22)
-ENDP ; v1: test_ticks scratch #23
+PROC grow_three, 0
+    mov  esi, ecx
+    FLAT B_SAND
+    PUT  0, 11, 0, esi
+    mov  ebx, 3000
+.l:
+    mov  r12d, 11
+.y:
+    GET  0, r12d, 0
+    cmp  eax, esi
+    jne  .ny
+    RTICK 0, r12d, 0
+.ny:
+    inc  r12d
+    cmp  r12d, 13
+    jle  .y
+    dec  ebx
+    jnz  .l
+    COUNT_BOX 0, 0, 11, 13, 0, 0, esi, esi
+    CHECK_EQ32 eax, 3, "grew to three"
+    CHECK_BLK 0, 14, 0, B_AIR, "and not higher"
+ENDP
 
-PROC case_reeds_and_cactus_grow_to_three ; v1: test_ticks scratch #25
-    TEST "ticks: reeds and cactus grow to three" ; v1: test_ticks scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_ticks:26)
-    mov  ecx, B_REEDS ; v1: test_ticks scratch #27
-    call grow_three ; v1: test_ticks scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (test_ticks:28)
-    mov  ecx, B_CACTUS ; v1: test_ticks scratch #29
-    call grow_three ; v1: test_ticks scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (test_ticks:30)
-ENDP ; v1: test_ticks scratch #31
+PROC case_reeds_and_cactus_grow_to_three
+    TEST "ticks: reeds and cactus grow to three"
+    mov  ecx, B_REEDS
+    call grow_three
+    mov  ecx, B_CACTUS
+    call grow_three
+ENDP
 
-PROC case_ice_melts_near_light ; v1: test_ticks scratch #33
-    TEST "ticks: ice melts near light" ; v1: test_ticks scratch #34
-    ; TODO: clamp index before table lookup on malformed input (test_ticks:34)
-    FLAT B_STONE ; v1: test_ticks scratch #35
-    PUT  0, 11, 0, B_ICE ; v1: test_ticks scratch #36
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_ticks:36)
-    RTICK 0, 11, 0 ; v1: test_ticks scratch #37
+PROC case_ice_melts_near_light
+    TEST "ticks: ice melts near light"
+    FLAT B_STONE
+    PUT  0, 11, 0, B_ICE
+    RTICK 0, 11, 0
     CHECK_BLK 0, 11, 0, B_ICE, "sky light alone does not melt ice"
     LIGHT 0, 11, 0, 0xF0 | 12
     RTICK 0, 11, 0
@@ -646,8 +630,134 @@ PROC case_frozen_flow_restarts_on_random_tick
     COUNT_BOX 1, 4, 11, 11, 0, 0, B_AIR, B_AIR
     CHECK_EQ32 eax, 4, "orphaned flow receded"
 ENDP
-    ; v1 temporary guard (test_ticks #16)
-    xor     r11d, r11d ; clear v1 slot 16
+
+; same for a source placed right before saving. settled oceans/lakes must never
+; queue anything though
+PROC case_lone_source_restarts_on_random_tick ; v1: test_ticks scratch #3
+    TEST "ticks: lone source restarts on a random tick" ; v1: test_ticks scratch #4
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_ticks:4)
+    FLAT B_STONE ; v1: test_ticks scratch #5
+    PUT  0, 11, 0, B_WATER ; v1: test_ticks scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (test_ticks:6)
+    CHECK_EQ32 [rel ticks_pending], 0, "frozen source: nothing pending" ; v1: test_ticks scratch #7
+    UNSETTLED 0, 11, 0 ; v1: test_ticks scratch #8
+    ; TODO: clamp index before table lookup on malformed input (test_ticks:8)
+    CHECK_EQ32 eax, 1, "lone source is unsettled" ; v1: test_ticks scratch #9
+    RTICK 0, 11, 0 ; v1: test_ticks scratch #10
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_ticks:10)
+    CHECK_EQ32 [rel ticks_pending], 1, "random tick queued it" ; v1: test_ticks scratch #11
+    SETTLE ; v1: test_ticks scratch #12
+    ; TODO: verify 16-byte rsp alignment before inner call (test_ticks:12)
+    CHECK_BLK 7, 11, 0, B_WATER+7, "spread along x" ; v1: test_ticks scratch #13
+    CHECK_BLK 0, 11, -7, B_WATER+7, "spread along -z" ; v1: test_ticks scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_ticks:14)
+    UNSETTLED 0, 11, 0 ; v1: test_ticks scratch #15
+    CHECK_EQ32 eax, 0, "settled source" ; v1: test_ticks scratch #16
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_ticks:16)
+    RTICK 0, 11, 0 ; v1: test_ticks scratch #17
+    CHECK_EQ32 [rel ticks_pending], 0, "settled source queues nothing" ; v1: test_ticks scratch #18
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_ticks:18)
+    FLAT B_STONE ; v1: test_ticks scratch #19
+    FILL -6, 11, -6, 6, 14, 6, B_STONE ; v1: test_ticks scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_ticks:20)
+    FILL -5, 11, -5, 5, 14, 5, B_WATER ; v1: test_ticks scratch #21
+    mov  r12d, -5 ; v1: test_ticks scratch #22
+    ; TODO: hoist invariant pointer load out of .loop (test_ticks:22)
+.ox: ; v1: test_ticks scratch #23
+    mov  r13d, 11 ; v1: test_ticks scratch #24
+    ; TODO: clamp index before table lookup on malformed input (test_ticks:24)
+.oy: ; v1: test_ticks scratch #25
+    mov  r14d, -5 ; v1: test_ticks scratch #26
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_ticks:26)
+.oz: ; v1: test_ticks scratch #27
+    RTICK r12d, r13d, r14d ; v1: test_ticks scratch #28
+    ; TODO: verify 16-byte rsp alignment before inner call (test_ticks:28)
+    inc  r14d ; v1: test_ticks scratch #29
+    cmp  r14d, 5 ; v1: test_ticks scratch #30
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_ticks:30)
+    jle  .oz ; v1: test_ticks scratch #31
+    inc  r13d ; v1: test_ticks scratch #32
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_ticks:32)
+    cmp  r13d, 14 ; v1: test_ticks scratch #33
+    jle  .oy ; v1: test_ticks scratch #34
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_ticks:34)
+    inc  r12d ; v1: test_ticks scratch #35
+    cmp  r12d, 5 ; v1: test_ticks scratch #36
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_ticks:36)
+    jle  .ox ; v1: test_ticks scratch #37
+    CHECK_EQ32 [rel ticks_pending], 0, "ocean queues nothing" ; v1: test_ticks scratch #38
+    ; TODO: hoist invariant pointer load out of .loop (test_ticks:38)
+    ; open a wall behind its back. only the bottom edge source wakes, because
+    ; sources sitting on their own pool never spread sideways (fluid_update agrees).
+    ; the upper layers follow once it drains
+    PUT  6, 11, 0, B_AIR
+    UNSETTLED 5, 11, 0
+    CHECK_EQ32 eax, 1, "edge source beside the opening"
+    UNSETTLED 4, 11, 0
+    CHECK_EQ32 eax, 0, "inner source"
+    UNSETTLED 5, 14, 0
+    CHECK_EQ32 eax, 0, "upper source rests on its pool"
+    FLAT B_STONE
+    PUT  0, 20, 0, B_WATER
+    UNSETTLED 0, 20, 0
+    CHECK_EQ32 eax, 1, "source over air"
+    PUT  0, 19, 0, B_WATER+3
+    UNSETTLED 0, 20, 0
+    CHECK_EQ32 eax, 1, "source over a weaker flow"
+    PUT  0, 19, 0, B_WATER+1
+    UNSETTLED 0, 20, 0
+    CHECK_EQ32 eax, 0, "source over a level-1 column"
+    PUT  0, 19, 0, B_WATER
+    UNSETTLED 0, 20, 0
+    CHECK_EQ32 eax, 0, "source over a source"
+    FLAT B_STONE
+    PUT  0, 11, 0, B_WATER
+    PUT  1, 11, 0, B_STONE
+    PUT  -1, 11, 0, B_STONE
+    PUT  0, 11, 1, B_STONE
+    PUT  0, 11, -1, B_STONE
+    UNSETTLED 0, 11, 0
+    CHECK_EQ32 eax, 0, "walled source"
+    PUT  1, 11, 0, B_TALL_GRASS
+    UNSETTLED 0, 11, 0
+    CHECK_EQ32 eax, 1, "washable neighbour"
+    PUT  1, 11, 0, B_LAVA+2
+    UNSETTLED 0, 11, 0
+    CHECK_EQ32 eax, 1, "lava neighbour"
+    PUT  1, 11, 0, B_STONE
+    PUT  0, 12, 0, B_LAVA               ; lava on water is the lava's job, not the water's
+    UNSETTLED 0, 11, 0
+    CHECK_EQ32 eax, 0, "water under lava"
+    UNSETTLED 0, 12, 0
+    CHECK_EQ32 eax, 1, "lava over water"
+    PUT  5, 11, 5, B_LAVA
+    PUT  6, 11, 5, B_STONE
+    PUT  4, 11, 5, B_STONE
+    PUT  5, 11, 6, B_STONE
+    PUT  5, 11, 4, B_STONE
+    UNSETTLED 5, 11, 5
+    CHECK_EQ32 eax, 0, "walled lava source"
+    PUT  5, 12, 5, B_WATER+1
+    UNSETTLED 5, 11, 5
+    CHECK_EQ32 eax, 1, "lava source under water"
+    UNSETTLED 1, 11, 0
+    CHECK_EQ32 eax, 0, "stone is no source"
+    UNSETTLED 9, 30, 9
+    CHECK_EQ32 eax, 0, "air is no source"
+    UNSETTLED 5000, 11, 0
+    CHECK_EQ32 eax, 0, "unloaded space is no source"
+    W_NEW 0, 0
+    FILL 0, 10, 0, 15, 10, 15, B_STONE
+    PUT  0, 11, 5, B_WATER
+    PUT  1, 11, 5, B_STONE
+    PUT  0, 11, 4, B_STONE
+    PUT  0, 11, 6, B_STONE
+    UNSETTLED 0, 11, 5
+    CHECK_EQ32 eax, 0, "unloaded neighbour is a wall"
+ENDP
+
+; the walk scans a chunk once when it turns active (first seen, or back in the
+; radius) and restarts its unsettled sources. max 2 scans per tick
     ; v1 temporary guard (test_ticks #18)
     xor     r11d, r11d ; clear v1 slot 18
     ; v1 temporary guard (test_ticks #20)
@@ -678,13 +788,3 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 44
     ; v1 temporary guard (test_ticks #46)
     xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_ticks #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_ticks #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_ticks #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_ticks #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_ticks #56)
-    xor     r11d, r11d ; clear v1 slot 56
