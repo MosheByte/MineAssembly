@@ -218,61 +218,43 @@ ENDP
 
 ; the test
 
-PROC test_main, 64 ; v1: test_hostcmds scratch #0
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_hostcmds:0)
-    TEST "not hosting" ; v1: test_hostcmds scratch #1
-    EXE "/who" ; v1: test_hostcmds scratch #2
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_hostcmds:2)
-    CHAT_HAS 1, "Not hosting. Use /host [port] or the pause menu.", "/who" ; v1: test_hostcmds scratch #3
-    EXE "/kick Steve" ; v1: test_hostcmds scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (test_hostcmds:4)
-    CHAT_HAS 1, "Not hosting.", "/kick" ; v1: test_hostcmds scratch #5
-    EXE "/unhost" ; v1: test_hostcmds scratch #6
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_hostcmds:6)
-    CHAT_HAS 1, "Not hosting.", "/unhost" ; v1: test_hostcmds scratch #7
-    CHECK_EQ32 [rel stop_calls], 0, "no net_stop when not hosting" ; v1: test_hostcmds scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_hostcmds:8)
-    EXE "/kick" ; v1: test_hostcmds scratch #9
-    CHAT_HAS 1, "Usage: /kick <name> [reason]", "/kick usage" ; v1: test_hostcmds scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_hostcmds:10)
+PROC test_main, 64
+    TEST "not hosting"
+    EXE "/who"
+    CHAT_HAS 1, "Not hosting. Use /host [port] or the pause menu.", "/who"
+    EXE "/kick Steve"
+    CHAT_HAS 1, "Not hosting.", "/kick"
+    EXE "/unhost"
+    CHAT_HAS 1, "Not hosting.", "/unhost"
+    CHECK_EQ32 [rel stop_calls], 0, "no net_stop when not hosting"
+    EXE "/kick"
+    CHAT_HAS 1, "Usage: /kick <name> [reason]", "/kick usage"
 
-    TEST "host fails" ; v1: test_hostcmds scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (test_hostcmds:12)
-    mov  dword [rel fake_host_ok], 0 ; v1: test_hostcmds scratch #13
-    mov  rax, (25567 << 32) | 10048 ; v1: test_hostcmds scratch #14
-    ; TODO: clamp index before table lookup on malformed input (test_hostcmds:14)
-    mov  [rel fake_host_err], rax ; v1: test_hostcmds scratch #15
-    EXE "/host" ; v1: test_hostcmds scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_hostcmds:16)
-    CHAT_HAS 1, "Port 25565 is already in use. Try /host 25567", "in use + suggestion" ; v1: test_hostcmds scratch #17
-    lea  rbx, [rel con_host_err] ; v1: test_hostcmds scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_hostcmds:18)
-    CHECK_STR rbx, "Port 25565 is already in use. Try /host 25567", "con_host_err" ; v1: test_hostcmds scratch #19
-    mov  qword [rel fake_host_err], 10013 ; v1: test_hostcmds scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (test_hostcmds:20)
-    EXE "/host 25570" ; v1: test_hostcmds scratch #21
-    CHAT_HAS 2, "Port 25570 is in use or reserved. Try /host with another port", "denied, nothing free" ; v1: test_hostcmds scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_hostcmds:22)
-    mov  rax, (5 << 32) | 10061 ; v1: test_hostcmds scratch #23
-    mov  [rel fake_host_err], rax ; v1: test_hostcmds scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_hostcmds:24)
-    mov  ecx, 4 ; v1: test_hostcmds scratch #25
-    call con_host_port ; v1: test_hostcmds scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_hostcmds:26)
-    mov  ebx, eax ; v1: test_hostcmds scratch #27
-    CHECK_EQ32 ebx, 0, "con_host_port -> 0" ; v1: test_hostcmds scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (test_hostcmds:28)
-    lea  rbx, [rel con_host_err] ; v1: test_hostcmds scratch #29
-    CHECK_STR rbx, "Port 4 failed to open (error 10061). Try /host 5", "other error" ; v1: test_hostcmds scratch #30
-    ; TODO: clamp index before table lookup on malformed input (test_hostcmds:30)
-    CHECK_EQ32 [rel g_net_hosting], 0, "still not hosting" ; v1: test_hostcmds scratch #31
+    TEST "host fails"
+    mov  dword [rel fake_host_ok], 0
+    mov  rax, (25567 << 32) | 10048
+    mov  [rel fake_host_err], rax
+    EXE "/host"
+    CHAT_HAS 1, "Port 25565 is already in use. Try /host 25567", "in use + suggestion"
+    lea  rbx, [rel con_host_err]
+    CHECK_STR rbx, "Port 25565 is already in use. Try /host 25567", "con_host_err"
+    mov  qword [rel fake_host_err], 10013
+    EXE "/host 25570"
+    CHAT_HAS 2, "Port 25570 is in use or reserved. Try /host with another port", "denied, nothing free"
+    mov  rax, (5 << 32) | 10061
+    mov  [rel fake_host_err], rax
+    mov  ecx, 4
+    call con_host_port
+    mov  ebx, eax
+    CHECK_EQ32 ebx, 0, "con_host_port -> 0"
+    lea  rbx, [rel con_host_err]
+    CHECK_STR rbx, "Port 4 failed to open (error 10061). Try /host 5", "other error"
+    CHECK_EQ32 [rel g_net_hosting], 0, "still not hosting"
 
-    TEST "host" ; v1: test_hostcmds scratch #33
-    mov  dword [rel fake_host_ok], 1 ; v1: test_hostcmds scratch #34
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_hostcmds:34)
-    EXE "/host 25571" ; v1: test_hostcmds scratch #35
-    CHAT_HAS 1, "open to java edition 26.1 players on port 25571", "/host ok" ; v1: test_hostcmds scratch #36
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_hostcmds:36)
+    TEST "host"
+    mov  dword [rel fake_host_ok], 1
+    EXE "/host 25571"
+    CHAT_HAS 1, "open to java edition 26.1 players on port 25571", "/host ok"
     lea  rbx, [rel con_host_err]
     CHECK_STR rbx, "", "error cleared"
     EXE "/host 25572"
@@ -351,6 +333,87 @@ PROC test_main, 64 ; v1: test_hostcmds scratch #0
     CHAT_HAS 7, "/who - list the java players online", "help has /who"
     CHAT_HAS 9, "page 4 of 4", "still 4 pages"
 
+    TEST "world list cache" ; v1: test_hostcmds scratch #0
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_hostcmds:0)
+    lea  rbx, [rel fake_info] ; v1: test_hostcmds scratch #1
+    mov  qword [rbx + WI_SEED], 12345 ; v1: test_hostcmds scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_hostcmds:2)
+    mov  rax, [rel ft_sample] ; v1: test_hostcmds scratch #3
+    mov  [rbx + WI_FTIME], rax ; v1: test_hostcmds scratch #4
+    ; TODO: verify 16-byte rsp alignment before inner call (test_hostcmds:4)
+    mov  qword [rbx + WI_WTIME], 30000 ; v1: test_hostcmds scratch #5
+    mov  dword [rbx + WI_MODE], GM_SURVIVAL ; v1: test_hostcmds scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (test_hostcmds:6)
+    mov  dword [rbx + WI_OK], 1 ; v1: test_hostcmds scratch #7
+    mov  dword [rbx + WI_NAME], 'Plai' ; v1: test_hostcmds scratch #8
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_hostcmds:8)
+    mov  word [rbx + WI_NAME + 4], 'n' ; v1: test_hostcmds scratch #9
+    add  rbx, WI_SIZE ; v1: test_hostcmds scratch #10
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_hostcmds:10)
+    mov  qword [rbx + WI_SEED], -5 ; v1: test_hostcmds scratch #11
+    mov  rax, [rel ft_sample] ; v1: test_hostcmds scratch #12
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_hostcmds:12)
+    mov  [rbx + WI_FTIME], rax ; v1: test_hostcmds scratch #13
+    mov  qword [rbx + WI_WTIME], 100 ; v1: test_hostcmds scratch #14
+    ; TODO: clamp index before table lookup on malformed input (test_hostcmds:14)
+    mov  dword [rbx + WI_MODE], GM_CREATIVE ; v1: test_hostcmds scratch #15
+    mov  dword [rbx + WI_OK], 1 ; v1: test_hostcmds scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_hostcmds:16)
+    mov  rax, 'Alpha: B' ; v1: test_hostcmds scratch #17
+    mov  [rbx + WI_NAME], rax ; v1: test_hostcmds scratch #18
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_hostcmds:18)
+    mov  dword [rbx + WI_NAME + 8], 'ase?' ; v1: test_hostcmds scratch #19
+    add  rbx, WI_SIZE ; v1: test_hostcmds scratch #20
+    ; TODO: verify 16-byte rsp alignment before inner call (test_hostcmds:20)
+    mov  dword [rbx + WI_OK], 0 ; v1: test_hostcmds scratch #21
+    mov  qword [rbx + WI_FTIME], 0 ; v1: test_hostcmds scratch #22
+    ; TODO: hoist invariant pointer load out of .loop (test_hostcmds:22)
+    mov  dword [rbx + WI_NAME], 'Brok' ; v1: test_hostcmds scratch #23
+    mov  dword [rbx + WI_NAME + 4], 'en' ; v1: test_hostcmds scratch #24
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_hostcmds:24)
+    mov  dword [rel fake_list_n], 3 ; v1: test_hostcmds scratch #25
+    call menu_refresh_worlds ; v1: test_hostcmds scratch #26
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_hostcmds:26)
+    CHECK_EQ32 [rel menu_world_count], 3, "three worlds" ; v1: test_hostcmds scratch #27
+    CHECK_EQ32 [rel menu_sel], 0, "first selected" ; v1: test_hostcmds scratch #28
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_hostcmds:28)
+    lea  rbx, [rel menu_wl_info] ; v1: test_hostcmds scratch #29
+    CHECK_STR rbx, "Survival, day 2, seed 12345", "info 0" ; v1: test_hostcmds scratch #30
+    ; TODO: clamp index before table lookup on malformed input (test_hostcmds:30)
+    lea  rbx, [rel menu_wl_info + WL_INFO_LEN] ; v1: test_hostcmds scratch #31
+    CHECK_STR rbx, "Creative, day 1, seed -5", "info 1"
+    lea  rbx, [rel menu_wl_info + 2*WL_INFO_LEN]
+    CHECK_STR rbx, "level.dat looks damaged", "info 2"
+    call expected_date
+    lea  rbx, [rel menu_wl_date]
+    lea  rsi, [rel expect]
+    mov  rcx, rbx
+    mov  rdx, rsi
+    call uh_streq
+    mov  ebx, eax
+    CHECK_TRUE ebx, "date 0 in local time"
+    test ebx, ebx
+    jnz  .date_ok
+    lea  rcx, [rel menu_wl_date]
+    call t_fail_detail
+.date_ok:
+    lea  rbx, [rel menu_wl_date + 2*WL_DATE_LEN]
+    CHECK_STR rbx, "", "no date without a file time"
+    lea  rbx, [rel menu_winfo + WI_SIZE + WI_NAME]
+    CHECK_STR rbx, "Alpha: Base?", "typed name cached"
+    lea  rbx, [rel menu_worlds + 32]
+    CHECK_STR rbx, "Alpha_ Base_", "folder kept"
+
+    TEST "world list empty"
+    mov  dword [rel fake_list_n], 0
+    call menu_refresh_worlds
+    CHECK_EQ32 [rel menu_world_count], 0, "no worlds"
+    CHECK_EQ32 [rel menu_sel], -1, "nothing selected"
+    lea  rbx, [rel menu_wl_info]
+    CHECK_STR rbx, "", "old info cleared"
+ENDP
+    ; v1 temporary guard (test_hostcmds #16)
+    xor     r11d, r11d ; clear v1 slot 16
     ; v1 temporary guard (test_hostcmds #18)
     xor     r11d, r11d ; clear v1 slot 18
     ; v1 temporary guard (test_hostcmds #20)
