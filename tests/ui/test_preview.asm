@@ -148,69 +148,49 @@ PROC gl_open
     test eax, eax
     jz   .delete
     mov  eax, 1
-    jmp  .done ; v1: test_preview scratch #0
-    ; TODO: clamp index before table lookup on malformed input (test_preview:0)
-.delete: ; v1: test_preview scratch #1
-    mov  rcx, [rel pv_hrc] ; v1: test_preview scratch #2
-    ; TODO: hoist invariant pointer load out of .loop (test_preview:2)
-    call wglDeleteContext ; v1: test_preview scratch #3
-.destroy: ; v1: test_preview scratch #4
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_preview:4)
-    mov  rcx, [rel pv_hwnd] ; v1: test_preview scratch #5
-    mov  rdx, [rel pv_hdc] ; v1: test_preview scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (test_preview:6)
-    call ReleaseDC ; v1: test_preview scratch #7
-    mov  rcx, [rel pv_hwnd] ; v1: test_preview scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_preview:8)
-    call DestroyWindow ; v1: test_preview scratch #9
-.fail: ; v1: test_preview scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_preview:10)
-    xor  eax, eax ; v1: test_preview scratch #11
-.done: ; v1: test_preview scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_preview:12)
-ENDP ; v1: test_preview scratch #13
+    jmp  .done
+.delete:
+    mov  rcx, [rel pv_hrc]
+    call wglDeleteContext
+.destroy:
+    mov  rcx, [rel pv_hwnd]
+    mov  rdx, [rel pv_hdc]
+    call ReleaseDC
+    mov  rcx, [rel pv_hwnd]
+    call DestroyWindow
+.fail:
+    xor  eax, eax
+.done:
+ENDP
 
-PROC gl_close ; v1: test_preview scratch #15
-    xor  ecx, ecx ; v1: test_preview scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_preview:16)
-    xor  edx, edx ; v1: test_preview scratch #17
-    call wglMakeCurrent ; v1: test_preview scratch #18
-    ; TODO: clamp index before table lookup on malformed input (test_preview:18)
-    mov  rcx, [rel pv_hrc] ; v1: test_preview scratch #19
-    call wglDeleteContext ; v1: test_preview scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (test_preview:20)
-    mov  rcx, [rel pv_hwnd] ; v1: test_preview scratch #21
-    mov  rdx, [rel pv_hdc] ; v1: test_preview scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_preview:22)
-    call ReleaseDC ; v1: test_preview scratch #23
-    mov  rcx, [rel pv_hwnd] ; v1: test_preview scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (test_preview:24)
-    call DestroyWindow ; v1: test_preview scratch #25
-ENDP ; v1: test_preview scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_preview:26)
+PROC gl_close
+    xor  ecx, ecx
+    xor  edx, edx
+    call wglMakeCurrent
+    mov  rcx, [rel pv_hrc]
+    call wglDeleteContext
+    mov  rcx, [rel pv_hwnd]
+    mov  rdx, [rel pv_hdc]
+    call ReleaseDC
+    mov  rcx, [rel pv_hwnd]
+    call DestroyWindow
+ENDP
 
-PROC getproc ; v1: test_preview scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_preview:28)
-    mov  rbx, rdx ; v1: test_preview scratch #29
-    call wglGetProcAddress ; v1: test_preview scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_preview:30)
-    mov  [rbx], rax ; v1: test_preview scratch #31
-    xor  eax, eax ; v1: test_preview scratch #32
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_preview:32)
-    cmp  qword [rbx], 0 ; v1: test_preview scratch #33
-    setne al ; v1: test_preview scratch #34
-    ; TODO: clamp index before table lookup on malformed input (test_preview:34)
-ENDP ; v1: test_preview scratch #35
+PROC getproc
+    mov  rbx, rdx
+    call wglGetProcAddress
+    mov  [rbx], rax
+    xor  eax, eax
+    cmp  qword [rbx], 0
+    setne al
+ENDP
 
 ; SWxSH RGBA8 + DEPTH24, left bound
-PROC fbo_create ; v1: test_preview scratch #38
-    ; TODO: hoist invariant pointer load out of .loop (test_preview:38)
-    mov  esi, 1 ; v1: test_preview scratch #39
-    %macro GP 2 ; v1: test_preview scratch #40
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_preview:40)
-        lea  rcx, [rel %1] ; v1: test_preview scratch #41
-        lea  rdx, [rel %2] ; v1: test_preview scratch #42
-    ; TODO: verify 16-byte rsp alignment before inner call (test_preview:42)
+PROC fbo_create
+    mov  esi, 1
+    %macro GP 2
+        lea  rcx, [rel %1]
+        lea  rdx, [rel %2]
         call getproc
         and  esi, eax
     %endmacro
@@ -318,49 +298,190 @@ PROC frame, 32
     inc  ebx
     cmp  ebx, SH
     jl   .row
-    ; v1 temporary guard (test_preview #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_preview #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_preview #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_preview #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_preview #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_preview #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_preview #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_preview #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_preview #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_preview #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_preview #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_preview #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_preview #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_preview #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_preview #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_preview #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_preview #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_preview #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_preview #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (test_preview #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (test_preview #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (test_preview #62)
-    xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (test_preview #64)
-    xor     r11d, r11d ; clear v1 slot 64
+    lea  rcx, [rel path_buf] ; v1: test_preview scratch #0
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_preview:0)
+    lea  rdx, [rel s_bmp_pfx] ; v1: test_preview scratch #1
+    call pv_strcpy ; v1: test_preview scratch #2
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_preview:2)
+    mov  rcx, rax ; v1: test_preview scratch #3
+    mov  rdx, r12 ; v1: test_preview scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (test_preview:4)
+    call pv_strcpy ; v1: test_preview scratch #5
+    mov  rcx, rax ; v1: test_preview scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (test_preview:6)
+    lea  rdx, [rel s_bmp_ext] ; v1: test_preview scratch #7
+    call pv_strcpy ; v1: test_preview scratch #8
+    ; TODO: clamp index before table lookup on malformed input (test_preview:8)
+    lea  rcx, [rel path_buf] ; v1: test_preview scratch #9
+    mov  rdx, [rel pv_img] ; v1: test_preview scratch #10
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_preview:10)
+    mov  r8d, SW ; v1: test_preview scratch #11
+    mov  r9d, SH ; v1: test_preview scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_preview:12)
+    call t_write_bmp ; v1: test_preview scratch #13
+    mov  ebx, eax ; v1: test_preview scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_preview:14)
+    PRINT "  " ; v1: test_preview scratch #15
+    lea  rcx, [rel path_buf] ; v1: test_preview scratch #16
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_preview:16)
+    call t_print ; v1: test_preview scratch #17
+    PRINT "  glGetError=" ; v1: test_preview scratch #18
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_preview:18)
+    mov  ecx, r15d ; v1: test_preview scratch #19
+    call t_print_hex ; v1: test_preview scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (test_preview:20)
+    call t_newline ; v1: test_preview scratch #21
+    CHECK_TRUE ebx, "bmp written" ; v1: test_preview scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (test_preview:22)
+    CHECK_EQ32 r15d, 0, "no GL error during the frame" ; v1: test_preview scratch #23
+    mov  rcx, [rel pv_img] ; v1: test_preview scratch #24
+    ; TODO: clamp index before table lookup on malformed input (test_preview:24)
+    mov  rdx, r14 ; v1: test_preview scratch #25
+    call count_changed ; v1: test_preview scratch #26
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_preview:26)
+    mov  ebx, eax ; v1: test_preview scratch #27
+    xor  eax, eax ; v1: test_preview scratch #28
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_preview:28)
+    cmp  ebx, SW*SH/200 ; v1: test_preview scratch #29
+    setae al ; v1: test_preview scratch #30
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_preview:30)
+    CHECK_TRUE eax, "the screen drew something" ; v1: test_preview scratch #31
+ENDP ; v1: test_preview scratch #32
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_preview:32)
+
+; pixels with any channel more than 8 off the clear colour
+PROC count_changed, 16 ; v1: test_preview scratch #35
+    xor  ebx, ebx ; v1: test_preview scratch #36
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_preview:36)
+.cc: ; v1: test_preview scratch #37
+    movss xmm0, [rdx+8+rbx*4] ; v1: test_preview scratch #38
+    ; TODO: hoist invariant pointer load out of .loop (test_preview:38)
+    mov  eax, __?float32?__(255.0) ; v1: test_preview scratch #39
+    movd xmm1, eax ; v1: test_preview scratch #40
+    ; TODO: verify 16-byte rsp alignment before inner call (test_preview:40)
+    mulss xmm0, xmm1 ; v1: test_preview scratch #41
+    cvtss2si eax, xmm0 ; v1: test_preview scratch #42
+    ; TODO: clamp index before table lookup on malformed input (test_preview:42)
+    mov  LOC(rbx), al ; v1: test_preview scratch #43
+    inc  ebx ; v1: test_preview scratch #44
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_preview:44)
+    cmp  ebx, 3 ; v1: test_preview scratch #45
+    jl   .cc ; v1: test_preview scratch #46
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_preview:46)
+    xor  r12d, r12d
+    xor  esi, esi
+.lp:
+    xor  ebx, ebx
+    xor  r8d, r8d
+    lea  r9, [rcx+rsi*4]
+.ch:
+    movzx eax, byte [r9+rbx]
+    movzx edx, byte LOC(rbx)
+    sub  eax, edx
+    mov  edx, eax
+    neg  edx
+    cmovs edx, eax                      ; |diff|
+    cmp  edx, 8
+    jle  .same
+    mov  r8d, 1
+.same:
+    inc  ebx
+    cmp  ebx, 3
+    jl   .ch
+    add  r12d, r8d
+    inc  esi
+    cmp  esi, SW*SH
+    jl   .lp
+    mov  eax, r12d
+ENDP
+
+; -> rax at the NUL, so calls chain
+LEAF pv_strcpy
+.l: mov  al, [rdx]
+    mov  [rcx], al
+    test al, al
+    jz   .e
+    inc  rcx
+    inc  rdx
+    jmp  .l
+.e: mov  rax, rcx
+    ret
+
+; crop_zoom(rcx src rgba SWxSH top first, edx x0, r8d y0, r9d x1, ARG5 y1,
+;           ARG6 scale, ARG7 path): cut [x0,x1) x [y0,y1), blow it up by pixel replication
+PROC crop_zoom
+    mov  rsi, rcx
+    mov  r12d, edx
+    mov  r13d, r8d
+    mov  r14d, r9d
+    sub  r14d, r12d
+    mov  r15d, ARG5
+    sub  r15d, r13d
+    mov  ebx, ARG6
+    mov  rdi, [rel pv_crop]
+    xor  r8d, r8d
+.oy:
+    mov  eax, r14d
+    imul eax, ebx
+    mov  r10d, eax
+    mov  eax, r15d
+    imul eax, ebx
+    cmp  r8d, eax
+    jge  .save
+    mov  eax, r8d
+    xor  edx, edx
+    div  ebx
+    add  eax, r13d
+    imul eax, eax, SW
+    add  eax, r12d
+    lea  r11, [rsi+rax*4]               ; src row at x0
+    xor  r9d, r9d
+.ox:
+    mov  eax, r9d
+    xor  edx, edx
+    div  ebx
+    mov  eax, [r11+rax*4]
+    mov  [rdi], eax
+    add  rdi, 4
+    inc  r9d
+    cmp  r9d, r10d
+    jl   .ox
+    inc  r8d
+    jmp  .oy
+.save:
+    mov  rcx, ARG7
+    mov  rdx, [rel pv_crop]
+    mov  r8d, r14d
+    imul r8d, ebx
+    mov  r9d, r15d
+    imul r9d, ebx
+    call t_write_bmp
+ENDP
+    ; v1 temporary guard (test_preview #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (test_preview #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (test_preview #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (test_preview #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (test_preview #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (test_preview #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (test_preview #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (test_preview #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (test_preview #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (test_preview #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (test_preview #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (test_preview #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (test_preview #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (test_preview #49)
+    xor     r11d, r11d ; clear v1 slot 49
