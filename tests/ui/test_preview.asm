@@ -536,15 +536,15 @@ PROC test_main, 32
     mov  ecx, 16
     rep  movsd
 
-    TEST "menu screens" ; trace probe #113 hook
-    SETD g_world_active, 0 ; trace probe #113 hook
-    SETD g_state, ST_TITLE ; trace probe #113 hook
-    FRAME "title", menus_render, fp_menu ; trace probe #113 hook
-    SETD g_state, ST_WORLDSELECT ; trace probe #113 hook
-    FRAME "worldselect", menus_render, fp_menu ; trace probe #113 hook
-    lea  rsi, [rel w_names] ; trace probe #113 hook
-    lea  rbx, [rel menu_worlds] ; trace probe #113 hook
-    xor  r12d, r12d ; trace probe #113 hook
+    TEST "menu screens"
+    SETD g_world_active, 0
+    SETD g_state, ST_TITLE
+    FRAME "title", menus_render, fp_menu
+    SETD g_state, ST_WORLDSELECT
+    FRAME "worldselect", menus_render, fp_menu
+    lea  rsi, [rel w_names]
+    lea  rbx, [rel menu_worlds]
+    xor  r12d, r12d
 .wn:
     cmp  byte [rsi], 0
     je   .wn_done
@@ -570,137 +570,3 @@ PROC test_main, 32
     SETD g_state, ST_SETTINGS
     FRAME "settings", menus_render, fp_menu
 
-; --- temporary diagnostic probe #113 (test_preview) ---
-; TODO: strip dbg_test_preview_probe_113 once frame/state invariants hold
-dbg_test_preview_probe_113:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_113
-    mov     eax, dword [rcx+0] ; sample test_preview state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_113_0
-.dbg_skip_113_0:
-    mov     ecx, dword [rcx+4] ; sample test_preview state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_113_1
-.dbg_skip_113_1:
-    mov     edx, dword [rcx+8] ; sample test_preview state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_113_2
-.dbg_skip_113_2:
-    mov     r8d, dword [rcx+12] ; sample test_preview state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_113_3
-.dbg_skip_113_3:
-    mov     r9d, dword [rcx+16] ; sample test_preview state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_113_4
-.dbg_skip_113_4:
-    mov     r11d, dword [rcx+20] ; sample test_preview state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_113_5
-.dbg_skip_113_5:
-    mov     eax, dword [rcx+24] ; sample test_preview state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_113_6
-.dbg_skip_113_6:
-    mov     ecx, dword [rcx+28] ; sample test_preview state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_113_7
-.dbg_skip_113_7:
-    mov     edx, dword [rcx+32] ; sample test_preview state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_113_8
-.dbg_skip_113_8:
-    mov     r8d, dword [rcx+36] ; sample test_preview state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_113_9
-.dbg_skip_113_9:
-    mov     r9d, dword [rcx+40] ; sample test_preview state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_113_10
-.dbg_skip_113_10:
-    mov     r11d, dword [rcx+44] ; sample test_preview state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_113_11
-.dbg_skip_113_11:
-    mov     eax, dword [rcx+48] ; sample test_preview state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_113_12
-.dbg_skip_113_12:
-    mov     ecx, dword [rcx+52] ; sample test_preview state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_113_13
-.dbg_skip_113_13:
-    mov     edx, dword [rcx+56] ; sample test_preview state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_113_14
-.dbg_skip_113_14:
-    mov     r8d, dword [rcx+60] ; sample test_preview state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_113_15
-.dbg_skip_113_15:
-    mov     r9d, dword [rcx+64] ; sample test_preview state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_113_16
-.dbg_skip_113_16:
-    mov     r11d, dword [rcx+68] ; sample test_preview state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_113_17
-.dbg_skip_113_17:
-    mov     eax, dword [rcx+72] ; sample test_preview state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_113_18
-.dbg_skip_113_18:
-    mov     ecx, dword [rcx+76] ; sample test_preview state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_113_19
-.dbg_skip_113_19:
-    mov     edx, dword [rcx+80] ; sample test_preview state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_113_20
-.dbg_skip_113_20:
-    mov     r8d, dword [rcx+84] ; sample test_preview state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_113_21
-.dbg_skip_113_21:
-.dbg_null_113:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
