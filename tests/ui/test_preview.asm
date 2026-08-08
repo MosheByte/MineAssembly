@@ -570,3 +570,99 @@ PROC test_main, 32
     SETD g_state, ST_SETTINGS
     FRAME "settings", menus_render, fp_menu
 
+    TEST "in-game screens"
+    SETD g_world_active, 1
+    SETD g_gamemode, 0
+    lea  rsi, [rel inv_items]
+    lea  rdi, [rel g_player+PLAYER.inv]
+    xor  ecx, ecx
+.inv:
+    movzx eax, byte [rsi+rcx*2]
+    mov  [rdi+rcx*4], al
+    movzx edx, byte [rsi+rcx*2+1]
+    mov  [rdi+rcx*4+1], dl
+    xor  edx, edx
+    cmp  eax, 142
+    jne  .dur
+    mov  edx, 120
+.dur:
+    mov  [rdi+rcx*4+2], dx
+    inc  ecx
+    cmp  ecx, 9
+    jl   .inv
+    SETD g_player+PLAYER.health, 7      ; 3.5 hearts
+    SETD g_player+PLAYER.hunger, 13
+    SETD g_player+PLAYER.saturation, 0  ; 0.0: hunger bar jitter
+    SETD g_player+PLAYER.air, 180
+    SETD g_player+PLAYER.eye_in_water, 1
+    SETD g_player+PLAYER.selected, 2
+    SETD g_player+PLAYER.hurt_time, 6
+    SETD g_player+PLAYER.x, __?float32?__(12.5)
+    SETD g_player+PLAYER.y, __?float32?__(70.0)
+    SETD g_player+PLAYER.z, __?float32?__(-8.25)
+    lea  rcx, [rel s_welcome]
+    mov  edx, 0xFFFFFFFF
+    call chat_add
+    STRP rcx, "/time set noon"
+    call console_execute
+    STRP rcx, "/give diamond 3"
+    call console_execute
+    lea  rcx, [rel s_brag]
+    mov  edx, 0xFFFFFFFF
+    call chat_add
+    SETD g_state, ST_PLAYING
+    FRAME "hud", hud_render, fp_hud
+    mov  rsi, [rel pv_img]              ; keep it for the hotbar crop
+    mov  rdi, [rel hud_copy]
+    mov  ecx, SW*SH
+    rep  movsd
+    SETD g_show_debug, 1
+    FRAME "hud_debug", hud_render, fp_hud
+    SETD g_show_debug, 0
+    SETD g_state, ST_CHAT
+    xor  ecx, ecx
+    call console_open
+    mov  ecx, '/'
+    call con_insert
+    mov  ecx, 't'
+    call con_insert
+    mov  ecx, 'i'
+    call con_insert
+    FRAME "chat", draw_chat, fp_chat
+    SETD g_state, ST_PAUSED
+    FRAME "pause", draw_pause, fp_chat
+    SETD g_player+PLAYER.health, 0
+    SETD g_player+PLAYER.last_damage_src, 4
+    SETD g_state, ST_DEAD
+    FRAME "dead", draw_pause, fp_dead
+
+    TEST "icons"
+    SETD g_mouse_x, 900
+    SETD g_mouse_y, 300
+    FRAME "icons", draw_icons, fp_icons
+
+    TEST "crops"
+    mov  rcx, [rel hud_copy]            ; hotbar strip at the bottom centre
+    mov  edx, 380
+    mov  r8d, 600
+    mov  r9d, 900
+    mov  qword [rsp+32], 720
+    mov  qword [rsp+40], 2
+    STRP rax, "ui_hud_hotbar_x2.bmp"
+    mov  [rsp+48], rax
+    call crop_zoom
+    CHECK_TRUE eax, "hotbar crop written"
+    mov  rcx, [rel pv_img]              ; the icon panel (top-left)
+    xor  edx, edx
+    xor  r8d, r8d
+    mov  r9d, 640
+    mov  qword [rsp+32], 400
+    mov  qword [rsp+40], 2
+    STRP rax, "ui_icons_panel_x2.bmp"
+    mov  [rsp+48], rax
+    call crop_zoom
+    CHECK_TRUE eax, "icon panel crop written"
+.close:
+    call gl_close
+.done:
+ENDP
