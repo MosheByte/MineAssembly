@@ -607,50 +607,36 @@ PROC test_main, 64
     movss xmm6, [rel fake_spawn_y]
     CHECK_NEAR xmm6, 64.5, 0.0001, "open air: spawn at feet + 0.5"
 
-    TEST "8 menu key repeat" ; v1: test_review scratch #0
-    ; TODO: hoist invariant pointer load out of .loop (test_review:0)
-    lea  rbx, [rel g_keys_pressed] ; v1: test_review scratch #1
-    mov  dword [rel g_state], ST_WORLDSELECT ; v1: test_review scratch #2
-    ; TODO: clamp index before table lookup on malformed input (test_review:2)
-    mov  byte [rbx+VK_ESCAPE], 0 ; v1: test_review scratch #3
-    mov  ecx, VK_ESCAPE ; v1: test_review scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (test_review:4)
-    call menus_on_key ; v1: test_review scratch #5
-    CHECK_EQ32 [rel g_state], ST_WORLDSELECT, "auto-repeated Esc ignored" ; v1: test_review scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_review:6)
-    lea  rbx, [rel g_keys_pressed] ; v1: test_review scratch #7
-    mov  byte [rbx+VK_ESCAPE], 1 ; v1: test_review scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_review:8)
-    mov  ecx, VK_ESCAPE ; v1: test_review scratch #9
-    call menus_on_key ; v1: test_review scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_review:10)
-    CHECK_EQ32 [rel g_state], ST_TITLE, "real Esc press goes back to the title" ; v1: test_review scratch #11
-    lea  rbx, [rel g_keys_pressed] ; v1: test_review scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_review:12)
-    mov  byte [rbx+VK_ESCAPE], 0 ; v1: test_review scratch #13
-    mov  dword [rel g_state], ST_WORLDSELECT ; v1: test_review scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_review:14)
-    mov  dword [rel menu_world_count], 5 ; v1: test_review scratch #15
-    mov  dword [rel menu_sel], 0 ; v1: test_review scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (test_review:16)
-    mov  ecx, VK_DOWN ; v1: test_review scratch #17
-    call menus_on_key ; v1: test_review scratch #18
-    ; TODO: clamp index before table lookup on malformed input (test_review:18)
-    mov  ecx, VK_DOWN ; v1: test_review scratch #19
-    call menus_on_key ; v1: test_review scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (test_review:20)
-    CHECK_EQ32 [rel menu_sel], 2, "Down auto-repeats in the world list" ; v1: test_review scratch #21
+    TEST "8 menu key repeat"
+    lea  rbx, [rel g_keys_pressed]
+    mov  dword [rel g_state], ST_WORLDSELECT
+    mov  byte [rbx+VK_ESCAPE], 0        ; auto-repeat: not a new press
+    mov  ecx, VK_ESCAPE
+    call menus_on_key
+    CHECK_EQ32 [rel g_state], ST_WORLDSELECT, "auto-repeated Esc ignored"
+    lea  rbx, [rel g_keys_pressed]
+    mov  byte [rbx+VK_ESCAPE], 1
+    mov  ecx, VK_ESCAPE
+    call menus_on_key
+    CHECK_EQ32 [rel g_state], ST_TITLE, "real Esc press goes back to the title"
+    lea  rbx, [rel g_keys_pressed]
+    mov  byte [rbx+VK_ESCAPE], 0
+    mov  dword [rel g_state], ST_WORLDSELECT
+    mov  dword [rel menu_world_count], 5
+    mov  dword [rel menu_sel], 0
+    mov  ecx, VK_DOWN                   ; repeat allowed
+    call menus_on_key
+    mov  ecx, VK_DOWN
+    call menus_on_key
+    CHECK_EQ32 [rel menu_sel], 2, "Down auto-repeats in the world list"
 
-    TEST "9 reserved names" ; v1: test_review scratch #23
-    RESERVED "con", 1 ; v1: test_review scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_review:24)
-    RESERVED "CON", 1 ; v1: test_review scratch #25
-    RESERVED "nul.txt", 1 ; v1: test_review scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_review:26)
-    RESERVED "Com7", 1 ; v1: test_review scratch #27
-    RESERVED "lpt9.a.b", 1 ; v1: test_review scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_review:28)
-    RESERVED "com0", 0 ; v1: test_review scratch #29
+    TEST "9 reserved names"
+    RESERVED "con", 1
+    RESERVED "CON", 1
+    RESERVED "nul.txt", 1
+    RESERVED "Com7", 1
+    RESERVED "lpt9.a.b", 1
+    RESERVED "com0", 0
     RESERVED "console", 0
     RESERVED "co", 0
     RESERVED "aux_", 0
@@ -742,55 +728,36 @@ PROC test_main, 64
     CHECK_TRUE ebx, "narrow window: right lines pushed down"
 .f3_done:
 ENDP
-    ; v1 temporary guard (test_review #14)
-    xor     r11d, r11d ; clear v1 slot 14
-    ; v1 temporary guard (test_review #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (test_review #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_review #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_review #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_review #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_review #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_review #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_review #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_review #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_review #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_review #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_review #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_review #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_review #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_review #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_review #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_review #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_review #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_review #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_review #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_review #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (test_review #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (test_review #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (test_review #62)
-    xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (test_review #64)
-    xor     r11d, r11d ; clear v1 slot 64
+
+; last 10 chat lines must have the exact line "/about - about this game"
+; and one starting with "/fill <x1>"
+PROC help_lines_check
+    xor  r12d, r12d                     ; found /about line
+    xor  r13d, r13d                     ; found /fill line
+    mov  esi, [rel con_total]
+    lea  ebx, [rsi-10]
+    test ebx, ebx
+    jns  .lp
+    xor  ebx, ebx
+.lp:
+    cmp  ebx, esi
+    jge  .done
+    mov  ecx, ebx
+    call uh_chat_line
+    mov  rcx, rax
+    lea  rdx, [rel line_tmp]
+    call uh_strip
+    lea  rcx, [rel line_tmp]
+    lea  rdx, [rel s_about]
+    call uh_streq
+    or   r12d, eax
+    lea  rcx, [rel line_tmp]
+    lea  rdx, [rel s_fillu]
+    call uh_starts
+    or   r13d, eax
+    inc  ebx
+    jmp  .lp
+.done:
+    CHECK_TRUE r12d, "/help line without usage"
+    CHECK_TRUE r13d, "/help line with usage keeps it"
+ENDP
