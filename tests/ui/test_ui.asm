@@ -265,48 +265,34 @@ PROC test_main, 128
     ; real proportional widths, zeroed again afterwards so the rest stays on the fallback
     lea  rdi, [rel g_font_widths]
     mov  al, 6
-    mov  ecx, 128 ; v1: test_ui scratch #0
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_ui:0)
-    rep  stosb ; v1: test_ui scratch #1
-    lea  rdi, [rel g_font_widths] ; v1: test_ui scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_ui:2)
-    mov  byte [rdi+'i'], 2 ; v1: test_ui scratch #3
-    mov  byte [rdi+' '], 4 ; v1: test_ui scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (test_ui:4)
-    STRP rcx, "iii i" ; v1: test_ui scratch #5
-    call ui_text_width ; v1: test_ui scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_ui:6)
-    CHECK_EQ32 eax, 2*4+4, "proportional widths" ; v1: test_ui scratch #7
-    lea  rdi, [rel g_font_widths] ; v1: test_ui scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (test_ui:8)
-    xor  eax, eax ; v1: test_ui scratch #9
-    mov  ecx, 128 ; v1: test_ui scratch #10
-    ; TODO: clamp index before table lookup on malformed input (test_ui:10)
-    rep  stosb ; v1: test_ui scratch #11
-    mov  dword [rel g_ui_mx], 15 ; v1: test_ui scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_ui:12)
-    mov  dword [rel g_ui_my], 25 ; v1: test_ui scratch #13
-    mov  ecx, 10 ; v1: test_ui scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_ui:14)
-    mov  edx, 20 ; v1: test_ui scratch #15
-    mov  r8d, 10 ; v1: test_ui scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_ui:16)
-    mov  r9d, 10 ; v1: test_ui scratch #17
-    call ui_mouse_in ; v1: test_ui scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_ui:18)
-    CHECK_EQ32 eax, 1, "mouse inside" ; v1: test_ui scratch #19
-    mov  ecx, 16 ; v1: test_ui scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (test_ui:20)
-    mov  edx, 20 ; v1: test_ui scratch #21
-    mov  r8d, 10 ; v1: test_ui scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_ui:22)
-    mov  r9d, 10 ; v1: test_ui scratch #23
-    call ui_mouse_in ; v1: test_ui scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (test_ui:24)
-    CHECK_EQ32 eax, 0, "mouse left of rect" ; v1: test_ui scratch #25
-    mov  ecx, 10 ; v1: test_ui scratch #26
-    ; TODO: clamp index before table lookup on malformed input (test_ui:26)
-    mov  edx, 20 ; v1: test_ui scratch #27
+    mov  ecx, 128
+    rep  stosb
+    lea  rdi, [rel g_font_widths]
+    mov  byte [rdi+'i'], 2
+    mov  byte [rdi+' '], 4
+    STRP rcx, "iii i"
+    call ui_text_width
+    CHECK_EQ32 eax, 2*4+4, "proportional widths"
+    lea  rdi, [rel g_font_widths]
+    xor  eax, eax
+    mov  ecx, 128
+    rep  stosb
+    mov  dword [rel g_ui_mx], 15
+    mov  dword [rel g_ui_my], 25
+    mov  ecx, 10
+    mov  edx, 20
+    mov  r8d, 10
+    mov  r9d, 10
+    call ui_mouse_in
+    CHECK_EQ32 eax, 1, "mouse inside"
+    mov  ecx, 16
+    mov  edx, 20
+    mov  r8d, 10
+    mov  r9d, 10
+    call ui_mouse_in
+    CHECK_EQ32 eax, 0, "mouse left of rect"
+    mov  ecx, 10
+    mov  edx, 20
     mov  r8d, 5
     mov  r9d, 10
     call ui_mouse_in
@@ -402,51 +388,198 @@ PROC test_main, 128
     movss xmm6, [rel g_player+P_SAT]
     CHECK_NEAR xmm6, 5.0, 0.0, "feed sets saturation"
 
-    ; v1 temporary guard (test_ui #14)
-    xor     r11d, r11d ; clear v1 slot 14
-    ; v1 temporary guard (test_ui #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (test_ui #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_ui #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_ui #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_ui #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_ui #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_ui #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_ui #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_ui #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_ui #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_ui #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_ui #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_ui #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_ui #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_ui #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_ui #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_ui #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_ui #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_ui #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_ui #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_ui #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (test_ui #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (test_ui #60)
-    xor     r11d, r11d ; clear v1 slot 60
+    EXE "/render 40" ; v1: test_ui scratch #0
+    ; TODO: hoist invariant pointer load out of .loop (test_ui:0)
+    CHECK_EQ32 [rel g_settings+S_RD], 16, "render clamps to 16" ; v1: test_ui scratch #1
+    EXE "/render 1" ; v1: test_ui scratch #2
+    ; TODO: clamp index before table lookup on malformed input (test_ui:2)
+    CHECK_EQ32 [rel g_settings+S_RD], 2, "render clamps to 2" ; v1: test_ui scratch #3
+    EXE "/fov 90" ; v1: test_ui scratch #4
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_ui:4)
+    movss xmm6, [rel g_settings+S_FOV] ; v1: test_ui scratch #5
+    CHECK_NEAR xmm6, 90.0, 0.0, "fov" ; v1: test_ui scratch #6
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_ui:6)
+
+    mov  dword [rel g_player+P_FLYING], 0 ; v1: test_ui scratch #8
+    ; TODO: verify 16-byte rsp alignment before inner call (test_ui:8)
+    EXE "/fly" ; v1: test_ui scratch #9
+    CHECK_EQ32 [rel g_player+P_FLYING], 1, "fly on" ; v1: test_ui scratch #10
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_ui:10)
+    EXE "/fly" ; v1: test_ui scratch #11
+    CHECK_EQ32 [rel g_player+P_FLYING], 0, "fly off" ; v1: test_ui scratch #12
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_ui:12)
+
+    mov  rax, -1234567890123 ; v1: test_ui scratch #14
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_ui:14)
+    mov  [rel g_seed], rax ; v1: test_ui scratch #15
+    EXE "/seed" ; v1: test_ui scratch #16
+    ; TODO: hoist invariant pointer load out of .loop (test_ui:16)
+    CHAT_HAS 4, "-1234567890123", "seed" ; v1: test_ui scratch #17
+
+    mov  dword [rel hud_screenshot_req], 0 ; v1: test_ui scratch #19
+    EXE "/screenshot" ; v1: test_ui scratch #20
+    ; TODO: clamp index before table lookup on malformed input (test_ui:20)
+    CHECK_EQ32 [rel hud_screenshot_req], 1, "screenshot request flag" ; v1: test_ui scratch #21
+
+    EXE "/definitelynotacommand 1 2" ; v1: test_ui scratch #23
+    CHECK_EQ32 eax, 0, "unknown command returns 0" ; v1: test_ui scratch #24
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_ui:24)
+    CHAT_HAS 4, "Unknown command: /definitelynotacommand", "unknown msg" ; v1: test_ui scratch #25
+
+    EXE "/fill 0 0 0 100 100 100 stone" ; v1: test_ui scratch #27
+    CHAT_HAS 4, "Too many blocks", "fill limit" ; v1: test_ui scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_ui:28)
+    EXE "/fill 0 0 0 1 1 1 notablock" ; v1: test_ui scratch #29
+    CHAT_HAS 4, "Unknown block", "fill bad block" ; v1: test_ui scratch #30
+    ; TODO: verify 16-byte rsp alignment before inner call (test_ui:30)
+
+    EXE "/help" ; v1: test_ui scratch #32
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_ui:32)
+    CHAT_HAS 14, "commands (page 1 of", "help header" ; v1: test_ui scratch #33
+    EXE "/help 99" ; v1: test_ui scratch #34
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_ui:34)
+    CHAT_HAS 10, "(page 4 of 4)", "help clamps page" ; v1: test_ui scratch #35
+
+    EXE "/give diamond 5" ; v1: test_ui scratch #37
+    CHAT_HAS 4, "Gave 5 x", "give by name" ; v1: test_ui scratch #38
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_ui:38)
+    EXE "/give iron ingot" ; v1: test_ui scratch #39
+    CHAT_HAS 4, "Gave 1 x", "give multi-word" ; v1: test_ui scratch #40
+    ; TODO: hoist invariant pointer load out of .loop (test_ui:40)
+    EXE "/give 129 3" ; v1: test_ui scratch #41
+    CHAT_HAS 4, "Gave 3 x", "give by id" ; v1: test_ui scratch #42
+    ; TODO: clamp index before table lookup on malformed input (test_ui:42)
+    EXE "/give unobtainium" ; v1: test_ui scratch #43
+    CHAT_HAS 4, "Unknown item 'unobtainium'", "give unknown" ; v1: test_ui scratch #44
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_ui:44)
+
+    EXE "/spawn dragon" ; v1: test_ui scratch #46
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_ui:46)
+    CHAT_HAS 5, "Unknown creature 'dragon'", "spawn unknown" ; v1: test_ui scratch #47
+
+    TEST "chat log" ; v1: test_ui scratch #49
+    EXE "/cls" ; v1: test_ui scratch #50
+    ; TODO: verify 16-byte rsp alignment before inner call (test_ui:50)
+    CHECK_EQ32 [rel con_total], 0, "cls empties chat" ; v1: test_ui scratch #51
+    lea  rcx, [rel long_msg]
+    mov  edx, 0xFFFFFFFF
+    call chat_add
+    xor  ebx, ebx
+    cmp  dword [rel con_total], 1
+    setg bl
+    CHECK_TRUE ebx, "long message wrapped into several lines"
+    call all_fit_300
+    CHECK_TRUE eax, "every wrapped line fits 300 px"
+    mov  ebx, 1
+    xor  esi, esi
+.cc:
+    cmp  esi, [rel con_total]
+    jge  .cc_done
+    mov  ecx, esi
+    call uh_chat_line
+    cmp  byte [rax], 12
+    jne  .cc_bad
+    cmp  byte [rax+1], 'e'
+    je   .cc_next
+.cc_bad:
+    xor  ebx, ebx
+.cc_next:
+    inc  esi
+    jmp  .cc
+.cc_done:
+    CHECK_TRUE ebx, "colour code carried to continuation lines"
+    mov  ecx, 1000
+    call uh_last_chat
+    mov  rbx, rax
+    lea  rdx, [rel long_plain]
+    mov  rcx, rbx
+    call uh_streq
+    CHECK_TRUE eax, "wrapping loses no words"
+    lea  rcx, [rel hard_msg]            ; no spaces, has to hard break
+    mov  edx, 0xFFFFFFFF
+    call chat_add
+    call all_fit_300
+    CHECK_TRUE eax, "hard wrap fits"
+    lea  rcx, [rel two_lines]
+    mov  edx, 0xFF00FF00
+    call chat_add
+    mov  ecx, [rel con_total]
+    sub  ecx, 2
+    call uh_chat_line
+    mov  rcx, rax
+    lea  rdx, [rel s_line1]
+    call uh_streq
+    mov  ebx, eax
+    mov  ecx, [rel con_total]
+    dec  ecx
+    call uh_chat_line
+    mov  rcx, rax
+    lea  rdx, [rel s_line2]
+    call uh_streq
+    and  ebx, eax
+    CHECK_TRUE ebx, "newline splits lines"
+    xor  esi, esi
+.ring:
+    lea  rcx, LOC(0)
+    lea  rdx, [rel s_msg]
+    call uh_strcpy
+    mov  ecx, esi
+    lea  rdx, LOC(4)
+    call ui_itoa
+    lea  rcx, LOC(0)
+    mov  edx, 0xFFFFFFFF
+    call chat_add
+    inc  esi
+    cmp  esi, 150
+    jl   .ring
+    CHECK_EQ32 [rel con_total], 100, "ring keeps 100 lines"
+    mov  ecx, 99
+    call uh_chat_line
+    mov  rcx, rax
+    STRP rdx, "msg 149"
+    call uh_streq
+    mov  ebx, eax
+    xor  ecx, ecx
+    call uh_chat_line
+    mov  rcx, rax
+    STRP rdx, "msg 50"
+    call uh_streq
+    and  ebx, eax
+    CHECK_TRUE ebx, "ring order"
+
+    ; v1 temporary guard (test_ui #21)
+    xor     r11d, r11d ; clear v1 slot 21
+    ; v1 temporary guard (test_ui #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (test_ui #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (test_ui #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (test_ui #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (test_ui #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (test_ui #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (test_ui #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (test_ui #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (test_ui #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (test_ui #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (test_ui #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (test_ui #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (test_ui #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (test_ui #49)
+    xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (test_ui #51)
+    xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (test_ui #53)
+    xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (test_ui #55)
+    xor     r11d, r11d ; clear v1 slot 55
