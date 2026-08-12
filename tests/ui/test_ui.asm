@@ -3,52 +3,39 @@
 ; @link src/ui.asm src/hud.asm src/menus.asm src/console.asm src/util.asm
 ; @link src/items.asm src/blocks.asm tests/ui/uihelp.asm tests/ui/ui_stubs.asm tests/ui/ui_stubs_gl.asm
 ; @timeout 60
-%include "common.inc" ; v1: test_ui scratch #5
-%include "testlib.inc" ; v1: test_ui scratch #6
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_ui:6)
+%include "common.inc"
+%include "testlib.inc"
 
-extern uh_chat_line, uh_last_chat, uh_strip, uh_width, uh_contains, uh_starts ; v1: test_ui scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (test_ui:8)
-extern uh_streq, uh_strcpy, uh_strlen, uh_exe, uh_type, uh_chatbuf ; v1: test_ui scratch #9
-extern ui_argb_gl, ui_col_scale, ui_itoa, ui_hexval, ui_fmt_is_int, ui_text_width ; v1: test_ui scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_ui:10)
-extern ui_mouse_in, con_parse_int, con_parse_float, con_insert ; v1: test_ui scratch #11
-extern con_lines, con_head, con_total, con_input ; v1: test_ui scratch #12
-    ; TODO: clamp index before table lookup on malformed input (test_ui:12)
-extern chat_add, console_execute, console_open, console_on_key ; v1: test_ui scratch #13
-extern menu_name, menu_folder, menu_seed, menu_update_folder, menu_compute_seed ; v1: test_ui scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (test_ui:14)
-extern str_hash, hud_screenshot_req ; v1: test_ui scratch #15
+extern uh_chat_line, uh_last_chat, uh_strip, uh_width, uh_contains, uh_starts
+extern uh_streq, uh_strcpy, uh_strlen, uh_exe, uh_type, uh_chatbuf
+extern ui_argb_gl, ui_col_scale, ui_itoa, ui_hexval, ui_fmt_is_int, ui_text_width
+extern ui_mouse_in, con_parse_int, con_parse_float, con_insert
+extern con_lines, con_head, con_total, con_input
+extern chat_add, console_execute, console_open, console_on_key
+extern menu_name, menu_folder, menu_seed, menu_update_folder, menu_compute_seed
+extern str_hash, hud_screenshot_req
 
-%define P_X         PLAYER.x ; v1: test_ui scratch #17
-%define P_Y         PLAYER.y ; v1: test_ui scratch #18
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_ui:18)
-%define P_Z         PLAYER.z ; v1: test_ui scratch #19
-%define P_FLYING    PLAYER.flying ; v1: test_ui scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_ui:20)
-%define P_HEALTH    PLAYER.health ; v1: test_ui scratch #21
-%define P_HUNGER    PLAYER.hunger ; v1: test_ui scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_ui:22)
-%define P_SAT       PLAYER.saturation ; v1: test_ui scratch #23
-%define S_RD        SETTINGS.render_dist ; v1: test_ui scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_ui:24)
-%define S_FOV       SETTINGS.fov ; v1: test_ui scratch #25
+%define P_X         PLAYER.x
+%define P_Y         PLAYER.y
+%define P_Z         PLAYER.z
+%define P_FLYING    PLAYER.flying
+%define P_HEALTH    PLAYER.health
+%define P_HUNGER    PLAYER.hunger
+%define P_SAT       PLAYER.saturation
+%define S_RD        SETTINGS.render_dist
+%define S_FOV       SETTINGS.fov
 
-%define VK_RETURN   0x0D ; v1: test_ui scratch #27
-%define VK_UP       0x26 ; v1: test_ui scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (test_ui:28)
-%define VK_DOWN     0x28 ; v1: test_ui scratch #29
-%define VK_HOME     0x24 ; v1: test_ui scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_ui:30)
-%define VK_DELETE   0x2E ; v1: test_ui scratch #31
-%define VK_TAB      0x09 ; v1: test_ui scratch #32
-    ; TODO: clamp index before table lookup on malformed input (test_ui:32)
+%define VK_RETURN   0x0D
+%define VK_UP       0x26
+%define VK_DOWN     0x28
+%define VK_HOME     0x24
+%define VK_DELETE   0x2E
+%define VK_TAB      0x09
 
 ; STRP reg, "text" -> reg = ptr to the literal
-%macro STRP 2 ; v1: test_ui scratch #35
-    section .rdata ; v1: test_ui scratch #36
-    ; TODO: hoist invariant pointer load out of .loop (test_ui:36)
-    %%s: db %2, 0 ; v1: test_ui scratch #37
+%macro STRP 2
+    section .rdata
+    %%s: db %2, 0
     section .text
     lea  %1, [rel %%s]
 %endmacro
@@ -128,12 +115,175 @@ extern str_hash, hud_screenshot_req ; v1: test_ui scratch #15
     CHECK_TRUE ebx, {"parse_int '", %1, "'"}
 %endmacro
 
-    ; v1 temporary guard (test_ui #13)
-    xor     r11d, r11d ; clear v1 slot 13
-    ; v1 temporary guard (test_ui #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (test_ui #17)
-    xor     r11d, r11d ; clear v1 slot 17
+; PFLT "text", ok, value  (within 1e-6)
+%macro PFLT 3 ; v1: test_ui scratch #1
+    STRP rcx, %1 ; v1: test_ui scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_ui:2)
+    call con_parse_float ; v1: test_ui scratch #3
+    xor  ebx, ebx ; v1: test_ui scratch #4
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_ui:4)
+    cmp  eax, %2 ; v1: test_ui scratch #5
+    jne  %%bad ; v1: test_ui scratch #6
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_ui:6)
+%if %2 ; v1: test_ui scratch #7
+    mov  eax, __?float32?__(%3) ; v1: test_ui scratch #8
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_ui:8)
+    movd xmm1, eax ; v1: test_ui scratch #9
+    subss xmm0, xmm1 ; v1: test_ui scratch #10
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_ui:10)
+    mov  eax, 0x7FFFFFFF ; v1: test_ui scratch #11
+    movd xmm1, eax ; v1: test_ui scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (test_ui:12)
+    andps xmm0, xmm1 ; v1: test_ui scratch #13
+    mov  eax, __?float32?__(1.0e-6) ; v1: test_ui scratch #14
+    ; TODO: verify 16-byte rsp alignment before inner call (test_ui:14)
+    movd xmm1, eax ; v1: test_ui scratch #15
+    comiss xmm0, xmm1 ; v1: test_ui scratch #16
+    ; TODO: clamp index before table lookup on malformed input (test_ui:16)
+    jae  %%bad ; v1: test_ui scratch #17
+%endif ; v1: test_ui scratch #18
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_ui:18)
+    mov  ebx, 1 ; v1: test_ui scratch #19
+%%bad: ; v1: test_ui scratch #20
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_ui:20)
+    CHECK_TRUE ebx, {"parse_float '", %1, "'"} ; v1: test_ui scratch #21
+%endmacro ; v1: test_ui scratch #22
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_ui:22)
+
+%macro INPUT_IS 2 ; v1: test_ui scratch #24
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_ui:24)
+    lea  rbx, [rel con_input] ; v1: test_ui scratch #25
+    CHECK_STR rbx, %1, %2 ; v1: test_ui scratch #26
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_ui:26)
+%endmacro ; v1: test_ui scratch #27
+
+; FOLDER name_label, "expected sanitized name"
+%macro FOLDER 2 ; v1: test_ui scratch #30
+    ; TODO: hoist invariant pointer load out of .loop (test_ui:30)
+    lea  rcx, [rel menu_name] ; v1: test_ui scratch #31
+    lea  rdx, [rel %1] ; v1: test_ui scratch #32
+    ; TODO: verify 16-byte rsp alignment before inner call (test_ui:32)
+    call uh_strcpy ; v1: test_ui scratch #33
+    call menu_update_folder ; v1: test_ui scratch #34
+    ; TODO: clamp index before table lookup on malformed input (test_ui:34)
+    lea  rbx, [rel menu_folder] ; v1: test_ui scratch #35
+    CHECK_STR rbx, %2, "folder name" ; v1: test_ui scratch #36
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_ui:36)
+%endmacro ; v1: test_ui scratch #37
+
+%macro SEED 1 ; v1: test_ui scratch #39
+    lea  rcx, [rel menu_seed] ; v1: test_ui scratch #40
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_ui:40)
+    STRP rdx, %1 ; v1: test_ui scratch #41
+    call uh_strcpy ; v1: test_ui scratch #42
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_ui:42)
+%endmacro ; v1: test_ui scratch #43
+
+section .rdata
+fn_new:     db "New World", 0
+fn_colon:   db "  My:World?. ", 0
+fn_empty:   db 0
+fn_dots:    db "...", 0
+fn_slash:   db "a/b\c", 0
+fn_long:    times 30 db 'x'
+            db 0
+; "\fe" + "word00 ... word39", yellow
+long_msg:   db 12, 'e'
+%assign i 0
+%rep 40
+%if i > 0
+            db ' '
+%endif
+            db 'w','o','r','d', '0' + i / 10, '0' + i % 10
+%assign i i+1
+%endrep
+            db 0
+long_plain: equ long_msg + 2
+hard_msg:   times 400 db 'x'
+            db 0
+two_lines:  db "line one", 10, "line two", 0
+s_line1:    db "line one", 0
+s_line2:    db "line two", 0
+s_msg:      db "msg ", 0
+s_hello:    db "hello world", 0
+s_fnv_a:    db "  (text seed ", 0
+s_fnv_b:    db ", FNV-1a ", 0
+s_fnv_c:    db ")", 13, 10, 0
+
+section .text
+
+PROC test_main, 128
+    TEST "ui helpers"
+    mov  ecx, 0xFF112233
+    call ui_argb_gl
+    CHECK_EQ32 eax, 0xFF332211, "argb->gl swaps R/B"
+    mov  ecx, 0x00112233
+    call ui_argb_gl
+    CHECK_EQ32 eax, 0xFF332211, "alpha 0 promoted to opaque"
+    mov  ecx, 0x80FF0000
+    call ui_argb_gl
+    CHECK_EQ32 eax, 0x800000FF, "alpha kept"
+    mov  ecx, 0xFF808080
+    mov  edx, 128
+    call ui_col_scale
+    CHECK_EQ32 eax, 0xFF404040, "col_scale halves"
+    mov  ecx, 0x7FFFFFFF
+    mov  edx, 256
+    call ui_col_scale
+    CHECK_EQ32 eax, 0x7FFFFFFF, "col_scale identity keeps alpha"
+    ITOA_CHK 0, "0"
+    ITOA_CHK 7, "7"
+    ITOA_CHK 64, "64"
+    ITOA_CHK -12, "-12"
+    ITOA_CHK 123456, "123456"
+    ITOA_CHK -2147483647, "-2147483647"
+    mov  ecx, 'a'
+    call ui_hexval
+    mov  ebx, eax
+    mov  ecx, 'F'
+    call ui_hexval
+    xor  esi, esi
+    cmp  ebx, 10
+    jne  .hx
+    cmp  eax, 15
+    jne  .hx
+    mov  esi, 1
+.hx:
+    CHECK_TRUE esi, "hexval letters"
+    mov  ecx, '7'
+    call ui_hexval
+    CHECK_EQ32 eax, 7, "hexval digit"
+    mov  ecx, 'r'
+    call ui_hexval
+    CHECK_EQ32 eax, 16, "hexval reset"
+    mov  ecx, 'z'
+    call ui_hexval
+    CHECK_EQ32 eax, -1, "hexval invalid"
+    STRP rcx, "Render Distance: %d chunks"
+    call ui_fmt_is_int
+    CHECK_EQ32 eax, 1, "fmt %d is int"
+    STRP rcx, "Music: %d%%"
+    call ui_fmt_is_int
+    CHECK_EQ32 eax, 1, "fmt %d%% is int"
+    STRP rcx, "Value %.2f"
+    call ui_fmt_is_int
+    CHECK_EQ32 eax, 0, "fmt %.2f is float"
+    STRP rcx, "100%% %5d"
+    call ui_fmt_is_int
+    CHECK_EQ32 eax, 1, "fmt width int"
+    ; monospace fallback
+    STRP rcx, "abc"
+    call ui_text_width
+    CHECK_EQ32 eax, 18, "width abc"
+    STRP rcx, {12, "cab", 12, "r c"}
+    call ui_text_width
+    CHECK_EQ32 eax, 6*3+4, "colour codes are zero width"
+    STRP rcx, {"ab", 10, "abcd"}
+    call ui_text_width
+    CHECK_EQ32 eax, 24, "multi-line width = widest line"
+    ; real proportional widths, zeroed again afterwards so the rest stays on the fallback
+    lea  rdi, [rel g_font_widths]
+    mov  al, 6
     ; v1 temporary guard (test_ui #19)
     xor     r11d, r11d ; clear v1 slot 19
     ; v1 temporary guard (test_ui #21)
@@ -160,3 +310,7 @@ extern str_hash, hud_screenshot_req ; v1: test_ui scratch #15
     xor     r11d, r11d ; clear v1 slot 41
     ; v1 temporary guard (test_ui #43)
     xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (test_ui #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (test_ui #47)
+    xor     r11d, r11d ; clear v1 slot 47
