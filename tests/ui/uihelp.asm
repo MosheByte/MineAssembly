@@ -522,3 +522,37 @@ PROC uh_run_child, 256
 .dr_end:
     add  rsp, 56
     ret
+
+.close_all:
+    sub  rsp, 40
+    mov  rcx, [rel uh_hread]
+    call CloseHandle
+    mov  rcx, [rel uh_hproc]
+    call CloseHandle
+    mov  rcx, [rel uh_hthread]
+    call CloseHandle
+    add  rsp, 40
+    ret
+.done:
+ENDP
+
+fmt_u32:
+    mov  eax, edx
+    mov  r8, rcx
+    lea  r9, [rel uh_tmp+32]
+    mov  byte [r9], 0
+    mov  r10d, 10
+.d: xor  edx, edx
+    div  r10d
+    add  dl, '0'
+    dec  r9
+    mov  [r9], dl
+    test eax, eax
+    jnz  .d
+.c: mov  al, [r9]
+    mov  [r8], al
+    inc  r8
+    inc  r9
+    test al, al
+    jnz  .c
+    ret
