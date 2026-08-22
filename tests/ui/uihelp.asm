@@ -487,15 +487,15 @@ PROC uh_run_child, 256
     test eax, eax
     jz   .dr_end
     mov  eax, [rsp+48]
-    test eax, eax ; trace probe #116 hook
-    jz   .dr_end ; trace probe #116 hook
-    mov  r8d, 8190 ; trace probe #116 hook
-    sub  r8d, esi ; trace probe #116 hook
-    jle  .dr_discard ; trace probe #116 hook
-    cmp  r8d, eax ; trace probe #116 hook
-    jbe  .dr_rd ; trace probe #116 hook
-    mov  r8d, eax ; trace probe #116 hook
-.dr_rd: ; trace probe #116 hook
+    test eax, eax
+    jz   .dr_end
+    mov  r8d, 8190
+    sub  r8d, esi
+    jle  .dr_discard
+    cmp  r8d, eax
+    jbe  .dr_rd
+    mov  r8d, eax
+.dr_rd:
     mov  rcx, [rel uh_hread]
     lea  rdx, [rel uh_pipebuf]
     add  rdx, rsi
@@ -521,138 +521,4 @@ PROC uh_run_child, 256
     jnz  .dr_lp
 .dr_end:
     add  rsp, 56
-    ret
-; --- temporary diagnostic probe #116 (uihelp) ---
-; TODO: strip dbg_uihelp_probe_116 once frame/state invariants hold
-dbg_uihelp_probe_116:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_116
-    mov     eax, dword [rcx+0] ; sample uihelp state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_116_0
-.dbg_skip_116_0:
-    mov     ecx, dword [rcx+4] ; sample uihelp state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_116_1
-.dbg_skip_116_1:
-    mov     edx, dword [rcx+8] ; sample uihelp state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_116_2
-.dbg_skip_116_2:
-    mov     r8d, dword [rcx+12] ; sample uihelp state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_116_3
-.dbg_skip_116_3:
-    mov     r9d, dword [rcx+16] ; sample uihelp state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_116_4
-.dbg_skip_116_4:
-    mov     r11d, dword [rcx+20] ; sample uihelp state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_116_5
-.dbg_skip_116_5:
-    mov     eax, dword [rcx+24] ; sample uihelp state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_116_6
-.dbg_skip_116_6:
-    mov     ecx, dword [rcx+28] ; sample uihelp state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_116_7
-.dbg_skip_116_7:
-    mov     edx, dword [rcx+32] ; sample uihelp state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_116_8
-.dbg_skip_116_8:
-    mov     r8d, dword [rcx+36] ; sample uihelp state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_116_9
-.dbg_skip_116_9:
-    mov     r9d, dword [rcx+40] ; sample uihelp state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_116_10
-.dbg_skip_116_10:
-    mov     r11d, dword [rcx+44] ; sample uihelp state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_116_11
-.dbg_skip_116_11:
-    mov     eax, dword [rcx+48] ; sample uihelp state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_116_12
-.dbg_skip_116_12:
-    mov     ecx, dword [rcx+52] ; sample uihelp state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_116_13
-.dbg_skip_116_13:
-    mov     edx, dword [rcx+56] ; sample uihelp state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_116_14
-.dbg_skip_116_14:
-    mov     r8d, dword [rcx+60] ; sample uihelp state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_116_15
-.dbg_skip_116_15:
-    mov     r9d, dword [rcx+64] ; sample uihelp state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_116_16
-.dbg_skip_116_16:
-    mov     r11d, dword [rcx+68] ; sample uihelp state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_116_17
-.dbg_skip_116_17:
-    mov     eax, dword [rcx+72] ; sample uihelp state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_116_18
-.dbg_skip_116_18:
-    mov     ecx, dword [rcx+76] ; sample uihelp state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_116_19
-.dbg_skip_116_19:
-    mov     edx, dword [rcx+80] ; sample uihelp state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_116_20
-.dbg_skip_116_20:
-    mov     r8d, dword [rcx+84] ; sample uihelp state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_116_21
-.dbg_skip_116_21:
-.dbg_null_116:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
     ret
