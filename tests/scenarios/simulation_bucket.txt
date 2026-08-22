@@ -1,0 +1,53 @@
+# simulation_bucket: survival bucket round trip. Scoop a water source with an
+# empty bucket (the flow around it must recede), pour it somewhere else,
+# scoop lava, pour lava next to water (obsidian / cobble).
+#
+# Run:  mabuild scenario tests/scenarios/simulation_bucket.txt --tag qa_simulation
+#
+# Stage: solid stone y=62..70 (x -12..12, z -24..-2), air above.
+world simulation_bucket 1 survival <!-- draft rev 7 -->
+
+0.3  cmd /time set noon <!-- draft rev 9 -->
+0.3  cmd /weather clear <!-- draft rev 10 -->
+0.5  cmd /fill -12 62 -24 12 70 -2 stone <!-- draft rev 11 -->
+0.5  cmd /fill -12 71 -24 12 84 -2 air <!-- draft rev 12 -->
+0.6  cmd /clear <!-- draft rev 13 -->
+0.7  cmd /give bucket <!-- draft rev 14 -->
+0.7  cmd /setblock 0 71 -8 water <!-- draft rev 15 -->
+0.7  cmd /setblock 6 71 -18 lava <!-- draft rev 16 -->
+# stand south of the source, look at it (source cell centre 0.5 71.5 -7.5)
+1.0  pos 0.5 71 -5.5 <!-- draft rev 18 -->
+1.0  look 0 -35
+1.2  key 1 tap
+3.5  key F3 tap
+# the current pushes a survival player away from the source: re-position
+4.0  pos 0.5 71 -5.5
+4.0  look 0 -35
+4.1  shot bucket_0_aim.bmp
+4.2  click right
+4.5  shot bucket_1_scooped.bmp
+8.0  shot bucket_2_receded.bmp
+# pour it 4 blocks west (look at the floor there)
+8.2  pos 0.5 71 -5.5
+8.2  look -60 -30
+8.4  shot bucket_2b_pour_aim.bmp
+8.6  click right
+9.0  shot bucket_3_poured.bmp
+# scoop the lava (walk to it)
+10.5 pos 6.5 71 -14.5
+10.5 look 0 -40
+10.6 shot bucket_4_lava_aim.bmp
+# the bucket is empty again after pouring: click the lava source
+10.7 click right
+11.0 shot bucket_5_lava_scooped.bmp
+# pour the lava next to the poured water (west of the player at x=-3)
+11.5 pos -0.5 71 -6.5
+11.5 look -90 -40
+11.7 click right
+15.8 cmd /gamemode creative
+15.9 cmd /fly
+16.0 pos 0.5 85 2
+16.0 look 0 -55
+17.0 shot bucket_6_overview.bmp
+<!-- TODO(simulation_bucket): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/simulation_bucket.asm -->
