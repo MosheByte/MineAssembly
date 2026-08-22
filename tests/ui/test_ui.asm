@@ -526,3 +526,129 @@ PROC test_main, 128
     and  ebx, eax
     CHECK_TRUE ebx, "ring order"
 
+    TEST "console input"
+    xor  ecx, ecx
+    call console_open
+    STRP rcx, "/time set 100"
+    call uh_type
+    INPUT_IS "/time set 100", "typing"
+    mov  ecx, VK_RETURN
+    call console_on_key
+    CHECK_EQ32 [rel g_time_of_day], 100, "enter executes"
+    INPUT_IS "", "input cleared after submit"
+    xor  ecx, ecx
+    call console_open
+    STRP rcx, "hello"
+    call uh_type
+    mov  ecx, VK_RETURN
+    call console_on_key
+    mov  ecx, 1
+    call uh_last_chat
+    mov  rbx, rax
+    CHECK_STR rbx, "<Player> hello", "plain text becomes chat"
+    xor  ecx, ecx
+    call console_open
+    STRP rcx, "draft"
+    call uh_type
+    mov  ecx, VK_UP
+    call console_on_key
+    INPUT_IS "hello", "up recalls newest"
+    mov  ecx, VK_UP
+    call console_on_key
+    INPUT_IS "/time set 100", "up again recalls older"
+    mov  ecx, VK_DOWN
+    call console_on_key
+    mov  ecx, VK_DOWN
+    call console_on_key
+    INPUT_IS "draft", "down returns to the draft"
+    mov  ecx, VK_HOME
+    call console_on_key
+    mov  ecx, VK_DELETE
+    call console_on_key
+    INPUT_IS "raft", "delete at caret"
+    mov  ecx, 'c'
+    call con_insert
+    INPUT_IS "craft", "insert at caret"
+    xor  ecx, ecx
+    call console_open
+    STRP rcx, "/scr"
+    call uh_type
+    mov  ecx, VK_TAB
+    call console_on_key
+    INPUT_IS "/screenshot ", "tab completes"
+
+    TEST "menus folder + seed"
+    FOLDER fn_new, "New World"
+    FOLDER fn_colon, "My_World_"
+    FOLDER fn_empty, "World"
+    FOLDER fn_dots, "World"
+    FOLDER fn_slash, "a_b_c"
+    FOLDER fn_long, "xxxxxxxxxxxxxxxxxxxxxxxx"
+    SEED "12345"
+    call menu_compute_seed
+    CHECK_EQ rax, 12345, "numeric seed"
+    SEED "  -42 "
+    call menu_compute_seed
+    CHECK_EQ rax, -42, "negative seed with spaces"
+    SEED "hello world"
+    call menu_compute_seed
+    mov  rbx, rax
+    lea  rcx, [rel s_hello]
+    call str_hash
+    CHECK_EQ rbx, rax, "text seed uses str_hash"
+    ; just printed, for comparing by hand: plain FNV-1a 64 of the same text
+    mov  rsi, 0xcbf29ce484222325
+    lea  rdi, [rel s_hello]
+    mov  r8, 0x100000001b3
+.fnv:
+    movzx eax, byte [rdi]
+    test eax, eax
+    jz   .fnv_done
+    xor  rsi, rax
+    imul rsi, r8
+    inc  rdi
+    jmp  .fnv
+.fnv_done:
+    lea  rcx, [rel s_fnv_a]
+    call t_print
+    mov  rcx, rbx
+    call t_print_hex
+    lea  rcx, [rel s_fnv_b]
+    call t_print
+    mov  rcx, rsi
+    call t_print_hex
+    lea  rcx, [rel s_fnv_c]
+    call t_print
+    SEED ""
+    call menu_compute_seed
+    mov  rbx, rax
+    call menu_compute_seed
+    xor  esi, esi
+    test rbx, rbx
+    jz   .rs
+    cmp  rbx, rax
+    je   .rs
+    mov  esi, 1
+.rs:
+    CHECK_TRUE esi, "blank seed is random"
+ENDP
+
+PROC all_fit_300
+    mov  ebx, 1
+    xor  esi, esi
+.lp:
+    cmp  esi, [rel con_total]
+    jge  .done
+    mov  ecx, esi
+    call uh_chat_line
+    mov  rcx, rax
+    call uh_width
+    cmp  eax, 300
+    jle  .next
+    xor  ebx, ebx
+.next:
+    inc  esi
+    jmp  .lp
+.done:
+    mov  eax, ebx
+ENDP
