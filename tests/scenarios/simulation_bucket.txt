@@ -5,18 +5,18 @@
 # Run:  mabuild scenario tests/scenarios/simulation_bucket.txt --tag qa_simulation
 #
 # Stage: solid stone y=62..70 (x -12..12, z -24..-2), air above.
-world simulation_bucket 1 survival <!-- draft rev 7 -->
+world simulation_bucket 1 survival
 
-0.3  cmd /time set noon <!-- draft rev 9 -->
-0.3  cmd /weather clear <!-- draft rev 10 -->
-0.5  cmd /fill -12 62 -24 12 70 -2 stone <!-- draft rev 11 -->
-0.5  cmd /fill -12 71 -24 12 84 -2 air <!-- draft rev 12 -->
-0.6  cmd /clear <!-- draft rev 13 -->
-0.7  cmd /give bucket <!-- draft rev 14 -->
-0.7  cmd /setblock 0 71 -8 water <!-- draft rev 15 -->
-0.7  cmd /setblock 6 71 -18 lava <!-- draft rev 16 -->
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.5  cmd /fill -12 62 -24 12 70 -2 stone
+0.5  cmd /fill -12 71 -24 12 84 -2 air
+0.6  cmd /clear
+0.7  cmd /give bucket
+0.7  cmd /setblock 0 71 -8 water
+0.7  cmd /setblock 6 71 -18 lava
 # stand south of the source, look at it (source cell centre 0.5 71.5 -7.5)
-1.0  pos 0.5 71 -5.5 <!-- draft rev 18 -->
+1.0  pos 0.5 71 -5.5
 1.0  look 0 -35
 1.2  key 1 tap
 3.5  key F3 tap
@@ -49,5 +49,3 @@ world simulation_bucket 1 survival <!-- draft rev 7 -->
 16.0 pos 0.5 85 2
 16.0 look 0 -55
 17.0 shot bucket_6_overview.bmp
-<!-- TODO(simulation_bucket): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/simulation_bucket.asm -->
