@@ -4,53 +4,39 @@
 ; @link src/math.asm src/platform.asm src/gl.asm src/util.asm
 ; @link src/blocks.asm src/items.asm src/light.asm tests/world/wglib.asm
 ; @timeout 120
-%include "common.inc" ; v1: test_chunkmgr scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (test_chunkmgr:6)
-%include "testlib.inc" ; v1: test_chunkmgr scratch #7
-%include "../world/wglib.inc" ; v1: test_chunkmgr scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_chunkmgr:8)
+%include "common.inc"
+%include "testlib.inc"
+%include "../world/wglib.inc"
 
-%define RD      4 ; v1: test_chunkmgr scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_chunkmgr:10)
-%define R       (RD+2) ; v1: test_chunkmgr scratch #11
+%define RD      4
+%define R       (RD+2)                  ; load radius
 
-section .bss ; v1: test_chunkmgr scratch #13
-alignb 8 ; v1: test_chunkmgr scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_chunkmgr:14)
-grid    resb 128*128 ; v1: test_chunkmgr scratch #15
+section .bss
+alignb 8
+grid    resb 128*128
 
-section .text ; v1: test_chunkmgr scratch #17
+section .text
 
 ; ecx ms of chunkmgr_update every ~5 ms. edx != 0: also fake the mesher
-PROC pump, 0 ; v1: test_chunkmgr scratch #20
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_chunkmgr:20)
-    mov  r12d, ecx ; v1: test_chunkmgr scratch #21
-    mov  r13d, edx ; v1: test_chunkmgr scratch #22
-    ; TODO: clamp index before table lookup on malformed input (test_chunkmgr:22)
-    call t_time_ms ; v1: test_chunkmgr scratch #23
-    mov  r14, rax ; v1: test_chunkmgr scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_chunkmgr:24)
-    add  r14, r12 ; v1: test_chunkmgr scratch #25
-.loop: ; v1: test_chunkmgr scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (test_chunkmgr:26)
-    call t_time_ms ; v1: test_chunkmgr scratch #27
-    cmp  rax, r14 ; v1: test_chunkmgr scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (test_chunkmgr:28)
-    jge  .done ; v1: test_chunkmgr scratch #29
-    call chunkmgr_update ; v1: test_chunkmgr scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_chunkmgr:30)
-    test r13d, r13d ; v1: test_chunkmgr scratch #31
-    jz   .sleep ; v1: test_chunkmgr scratch #32
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_chunkmgr:32)
-    call wg_chunk_count ; v1: test_chunkmgr scratch #33
-    mov  esi, eax ; v1: test_chunkmgr scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_chunkmgr:34)
-    xor  ebx, ebx ; v1: test_chunkmgr scratch #35
-.ch: ; v1: test_chunkmgr scratch #36
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_chunkmgr:36)
-    cmp  ebx, esi ; v1: test_chunkmgr scratch #37
-    jge  .sleep ; v1: test_chunkmgr scratch #38
-    ; TODO: clamp index before table lookup on malformed input (test_chunkmgr:38)
+PROC pump, 0
+    mov  r12d, ecx
+    mov  r13d, edx
+    call t_time_ms
+    mov  r14, rax
+    add  r14, r12
+.loop:
+    call t_time_ms
+    cmp  rax, r14
+    jge  .done
+    call chunkmgr_update
+    test r13d, r13d
+    jz   .sleep
+    call wg_chunk_count
+    mov  esi, eax
+    xor  ebx, ebx
+.ch:
+    cmp  ebx, esi
+    jge  .sleep
     mov  ecx, ebx
     call wg_chunk_ptr
     cmp  dword [rax+CHUNK.state], CS_LIT
@@ -162,43 +148,122 @@ PROC t_stream_in, 16
     jge  .inner_done
     mov  ecx, ebx
     call wg_chunk_ptr
-    ; v1 temporary guard (test_chunkmgr #14)
-    xor     r11d, r11d ; clear v1 slot 14
-    ; v1 temporary guard (test_chunkmgr #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (test_chunkmgr #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_chunkmgr #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_chunkmgr #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_chunkmgr #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_chunkmgr #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_chunkmgr #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_chunkmgr #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_chunkmgr #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_chunkmgr #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_chunkmgr #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_chunkmgr #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_chunkmgr #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_chunkmgr #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_chunkmgr #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_chunkmgr #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_chunkmgr #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_chunkmgr #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_chunkmgr #52)
-    xor     r11d, r11d ; clear v1 slot 52
+    mov  ecx, [rax+CHUNK.cx]
+    mov  edx, [rax+CHUNK.cz]
+    mov  r8d, ecx
+    imul r8d, ecx
+    mov  r9d, edx
+    imul r9d, edx
+    add  r8d, r9d
+    cmp  r8d, (R-2)*(R-2)
+    jg   .inext
+    mov  r9d, ecx
+    neg  r9d
+    cmovl r9d, ecx
+    cmp  r9d, R-2
+    jg   .inext
+    mov  r9d, edx
+    neg  r9d
+    cmovl r9d, edx
+    cmp  r9d, R-2
+    jg   .inext
+    cmp  dword [rax+CHUNK.state], CS_READY
+    je   .inext
+    test r14d, r14d
+    jnz  .icnt
+    mov  esi, [rax+CHUNK.state]
+    WG_SAY3 "first inner chunk not lit/ready (cx cz state):", ecx, edx, esi
+.icnt:
+    inc  r14d
+.inext:
+    inc  ebx
+    jmp  .inner
+.inner_done:
+    CHECK_EQ32 r14d, 0, "inner chunks are CS_READY"
+    mov  eax, [rel g_stat_chunks_generated]
+    xor  ecx, ecx
+    cmp  eax, r15d
+    setge cl
+    CHECK_TRUE ecx, "g_stat_chunks_generated >= resident chunks"
+    mov  eax, [rel g_stat_chunks_generated]
+    WG_SAY3 "streamed chunks / generated / 0:", r15d, eax, 0
+ENDP
+
+PROC t_teleport_unloads, 0
+    TEST "ChunkManager.2_teleport_unloads"
+    mov  ecx, 5000
+    mov  edx, -3000
+    call set_player_i
+    mov  ecx, 3000
+    mov  edx, 1
+    call pump
+    ; player chunk is (312, -188), floor div
+    call wg_chunk_count
+    mov  r15d, eax
+    xor  r14d, r14d                     ; stale
+    xor  r13d, r13d                     ; >= GENERATED
+    xor  ebx, ebx
+.ch:
+    cmp  ebx, r15d
+    jge  .done_list
+    mov  ecx, ebx
+    call wg_chunk_ptr
+    cmp  dword [rax+CHUNK.state], CS_GENERATED
+    jl   .gen_no
+    inc  r13d
+.gen_no:
+    mov  ecx, [rax+CHUNK.cx]
+    sub  ecx, 312
+    mov  edx, ecx
+    neg  edx
+    cmovl edx, ecx
+    cmp  edx, RD+2+2
+    jg   .stale
+    mov  ecx, [rax+CHUNK.cz]
+    add  ecx, 188
+    mov  edx, ecx
+    neg  edx
+    cmovl edx, ecx
+    cmp  edx, RD+2+2
+    jle  .next
+.stale:
+    test r14d, r14d
+    jnz  .scnt
+    mov  ecx, [rax+CHUNK.cx]
+    mov  edx, [rax+CHUNK.cz]
+    WG_SAY3 "first stale chunk (cx cz 0):", ecx, edx, 0
+.scnt:
+    inc  r14d
+.next:
+    inc  ebx
+    jmp  .ch
+.done_list:
+    CHECK_EQ32 r14d, 0, "stale chunks not unloaded"
+    xor  eax, eax
+    test r13d, r13d
+    setnz al
+    CHECK_TRUE eax, "some chunk around the new position is generated"
+ENDP
+
+PROC t_restart, 0
+    TEST "ChunkManager.3_restart"
+    call chunkmgr_shutdown
+    call world_clear
+    call wg_chunk_count
+    CHECK_EQ32 eax, 0, "world_clear after shutdown empties the list"
+    call chunkmgr_init
+    mov  ecx, 8
+    mov  edx, 8
+    call set_player_i
+    mov  ecx, 2000
+    mov  edx, 1
+    call pump
+    call wg_chunk_count
+    xor  ecx, ecx
+    cmp  eax, 20
+    setg cl
+    CHECK_TRUE ecx, "streaming resumes after re-init (> 20 chunks)"
+    call world_clear                    ; with workers live, it drains them first
+    call wg_chunk_count
+    CHECK_EQ32 eax, 0, "world_clear while running empties the list"
+ENDP
