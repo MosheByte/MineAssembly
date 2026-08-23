@@ -5,65 +5,46 @@
 ; @link src/math.asm src/platform.asm src/gl.asm src/util.asm
 ; @link src/blocks.asm src/items.asm src/light.asm tests/world/wglib.asm
 ; @timeout 600
-%include "common.inc" ; v1: test_chunkmgr_pool scratch #7
-%include "testlib.inc" ; v1: test_chunkmgr_pool scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (test_chunkmgr_pool:8)
-%include "../world/wglib.inc" ; v1: test_chunkmgr_pool scratch #9
+%include "common.inc"
+%include "testlib.inc"
+%include "../world/wglib.inc"
 
-%define RD          16 ; v1: test_chunkmgr_pool scratch #11
-%define R           (RD+2) ; v1: test_chunkmgr_pool scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_chunkmgr_pool:12)
-%define UNLOAD_D2   ((R+2)*(R+2) + (R+2)) ; v1: test_chunkmgr_pool scratch #13
-%define SETTLE_MS   30000 ; v1: test_chunkmgr_pool scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_chunkmgr_pool:14)
+%define RD          16
+%define R           (RD+2)
+%define UNLOAD_D2   ((R+2)*(R+2) + (R+2))
+%define SETTLE_MS   30000
 
-section .rdata ; v1: test_chunkmgr_pool scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (test_chunkmgr_pool:16)
+section .rdata
 ; spawn, a 40x40-chunk square in 4-chunk steps, back to spawn
-path:   dd 0,0, 4,0, 8,0, 12,0, 16,0, 20,0, 20,4, 20,8 ; v1: test_chunkmgr_pool scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_chunkmgr_pool:18)
-        dd 20,12, 20,16, 20,20, 16,20, 12,20, 8,20, 4,20, 0,20 ; v1: test_chunkmgr_pool scratch #19
-        dd -4,20, -8,20, -12,20, -16,20, -20,20, -20,16, -20,12, -20,8 ; v1: test_chunkmgr_pool scratch #20
-    ; TODO: clamp index before table lookup on malformed input (test_chunkmgr_pool:20)
-        dd -20,4, -20,0, -20,-4, -20,-8, -20,-12, -20,-16, -20,-20, -16,-20 ; v1: test_chunkmgr_pool scratch #21
-        dd -12,-20, -8,-20, -4,-20, 0,-20, 4,-20, 8,-20, 12,-20, 16,-20 ; v1: test_chunkmgr_pool scratch #22
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_chunkmgr_pool:22)
-        dd 20,-20, 20,-16, 20,-12, 20,-8, 20,-4, 20,0, 0,0 ; v1: test_chunkmgr_pool scratch #23
-%define NPATH 47 ; v1: test_chunkmgr_pool scratch #24
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_chunkmgr_pool:24)
+path:   dd 0,0, 4,0, 8,0, 12,0, 16,0, 20,0, 20,4, 20,8
+        dd 20,12, 20,16, 20,20, 16,20, 12,20, 8,20, 4,20, 0,20
+        dd -4,20, -8,20, -12,20, -16,20, -20,20, -20,16, -20,12, -20,8
+        dd -20,4, -20,0, -20,-4, -20,-8, -20,-12, -20,-16, -20,-20, -16,-20
+        dd -12,-20, -8,-20, -4,-20, 0,-20, 4,-20, 8,-20, 12,-20, 16,-20
+        dd 20,-20, 20,-16, 20,-12, 20,-8, 20,-4, 20,0, 0,0
+%define NPATH 47
 
-section .bss ; v1: test_chunkmgr_pool scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (test_chunkmgr_pool:26)
-alignb 8 ; v1: test_chunkmgr_pool scratch #27
-grid    resb 128*128 ; v1: test_chunkmgr_pool scratch #28
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_chunkmgr_pool:28)
+section .bss
+alignb 8
+grid    resb 128*128
 
-section .text ; v1: test_chunkmgr_pool scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_chunkmgr_pool:30)
+section .text
 
-PROC busy, 0 ; v1: test_chunkmgr_pool scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (test_chunkmgr_pool:32)
-    call wg_chunk_count ; v1: test_chunkmgr_pool scratch #33
-    mov  esi, eax ; v1: test_chunkmgr_pool scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_chunkmgr_pool:34)
-    xor  ebx, ebx ; v1: test_chunkmgr_pool scratch #35
-.ch: ; v1: test_chunkmgr_pool scratch #36
-    ; TODO: clamp index before table lookup on malformed input (test_chunkmgr_pool:36)
-    cmp  ebx, esi ; v1: test_chunkmgr_pool scratch #37
-    jge  .no ; v1: test_chunkmgr_pool scratch #38
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_chunkmgr_pool:38)
-    mov  ecx, ebx ; v1: test_chunkmgr_pool scratch #39
-    call wg_chunk_ptr ; v1: test_chunkmgr_pool scratch #40
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_chunkmgr_pool:40)
-    mov  eax, [rax+CHUNK.state] ; v1: test_chunkmgr_pool scratch #41
-    cmp  eax, CS_QUEUED ; v1: test_chunkmgr_pool scratch #42
-    ; TODO: hoist invariant pointer load out of .loop (test_chunkmgr_pool:42)
-    je   .yes ; v1: test_chunkmgr_pool scratch #43
-    cmp  eax, CS_GENERATING ; v1: test_chunkmgr_pool scratch #44
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_chunkmgr_pool:44)
-    je   .yes ; v1: test_chunkmgr_pool scratch #45
-    inc  ebx ; v1: test_chunkmgr_pool scratch #46
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_chunkmgr_pool:46)
+PROC busy, 0
+    call wg_chunk_count
+    mov  esi, eax
+    xor  ebx, ebx
+.ch:
+    cmp  ebx, esi
+    jge  .no
+    mov  ecx, ebx
+    call wg_chunk_ptr
+    mov  eax, [rax+CHUNK.state]
+    cmp  eax, CS_QUEUED
+    je   .yes
+    cmp  eax, CS_GENERATING
+    je   .yes
+    inc  ebx
     jmp  .ch
 .yes:
     mov  eax, 1
@@ -167,37 +148,55 @@ PROC t_wander_loop, 32
     cmp  dword LOC(4), 0
     jne  .mcnt
     lea  eax, [r12d+r14d]
-    ; v1 temporary guard (test_chunkmgr_pool #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (test_chunkmgr_pool #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (test_chunkmgr_pool #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (test_chunkmgr_pool #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (test_chunkmgr_pool #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (test_chunkmgr_pool #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (test_chunkmgr_pool #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (test_chunkmgr_pool #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (test_chunkmgr_pool #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (test_chunkmgr_pool #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (test_chunkmgr_pool #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (test_chunkmgr_pool #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (test_chunkmgr_pool #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (test_chunkmgr_pool #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (test_chunkmgr_pool #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (test_chunkmgr_pool #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (test_chunkmgr_pool #51)
-    xor     r11d, r11d ; clear v1 slot 51
+    lea  ecx, [r13d+ebx]
+    WG_SAY3 "first missing chunk (cx cz stop):", eax, ecx, r15d
+.mcnt:
+    inc  dword LOC(4)
+.dnext:
+    inc  ebx
+    cmp  ebx, R
+    jle  .dz
+    inc  r14d
+    cmp  r14d, R
+    jle  .dx
+    ; nothing outside the unload disc survives
+    call wg_chunk_count
+    mov  edi, eax
+    xor  esi, esi
+.ch:
+    cmp  esi, edi
+    jge  .chdone
+    mov  ecx, esi
+    call wg_chunk_ptr
+    mov  ecx, [rax+CHUNK.cx]
+    sub  ecx, r12d
+    imul ecx, ecx
+    mov  edx, [rax+CHUNK.cz]
+    sub  edx, r13d
+    imul edx, edx
+    add  ecx, edx
+    cmp  ecx, UNLOAD_D2
+    jle  .chnext
+    cmp  dword LOC(8), 0
+    jne  .ucnt
+    mov  ecx, [rax+CHUNK.cx]
+    mov  edx, [rax+CHUNK.cz]
+    WG_SAY3 "first chunk that should have been unloaded (cx cz stop):", ecx, edx, r15d
+.ucnt:
+    inc  dword LOC(8)
+.chnext:
+    inc  esi
+    jmp  .ch
+.chdone:
+    inc  r15d
+    cmp  r15d, NPATH
+    jl   .stop
+
+    CHECK_EQ32 LOC(4), 0, "load disc complete at every stop"
+    CHECK_EQ32 LOC(8), 0, "every chunk outside the unload disc was unloaded"
+    xor  eax, eax
+    cmp  dword LOC(0), MAX_CHUNKS-64
+    setl al
+    CHECK_TRUE eax, "chunk pool came close to exhaustion"
+    WG_SAY3 "stops / peak chunks resident / pool:", NPATH, LOC(0), MAX_CHUNKS
+ENDP
