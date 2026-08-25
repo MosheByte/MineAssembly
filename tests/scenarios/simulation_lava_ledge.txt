@@ -1,0 +1,52 @@
+# simulation_lava_ledge: water poured with a bucket flows toward and over a
+# ledge, lava spreads slowly (radius 3), water meets lava (obsidian / cobble),
+# lava poured onto water (stone).
+#
+# Run:  mabuild scenario tests/scenarios/simulation_lava_ledge.txt --tag qa_simulation
+#
+# Stage: sandstone floor at y=70 (x -14..14, z -30..-2), the east part
+# (x 3..14) is 3 blocks lower (floor y=67) -> a ledge at x=2/3.
+world simulation_lava_ledge 1 creative
+
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.5  cmd /fill -14 70 -30 14 70 -2 sandstone
+0.5  cmd /fill -14 71 -30 14 84 -2 air
+0.6  cmd /fill 3 67 -30 14 67 -2 sandstone
+0.6  cmd /fill 3 68 -30 14 70 -2 air
+0.7  cmd /clear
+0.8  cmd /give water_bucket
+0.8  cmd /give lava_bucket
+# stand on the stage and pour the water bucket on the floor 2 blocks ahead
+1.0  pos 0.5 71 -10
+1.0  look 0 -45
+
+1.6  shot ledge_0_hand.bmp
+# water bucket is in hotbar slot 1 after /clear
+1.7  key 1 tap
+1.9  shot ledge_1_bucket_selected.bmp
+2.0  click right
+2.5  shot ledge_2_poured.bmp
+# go up and watch
+2.8  cmd /fly
+3.0  pos 0.5 92 -3
+3.0  look 0 -62
+3.2  key F3 tap
+6.0  shot ledge_3_flow3s.bmp
+12.0 shot ledge_4_flow9s.bmp
+
+# --- lava: a source in the west part ---------------------------------------
+12.5 cmd /setblock -9 71 -25 lava
+15.0 shot lava_1_after2s.bmp
+22.0 shot lava_2_after10s.bmp
+# --- water meets lava: water source 6 blocks south of the lava -------------
+22.5 cmd /setblock -9 71 -18 water
+30.0 shot lava_3_mixed.bmp
+# --- lava poured from above onto standing water -----------------------------
+30.5 cmd /setblock -10 71 -8 water
+30.5 cmd /setblock -10 75 -8 lava
+40.0 shot lava_4_poured.bmp
+# close-up of the mixing area from the side
+40.5 pos -3.5 76 -10
+40.5 look -60 -35
+41.5 shot lava_5_closeup.bmp

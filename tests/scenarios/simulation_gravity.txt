@@ -1,0 +1,52 @@
+# simulation_gravity: sand / gravel fall as falling-block entities and land;
+# torches and flowers pop off when the block under them is removed; sand
+# falling onto a torch.
+#
+# Run:  mabuild scenario tests/scenarios/simulation_gravity.txt --tag qa_simulation
+#
+# Stage: solid stone y=66..70 (x -10..10, z -22..-2), air above.
+world simulation_gravity 1 survival
+
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.4  cmd /gamemode creative
+0.4  cmd /fly
+0.5  cmd /fill -10 66 -22 10 70 -2 stone
+0.5  cmd /fill -10 71 -22 10 84 -2 air
+# torch and flower on top of removable blocks
+0.8  cmd /setblock 4 71 -12 cobblestone
+0.8  cmd /setblock 4 72 -12 torch
+0.8  cmd /setblock 6 71 -12 grass_block
+0.8  cmd /setblock 6 72 -12 red_flower
+0.8  cmd /setblock 8 71 -12 grass_block
+0.8  cmd /setblock 8 72 -12 sapling
+# a torch on the floor that sand will fall on
+0.8  cmd /setblock -6 71 -12 torch
+1.0  pos 0.5 77 0
+1.0  look 0 -28
+1.5  hidehud on
+2.0  shot grav_0_stage.bmp
+
+# --- floating sand and gravel created by commands ---------------------------
+2.5  cmd /setblock 0 80 -12 sand
+2.5  cmd /setblock 2 80 -12 gravel
+2.5  cmd /fill -3 78 -14 -1 80 -12 sand
+2.5  cmd /setblock -6 80 -12 sand
+2.8  shot grav_1_falling.bmp
+5.0  shot grav_2_landed.bmp
+
+# --- remove the supports ----------------------------------------------------
+5.5  cmd /setblock 4 71 -12 air
+5.5  cmd /setblock 6 71 -12 air
+5.5  cmd /setblock 8 71 -12 air
+6.5  shot grav_3_popped.bmp
+# --- a sand stack whose bottom block is mined away (setblock air) -----------
+7.0  cmd /fill 0 71 -18 0 76 -18 gravel
+8.5  shot grav_4_column.bmp
+9.0  cmd /setblock 0 71 -18 air
+9.3  shot grav_5_column_falling.bmp
+11.0 shot grav_6_column_landed.bmp
+# close-up of the sand that fell onto the torch (x=-6) and the 3x3x3 cube
+11.5 pos -3.5 74 -7
+11.5 look 20 -30
+12.5 shot grav_7_close_sand.bmp
