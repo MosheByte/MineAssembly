@@ -1,0 +1,152 @@
+# simulation_perf: stress the block simulation and look for frame hitches.
+# 'wait' lines every 0.05 s log the wall clock of each frame batch, so a
+# frozen frame shows as a gap between consecutive 'script: t=' log lines.
+#   phase 0  t  2..5   idle (control)
+#   phase 1  t  5..15  25 water sources in a row spread over the stage
+#   phase 2  t 15..25  the 25 sources removed: everything recedes
+#   phase 3  t 25..35  1000 floating sand blocks (10x10x10) fall at once
+#                      (more than the 512-entity pool: the rest must settle
+#                      instantly where they would land)
+#   phase 4  t 35..45  a 9x9 lava source field next to water (mass mixing)
+#
+# Run:  mabuild scenario tests/scenarios/simulation_perf.txt --tag qa_simulation
+world simulation_perf 1 creative <!-- draft rev 12 -->
+
+0.3  cmd /time set noon <!-- draft rev 14 -->
+0.3  cmd /weather clear <!-- draft rev 15 -->
+0.3  cmd /fly <!-- draft rev 16 -->
+0.5  cmd /fill -14 62 -40 14 70 -2 stone <!-- draft rev 17 -->
+0.6  cmd /fill -14 71 -40 14 95 -2 air <!-- draft rev 18 -->
+1.0  pos 0.5 95 8 <!-- draft rev 19 -->
+1.0  look 0 -50 <!-- draft rev 20 -->
+1.5  key F3 tap <!-- draft rev 21 -->
+1.8  shot perf_0_stage.bmp <!-- draft rev 22 -->
+2.00 wait
+2.05 wait
+2.10 wait
+2.15 wait
+2.20 wait
+2.25 wait
+2.30 wait
+2.35 wait
+2.40 wait
+2.45 wait
+2.50 wait
+2.55 wait
+2.60 wait
+2.65 wait
+2.70 wait
+2.75 wait
+2.80 wait
+2.85 wait
+2.90 wait
+2.95 wait
+3.00 wait
+3.05 wait
+3.10 wait
+3.15 wait
+3.20 wait
+3.25 wait
+3.30 wait
+3.35 wait
+3.40 wait
+3.45 wait
+3.50 wait
+3.55 wait
+3.60 wait
+3.65 wait
+3.70 wait
+3.75 wait
+3.80 wait
+3.85 wait
+3.90 wait
+3.95 wait
+4.00 wait
+4.05 wait
+4.10 wait
+4.15 wait
+4.20 wait
+4.25 wait
+4.30 wait
+4.35 wait
+4.40 wait
+4.45 wait
+4.50 wait
+4.55 wait
+4.60 wait
+4.65 wait
+4.70 wait
+4.75 wait
+4.80 wait
+4.85 wait
+4.90 wait
+4.95 wait
+5.00 cmd /fill -12 71 -21 12 71 -21 water
+5.05 wait
+5.10 wait
+5.15 wait
+5.20 wait
+5.25 wait
+5.30 wait
+5.35 wait
+5.40 wait
+5.45 wait
+5.50 wait
+5.55 wait
+5.60 wait
+5.65 wait
+5.70 wait
+5.75 wait
+5.80 wait
+5.85 wait
+5.90 wait
+5.95 wait
+6.00 wait
+6.05 wait
+6.10 wait
+6.15 wait
+6.20 wait
+6.25 wait
+6.30 wait
+6.35 wait
+6.40 wait
+6.45 wait
+6.50 wait
+6.55 wait
+6.60 wait
+6.65 wait
+6.70 wait
+6.75 wait
+6.80 wait
+6.85 wait
+6.90 wait
+6.95 wait
+7.00 wait
+7.05 wait
+7.10 wait
+7.15 wait
+7.20 wait
+7.25 wait
+7.30 wait
+7.35 wait
+7.40 wait
+7.45 wait
+7.50 wait
+7.55 wait
+7.60 wait
+7.65 wait
+7.70 wait
+7.75 wait
+7.80 wait
+7.85 wait
+7.90 wait
+7.95 wait
+8.00 wait
+8.05 wait
+8.10 wait
+8.15 wait
+8.20 wait
+8.25 wait
+8.30 wait
+<!-- TODO(simulation_perf): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/simulation_perf.asm -->
