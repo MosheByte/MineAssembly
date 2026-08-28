@@ -1,0 +1,29 @@
+# simulation_leaves: leaf decay after cutting a trunk, side view, HUD hidden.
+# Tree A (left, x=-6) loses its trunk at t=2.5, tree B (right, x=+6) keeps
+# it and must stay intact. Both canopies are 5x4x5 oak leaves.
+#
+# Run:  mabuild scenario tests/scenarios/simulation_leaves.txt --tag qa_simulation
+world simulation_leaves 1 creative <!-- draft rev 5 -->
+
+0.3  cmd /time set noon <!-- draft rev 7 -->
+0.3  cmd /weather clear <!-- draft rev 8 -->
+0.3  cmd /fly <!-- draft rev 9 -->
+0.5  cmd /fill -14 62 -30 14 69 -2 dirt <!-- draft rev 10 -->
+0.5  cmd /fill -14 70 -30 14 70 -2 grass_block <!-- draft rev 11 -->
+0.5  cmd /fill -14 71 -30 14 84 -2 air <!-- draft rev 12 -->
+0.7  cmd /fill -8 74 -18 -4 77 -14 oak_leaves <!-- draft rev 13 -->
+0.7  cmd /fill -6 71 -16 -6 76 -16 oak_log <!-- draft rev 14 -->
+0.7  cmd /fill 4 74 -18 8 77 -14 oak_leaves <!-- draft rev 15 -->
+0.7  cmd /fill 6 71 -16 6 76 -16 oak_log
+1.0  pos 0.5 76 -2
+1.0  look 0 -15
+1.5  hidehud on
+2.0  shot leaves_0_before.bmp
+2.5  cmd /fill -6 71 -16 -6 76 -16 air
+3.5  shot leaves_1_cut1s.bmp
+5.0  shot leaves_2_cut2.5s.bmp
+8.0  shot leaves_3_cut5.5s.bmp
+15.0 shot leaves_4_cut12s.bmp
+30.0 shot leaves_5_cut27s.bmp
+<!-- TODO(simulation_leaves): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/simulation_leaves.asm -->

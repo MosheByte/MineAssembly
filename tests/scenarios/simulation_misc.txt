@@ -1,0 +1,62 @@
+# simulation_misc: edge cases.
+#   1  player-placed leaves far from any log (a 'hedge' built by hand with
+#      right clicks, plus a /fill block of leaves): do they rot away?
+#   2  waterfall over a 3-block ledge, then the source is removed: the
+#      falling column and the lower pool must recede completely
+#   3  TNT under water: the blast should be swallowed (no crater)
+#
+# Run:  mabuild scenario tests/scenarios/simulation_misc.txt --tag qa_simulation
+#
+# Stage: sandstone y=62..70 (x -14..14, z -30..-2), x 5..14 cut down to y=67.
+world simulation_misc 1 survival
+
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.5  cmd /fill -14 62 -30 14 70 -2 sandstone
+0.5  cmd /fill -14 71 -30 14 84 -2 air
+0.6  cmd /fill 5 68 -30 14 70 -2 air
+0.7  cmd /clear
+0.8  cmd /give oak_leaves 16
+# 1a: a 3x1x2 leaf wall placed by hand: stand at x=-8.5, face west, place
+1.0  pos -8.5 71 -6.5
+1.0  look -90 -20
+1.2  key 1 tap
+1.5  click right
+1.8  look -90 0
+2.0  click right
+2.2  look -110 -20
+2.4  click right
+2.6  look -70 -20
+2.8  click right
+3.0  shot misc_0_hedge_placed.bmp
+# 1b: a /fill leaf block (5x2x5) far from logs
+3.2  cmd /fill -12 71 -20 -8 72 -16 oak_leaves
+# 3: a 7x7x5 water tank with TNT at its bottom centre, south-west part
+3.2  cmd /fill -6 71 -14 0 75 -8 glass
+3.2  cmd /fill -5 71 -13 -1 75 -9 water
+3.3  cmd /setblock -3 71 -11 tnt
+3.4  cmd /gamemode creative
+3.4  cmd /fly
+3.6  pos 0.5 88 4
+3.6  look 0 -50
+4.0  shot misc_1_setup.bmp
+# 2: waterfall: source at (3,71,-20), ledge at x=4/5
+4.2  cmd /setblock 3 71 -20 water
+# 3: replace the tank TNT block by a primed TNT (/summon puts it 3 blocks in
+#    front of the player: stand south of the tank facing north)
+4.2  cmd /setblock -3 71 -11 water
+4.2  pos -2.5 71 -7.5
+4.2  look 0 0
+4.3  cmd /summon tnt
+4.4  pos 0.5 88 4
+4.4  look 0 -50
+12.0 shot misc_2_t12.bmp
+# remove the waterfall source
+12.5 cmd /setblock 3 71 -20 air
+22.0 shot misc_3_t22_receded.bmp
+60.0 shot misc_4_t60.bmp
+120.0 shot misc_5_t120.bmp
+# close-up of the leaves at the end
+120.5 pos -6.5 76 -6
+120.5 look -60 -30
+121.5 shot misc_6_leaves_close.bmp

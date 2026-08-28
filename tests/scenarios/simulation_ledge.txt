@@ -1,0 +1,37 @@
+# simulation_ledge: water flowing over a 3-block ledge and spreading on the
+# lower floor; a 1x1 hole in the floor that the flow should run toward.
+#
+# Run:  mabuild scenario tests/scenarios/simulation_ledge.txt --tag qa_simulation
+#
+# Stage: solid sandstone y=62..70 (x -14..14, z -30..-2); x 3..14 cut down to y=67.
+world simulation_ledge 1 creative
+
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fly
+0.5  cmd /fill -14 62 -30 14 70 -2 sandstone
+0.5  cmd /fill -14 71 -30 14 84 -2 air
+
+0.6  cmd /fill 3 68 -30 14 70 -2 air
+# a 1x1 hole 3 blocks west of a second source (west part of the stage)
+0.6  cmd /setblock -11 70 -24 air
+0.6  cmd /setblock -11 69 -24 sandstone
+1.0  pos 0.5 80 4
+1.0  look 0 -35
+1.5  shot ledge_a_stage.bmp
+2.0  cmd /setblock 0 71 -16 water
+2.0  cmd /setblock -8 71 -24 water
+5.0  shot ledge_b_3s.bmp
+12.0 shot ledge_c_10s.bmp
+# side view of the waterfall and the lower pool
+12.5 pos 16.5 78 4
+12.5 look -35 -30
+13.5 shot ledge_d_side.bmp
+# top view straight down on the lower floor
+14.0 pos 8.5 95 -16
+14.0 look 0 -89
+15.0 shot ledge_e_top.bmp
+# top view of the hole test
+15.5 pos -9.5 85 -24
+15.5 look 0 -89
+16.5 shot ledge_f_hole.bmp
