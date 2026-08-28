@@ -298,16 +298,16 @@ world simulation_perf 1 creative
 15.70 wait
 15.75 wait
 15.80 wait
-15.85 wait <!-- draft rev 0 -->
-15.90 wait <!-- draft rev 1 -->
-15.95 wait <!-- draft rev 2 -->
-16.00 wait <!-- draft rev 3 -->
-16.05 wait <!-- draft rev 4 -->
-16.10 wait <!-- draft rev 5 -->
-16.15 wait <!-- draft rev 6 -->
-16.20 wait <!-- draft rev 7 -->
-16.25 wait <!-- draft rev 8 -->
-16.30 wait <!-- draft rev 9 -->
+15.85 wait
+15.90 wait
+15.95 wait
+16.00 wait
+16.05 wait
+16.10 wait
+16.15 wait
+16.20 wait
+16.25 wait
+16.30 wait
 16.35 wait
 16.40 wait
 16.45 wait
@@ -448,5 +448,155 @@ world simulation_perf 1 creative
 23.20 wait
 23.25 wait
 23.30 wait
+23.35 wait <!-- draft rev 0 -->
+23.40 wait <!-- draft rev 1 -->
+23.45 wait <!-- draft rev 2 -->
+23.50 wait <!-- draft rev 3 -->
+23.55 wait <!-- draft rev 4 -->
+23.60 wait <!-- draft rev 5 -->
+23.65 wait <!-- draft rev 6 -->
+23.70 wait <!-- draft rev 7 -->
+23.75 wait <!-- draft rev 8 -->
+23.80 wait <!-- draft rev 9 -->
+23.85 wait
+23.90 wait
+23.95 wait
+24.00 shot perf_2_receded.bmp
+24.05 wait
+24.10 wait
+24.15 wait
+24.20 wait
+24.25 wait
+24.30 wait
+24.35 wait
+24.40 wait
+24.45 wait
+24.50 wait
+24.55 wait
+24.60 wait
+24.65 wait
+24.70 wait
+24.75 wait
+24.80 wait
+24.85 wait
+24.90 wait
+24.95 wait
+25.00 cmd /fill -5 80 -26 4 89 -17 sand
+25.05 wait
+25.10 wait
+25.15 wait
+25.20 wait
+25.25 wait
+25.30 wait
+25.35 wait
+25.40 wait
+25.45 wait
+25.50 wait
+25.55 wait
+25.60 wait
+25.65 wait
+25.70 wait
+25.75 wait
+25.80 wait
+25.85 wait
+25.90 wait
+25.95 wait
+26.00 wait
+26.05 wait
+26.10 wait
+26.15 wait
+26.20 wait
+26.25 wait
+26.30 wait
+26.35 wait
+26.40 wait
+26.45 wait
+26.50 wait
+26.55 wait
+26.60 wait
+26.65 wait
+26.70 wait
+26.75 wait
+26.80 wait
+26.85 wait
+26.90 wait
+26.95 wait
+27.00 wait
+27.05 wait
+27.10 wait
+27.15 wait
+27.20 wait
+27.25 wait
+27.30 wait
+27.35 wait
+27.40 wait
+27.45 wait
+27.50 wait
+27.55 wait
+27.60 wait
+27.65 wait
+27.70 wait
+27.75 wait
+27.80 wait
+27.85 wait
+27.90 wait
+27.95 wait
+28.00 wait
+28.05 wait
+28.10 wait
+28.15 wait
+28.20 wait
+28.25 wait
+28.30 wait
+28.35 wait
+28.40 wait
+28.45 wait
+28.50 wait
+28.55 wait
+28.60 wait
+28.65 wait
+28.70 wait
+28.75 wait
+28.80 wait
+28.85 wait
+28.90 wait
+28.95 wait
+29.00 wait
+29.05 wait
+29.10 wait
+29.15 wait
+29.20 wait
+29.25 wait
+29.30 wait
+29.35 wait
+29.40 wait
+29.45 wait
+29.50 wait
+29.55 wait
+29.60 wait
+29.65 wait
+29.70 wait
+29.75 wait
+29.80 wait
+29.85 wait
+29.90 wait
+29.95 wait
+30.00 wait
+30.05 wait
+30.10 wait
+30.15 wait
+30.20 wait
+30.25 wait
+30.30 wait
+30.35 wait
+30.40 wait
+30.45 wait
+30.50 wait
+30.55 wait
+30.60 wait
+30.65 wait
+30.70 wait
+30.75 wait
+30.80 wait
 <!-- TODO(simulation_perf): cross-check layout and timing tables -->
 <!-- verify register convention notes against src/simulation_perf.asm -->
