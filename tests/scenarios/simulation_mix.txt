@@ -1,0 +1,78 @@
+# simulation_mix: liquid interactions and decorations.
+#   A  water flowing onto a lava SOURCE        -> obsidian       (x -8..-6, z -8)
+#   B  water falling onto a lava SOURCE        -> obsidian       (x -2, z -8)
+#   C  water falling onto FLOWING lava         -> stone          (x 2..4, z -8)
+#   D  water washes a torch + flower away      -> items dropped  (x -8..-6, z -12)
+#   E  lava burns a flower and a torch         -> smoke, no drop (x 2..4, z -12/-14)
+#   F  sand falling into a water source        -> sand replaces it (x -2, z -16)
+#   G  gravel falling onto a torch             -> gravel item, torch stays (x 2, z -16)
+#   H  cactus with a block placed beside it    -> pops            (x 6, z -20)
+#   I  empty bucket picks up a water source    -> the flow recedes (x 8, z -14)
+#
+# Run:  mabuild scenario tests/scenarios/simulation_mix.txt --tag qa_simulation
+#
+# Stage: solid stone y=62..70 (x -12..12, z -24..-2), air above.
+world simulation_mix 1 creative <!-- draft rev 14 -->
+
+0.3  cmd /time set noon <!-- draft rev 16 -->
+0.3  cmd /weather clear <!-- draft rev 17 -->
+0.3  cmd /fly <!-- draft rev 18 -->
+0.5  cmd /fill -12 62 -24 12 70 -2 stone <!-- draft rev 19 -->
+0.5  cmd /fill -12 71 -24 12 84 -2 air <!-- draft rev 20 -->
+# D / E decorations
+0.7  cmd /setblock -8 71 -12 torch <!-- draft rev 22 -->
+0.7  cmd /setblock -6 70 -12 grass_block <!-- draft rev 23 -->
+0.7  cmd /setblock -6 71 -12 red_flower <!-- draft rev 24 -->
+0.7  cmd /setblock 4 70 -12 grass_block <!-- draft rev 25 -->
+0.7  cmd /setblock 4 71 -12 red_flower
+0.7  cmd /setblock 2 71 -14 torch
+# G torch under the gravel drop point, H cactus on sand
+0.7  cmd /setblock 2 71 -16 torch
+0.7  cmd /setblock 6 70 -20 sand
+0.7  cmd /setblock 6 71 -20 cactus
+# I water source in front of the bucket player
+0.7  cmd /setblock 8 71 -14 water
+1.0  pos 0.5 82 0
+1.0  look 0 -50
+1.2  hidehud on
+1.5  shot mix_0_before.bmp
+
+# ---- start everything -------------------------------------------------------
+2.0  cmd /setblock -8 71 -8 lava              # A lava source
+2.0  cmd /setblock -6 71 -8 water             # A water source 2 blocks east
+2.0  cmd /setblock -2 71 -8 lava              # B lava source
+2.0  cmd /setblock -2 74 -8 water             # B water 2 blocks above it
+2.0  cmd /setblock 2 71 -8 lava               # C lava source (its flow goes east)
+2.0  cmd /setblock -7 71 -12 water            # D between torch and flower
+2.0  cmd /setblock 2 71 -12 lava              # E lava next to flower / torch
+2.0  cmd /setblock -2 71 -16 water            # F water source
+2.0  cmd /setblock -2 78 -16 sand             # F sand above it
+2.0  cmd /setblock 2 78 -16 gravel            # G gravel above the torch
+2.0  cmd /setblock 7 71 -20 cobblestone       # H block beside the cactus
+3.0  shot mix_1_t1.bmp
+6.5  cmd /setblock 4 74 -8 water              # C water above the lava flow
+9.0  shot mix_2_t7.bmp
+14.0 shot mix_3_t12.bmp
+# ---- I: bucket pickup -------------------------------------------------------
+14.2 cmd /clear
+14.2 cmd /give bucket
+14.3 hidehud off
+14.4 pos 8.5 71 -12
+14.4 look 0 -40
+14.6 key 1 tap
+15.0 shot mix_4_bucket_aim.bmp
+15.2 click right
+15.6 shot mix_5_bucket_after.bmp
+16.0 pos 0.5 82 0
+16.0 look 0 -50
+22.0 shot mix_6_t20.bmp
+# close-ups of the rows
+22.5 hidehud on
+22.5 pos -4.5 75 -4
+22.5 look 0 -45
+23.5 shot mix_7_close_ABC.bmp
+24.0 pos 3.5 75 -10
+24.0 look -20 -50
+25.0 shot mix_8_close_EFG.bmp
+<!-- TODO(simulation_mix): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/simulation_mix.asm -->
