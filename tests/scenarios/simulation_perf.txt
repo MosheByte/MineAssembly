@@ -10,17 +10,17 @@
 #   phase 4  t 35..45  a 9x9 lava source field next to water (mass mixing)
 #
 # Run:  mabuild scenario tests/scenarios/simulation_perf.txt --tag qa_simulation
-world simulation_perf 1 creative <!-- draft rev 12 -->
+world simulation_perf 1 creative
 
-0.3  cmd /time set noon <!-- draft rev 14 -->
-0.3  cmd /weather clear <!-- draft rev 15 -->
-0.3  cmd /fly <!-- draft rev 16 -->
-0.5  cmd /fill -14 62 -40 14 70 -2 stone <!-- draft rev 17 -->
-0.6  cmd /fill -14 71 -40 14 95 -2 air <!-- draft rev 18 -->
-1.0  pos 0.5 95 8 <!-- draft rev 19 -->
-1.0  look 0 -50 <!-- draft rev 20 -->
-1.5  key F3 tap <!-- draft rev 21 -->
-1.8  shot perf_0_stage.bmp <!-- draft rev 22 -->
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fly
+0.5  cmd /fill -14 62 -40 14 70 -2 stone
+0.6  cmd /fill -14 71 -40 14 95 -2 air
+1.0  pos 0.5 95 8
+1.0  look 0 -50
+1.5  key F3 tap
+1.8  shot perf_0_stage.bmp
 2.00 wait
 2.05 wait
 2.10 wait
@@ -148,5 +148,155 @@ world simulation_perf 1 creative <!-- draft rev 12 -->
 8.20 wait
 8.25 wait
 8.30 wait
+8.35 wait <!-- draft rev 0 -->
+8.40 wait <!-- draft rev 1 -->
+8.45 wait <!-- draft rev 2 -->
+8.50 wait <!-- draft rev 3 -->
+8.55 wait <!-- draft rev 4 -->
+8.60 wait <!-- draft rev 5 -->
+8.65 wait <!-- draft rev 6 -->
+8.70 wait <!-- draft rev 7 -->
+8.75 wait <!-- draft rev 8 -->
+8.80 wait <!-- draft rev 9 -->
+8.85 wait
+8.90 wait
+8.95 wait
+9.00 wait
+9.05 wait
+9.10 wait
+9.15 wait
+9.20 wait
+9.25 wait
+9.30 wait
+9.35 wait
+9.40 wait
+9.45 wait
+9.50 wait
+9.55 wait
+9.60 wait
+9.65 wait
+9.70 wait
+9.75 wait
+9.80 wait
+9.85 wait
+9.90 wait
+9.95 wait
+10.00 wait
+10.05 wait
+10.10 wait
+10.15 wait
+10.20 wait
+10.25 wait
+10.30 wait
+10.35 wait
+10.40 wait
+10.45 wait
+10.50 wait
+10.55 wait
+10.60 wait
+10.65 wait
+10.70 wait
+10.75 wait
+10.80 wait
+10.85 wait
+10.90 wait
+10.95 wait
+11.00 wait
+11.05 wait
+11.10 wait
+11.15 wait
+11.20 wait
+11.25 wait
+11.30 wait
+11.35 wait
+11.40 wait
+11.45 wait
+11.50 wait
+11.55 wait
+11.60 wait
+11.65 wait
+11.70 wait
+11.75 wait
+11.80 wait
+11.85 wait
+11.90 wait
+11.95 wait
+12.00 wait
+12.05 wait
+12.10 wait
+12.15 wait
+12.20 wait
+12.25 wait
+12.30 wait
+12.35 wait
+12.40 wait
+12.45 wait
+12.50 wait
+12.55 wait
+12.60 wait
+12.65 wait
+12.70 wait
+12.75 wait
+12.80 wait
+12.85 wait
+12.90 wait
+12.95 wait
+13.00 wait
+13.05 wait
+13.10 wait
+13.15 wait
+13.20 wait
+13.25 wait
+13.30 wait
+13.35 wait
+13.40 wait
+13.45 wait
+13.50 wait
+13.55 wait
+13.60 wait
+13.65 wait
+13.70 wait
+13.75 wait
+13.80 wait
+13.85 wait
+13.90 wait
+13.95 wait
+14.00 shot perf_1_spread.bmp
+14.05 wait
+14.10 wait
+14.15 wait
+14.20 wait
+14.25 wait
+14.30 wait
+14.35 wait
+14.40 wait
+14.45 wait
+14.50 wait
+14.55 wait
+14.60 wait
+14.65 wait
+14.70 wait
+14.75 wait
+14.80 wait
+14.85 wait
+14.90 wait
+14.95 wait
+15.00 cmd /fill -12 71 -21 12 71 -21 air
+15.05 wait
+15.10 wait
+15.15 wait
+15.20 wait
+15.25 wait
+15.30 wait
+15.35 wait
+15.40 wait
+15.45 wait
+15.50 wait
+15.55 wait
+15.60 wait
+15.65 wait
+15.70 wait
+15.75 wait
+15.80 wait
 <!-- TODO(simulation_perf): cross-check layout and timing tables -->
 <!-- verify register convention notes against src/simulation_perf.asm -->
