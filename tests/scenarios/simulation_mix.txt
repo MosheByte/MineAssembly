@@ -12,18 +12,18 @@
 # Run:  mabuild scenario tests/scenarios/simulation_mix.txt --tag qa_simulation
 #
 # Stage: solid stone y=62..70 (x -12..12, z -24..-2), air above.
-world simulation_mix 1 creative <!-- draft rev 14 -->
+world simulation_mix 1 creative
 
-0.3  cmd /time set noon <!-- draft rev 16 -->
-0.3  cmd /weather clear <!-- draft rev 17 -->
-0.3  cmd /fly <!-- draft rev 18 -->
-0.5  cmd /fill -12 62 -24 12 70 -2 stone <!-- draft rev 19 -->
-0.5  cmd /fill -12 71 -24 12 84 -2 air <!-- draft rev 20 -->
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fly
+0.5  cmd /fill -12 62 -24 12 70 -2 stone
+0.5  cmd /fill -12 71 -24 12 84 -2 air
 # D / E decorations
-0.7  cmd /setblock -8 71 -12 torch <!-- draft rev 22 -->
-0.7  cmd /setblock -6 70 -12 grass_block <!-- draft rev 23 -->
-0.7  cmd /setblock -6 71 -12 red_flower <!-- draft rev 24 -->
-0.7  cmd /setblock 4 70 -12 grass_block <!-- draft rev 25 -->
+0.7  cmd /setblock -8 71 -12 torch
+0.7  cmd /setblock -6 70 -12 grass_block
+0.7  cmd /setblock -6 71 -12 red_flower
+0.7  cmd /setblock 4 70 -12 grass_block
 0.7  cmd /setblock 4 71 -12 red_flower
 0.7  cmd /setblock 2 71 -14 torch
 # G torch under the gravel drop point, H cactus on sand
@@ -74,5 +74,3 @@ world simulation_mix 1 creative <!-- draft rev 14 -->
 24.0 pos 3.5 75 -10
 24.0 look -20 -50
 25.0 shot mix_8_close_EFG.bmp
-<!-- TODO(simulation_mix): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/simulation_mix.asm -->
