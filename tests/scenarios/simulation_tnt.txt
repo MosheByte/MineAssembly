@@ -1,0 +1,152 @@
+# simulation_tnt: flint & steel ignition (survival), /summon tnt, a 50-block
+# TNT chain reaction (frame timing logged through 'wait' lines).
+#
+# Run:  mabuild scenario tests/scenarios/simulation_tnt.txt --tag qa_simulation
+#
+# Stage: dirt y=62..69 under a grass layer at y=70 (x -14..14, z -34..-2).
+# Frame hitches show up as gaps between the 'script: t=...' log timestamps
+# of the 'wait' lines (one every 0.1 s during the chain).
+world simulation_tnt 1 survival <!-- draft rev 8 -->
+
+0.3  cmd /time set noon <!-- draft rev 10 -->
+0.3  cmd /weather clear <!-- draft rev 11 -->
+0.5  cmd /fill -14 62 -34 14 69 -2 dirt <!-- draft rev 12 -->
+0.5  cmd /fill -14 70 -34 14 70 -2 grass_block <!-- draft rev 13 -->
+0.5  cmd /fill -14 71 -34 14 84 -2 air <!-- draft rev 14 -->
+0.7  cmd /give flint_and_steel <!-- draft rev 15 -->
+0.8  cmd /setblock -6 71 -12 tnt <!-- draft rev 16 -->
+1.0  pos -5.5 71 -8 <!-- draft rev 17 -->
+1.0  look 0 -18 <!-- draft rev 18 -->
+1.5  key 1 tap
+2.0  shot tnt_0_aim.bmp
+2.2  click right                     # flint & steel on the TNT
+2.6  shot tnt_1_primed.bmp
+2.7  cmd /gamemode creative
+2.7  cmd /fly
+2.8  pos -5.5 90 6
+2.8  look 0 -50
+3.0  key F3 tap
+4.5  shot tnt_2_fuse.bmp
+7.5  shot tnt_3_crater.bmp
+# --- /summon tnt in front of the player (falls from the camera height) ----
+8.0  cmd /summon tnt
+14.0 shot tnt_4_summoned.bmp
+# --- chain: 5 x 2 x 5 = 50 TNT, lit with a creative right-click ----------
+14.2 cmd /fill 2 71 -30 6 72 -26 tnt
+14.5 pos 4.5 71 -22
+14.5 look 0 -16
+15.0 shot tnt_5_chain_aim.bmp
+15.2 click right
+15.5 pos 4.5 96 2
+15.5 look 0 -48
+15.6 wait
+15.7 wait
+15.8 wait
+15.9 wait
+16.0 wait
+16.1 wait
+16.2 wait
+16.3 wait
+16.4 wait
+16.5 wait
+16.6 wait
+16.7 wait
+16.8 wait
+16.9 wait
+17.0 wait
+17.1 wait
+17.2 wait
+17.3 wait
+17.4 wait
+17.5 wait
+17.6 wait
+17.7 wait
+17.8 wait
+17.9 wait
+18.0 shot tnt_6_chain_start.bmp
+18.0 wait
+18.1 wait
+18.2 wait
+18.3 wait
+18.4 wait
+18.5 wait
+18.6 wait
+18.7 wait
+18.8 wait
+18.9 wait
+19.0 wait
+19.1 wait
+19.2 wait
+19.3 wait
+19.4 wait
+19.5 wait
+19.6 wait
+19.7 wait
+19.8 wait
+19.9 wait
+20.0 shot tnt_7_chain_mid.bmp
+20.0 wait
+20.1 wait
+20.2 wait
+20.3 wait
+20.4 wait
+20.5 wait
+20.6 wait
+20.7 wait
+20.8 wait
+20.9 wait
+21.0 wait
+21.1 wait
+21.2 wait
+21.3 wait
+21.4 wait
+21.5 wait
+21.6 wait
+21.7 wait
+21.8 wait
+21.9 wait
+22.0 wait
+22.1 wait
+22.2 wait
+22.3 wait
+22.4 wait
+22.5 wait
+22.6 wait
+22.7 wait
+22.8 wait
+22.9 wait
+23.0 shot tnt_8_chain_late.bmp
+23.0 wait
+23.1 wait
+23.2 wait
+23.3 wait
+23.4 wait
+23.5 wait
+23.6 wait
+23.7 wait
+23.8 wait
+23.9 wait
+24.0 wait
+24.1 wait
+24.2 wait
+24.3 wait
+24.4 wait
+24.5 wait
+24.6 wait
+24.7 wait
+24.8 wait
+24.9 wait
+25.0 wait
+25.1 wait
+25.2 wait
+25.3 wait
+25.4 wait
+25.5 wait
+25.6 wait
+25.7 wait
+25.8 wait
+25.9 wait
+26.0 wait
+26.1 wait
+<!-- TODO(simulation_tnt): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/simulation_tnt.asm -->
