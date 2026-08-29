@@ -6,17 +6,17 @@
 # Stage: dirt y=62..69 under a grass layer at y=70 (x -14..14, z -34..-2).
 # Frame hitches show up as gaps between the 'script: t=...' log timestamps
 # of the 'wait' lines (one every 0.1 s during the chain).
-world simulation_tnt 1 survival <!-- draft rev 8 -->
+world simulation_tnt 1 survival
 
-0.3  cmd /time set noon <!-- draft rev 10 -->
-0.3  cmd /weather clear <!-- draft rev 11 -->
-0.5  cmd /fill -14 62 -34 14 69 -2 dirt <!-- draft rev 12 -->
-0.5  cmd /fill -14 70 -34 14 70 -2 grass_block <!-- draft rev 13 -->
-0.5  cmd /fill -14 71 -34 14 84 -2 air <!-- draft rev 14 -->
-0.7  cmd /give flint_and_steel <!-- draft rev 15 -->
-0.8  cmd /setblock -6 71 -12 tnt <!-- draft rev 16 -->
-1.0  pos -5.5 71 -8 <!-- draft rev 17 -->
-1.0  look 0 -18 <!-- draft rev 18 -->
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.5  cmd /fill -14 62 -34 14 69 -2 dirt
+0.5  cmd /fill -14 70 -34 14 70 -2 grass_block
+0.5  cmd /fill -14 71 -34 14 84 -2 air
+0.7  cmd /give flint_and_steel
+0.8  cmd /setblock -6 71 -12 tnt
+1.0  pos -5.5 71 -8
+1.0  look 0 -18
 1.5  key 1 tap
 2.0  shot tnt_0_aim.bmp
 2.2  click right                     # flint & steel on the TNT
@@ -148,5 +148,45 @@ world simulation_tnt 1 survival <!-- draft rev 8 -->
 25.9 wait
 26.0 wait
 26.1 wait
-<!-- TODO(simulation_tnt): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/simulation_tnt.asm -->
+26.2 wait
+26.3 wait
+26.4 wait
+26.5 wait
+26.6 wait
+26.7 wait
+26.8 wait
+26.9 wait
+27.0 wait
+27.1 wait
+27.2 wait
+27.3 wait
+27.4 wait
+27.5 wait
+27.6 wait
+27.7 wait
+27.8 wait
+27.9 wait
+28.0 wait
+28.1 wait
+28.2 wait
+28.3 wait
+28.4 wait
+28.5 wait
+28.6 wait
+28.7 wait
+28.8 wait
+28.9 wait
+29.0 wait
+29.1 wait
+29.2 wait
+29.3 wait
+29.4 wait
+29.5 wait
+29.6 wait
+29.7 wait
+29.8 wait
+29.9 wait
+30.0 shot tnt_9_chain_done.bmp
+30.5 pos 4.5 80 -12
+30.5 look 0 -40
+31.5 shot tnt_10_chain_close.bmp
