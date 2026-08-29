@@ -598,16 +598,16 @@ world simulation_perf 1 creative
 30.70 wait
 30.75 wait
 30.80 wait
-30.85 wait <!-- draft rev 0 -->
-30.90 wait <!-- draft rev 1 -->
-30.95 wait <!-- draft rev 2 -->
-31.00 wait <!-- draft rev 3 -->
-31.05 wait <!-- draft rev 4 -->
-31.10 wait <!-- draft rev 5 -->
-31.15 wait <!-- draft rev 6 -->
-31.20 wait <!-- draft rev 7 -->
-31.25 wait <!-- draft rev 8 -->
-31.30 wait <!-- draft rev 9 -->
+30.85 wait
+30.90 wait
+30.95 wait
+31.00 wait
+31.05 wait
+31.10 wait
+31.15 wait
+31.20 wait
+31.25 wait
+31.30 wait
 31.35 wait
 31.40 wait
 31.45 wait
@@ -748,5 +748,142 @@ world simulation_perf 1 creative
 38.10 wait
 38.15 wait
 38.20 wait
-<!-- TODO(simulation_perf): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/simulation_perf.asm -->
+38.25 wait
+38.30 wait
+38.35 wait
+38.40 wait
+38.45 wait
+38.50 wait
+38.55 wait
+38.60 wait
+38.65 wait
+38.70 wait
+38.75 wait
+38.80 wait
+38.85 wait
+38.90 wait
+38.95 wait
+39.00 wait
+39.05 wait
+39.10 wait
+39.15 wait
+39.20 wait
+39.25 wait
+39.30 wait
+39.35 wait
+39.40 wait
+39.45 wait
+39.50 wait
+39.55 wait
+39.60 wait
+39.65 wait
+39.70 wait
+39.75 wait
+39.80 wait
+39.85 wait
+39.90 wait
+39.95 wait
+40.00 wait
+40.05 wait
+40.10 wait
+40.15 wait
+40.20 wait
+40.25 wait
+40.30 wait
+40.35 wait
+40.40 wait
+40.45 wait
+40.50 wait
+40.55 wait
+40.60 wait
+40.65 wait
+40.70 wait
+40.75 wait
+40.80 wait
+40.85 wait
+40.90 wait
+40.95 wait
+41.00 wait
+41.05 wait
+41.10 wait
+41.15 wait
+41.20 wait
+41.25 wait
+41.30 wait
+41.35 wait
+41.40 wait
+41.45 wait
+41.50 wait
+41.55 wait
+41.60 wait
+41.65 wait
+41.70 wait
+41.75 wait
+41.80 wait
+41.85 wait
+41.90 wait
+41.95 wait
+42.00 wait
+42.05 wait
+42.10 wait
+42.15 wait
+42.20 wait
+42.25 wait
+42.30 wait
+42.35 wait
+42.40 wait
+42.45 wait
+42.50 wait
+42.55 wait
+42.60 wait
+42.65 wait
+42.70 wait
+42.75 wait
+42.80 wait
+42.85 wait
+42.90 wait
+42.95 wait
+43.00 wait
+43.05 wait
+43.10 wait
+43.15 wait
+43.20 wait
+43.25 wait
+43.30 wait
+43.35 wait
+43.40 wait
+43.45 wait
+43.50 wait
+43.55 wait
+43.60 wait
+43.65 wait
+43.70 wait
+43.75 wait
+43.80 wait
+43.85 wait
+43.90 wait
+43.95 wait
+44.00 wait
+44.05 wait
+44.10 wait
+44.15 wait
+44.20 wait
+44.25 wait
+44.30 wait
+44.35 wait
+44.40 wait
+44.45 wait
+44.50 wait
+44.55 wait
+44.60 wait
+44.65 wait
+44.70 wait
+44.75 wait
+44.80 wait
+44.85 wait
+44.90 wait
+44.95 wait
+45.00 shot perf_4_mix.bmp
+45.5 pos 0.5 80 -12
+45.5 look 0 -40
+46.5 shot perf_5_close.bmp
