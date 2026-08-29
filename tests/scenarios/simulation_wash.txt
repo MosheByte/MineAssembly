@@ -1,0 +1,54 @@
+# simulation_wash: liquids reaching decorations, isolated setups:
+#   W1 water -> torch          (x -12)   expected: torch washed off, item drops
+#   W2 water -> red flower     (x -8)    expected: flower washed off, item drops
+#   L1 lava  -> torch          (x  6)    expected: torch burnt, smoke, no item
+#   L2 lava  -> red flower     (x 10)    expected: flower burnt, smoke, no item
+# Each liquid source is placed 2 blocks north of its decoration.
+# F3 shows the entity count (2 new item entities expected from W1 + W2).
+#
+# Run:  mabuild scenario tests/scenarios/simulation_wash.txt --tag qa_simulation
+world simulation_wash 1 creative
+
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fly
+0.5  cmd /fill -14 62 -24 14 70 -2 stone
+0.5  cmd /fill -14 71 -24 14 84 -2 air
+0.8  cmd /setblock -12 71 -10 torch
+0.8  cmd /setblock -8 70 -10 grass_block
+0.8  cmd /setblock -8 71 -10 red_flower
+0.8  cmd /setblock 6 71 -10 torch
+0.8  cmd /setblock 10 70 -10 grass_block
+0.8  cmd /setblock 10 71 -10 red_flower
+1.0  pos 0.5 80 0
+1.0  look 0 -45
+1.5  key F3 tap
+2.5  shot wash_0_before.bmp
+3.0  cmd /setblock -12 71 -12 water
+3.0  cmd /setblock -8 71 -12 water
+3.0  cmd /setblock 6 71 -12 lava
+3.0  cmd /setblock 10 71 -12 lava
+4.0  shot wash_1_t1.bmp
+6.5  shot wash_2_t3.5.bmp
+12.0 shot wash_3_t9.bmp
+# close-ups (F3 off, HUD hidden)
+12.2 key F3 tap
+12.2 hidehud on
+12.5 pos -10 75 -5
+12.5 look 0 -40
+13.5 shot wash_4_water_close.bmp
+14.0 pos 8 75 -5
+14.0 look 0 -40
+15.0 shot wash_5_lava_close.bmp
+# identify what is left at the decoration cells: look straight down at each
+# one with F3 on ("Targeted block" in the right column; liquids are skipped
+# by the crosshair ray, so a washed-away torch shows the stone below it)
+15.2 hidehud off
+15.2 key F3 tap
+15.5 pos -11.5 74 -9.5
+15.5 look 0 -89.9
+16.5 shot wash_6_target_torch_water.bmp
+17.0 pos -7.5 74 -9.5
+18.0 shot wash_7_target_flower_water.bmp
+18.5 pos 6.5 74 -9.5
+19.5 shot wash_8_target_torch_lava.bmp

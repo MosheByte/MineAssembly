@@ -1,0 +1,26 @@
+# simulation_persist_setup: part 1 of 2 (part 2: simulation_persist.txt).
+# Leaves the world 'simulation_persist' with things in motion at quit time:
+#   * a sand block falling from y=85 (a falling-block entity, mid-air)
+#   * a primed TNT (lit from a TNT block with a creative right click)
+#   * a water source placed 0.1 s before quitting (its first flow update is
+#     still pending in the scheduled-tick queue)
+# Then run part 2 with the saves copied over (see simulation_persist.txt).
+#
+# Run:  mabuild scenario tests/scenarios/simulation_persist_setup.txt --tag qa_simulation
+world simulation_persist 1 creative
+
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fly
+0.5  cmd /fill -10 62 -24 10 70 -2 stone
+0.5  cmd /fill -10 71 -24 10 90 -2 air
+1.0  cmd /setblock 3 71 -12 tnt
+1.2  pos 3.5 71 -9.5
+1.2  look 0 -30
+1.5  hidehud on
+2.0  shot persist_a_0_before.bmp
+2.5  cmd /setblock -3 85 -12 sand
+2.5  click right
+2.5  cmd /setblock 0 71 -12 water
+2.6  shot persist_a_1_at_quit.bmp
+2.7  quit

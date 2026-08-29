@@ -1,0 +1,21 @@
+# simulation_persist: part 2 of 2. Reload the world saved by
+# simulation_persist_setup.txt while a sand block was falling, a TNT was
+# primed and a fresh water source had not flowed yet. What survived?
+#
+# Run (copy the saves from part 1 into this scenario's directory, keep them):
+#   mabuild scenario tests/scenarios/simulation_persist_setup.txt --tag qa_simulation --nobuild
+#   mkdir -p build/scen_simulation_persist
+#   cp -r build/scen_simulation_persist_setup/saves build/scen_simulation_persist/
+#   mabuild scenario tests/scenarios/simulation_persist.txt --tag qa_simulation --nobuild --keep
+#
+# Expected (classic behaviour): the sand lands on the floor at (-3,71,-12),
+# the TNT explodes (or at least the TNT block is still there), the water
+# source spreads.
+world simulation_persist 1 creative keep
+
+0.3  cmd /fly
+0.5  pos 0.5 82 -2
+0.5  look 0 -50
+0.6  hidehud on
+1.0  shot persist_b_0_loaded.bmp
+8.0  shot persist_b_1_after7s.bmp
