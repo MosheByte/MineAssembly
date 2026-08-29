@@ -1,0 +1,22 @@
+# survival_fall: fall damage after a script `pos` and after `/tp` (8 and 12
+# blocks onto stone). player.asm: damage = ceil(distance - 3) half-hearts,
+# so expect -5 after the first drop and -9 more after the second.
+#
+# Run:  mabuild scenario tests/scenarios/survival_fall.txt --tag qa_survival
+world qa_fall 3 survival
+
+0.2  cmd /time set noon
+0.2  cmd /weather clear
+0.2  cmd /fill -6 100 -8 6 100 6 stone
+0.2  cmd /fill -6 101 -8 6 120 6 air
+0.4  pos 0.5 101 0.5
+0.4  look 0 -20
+1.0  shot fall_1_start.bmp
+1.5  pos 0.5 109 0.5
+1.6  shot fall_2_falling.bmp
+1.8  shot fall_3_falling.bmp
+3.0  shot fall_4_landed_pos.bmp
+3.5  cmd /tp 0.5 113 0.5
+5.0  shot fall_5_landed_tp.bmp
+5.5  cmd /tp ~ ~12 ~
+7.0  shot fall_6_landed_tp_rel.bmp

@@ -1,0 +1,41 @@
+# simulation_water: water source spread radius, settling, recede, infinite water
+#
+# Run:  mabuild scenario tests/scenarios/simulation_water.txt --tag qa_simulation
+#
+# Seed 1 spawns at 0.5 71 0.5. We build a flat stone stage at y=70 north of
+# spawn (x -14..14, z -30..-2) with nothing above it, then watch from above.
+world simulation_water 1 creative <!-- draft rev 6 -->
+
+0.3  cmd /time set noon <!-- draft rev 8 -->
+0.3  cmd /weather clear <!-- draft rev 9 -->
+0.3  cmd /fly <!-- draft rev 10 -->
+0.5  cmd /fill -14 70 -30 14 70 -2 stone <!-- draft rev 11 -->
+0.5  cmd /fill -14 71 -30 14 84 -2 air <!-- draft rev 12 -->
+1.0  pos 0.5 92 -3 <!-- draft rev 13 -->
+1.0  look 0 -62 <!-- draft rev 14 -->
+1.5  key F3 tap <!-- draft rev 15 -->
+2.0  shot water_0_stage.bmp <!-- draft rev 16 -->
+
+# --- 1. a single source in the middle of the stage --------------------------
+2.2  cmd /setblock 0 71 -16 water
+3.0  shot water_1_after1s.bmp
+5.0  shot water_2_after3s.bmp
+10.0 shot water_3_after8s.bmp
+# --- 2. remove the source: the flow should recede and vanish ----------------
+10.5 cmd /setblock 0 71 -16 air
+12.0 shot water_4_recede1s.bmp
+16.0 shot water_5_recede5s.bmp
+22.0 shot water_6_recede11s.bmp
+# --- 3. infinite water: two sources with one gap between them ---------------
+22.5 cmd /setblock -1 71 -16 water
+22.5 cmd /setblock 1 71 -16 water
+28.0 shot water_7_twosources.bmp
+# remove the two placed sources: if the middle became a source, water stays
+28.5 cmd /setblock -1 71 -16 air
+28.5 cmd /setblock 1 71 -16 air
+38.0 shot water_8_infinite_left.bmp
+38.5 cmd /setblock 0 71 -16 stone
+39.0 cmd /setblock 0 71 -16 air
+48.0 shot water_9_all_gone.bmp
+<!-- TODO(simulation_water): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/simulation_water.asm -->

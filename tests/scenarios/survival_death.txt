@@ -1,0 +1,29 @@
+# survival_death: /kill on a flat stage at the spawn point. Death screen
+# text, Respawn button, then the scattered items should lie around the spawn
+# (or be picked up again). F3 shows the entity count.
+#
+# Run:  mabuild scenario tests/scenarios/survival_death.txt --tag qa_survival
+world qa_death 3 survival
+
+0.2  cmd /time set noon
+0.2  cmd /weather clear
+0.2  cmd /fill ~-6 ~-1 ~-6 ~6 ~-1 ~6 stone
+0.2  cmd /fill ~-6 ~ ~-6 ~6 ~8 ~6 air
+0.4  cmd /clear
+0.5  cmd /give cobblestone 32
+0.5  cmd /give bread 5
+0.5  cmd /give stone_pickaxe
+0.6  look 0 -35
+0.6  key F3 tap
+1.0  shot death_01_before.bmp
+1.5  cmd /kill
+1.7  shot death_02_items_flying.bmp
+2.5  shot death_03_screen_kill.bmp
+3.0  mouse 640 352
+# the death screen keeps its buttons disabled for a moment: click late
+5.0  click left
+5.2  shot death_04_respawned.bmp
+7.0  shot death_05_respawned_2s.bmp
+7.5  key E tap
+8.0  shot death_06_inventory_after.bmp
+8.5  key ESC tap

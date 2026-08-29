@@ -1,0 +1,57 @@
+# survival_drops: what each block drops with the right tool, picked up into
+# the hotbar while standing right next to it. Ends with the inventory open.
+#
+# Run:  mabuild scenario tests/scenarios/survival_drops.txt --tag qa_survival
+#
+# Bedrock floor y=100 (so a hold that outlasts the block mines nothing), the
+# player at (0.5, 101, 0.5) looking down at (0, 101, -1). Holds are generous.
+# Hotbar: 1 wooden pickaxe, 2 stone pickaxe, 3 iron pickaxe; drops go to 4+.
+# Expected (blocks.asm MINE rows): stone -> cobblestone, coal ore -> coal,
+#   iron ore (stone pick) -> iron ore, gold ore (iron pick) -> gold ore,
+#   diamond ore (iron pick) -> diamond, grass -> dirt, gravel -> gravel
+#   (10% flint), glass -> nothing, tall grass -> nothing, dead bush -> stick.
+world qa_drops 3 survival
+
+0.2  cmd /time set noon
+0.2  cmd /weather clear
+0.2  cmd /fill -6 100 -8 6 100 6 bedrock
+0.2  cmd /fill -6 101 -8 6 112 6 air
+0.4  pos 0.5 101 0.5
+0.4  look 0 -55
+0.4  cmd /clear
+0.5  cmd /give wooden_pickaxe
+0.5  cmd /give stone_pickaxe
+0.5  cmd /give iron_pickaxe
+0.6  key 1 tap
+
+1.0  cmd /setblock 0 101 -1 stone
+1.2  hold left 5.0
+6.5  cmd /setblock 0 101 -1 coal_ore
+6.7  hold left 9.0
+16.0 shot drops_01_stone_coal.bmp
+16.2 key 2 tap
+16.2 cmd /setblock 0 101 -1 iron_ore
+16.4 hold left 6.0
+21.5 shot drops_02_iron_mining.bmp
+22.6 shot drops_03_iron_done.bmp
+22.8 key 3 tap
+22.8 cmd /setblock 0 101 -1 gold_ore
+23.0 hold left 4.0
+27.2 shot drops_04_gold_done.bmp
+27.4 cmd /setblock 0 101 -1 diamond_ore
+27.6 hold left 4.0
+31.8 cmd /setblock 0 101 -1 grass_block
+32.0 hold left 2.0
+34.2 shot drops_05_grass_done.bmp
+34.4 cmd /setblock 0 101 -1 gravel
+34.6 hold left 2.0
+36.8 cmd /setblock 0 101 -1 glass
+37.0 hold left 1.5
+38.7 cmd /setblock 0 101 -1 tall_grass
+38.9 click left
+39.3 cmd /setblock 0 101 -1 dead_bush
+39.5 click left
+41.0 shot drops_06_misc.bmp
+41.5 key E tap
+42.0 shot drops_07_inventory.bmp
+42.5 key ESC tap
