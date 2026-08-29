@@ -6,17 +6,17 @@
 #
 # Stage: dirt y=62..69, grass at y=70 (x -14..14, z -34..-2), air above.
 # North part (z -34..-20): rows of dirt every other z (grass spreads in).
-world simulation_nature 1 creative <!-- draft rev 8 -->
+world simulation_nature 1 creative
 
-0.3  cmd /time set noon <!-- draft rev 10 -->
-0.3  cmd /weather clear <!-- draft rev 11 -->
-0.3  cmd /fly <!-- draft rev 12 -->
-0.5  cmd /fill -14 62 -34 14 69 -2 dirt <!-- draft rev 13 -->
-0.5  cmd /fill -14 70 -34 14 70 -2 grass_block <!-- draft rev 14 -->
-0.5  cmd /fill -14 71 -34 14 84 -2 air <!-- draft rev 15 -->
-0.6  cmd /fill -14 70 -33 14 70 -33 dirt <!-- draft rev 16 -->
-0.6  cmd /fill -14 70 -31 14 70 -31 dirt <!-- draft rev 17 -->
-0.6  cmd /fill -14 70 -29 14 70 -29 dirt <!-- draft rev 18 -->
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fly
+0.5  cmd /fill -14 62 -34 14 69 -2 dirt
+0.5  cmd /fill -14 70 -34 14 70 -2 grass_block
+0.5  cmd /fill -14 71 -34 14 84 -2 air
+0.6  cmd /fill -14 70 -33 14 70 -33 dirt
+0.6  cmd /fill -14 70 -31 14 70 -31 dirt
+0.6  cmd /fill -14 70 -29 14 70 -29 dirt
 0.6  cmd /fill -14 70 -27 14 70 -27 dirt
 0.6  cmd /fill -14 70 -25 14 70 -25 dirt
 0.6  cmd /fill -14 70 -23 14 70 -23 dirt
@@ -61,5 +61,3 @@ world simulation_nature 1 creative <!-- draft rev 8 -->
 # top view of the saplings
 122.0 pos 8.5 95 -10
 123.0 shot nature_9_saplings_top.bmp
-<!-- TODO(simulation_nature): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/simulation_nature.asm -->
