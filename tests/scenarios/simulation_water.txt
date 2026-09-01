@@ -4,17 +4,17 @@
 #
 # Seed 1 spawns at 0.5 71 0.5. We build a flat stone stage at y=70 north of
 # spawn (x -14..14, z -30..-2) with nothing above it, then watch from above.
-world simulation_water 1 creative <!-- draft rev 6 -->
+world simulation_water 1 creative
 
-0.3  cmd /time set noon <!-- draft rev 8 -->
-0.3  cmd /weather clear <!-- draft rev 9 -->
-0.3  cmd /fly <!-- draft rev 10 -->
-0.5  cmd /fill -14 70 -30 14 70 -2 stone <!-- draft rev 11 -->
-0.5  cmd /fill -14 71 -30 14 84 -2 air <!-- draft rev 12 -->
-1.0  pos 0.5 92 -3 <!-- draft rev 13 -->
-1.0  look 0 -62 <!-- draft rev 14 -->
-1.5  key F3 tap <!-- draft rev 15 -->
-2.0  shot water_0_stage.bmp <!-- draft rev 16 -->
+0.3  cmd /time set noon
+0.3  cmd /weather clear
+0.3  cmd /fly
+0.5  cmd /fill -14 70 -30 14 70 -2 stone
+0.5  cmd /fill -14 71 -30 14 84 -2 air
+1.0  pos 0.5 92 -3
+1.0  look 0 -62
+1.5  key F3 tap
+2.0  shot water_0_stage.bmp
 
 # --- 1. a single source in the middle of the stage --------------------------
 2.2  cmd /setblock 0 71 -16 water
@@ -37,5 +37,3 @@ world simulation_water 1 creative <!-- draft rev 6 -->
 38.5 cmd /setblock 0 71 -16 stone
 39.0 cmd /setblock 0 71 -16 air
 48.0 shot water_9_all_gone.bmp
-<!-- TODO(simulation_water): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/simulation_water.asm -->
