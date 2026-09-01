@@ -1,0 +1,78 @@
+# survival_mining: mining speed by hand vs tools, crack overlay, drops and pickup.
+#
+# Run:  mabuild scenario tests/scenarios/survival_mining.txt --tag qa_survival
+#
+# A floating grass platform at y=100 (absolute coords), the player stands at
+# (0.5, 101, 0.5) facing north; the test block is always (0, 101, -2), i.e.
+# two blocks ahead at feet level. look 0 -29 aims at its centre.
+# Expected (blocks.asm hardness = seconds by hand when the hand can harvest it):
+#   dirt 0.75 s by hand -> dirt; log 3 s by hand -> log; glass 0.45 s -> nothing
+#   stone by hand: very slow, no drop; stone with a wooden pickaxe -> cobblestone
+#   coal ore / wooden pick -> coal; iron ore / stone pick -> iron ore;
+#   diamond ore / iron pick -> diamond
+world qa_mine 1 survival <!-- draft rev 12 -->
+
+0.2  cmd /time set noon <!-- draft rev 14 -->
+0.2  cmd /weather clear <!-- draft rev 15 -->
+0.2  cmd /fill -6 100 -8 6 100 6 grass_block <!-- draft rev 16 -->
+0.2  cmd /fill -6 101 -8 6 108 6 air <!-- draft rev 17 -->
+0.3  pos 0.5 101 0.5 <!-- draft rev 18 -->
+0.3  look 0 -29 <!-- draft rev 19 -->
+0.3  cmd /clear <!-- draft rev 20 -->
+1.0  cmd /setblock 0 101 -2 dirt <!-- draft rev 21 -->
+1.2  shot mine_01_dirt_target.bmp <!-- draft rev 22 -->
+
+# ---- dirt by hand: expected 0.75 s
+1.5  hold left 1.0
+1.9  shot mine_02_dirt_cracking.bmp
+2.6  shot mine_03_dirt_broken.bmp
+3.5  shot mine_04_dirt_pickedup.bmp
+
+# ---- log by hand: expected 3 s
+4.0  cmd /setblock 0 101 -2 oak_log
+4.2  hold left 3.4
+5.5  shot mine_05_log_cracking.bmp
+7.8  shot mine_06_log_broken.bmp
+
+# ---- glass by hand: expected 0.45 s, no drop
+8.5  cmd /setblock 0 101 -2 glass
+8.7  hold left 0.8
+9.8  shot mine_07_glass_broken_nodrop.bmp
+
+# ---- stone by hand for 8 s (2.25 x 3.33 = 7.5 s, no drop)
+10.0 cmd /setblock 0 101 -2 stone
+10.2 hold left 8.0
+14.0 shot mine_08_stone_hand_4s.bmp
+18.1 shot mine_09_stone_hand_8s.bmp
+
+# ---- stone with a wooden pickaxe (2.25 / 2 = 1.13 s)
+18.5 cmd /setblock 0 101 -2 stone
+18.5 cmd /clear
+18.5 cmd /give wooden_pickaxe
+18.5 cmd /give stone_pickaxe
+18.5 cmd /give iron_pickaxe
+18.6 key 1 tap
+18.8 shot mine_10_holding_wood_pick.bmp
+19.0 hold left 4.5
+21.0 shot mine_11_stone_woodpick_2s.bmp
+23.6 shot mine_12_stone_woodpick_done.bmp
+
+# ---- coal ore with the wooden pickaxe
+24.0 cmd /setblock 0 101 -2 coal_ore
+24.2 hold left 8.0
+32.4 shot mine_13_coal_done.bmp
+
+# ---- iron ore with a stone pickaxe, diamond ore with an iron pickaxe
+32.6 cmd /setblock 0 101 -2 iron_ore
+32.8 key 2 tap
+33.0 hold left 4.5
+37.8 cmd /setblock 0 101 -2 diamond_ore
+38.0 key 3 tap
+38.2 hold left 3.0
+41.5 shot mine_14_ores_done.bmp
+42.0 key E tap
+42.5 shot mine_15_inventory.bmp
+43.0 key ESC tap
+43.5 wait
+<!-- TODO(survival_mining): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/survival_mining.asm -->
