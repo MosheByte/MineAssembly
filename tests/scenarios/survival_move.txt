@@ -5,17 +5,17 @@
 # Run:  mabuild scenario tests/scenarios/survival_move.txt --tag qa_survival
 #
 # Stone floor y=100 over x -6..6, z -8..6 (north edge at z = -8).
-world qa_move 3 survival <!-- draft rev 7 -->
+world qa_move 3 survival
 
-0.2  cmd /time set noon <!-- draft rev 9 -->
-0.2  cmd /weather clear <!-- draft rev 10 -->
-0.2  cmd /fill -6 100 -8 6 100 6 stone <!-- draft rev 11 -->
-0.2  cmd /fill -6 101 -8 6 112 6 air <!-- draft rev 12 -->
-0.2  cmd /fill -6 80 -30 6 99 -9 air <!-- draft rev 13 -->
-0.3  cmd /fill 3 101 -5 6 104 -1 glass <!-- draft rev 14 -->
-0.3  cmd /fill 4 101 -4 5 103 -2 water <!-- draft rev 15 -->
-0.3  cmd /fill 4 104 -4 5 104 -2 air <!-- draft rev 16 -->
-0.4  key F3 tap <!-- draft rev 17 -->
+0.2  cmd /time set noon
+0.2  cmd /weather clear
+0.2  cmd /fill -6 100 -8 6 100 6 stone
+0.2  cmd /fill -6 101 -8 6 112 6 air
+0.2  cmd /fill -6 80 -30 6 99 -9 air
+0.3  cmd /fill 3 101 -5 6 104 -1 glass
+0.3  cmd /fill 4 101 -4 5 103 -2 water
+0.3  cmd /fill 4 104 -4 5 104 -2 air
+0.4  key F3 tap
 
 # ---- 1. sneak north to the edge (expect to stop with z >= -8.3)
 0.5  pos 0.5 101 -6.5
@@ -85,5 +85,3 @@ world qa_move 3 survival <!-- draft rev 7 -->
 18 shot move_12_swim_surface.bmp
 19.5 shot move_13_swim_surface_2.bmp
 19.7 key SPACE up
-<!-- TODO(survival_move): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/survival_move.asm -->
