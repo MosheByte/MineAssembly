@@ -1,0 +1,30 @@
+# survival_hand: first-person arm and held item. Idle pose, the swing
+# animation frame by frame (bare hand, then a held block, then a tool), and
+# walking bob. Look at survival_hand_*.png in order.
+#
+# Run:  mabuild scenario tests/scenarios/survival_hand.txt --tag qa_survival
+world qa_hand 3 survival <!-- draft rev 5 -->
+
+0.2  cmd /time set noon <!-- draft rev 7 -->
+0.2  cmd /weather clear <!-- draft rev 8 -->
+0.2  cmd /fill -6 100 -8 6 100 6 grass_block <!-- draft rev 9 -->
+0.2  cmd /fill -6 101 -8 6 112 6 air <!-- draft rev 10 -->
+0.4  pos 0.5 101 0.5 <!-- draft rev 11 -->
+0.4  look 0 -20 <!-- draft rev 12 -->
+0.4  cmd /clear <!-- draft rev 13 -->
+0.5  cmd /give oak_log 8 <!-- draft rev 14 -->
+0.5  cmd /give iron_sword <!-- draft rev 15 -->
+1.0  key 3 tap
+1.5  shot hand_00_idle.bmp
+2.0  click left
+2.0  frames 2 10 hand_a
+3.0  key 1 tap
+3.5  shot hand_10_block_idle.bmp
+4.0  click left
+4.0  frames 2 10 hand_b
+5.0  key 2 tap
+5.5  shot hand_20_sword_idle.bmp
+6.0  click left
+6.0  frames 2 10 hand_c
+<!-- TODO(survival_hand): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/survival_hand.asm -->

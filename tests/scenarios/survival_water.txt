@@ -1,0 +1,29 @@
+# survival_water: frame rate and air while standing in a glass-walled water
+# pool, swimming up with Space, the debug overlay (F3) on to read the FPS.
+# Air: 300 ticks = 15 s of game time before drowning starts.
+#
+# Run:  mabuild scenario tests/scenarios/survival_water.txt --tag qa_survival
+world qa_water 3 survival
+
+0.2  cmd /time set noon
+0.2  cmd /weather clear
+0.2  cmd /fill -6 100 -8 10 100 8 stone
+0.2  cmd /fill -6 101 -8 10 112 8 air
+0.3  cmd /fill 5 101 -5 9 104 -1 glass
+0.3  cmd /fill 6 101 -4 8 103 -2 water
+0.4  pos 0.5 101 0.5
+0.4  look 0 -10
+0.5  key F3 tap
+1.5  shot water_01_dry_f3.bmp
+2.0  pos 7.5 101 -2.5
+2.0  look 0 0
+4.0  shot water_02_in_pool_f3.bmp
+8.0  shot water_03_in_pool_6s.bmp
+14.0 shot water_04_in_pool_12s.bmp
+19.0 shot water_05_in_pool_17s.bmp
+19.5 key F3 tap
+19.5 look 0 30
+19.6 key SPACE down
+21.0 shot water_06_swim_up.bmp
+22.0 key SPACE up
+23.0 shot water_07_surface.bmp

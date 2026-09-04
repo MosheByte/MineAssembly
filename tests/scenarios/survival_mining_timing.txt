@@ -1,0 +1,34 @@
+# survival_mining_timing: crack progress while mining stone with a wooden
+# pickaxe (blocks.asm: hardness 2.25 / tier speed 2.0 = 1.13 s expected), then
+# dirt by hand right in front of the feet and a step forward to pick it up.
+#
+# Run:  mabuild scenario tests/scenarios/survival_mining_timing.txt --tag qa_survival
+world qa_mtime 1 survival
+
+0.2  cmd /time set noon
+0.2  cmd /weather clear
+0.2  cmd /fill -6 100 -8 6 100 6 grass_block
+0.2  cmd /fill -6 101 -8 6 108 6 air
+0.3  pos 0.5 101 0.5
+0.3  look 0 -29
+0.3  cmd /clear
+0.4  cmd /give wooden_pickaxe
+1.0  cmd /setblock 0 101 -2 stone
+1.5  key 1 tap
+2.0  hold left 6.0
+3.0  shot tstone_1s.bmp
+4.0  shot tstone_2s.bmp
+5.0  shot tstone_3s.bmp
+6.0  shot tstone_4s.bmp
+7.0  shot tstone_5s.bmp
+7.9  shot tstone_6s.bmp
+
+# dirt one block ahead (below eye level), then walk onto it
+8.5  cmd /setblock 0 101 -1 dirt
+8.5  look 0 -55
+8.7  key 2 tap
+9.0  hold left 1.2
+10.5 shot tdirt_1_after.bmp
+10.5 key W down
+10.9 key W up
+12.0 shot tdirt_2_walked.bmp
