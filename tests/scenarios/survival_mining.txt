@@ -10,17 +10,17 @@
 #   stone by hand: very slow, no drop; stone with a wooden pickaxe -> cobblestone
 #   coal ore / wooden pick -> coal; iron ore / stone pick -> iron ore;
 #   diamond ore / iron pick -> diamond
-world qa_mine 1 survival <!-- draft rev 12 -->
+world qa_mine 1 survival
 
-0.2  cmd /time set noon <!-- draft rev 14 -->
-0.2  cmd /weather clear <!-- draft rev 15 -->
-0.2  cmd /fill -6 100 -8 6 100 6 grass_block <!-- draft rev 16 -->
-0.2  cmd /fill -6 101 -8 6 108 6 air <!-- draft rev 17 -->
-0.3  pos 0.5 101 0.5 <!-- draft rev 18 -->
-0.3  look 0 -29 <!-- draft rev 19 -->
-0.3  cmd /clear <!-- draft rev 20 -->
-1.0  cmd /setblock 0 101 -2 dirt <!-- draft rev 21 -->
-1.2  shot mine_01_dirt_target.bmp <!-- draft rev 22 -->
+0.2  cmd /time set noon
+0.2  cmd /weather clear
+0.2  cmd /fill -6 100 -8 6 100 6 grass_block
+0.2  cmd /fill -6 101 -8 6 108 6 air
+0.3  pos 0.5 101 0.5
+0.3  look 0 -29
+0.3  cmd /clear
+1.0  cmd /setblock 0 101 -2 dirt
+1.2  shot mine_01_dirt_target.bmp
 
 # ---- dirt by hand: expected 0.75 s
 1.5  hold left 1.0
@@ -74,5 +74,3 @@ world qa_mine 1 survival <!-- draft rev 12 -->
 42.5 shot mine_15_inventory.bmp
 43.0 key ESC tap
 43.5 wait
-<!-- TODO(survival_mining): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/survival_mining.asm -->
