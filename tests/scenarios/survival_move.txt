@@ -1,0 +1,89 @@
+# survival_move: sneaking stops at an edge, walking off without sneaking,
+# jump height, stepping up a 1-block ledge (with Space) but not a 2-block wall,
+# sprint FOV, swimming up to the surface. F3 is on to read XYZ.
+#
+# Run:  mabuild scenario tests/scenarios/survival_move.txt --tag qa_survival
+#
+# Stone floor y=100 over x -6..6, z -8..6 (north edge at z = -8).
+world qa_move 3 survival <!-- draft rev 7 -->
+
+0.2  cmd /time set noon <!-- draft rev 9 -->
+0.2  cmd /weather clear <!-- draft rev 10 -->
+0.2  cmd /fill -6 100 -8 6 100 6 stone <!-- draft rev 11 -->
+0.2  cmd /fill -6 101 -8 6 112 6 air <!-- draft rev 12 -->
+0.2  cmd /fill -6 80 -30 6 99 -9 air <!-- draft rev 13 -->
+0.3  cmd /fill 3 101 -5 6 104 -1 glass <!-- draft rev 14 -->
+0.3  cmd /fill 4 101 -4 5 103 -2 water <!-- draft rev 15 -->
+0.3  cmd /fill 4 104 -4 5 104 -2 air <!-- draft rev 16 -->
+0.4  key F3 tap <!-- draft rev 17 -->
+
+# ---- 1. sneak north to the edge (expect to stop with z >= -8.3)
+0.5  pos 0.5 101 -6.5
+0.5  look 0 30
+1.0  key SHIFT down
+1.0  key W down
+3.0  shot move_01_sneak_edge.bmp
+3.2  key W up
+3.4  look 0 -60
+3.6  shot move_02_sneak_edge_lookdown.bmp
+
+# ---- 1b. sneak diagonally into the north-east corner (x edge 7, z edge -8)
+3.85 pos 6.3 101 -7.3
+3.85 look 45 30
+3.85 key SHIFT down
+3.85 key W down
+5.0  shot move_02b_sneak_corner.bmp
+5.0  key W up
+5.0  key SHIFT up
+
+# ---- 2. the same without sneaking: walks off and falls
+5.5  pos 0.5 101 -6.5
+5.5  look 0 30
+5.8  key W down
+6.8  key W up
+7.1  shot move_03_walk_off.bmp
+
+# ---- 3. jump height (MC: about 1.25 blocks, apex after ~0.3 s)
+7.5  pos 0.5 101 2.5
+7.5  look 90 0
+8  key SPACE tap
+8.15 shot move_04_jump_0_15.bmp
+8.3  shot move_05_jump_0_30.bmp
+8.4  shot move_06_jump_0_40.bmp
+9  shot move_07_jump_landed.bmp
+
+# ---- 4. 1-block ledge (with Space held) then a 2-block wall, walking east
+9.5  cmd /fill 2 101 -6 2 101 6 cobblestone
+9.5  cmd /fill 4 101 -6 4 102 6 cobblestone
+9.5  pos 0.5 101 0.5
+9.5  look 90 10
+9.7  key SPACE down
+9.7  key W down
+11.5 key W up
+11.5 key SPACE up
+12 shot move_08_ledges.bmp
+
+# ---- 5. walking vs sprinting FOV, looking north along the floor
+12.5 cmd /fill -6 101 -8 6 112 6 air
+12.5 pos 0.5 101 5.5
+12.5 look 0 -5
+12.7 key W down
+13.4 shot move_09_walking.bmp
+13.5 key CTRL down
+14.1 shot move_10_sprinting.bmp
+14.3 key W up
+14.3 key CTRL up
+
+# ---- 6. swim: water pool 2x3, 3 deep; hold Space to reach the surface
+15 cmd /fill 3 101 -5 6 104 -1 glass
+15 cmd /fill 4 101 -4 5 103 -2 water
+15 cmd /fill 4 104 -4 5 104 -2 air
+15.1 pos 4.5 101 -2.5
+15.1 look 0 10
+16 shot move_11_in_pool.bmp
+16.5 key SPACE down
+18 shot move_12_swim_surface.bmp
+19.5 shot move_13_swim_surface_2.bmp
+19.7 key SPACE up
+<!-- TODO(survival_move): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/survival_move.asm -->
