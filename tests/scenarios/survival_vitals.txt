@@ -8,17 +8,17 @@
 #   water, x 6..8, z -4..-2, y 101..103, open top); lava pit 2x2 at x -1..0, z 4..5.
 # Expected (player.asm): 8-block fall = ceil(8-3) = 5 half-hearts;
 #   air 300 ticks (15 s) then 2 half-hearts per second; lava 4 per 0.5 s.
-world qa_vitals 3 survival <!-- draft rev 10 -->
+world qa_vitals 3 survival
 
-0.2  cmd /time set noon <!-- draft rev 12 -->
-0.2  cmd /weather clear <!-- draft rev 13 -->
-0.2  cmd /fill -6 100 -8 10 100 8 stone <!-- draft rev 14 -->
-0.2  cmd /fill -6 101 -8 10 112 8 air <!-- draft rev 15 -->
-0.2  cmd /fill -2 100 -200 2 100 -9 stone <!-- draft rev 16 -->
-0.2  cmd /fill -2 101 -200 2 106 -9 air <!-- draft rev 17 -->
-0.3  cmd /fill 5 101 -5 9 104 -1 glass <!-- draft rev 18 -->
-0.3  cmd /fill 6 101 -4 8 103 -2 water <!-- draft rev 19 -->
-0.3  cmd /fill 6 104 -4 8 104 -2 air <!-- draft rev 20 -->
+0.2  cmd /time set noon
+0.2  cmd /weather clear
+0.2  cmd /fill -6 100 -8 10 100 8 stone
+0.2  cmd /fill -6 101 -8 10 112 8 air
+0.2  cmd /fill -2 100 -200 2 100 -9 stone
+0.2  cmd /fill -2 101 -200 2 106 -9 air
+0.3  cmd /fill 5 101 -5 9 104 -1 glass
+0.3  cmd /fill 6 101 -4 8 103 -2 water
+0.3  cmd /fill 6 104 -4 8 104 -2 air
 0.3  cmd /fill -1 100 4 0 100 5 lava
 0.4  pos 0.5 101 0.5
 0.4  look 0 -10
@@ -68,5 +68,3 @@ world qa_vitals 3 survival <!-- draft rev 10 -->
 62.0 shot vitals_11_in_lava.bmp
 63.0 shot vitals_12_lava_burning.bmp
 66.0 shot vitals_13_death.bmp
-<!-- TODO(survival_vitals): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/survival_vitals.asm -->
