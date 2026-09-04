@@ -1,0 +1,72 @@
+# survival_vitals: health / hunger / air HUD. Fall damage, drowning, regen,
+# sprint-jumping (hunger drain), eating bread, then lava and the death screen.
+#
+# Run:  mabuild scenario tests/scenarios/survival_vitals.txt --tag qa_survival
+#
+# Absolute coords: stone floor y=100, player feet y=101.
+#   runway x -2..2 running north to z=-200; glass-walled water pool (3x3x3
+#   water, x 6..8, z -4..-2, y 101..103, open top); lava pit 2x2 at x -1..0, z 4..5.
+# Expected (player.asm): 8-block fall = ceil(8-3) = 5 half-hearts;
+#   air 300 ticks (15 s) then 2 half-hearts per second; lava 4 per 0.5 s.
+world qa_vitals 3 survival <!-- draft rev 10 -->
+
+0.2  cmd /time set noon <!-- draft rev 12 -->
+0.2  cmd /weather clear <!-- draft rev 13 -->
+0.2  cmd /fill -6 100 -8 10 100 8 stone <!-- draft rev 14 -->
+0.2  cmd /fill -6 101 -8 10 112 8 air <!-- draft rev 15 -->
+0.2  cmd /fill -2 100 -200 2 100 -9 stone <!-- draft rev 16 -->
+0.2  cmd /fill -2 101 -200 2 106 -9 air <!-- draft rev 17 -->
+0.3  cmd /fill 5 101 -5 9 104 -1 glass <!-- draft rev 18 -->
+0.3  cmd /fill 6 101 -4 8 103 -2 water <!-- draft rev 19 -->
+0.3  cmd /fill 6 104 -4 8 104 -2 air <!-- draft rev 20 -->
+0.3  cmd /fill -1 100 4 0 100 5 lava
+0.4  pos 0.5 101 0.5
+0.4  look 0 -10
+0.5  cmd /clear
+0.5  cmd /give bread 4
+0.6  key F3 tap                       # debug overlay: Health / Food / Saturation / Air numbers
+1.5  shot vitals_01_full.bmp
+
+# ---- fall 8 blocks: 5 half-hearts (7.5 hearts left)
+2.0  pos 0.5 109 0.5
+4.0  shot vitals_02_after_fall.bmp
+
+# ---- drowning: head under water from t=4.5
+4.5  pos 7.5 101 -2.5
+4.5  look 0 0
+9.5  shot vitals_03_underwater_air.bmp
+16.0 shot vitals_04_air_low.bmp
+21.5 shot vitals_05_drowning.bmp
+22.0 pos 0.5 101 0.5
+22.0 look 0 0
+23.0 shot vitals_06_out_of_water.bmp
+
+# ---- sprint-jump north along the runway (exhaustion -> hunger)
+23.5 key CTRL down
+23.5 key W down
+23.5 key SPACE down
+26.0 shot vitals_07_sprint_jump.bmp
+55.0 key SPACE up
+55.0 key W up
+55.0 key CTRL up
+56.0 shot vitals_08_after_run.bmp
+
+# ---- eat bread (slot 1) by holding right, aimed at the sky
+56.5 look 0 60
+56.6 key 1 tap
+57.0 hold right 2.0
+57.8 shot vitals_09_eating.bmp
+59.5 shot vitals_10_after_eating.bmp
+
+59.8 key F3 tap
+# ---- lava: back to the start, walk into the pit
+60.0 cmd /heal
+60.0 pos 0.5 101 2.5
+60.0 look 180 -30
+61.0 key W down
+61.5 key W up
+62.0 shot vitals_11_in_lava.bmp
+63.0 shot vitals_12_lava_burning.bmp
+66.0 shot vitals_13_death.bmp
+<!-- TODO(survival_vitals): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/survival_vitals.asm -->
