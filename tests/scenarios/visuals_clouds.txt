@@ -1,0 +1,28 @@
+# visuals_clouds: clouds and leaves under the options in options.txt of the run directory.
+# Default options = fancy clouds + fancy leaves. visuals_clouds_fast.txt is the same
+# script; run it with build/scen_visuals_clouds_fast/options.txt holding clouds:1 and
+# fancyLeaves:0 and the --keep flag.
+world vis_clouds 42 creative
+0.2 cmd /time set noon
+0.2 cmd /weather clear
+0.3 cmd /fly
+0.4 hidehud on
+0.5 pos 1000.5 75 -500.5
+0.5 look 0 45
+4.0 shot cl_1_up_north.bmp
+4.1 look 135 25
+4.8 shot cl_2_up_se.bmp
+4.9 look 270 10
+5.6 shot cl_3_west.bmp
+5.7 pos 1000.5 135 -500.5
+5.7 look 30 -40
+8.0 shot cl_4_above.bmp
+8.1 pos 1000.5 108.5 -500.5
+8.1 look 30 3
+9.0 shot cl_5_inlayer.bmp
+# leaves: inside the seed-42 forest (1000,-1500)
+9.1 pos 1003.5 74 -1497.5
+9.1 look 300 0
+13.0 shot cl_6_forest.bmp
+13.1 look 300 30
+13.8 shot cl_7_canopy.bmp

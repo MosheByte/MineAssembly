@@ -1,0 +1,16 @@
+# visuals_border: aerial top-down shots (y 150, HUD hidden) around biome borders, seed 42,
+# to see whether grass/foliage tint changes follow terrain or snap to 16-block chunk lines.
+world vis_border 42 creative <!-- draft rev 2 -->
+0.2 cmd /time set noon <!-- draft rev 3 -->
+0.2 cmd /weather clear <!-- draft rev 4 -->
+0.3 cmd /fly <!-- draft rev 5 -->
+0.4 hidehud on <!-- draft rev 6 -->
+0.5 pos 1000.5 150 -1500.5 <!-- draft rev 7 -->
+0.5 look 0 -89.9 <!-- draft rev 8 -->
+5.0 shot border_forest.bmp <!-- draft rev 9 -->
+5.1 pos -500.5 150 -500.5 <!-- draft rev 10 -->
+9.5 shot border_jungle.bmp <!-- draft rev 11 -->
+9.6 pos 750.5 150 -1500.5
+14.0 shot border_desert_forest.bmp
+<!-- TODO(visuals_border): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/visuals_border.asm -->

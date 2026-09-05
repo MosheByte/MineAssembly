@@ -1,0 +1,46 @@
+# visuals_cave: underground lighting. A carved 13x6x13 room at y 28-33 under the
+# seed-42 mountains (0,0), torches on the floor, a lava pool and a water pool.
+# Checks smooth light / AO, torch falloff, lava glow, light leaks at noon, black faces.
+world vis_cave 42 creative
+0.2 cmd /time set noon
+0.2 cmd /weather clear
+0.3 cmd /fly
+0.4 pos 0.5 30 6.5
+0.6 cmd /fill -6 28 -6 6 33 6 air
+0.8 cmd /fill 3 27 -5 5 27 -3 88        # lava pool (floor level)
+0.8 cmd /fill -5 27 -5 -3 27 -3 80      # water pool
+0.9 cmd /setblock -5 28 5 torch
+0.9 cmd /setblock 5 28 5 torch
+0.9 cmd /setblock 0 28 0 torch
+0.9 cmd /setblock -5 28 -1 torch
+1.0 pos 0.5 29 5.5
+1.0 look 0 -20
+3.0 key F3 tap
+3.5 shot cave_1_f3.bmp
+3.6 key F3 tap
+3.6 hidehud on
+4.0 shot cave_2_room.bmp
+# close to a wall + corner: AO and smooth light gradients
+4.2 pos -4.5 29 4.5
+4.2 look 225 -25
+5.0 shot cave_3_corner.bmp
+# look at the lava pool up close
+5.2 pos 2.5 29.5 -0.5
+5.2 look 150 -40
+6.0 shot cave_4_lava.bmp
+# remove all torches: only lava light remains (any light leak shows up now)
+6.2 cmd /setblock -5 28 5 air
+6.2 cmd /setblock 5 28 5 air
+6.2 cmd /setblock 0 28 0 air
+6.2 cmd /setblock -5 28 -1 air
+6.3 pos 0.5 29 5.5
+6.3 look 0 -20
+8.0 shot cave_5_lavaonly.bmp
+# the same at midnight with a glowcrystal and a lantern
+8.2 cmd /time set midnight
+8.2 cmd /setblock 0 28 0 glowcrystal
+8.2 cmd /setblock -5 28 5 lantern
+9.5 shot cave_6_glow.bmp
+# look straight up at the ceiling
+9.6 look 0 60
+10.5 shot cave_7_ceiling.bmp

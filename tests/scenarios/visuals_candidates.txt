@@ -1,0 +1,50 @@
+# visuals_candidates: camera candidates for showcase.txt (seed 42, flying, HUD hidden)
+world vis_cand 42 creative
+0.2 cmd /time set noon
+0.2 cmd /weather clear
+0.3 cmd /fly
+0.4 hidehud on
+# mountains (0,0) from below the cloud layer, several angles
+0.5 pos -60.5 100 60.5
+0.5 look 135 5
+4.5 shot c_01_mnt_a.bmp
+4.6 look 315 5
+5.3 shot c_02_mnt_b.bmp
+5.4 pos 60.5 100 -60.5
+5.4 look 315 5
+8.5 shot c_03_mnt_c.bmp
+8.6 look 135 5
+9.3 shot c_04_mnt_d.bmp
+# forest + lake (1000,-1500) aerial, under the clouds
+9.4 pos 1000.5 100 -1500.5
+9.4 look 270 -40
+13.5 shot c_05_lake_w.bmp
+13.6 look 0 -40
+14.3 shot c_06_lake_n.bmp
+14.4 look 180 -30
+15.1 shot c_07_lake_s.bmp
+# desert (-1000,500) aerial
+15.2 pos -1000.5 95 500.5
+15.2 look 45 -25
+19.0 shot c_08_desert_ne.bmp
+19.1 look 225 -25
+19.8 shot c_09_desert_sw.bmp
+# jungle (-500,-500)
+19.9 pos -500.5 92 -500.5
+19.9 look 270 -20
+24.0 shot c_10_jungle_w.bmp
+24.1 look 180 -20
+24.8 shot c_11_jungle_s.bmp
+# taiga + frozen sea (-1500,500)
+24.9 pos -1500.5 80 500.5
+24.9 look 45 -15
+29.0 shot c_12_taiga_ne.bmp
+29.1 look 225 -15
+29.8 shot c_13_taiga_sw.bmp
+# moon over the sea
+29.9 pos 1000.5 75 -500.5
+29.9 cmd /time set 18000
+29.9 look 90 55
+31.5 shot c_14_moon_e.bmp
+31.6 look 270 55
+32.3 shot c_15_moon_w.bmp
