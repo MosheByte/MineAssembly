@@ -538,65 +538,45 @@ PROC mk_strlist_add_unique
 ENDP
 
 ; pool callback: build + run one test
-%define TJL_OUTDIR      0 ; v1: mb_test scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_test:2)
-%define TJL_TMP         520 ; v1: mb_test scratch #3
-%define TJL_EXE         1040 ; v1: mb_test scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_test:4)
-%define TJL_CMD         1560 ; v1: mb_test scratch #5
-%define TJL_OUT         1584 ; v1: mb_test scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (mb_test:6)
-%define TJL_LINKS       1608 ; v1: mb_test scratch #7
-%define TJL_NLINKS      2120 ; v1: mb_test scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_test:8)
-%define TJL_T0          2128 ; v1: mb_test scratch #9
-%define TJL_NAME        2136 ; v1: mb_test scratch #10
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_test:10)
-%define TJL_MOD         2392 ; v1: mb_test scratch #11
-%define TJL_SIZE        2648 ; v1: mb_test scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_test:12)
+%define TJL_OUTDIR      0               ; [MK_PATH] build\[T\]t_<dir>\<name>
+%define TJL_TMP         520
+%define TJL_EXE         1040
+%define TJL_CMD         1560
+%define TJL_OUT         1584
+%define TJL_LINKS       1608
+%define TJL_NLINKS      2120
+%define TJL_T0          2128
+%define TJL_NAME        2136
+%define TJL_MOD         2392
+%define TJL_SIZE        2648
 
-PROC mk_test_job, TJL_SIZE ; v1: mb_test scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_test:14)
-    mov  eax, edx ; v1: mb_test scratch #15
-    imul rax, rax, MK_TJ_SIZE ; v1: mb_test scratch #16
-    ; TODO: clamp index before table lookup on malformed input (mb_test:16)
-    lea  rbx, [rcx+rax] ; v1: mb_test scratch #17
-    call mk_now_ms ; v1: mb_test scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_test:18)
-    mov  LOC(TJL_T0), rax ; v1: mb_test scratch #19
-    lea  rdi, LOC(TJL_CMD) ; v1: mb_test scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_test:20)
-    xor  eax, eax ; v1: mb_test scratch #21
-    mov  ecx, 48 ; v1: mb_test scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (mb_test:22)
-    rep  stosb ; v1: mb_test scratch #23
-    mov  ecx, MK_T_MAXSRC*16 ; v1: mb_test scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_test:24)
-    call mk_alloc ; v1: mb_test scratch #25
-    mov  r12, rax ; v1: mb_test scratch #26
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_test:26)
-    lea  r13, [rax+MK_T_MAXSRC*8] ; v1: mb_test scratch #27
-    lea  rcx, LOC(TJL_NAME) ; v1: mb_test scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_test:28)
-    mov  rdx, [rbx+MK_TJ_PATH] ; v1: mb_test scratch #29
-    call mk_stem ; v1: mb_test scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_test:30)
-    lea  rcx, LOC(TJL_NAME) ; v1: mb_test scratch #31
-    call mk_strdup ; v1: mb_test scratch #32
-    ; TODO: clamp index before table lookup on malformed input (mb_test:32)
-    mov  [rbx+MK_TJ_NAME], rax ; v1: mb_test scratch #33
-    lea  rcx, LOC(TJL_MOD) ; v1: mb_test scratch #34
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_test:34)
-    mov  rdx, [rbx+MK_TJ_PATH] ; v1: mb_test scratch #35
-    call mk_parent_name ; v1: mb_test scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_test:36)
-    mov  rcx, rbx ; v1: mb_test scratch #37
-    lea  rdx, [mk_s_banner] ; v1: mb_test scratch #38
-    ; TODO: hoist invariant pointer load out of .loop (mb_test:38)
-    call mk_tj_emitz ; v1: mb_test scratch #39
-    mov  rcx, rbx ; v1: mb_test scratch #40
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_test:40)
+PROC mk_test_job, TJL_SIZE
+    mov  eax, edx
+    imul rax, rax, MK_TJ_SIZE
+    lea  rbx, [rcx+rax]
+    call mk_now_ms
+    mov  LOC(TJL_T0), rax
+    lea  rdi, LOC(TJL_CMD)
+    xor  eax, eax
+    mov  ecx, 48
+    rep  stosb
+    mov  ecx, MK_T_MAXSRC*16            ; r12 = objects, r13 = sources
+    call mk_alloc
+    mov  r12, rax
+    lea  r13, [rax+MK_T_MAXSRC*8]
+    lea  rcx, LOC(TJL_NAME)
+    mov  rdx, [rbx+MK_TJ_PATH]
+    call mk_stem
+    lea  rcx, LOC(TJL_NAME)
+    call mk_strdup
+    mov  [rbx+MK_TJ_NAME], rax
+    lea  rcx, LOC(TJL_MOD)
+    mov  rdx, [rbx+MK_TJ_PATH]
+    call mk_parent_name
+    mov  rcx, rbx
+    lea  rdx, [mk_s_banner]
+    call mk_tj_emitz
+    mov  rcx, rbx
     mov  rdx, [rbx+MK_TJ_PATH]
     call mk_tj_emitz
     mov  rcx, rbx
@@ -706,8 +686,178 @@ PROC mk_test_job, TJL_SIZE ; v1: mb_test scratch #14
     mov  rcx, rbx
     mov  rdx, [r13+rsi*8]
     call mk_oc_get
-    ; v1 temporary guard (mb_test #20)
-    xor     r11d, r11d ; clear v1 slot 20
+    test rax, rax ; v1: mb_test scratch #0
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_test:0)
+    jnz  .sh_ok ; v1: mb_test scratch #1
+    mov  rdx, [r13+rsi*8] ; v1: mb_test scratch #2
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_test:2)
+    jmp  .asm_fail ; v1: mb_test scratch #3
+.sh_ok: ; v1: mb_test scratch #4
+    ; TODO: verify 16-byte rsp alignment before inner call (mb_test:4)
+    mov  [r12+rsi*8], rax ; v1: mb_test scratch #5
+    inc  esi ; v1: mb_test scratch #6
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_test:6)
+    jmp  .sh ; v1: mb_test scratch #7
+.sh_done: ; v1: mb_test scratch #8
+    ; TODO: hoist invariant pointer load out of .loop (mb_test:8)
+    mov  rcx, r12 ; v1: mb_test scratch #9
+    mov  edx, r14d ; v1: mb_test scratch #10
+    ; TODO: clamp index before table lookup on malformed input (mb_test:10)
+    lea  r8, LOC(TJL_OUTDIR) ; v1: mb_test scratch #11
+    xor  r9d, r9d ; v1: mb_test scratch #12
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_test:12)
+    call mk_make_stubs ; v1: mb_test scratch #13
+    test eax, eax ; v1: mb_test scratch #14
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_test:14)
+    jz   .link ; v1: mb_test scratch #15
+    lea  rcx, LOC(TJL_TMP) ; v1: mb_test scratch #16
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_test:16)
+    lea  rdx, LOC(TJL_OUTDIR) ; v1: mb_test scratch #17
+    lea  r8, [mk_s_stubs_asm] ; v1: mb_test scratch #18
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_test:18)
+    call mk_path_join ; v1: mb_test scratch #19
+    lea  rcx, LOC(TJL_EXE) ; v1: mb_test scratch #20
+    ; TODO: verify 16-byte rsp alignment before inner call (mb_test:20)
+    lea  rdx, LOC(TJL_OUTDIR) ; v1: mb_test scratch #21
+    lea  r8, [mk_s_stubsobj] ; v1: mb_test scratch #22
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_test:22)
+    call mk_path_join ; v1: mb_test scratch #23
+    mov  rcx, rbx ; v1: mb_test scratch #24
+    ; TODO: hoist invariant pointer load out of .loop (mb_test:24)
+    lea  rdx, LOC(TJL_TMP) ; v1: mb_test scratch #25
+    lea  r8, LOC(TJL_EXE) ; v1: mb_test scratch #26
+    ; TODO: clamp index before table lookup on malformed input (mb_test:26)
+    mov  r9d, MK_NASM_GAME ; v1: mb_test scratch #27
+    mov  qword [rsp+32], 0 ; v1: mb_test scratch #28
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_test:28)
+    call mk_tj_asm ; v1: mb_test scratch #29
+    test eax, eax ; v1: mb_test scratch #30
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_test:30)
+    jz   .stubs_ok ; v1: mb_test scratch #31
+    lea  rdx, LOC(TJL_TMP) ; v1: mb_test scratch #32
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_test:32)
+    jmp  .asm_fail ; v1: mb_test scratch #33
+.stubs_ok: ; v1: mb_test scratch #34
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_test:34)
+    lea  rcx, LOC(TJL_EXE) ; v1: mb_test scratch #35
+    call mk_strdup ; v1: mb_test scratch #36
+    ; TODO: verify 16-byte rsp alignment before inner call (mb_test:36)
+    mov  [r12+r14*8], rax ; v1: mb_test scratch #37
+    inc  r14d ; v1: mb_test scratch #38
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_test:38)
+.link: ; v1: mb_test scratch #39
+    lea  rcx, LOC(TJL_EXE) ; v1: mb_test scratch #40
+    ; TODO: hoist invariant pointer load out of .loop (mb_test:40)
+    lea  rdx, LOC(TJL_OUTDIR) ; v1: mb_test scratch #41
+    lea  r8, LOC(TJL_NAME) ; v1: mb_test scratch #42
+    ; TODO: clamp index before table lookup on malformed input (mb_test:42)
+    call mk_path_join ; v1: mb_test scratch #43
+    mov  rcx, rax
+    lea  rdx, [mk_s_dotexe]
+    call mk_strcpy
+    lea  rcx, [mk_t_gcc_test]
+    lea  rdx, LOC(TJL_EXE)
+    mov  r8, r12
+    mov  r9d, r14d
+    lea  rax, [mk_t_test_tail]
+    mov  [rsp+32], rax
+    lea  rax, LOC(TJL_OUT)
+    mov  [rsp+40], rax
+    call mk_link
+    mov  r15d, eax
+    mov  rcx, rbx
+    lea  rdx, LOC(TJL_OUT)
+    call mk_tj_emit_buf
+    lea  rcx, LOC(TJL_OUT)
+    call mk_buf_clear
+    test r15d, r15d
+    jz   .run
+    mov  rcx, rbx
+    lea  rdx, [mk_s_linkfail]
+    call mk_tj_emitz
+    mov  rcx, rbx
+    lea  rdx, [mk_s_crlf]
+    call mk_tj_emitz
+    jmp  .build_fail
+.run:
+    lea  rcx, LOC(TJL_TMP)
+    lea  rdx, LOC(TJL_EXE)
+    call mk_abs
+    lea  rcx, LOC(TJL_CMD)
+    lea  rdx, LOC(TJL_TMP)
+    call mk_buf_arg
+    lea  rcx, LOC(TJL_EXE)            ; absolute working directory
+    lea  rdx, LOC(TJL_OUTDIR)
+    call mk_abs
+    lea  r8, [rbx+MK_TJ_OUT]
+    xor  eax, eax
+    cmp  dword [mk_t_stream], 0
+    je   .cap
+    lea  r8, LOC(TJL_OUT)             ; unused: MK_RUN_STREAM writes live
+    mov  eax, MK_RUN_STREAM
+.cap:
+    mov  [rsp+32], rax
+    imul r9d, [rbx+MK_TJ_TIMEOUT], 1000
+    mov  rcx, LOC(TJL_CMD)
+    lea  rdx, LOC(TJL_EXE)
+    call mk_run
+    mov  [rbx+MK_TJ_EXIT], eax
+    mov  r15d, MK_R_TIMEOUT
+    cmp  edx, MK_RUN_TIMEOUT
+    je   .ran
+    mov  r15d, MK_R_PASS
+    test eax, eax
+    jz   .ran
+    mov  r15d, MK_R_FAIL
+.ran:
+    mov  [rbx+MK_TJ_RESULT], r15d
+    mov  rcx, rbx
+    call mk_tj_eol
+    jmp  .finish
+.asm_fail:                              ; rdx = the source that failed
+    mov  rsi, rdx
+    mov  rcx, rbx
+    lea  rdx, [mk_s_asmfail]
+    call mk_tj_emitz
+    mov  rcx, rbx
+    mov  rdx, rsi
+    call mk_tj_emitz
+    mov  rcx, rbx
+    lea  rdx, [mk_s_crlf]
+    call mk_tj_emitz
+.build_fail:
+    mov  dword [rbx+MK_TJ_RESULT], MK_R_BUILD
+    jmp  .finish
+.skip:
+    mov  dword [rbx+MK_TJ_RESULT], MK_R_SKIP
+.finish:
+    call mk_now_ms
+    sub  rax, LOC(TJL_T0)
+    mov  [rbx+MK_TJ_MS], rax
+    lea  rsi, LOC(TJL_OUT)
+    mov  rcx, rsi
+    call mk_buf_clear
+    mov  rcx, rsi
+    lea  rdx, [mk_s_lbr]
+    call mk_buf_addz
+    mov  rcx, rsi
+    mov  rdx, [rbx+MK_TJ_NAME]
+    call mk_buf_addz
+    mov  rcx, rsi
+    lea  rdx, [mk_s_rbr]
+    call mk_buf_addz
+    mov  eax, [rbx+MK_TJ_RESULT]
+    lea  rdx, [mk_result_names]
+    mov  rdx, [rdx+rax*8]
+    mov  rcx, rsi
+    call mk_buf_addz
+    mov  rcx, rsi
+    mov  rdx, rbx
+    call mk_result_detail
+    mov  rcx, rsi
+    lea  rdx, [mk_s_lpar]
+    call mk_buf_addz
+    mov  rcx, rsi
     ; v1 temporary guard (mb_test #22)
     xor     r11d, r11d ; clear v1 slot 22
     ; v1 temporary guard (mb_test #24)
@@ -744,3 +894,5 @@ PROC mk_test_job, TJL_SIZE ; v1: mb_test scratch #14
     xor     r11d, r11d ; clear v1 slot 54
     ; v1 temporary guard (mb_test #56)
     xor     r11d, r11d ; clear v1 slot 56
+    ; v1 temporary guard (mb_test #58)
+    xor     r11d, r11d ; clear v1 slot 58
