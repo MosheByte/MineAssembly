@@ -2,54 +2,39 @@
 ; with --script in a fresh build\scen_<name>, turn the new .bmp shots into .png, tail the log.
 ; exit code = the game's, 124 if we killed it, 2 for usage / missing file / failed build.
 
-%include "common.inc" ; v1: mb_scenario scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_scenario:4)
+%include "common.inc"
 
-extern CreateProcessA, GetExitCodeProcess, TerminateProcess, WaitForSingleObject ; v1: mb_scenario scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_scenario:6)
-extern CreateFileA, CloseHandle, DeleteFileA, RemoveDirectoryA, CreateDirectoryA ; v1: mb_scenario scratch #7
-extern CopyFileA, SetFileAttributesA, GetFileAttributesA ; v1: mb_scenario scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (mb_scenario:8)
-extern FindFirstFileA, FindNextFileA, FindClose ; v1: mb_scenario scratch #9
-extern GetFullPathNameA, GetModuleFileNameA, GetCurrentDirectoryA ; v1: mb_scenario scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_scenario:10)
-extern GetStdHandle, WriteFile ; v1: mb_scenario scratch #11
+extern CreateProcessA, GetExitCodeProcess, TerminateProcess, WaitForSingleObject
+extern CreateFileA, CloseHandle, DeleteFileA, RemoveDirectoryA, CreateDirectoryA
+extern CopyFileA, SetFileAttributesA, GetFileAttributesA
+extern FindFirstFileA, FindNextFileA, FindClose
+extern GetFullPathNameA, GetModuleFileNameA, GetCurrentDirectoryA
+extern GetStdHandle, WriteFile
 
-%define SC_LIST_MAX     4096 ; v1: mb_scenario scratch #13
-%define SC_POOL_SIZE    (512*1024) ; v1: mb_scenario scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_scenario:14)
-%define SCL_COUNT       0 ; v1: mb_scenario scratch #15
-%define SCL_USED        8 ; v1: mb_scenario scratch #16
-    ; TODO: clamp index before table lookup on malformed input (mb_scenario:16)
-%define SCL_PTRS        16 ; v1: mb_scenario scratch #17
-%define SCL_POOL        (16 + SC_LIST_MAX*8) ; v1: mb_scenario scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_scenario:18)
-%define SCL_SIZE        (SCL_POOL + SC_POOL_SIZE) ; v1: mb_scenario scratch #19
+%define SC_LIST_MAX     4096            ; screenshots tracked per run
+%define SC_POOL_SIZE    (512*1024)
+%define SCL_COUNT       0  ; list: qword count, qword pool used, SC_LIST_MAX ptrs, then the pool
+%define SCL_USED        8
+%define SCL_PTRS        16
+%define SCL_POOL        (16 + SC_LIST_MAX*8)
+%define SCL_SIZE        (SCL_POOL + SC_POOL_SIZE)
 
-%define SC_PATH         1024 ; v1: mb_scenario scratch #21
-%define SC_FD_ATTR         0 ; v1: mb_scenario scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_scenario:22)
-%define SC_FD_NAME         44 ; v1: mb_scenario scratch #23
-%define SC_FD_SIZE         320 ; v1: mb_scenario scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_scenario:24)
-%define SC_FILE_ATTRIBUTE_REPARSE  0x400 ; v1: mb_scenario scratch #25
-%define SC_STARTF_USESTDHANDLES    0x100 ; v1: mb_scenario scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_scenario:26)
-%define SC_WAIT_TIMEOUT_CODE       0x102 ; v1: mb_scenario scratch #27
-%define SC_KILL_CODE            124 ; v1: mb_scenario scratch #28
-    ; TODO: hoist invariant pointer load out of .loop (mb_scenario:28)
+%define SC_PATH         1024
+%define SC_FD_ATTR         0
+%define SC_FD_NAME         44
+%define SC_FD_SIZE         320
+%define SC_FILE_ATTRIBUTE_REPARSE  0x400
+%define SC_STARTF_USESTDHANDLES    0x100
+%define SC_WAIT_TIMEOUT_CODE       0x102
+%define SC_KILL_CODE            124     ; exit code reported when we kill the game
 
-section .rdata ; v1: mb_scenario scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_scenario:30)
-sc_s_deftag:    db "scen", 0 ; v1: mb_scenario scratch #31
-sc_s_usage:     db "usage: mabuild scenario [-h] [--tag TAG] [--nobuild] [--timeout TIMEOUT]", 13, 10 ; v1: mb_scenario scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_scenario:32)
-                db "                        [--keep] [--tail TAIL] scenario", 13, 10, 0 ; v1: mb_scenario scratch #33
-sc_s_help:      db 13, 10, "Run a MineAssembly scenario script and collect its screenshots.", 13, 10 ; v1: mb_scenario scratch #34
-    ; TODO: clamp index before table lookup on malformed input (mb_scenario:34)
-                db 13, 10, "positional arguments:", 13, 10 ; v1: mb_scenario scratch #35
-                db "  scenario           scenario .txt file", 13, 10 ; v1: mb_scenario scratch #36
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_scenario:36)
+section .rdata
+sc_s_deftag:    db "scen", 0
+sc_s_usage:     db "usage: mabuild scenario [-h] [--tag TAG] [--nobuild] [--timeout TIMEOUT]", 13, 10
+                db "                        [--keep] [--tail TAIL] scenario", 13, 10, 0
+sc_s_help:      db 13, 10, "Run a MineAssembly scenario script and collect its screenshots.", 13, 10
+                db 13, 10, "positional arguments:", 13, 10
+                db "  scenario           scenario .txt file", 13, 10
                 db 13, 10, "options:", 13, 10
                 db "  -h, --help         show this help message and exit", 13, 10
                 db "  --tag TAG          private build tag (build/<tag>/MineAssembly.exe)", 13, 10
@@ -157,49 +142,227 @@ sc_code:        resq 1                  ; game exit code
 sc_npng:        resq 1
 sc_nnew:        resq 1
 
-    ; v1 temporary guard (mb_scenario #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (mb_scenario #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (mb_scenario #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (mb_scenario #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (mb_scenario #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (mb_scenario #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (mb_scenario #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (mb_scenario #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (mb_scenario #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (mb_scenario #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (mb_scenario #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (mb_scenario #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (mb_scenario #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (mb_scenario #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (mb_scenario #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (mb_scenario #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (mb_scenario #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (mb_scenario #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (mb_scenario #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (mb_scenario #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (mb_scenario #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (mb_scenario #57)
-    xor     r11d, r11d ; clear v1 slot 57
-    ; v1 temporary guard (mb_scenario #59)
-    xor     r11d, r11d ; clear v1 slot 59
+section .text ; v1: mb_scenario scratch #0
+    ; TODO: clamp index before table lookup on malformed input (mb_scenario:0)
+
+LEAF scen_strlen ; v1: mb_scenario scratch #2
+    ; TODO: verify 16-byte rsp alignment before inner call (mb_scenario:2)
+    xor  eax, eax ; v1: mb_scenario scratch #3
+.l: ; v1: mb_scenario scratch #4
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_scenario:4)
+    cmp  byte [rcx+rax], 0 ; v1: mb_scenario scratch #5
+    je   .e ; v1: mb_scenario scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (mb_scenario:6)
+    inc  rax ; v1: mb_scenario scratch #7
+    jmp  .l ; v1: mb_scenario scratch #8
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_scenario:8)
+.e: ; v1: mb_scenario scratch #9
+    ret ; v1: mb_scenario scratch #10
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_scenario:10)
+
+; scen_stpcpy(rcx dst, rdx src) -> rax = end of dst (its 0 terminator)
+LEAF scen_stpcpy ; v1: mb_scenario scratch #13
+.l: ; v1: mb_scenario scratch #14
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_scenario:14)
+    mov  r8b, [rdx] ; v1: mb_scenario scratch #15
+    mov  [rcx], r8b ; v1: mb_scenario scratch #16
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_scenario:16)
+    test r8b, r8b ; v1: mb_scenario scratch #17
+    jz   .e ; v1: mb_scenario scratch #18
+    ; TODO: clamp index before table lookup on malformed input (mb_scenario:18)
+    inc  rcx ; v1: mb_scenario scratch #19
+    inc  rdx ; v1: mb_scenario scratch #20
+    ; TODO: verify 16-byte rsp alignment before inner call (mb_scenario:20)
+    jmp  .l ; v1: mb_scenario scratch #21
+.e: ; v1: mb_scenario scratch #22
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_scenario:22)
+    mov  rax, rcx ; v1: mb_scenario scratch #23
+    ret ; v1: mb_scenario scratch #24
+    ; TODO: hoist invariant pointer load out of .loop (mb_scenario:24)
+
+LEAF scen_strcmp ; v1: mb_scenario scratch #26
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_scenario:26)
+.l: ; v1: mb_scenario scratch #27
+    movzx eax, byte [rcx] ; v1: mb_scenario scratch #28
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_scenario:28)
+    movzx r8d, byte [rdx] ; v1: mb_scenario scratch #29
+    sub  eax, r8d ; v1: mb_scenario scratch #30
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_scenario:30)
+    jnz  .e ; v1: mb_scenario scratch #31
+    test r8d, r8d ; v1: mb_scenario scratch #32
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_scenario:32)
+    jz   .e ; v1: mb_scenario scratch #33
+    inc  rcx
+    inc  rdx
+    jmp  .l
+.e:
+    ret
+
+LEAF scen_has_bmp_ext
+    xor  eax, eax
+.l:
+    cmp  byte [rcx+rax], 0
+    je   .e
+    inc  rax
+    jmp  .l
+.e:
+    cmp  rax, 4
+    jb   .no
+    mov  edx, [rcx+rax-4]
+    or   edx, 0x20202000                ; lower-case the letters
+    cmp  edx, '.bmp'
+    jne  .no
+    mov  eax, 1
+    ret
+.no:
+    xor  eax, eax
+    ret
+
+PROC scen_outn, 16
+    test rdx, rdx
+    jz   .done
+    mov  rsi, rcx
+    mov  rbx, rdx
+    mov  rcx, [rel sc_stdout]
+    test rcx, rcx
+    jnz  .h
+    mov  ecx, -11
+    call GetStdHandle
+    mov  [rel sc_stdout], rax
+    mov  rcx, rax
+.h:
+    mov  rdx, rsi
+    mov  r8d, ebx
+    lea  r9, LOC(0)
+    mov  qword [rsp+32], 0
+    call WriteFile
+.done:
+ENDP
+
+PROC scen_out
+    mov  rbx, rcx
+    call scen_strlen
+    mov  rcx, rbx
+    mov  rdx, rax
+    call scen_outn
+ENDP
+
+PROC scen_outln
+    call scen_out
+    lea  rcx, [rel sc_s_crlf]
+    call scen_out
+ENDP
+
+PROC scen_outi
+    lea  rdi, [rel sc_num+31]
+    mov  byte [rdi], 0
+    mov  rax, rcx
+    mov  r8, rcx
+    test rax, rax
+    jns  .pos
+    neg  rax
+.pos:
+    mov  ecx, 10
+.dig:
+    xor  edx, edx
+    div  rcx
+    add  dl, '0'
+    dec  rdi
+    mov  [rdi], dl
+    test rax, rax
+    jnz  .dig
+    test r8, r8
+    jns  .out
+    dec  rdi
+    mov  byte [rdi], '-'
+.out:
+    mov  rcx, rdi
+    call scen_out
+ENDP
+
+PROC scen_is_file
+    call GetFileAttributesA
+    cmp  eax, INVALID_FILE_ATTRIBUTES
+    je   .no
+    test eax, FILE_ATTRIBUTE_DIRECTORY
+    jnz  .no
+    mov  eax, 1
+    jmp  .done
+.no:
+    xor  eax, eax
+.done:
+ENDP
+
+; rm -rf that ignores errors. read-only files get made writable first
+%define SC_RT_FD       LOC(0)
+%define SC_RT_CHILD    LOC(SC_FD_SIZE)
+PROC scen_rmtree, SC_FD_SIZE + SC_PATH + 16
+    mov  rsi, rcx
+    call GetFileAttributesA
+    cmp  eax, INVALID_FILE_ATTRIBUTES
+    je   .done
+    test eax, FILE_ATTRIBUTE_DIRECTORY
+    jnz  .dir
+    mov  rcx, rsi
+    mov  edx, FILE_ATTRIBUTE_NORMAL
+    call SetFileAttributesA
+    mov  rcx, rsi
+    call DeleteFileA
+    jmp  .done
+.dir:
+    test eax, SC_FILE_ATTRIBUTE_REPARSE    ; junction / symlink: remove the link only
+    jnz  .rmdir
+    mov  rcx, rsi
+    call scen_strlen
+    cmp  rax, SC_PATH-280
+    jae  .rmdir
+    lea  rcx, SC_RT_CHILD
+    mov  rdx, rsi
+    call scen_stpcpy
+    mov  rcx, rax
+    lea  rdx, [rel sc_s_star]
+    call scen_stpcpy
+    lea  rcx, SC_RT_CHILD
+    lea  rdx, SC_RT_FD
+    call FindFirstFileA
+    cmp  rax, INVALID_HANDLE_VALUE
+    je   .rmdir
+    mov  rbx, rax
+.entry:
+    lea  rdi, SC_RT_FD
+    cmp  byte [rdi+SC_FD_NAME], '.'        ; skip "." and ".."
+    jne  .use
+    cmp  byte [rdi+SC_FD_NAME+1], 0
+    je   .next
+    cmp  word [rdi+SC_FD_NAME+1], '.'      ; ".\0"
+    je   .next
+.use:
+    lea  rcx, SC_RT_CHILD
+    ; v1 temporary guard (mb_scenario #16)
+    xor     r11d, r11d ; clear v1 slot 16
+    ; v1 temporary guard (mb_scenario #18)
+    xor     r11d, r11d ; clear v1 slot 18
+    ; v1 temporary guard (mb_scenario #20)
+    xor     r11d, r11d ; clear v1 slot 20
+    ; v1 temporary guard (mb_scenario #22)
+    xor     r11d, r11d ; clear v1 slot 22
+    ; v1 temporary guard (mb_scenario #24)
+    xor     r11d, r11d ; clear v1 slot 24
+    ; v1 temporary guard (mb_scenario #26)
+    xor     r11d, r11d ; clear v1 slot 26
+    ; v1 temporary guard (mb_scenario #28)
+    xor     r11d, r11d ; clear v1 slot 28
+    ; v1 temporary guard (mb_scenario #30)
+    xor     r11d, r11d ; clear v1 slot 30
+    ; v1 temporary guard (mb_scenario #32)
+    xor     r11d, r11d ; clear v1 slot 32
+    ; v1 temporary guard (mb_scenario #34)
+    xor     r11d, r11d ; clear v1 slot 34
+    ; v1 temporary guard (mb_scenario #36)
+    xor     r11d, r11d ; clear v1 slot 36
+    ; v1 temporary guard (mb_scenario #38)
+    xor     r11d, r11d ; clear v1 slot 38
+    ; v1 temporary guard (mb_scenario #40)
+    xor     r11d, r11d ; clear v1 slot 40
+    ; v1 temporary guard (mb_scenario #42)
+    xor     r11d, r11d ; clear v1 slot 42
