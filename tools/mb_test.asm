@@ -971,51 +971,37 @@ PROC mk_collect_tests, 336+2*MK_PATH
 .done:
 ENDP
 
-PROC mk_buf_padto ; v1: mb_test scratch #1
-    mov  rbx, rcx ; v1: mb_test scratch #2
-    ; TODO: clamp index before table lookup on malformed input (mb_test:2)
-    mov  rsi, rdx ; v1: mb_test scratch #3
-    mov  edi, r8d ; v1: mb_test scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_test:4)
-.l: mov  rax, [rbx+MK_BUF_LEN] ; v1: mb_test scratch #5
-    sub  rax, rsi ; v1: mb_test scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_test:6)
-    cmp  rax, rdi ; v1: mb_test scratch #7
-    jae  .done ; v1: mb_test scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_test:8)
-    mov  rcx, rbx ; v1: mb_test scratch #9
-    mov  edx, ' ' ; v1: mb_test scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_test:10)
-    call mk_buf_addc ; v1: mb_test scratch #11
-    jmp  .l ; v1: mb_test scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_test:12)
-.done: ; v1: mb_test scratch #13
-ENDP ; v1: mb_test scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (mb_test:14)
+PROC mk_buf_padto
+    mov  rbx, rcx
+    mov  rsi, rdx
+    mov  edi, r8d
+.l: mov  rax, [rbx+MK_BUF_LEN]
+    sub  rax, rsi
+    cmp  rax, rdi
+    jae  .done
+    mov  rcx, rbx
+    mov  edx, ' '
+    call mk_buf_addc
+    jmp  .l
+.done:
+ENDP
 
-PROC mk_cmd_test, MK_PATH+96 ; v1: mb_test scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_test:16)
+PROC mk_cmd_test, MK_PATH+96
     ; LOC(0) test list (pointer buf), LOC(24) table text, LOC(48) counters,
     ; LOC(96) scratch path
-    lea  rdi, LOC(0) ; v1: mb_test scratch #19
-    xor  eax, eax ; v1: mb_test scratch #20
-    ; TODO: clamp index before table lookup on malformed input (mb_test:20)
-    mov  ecx, 96 ; v1: mb_test scratch #21
-    rep  stosb ; v1: mb_test scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_test:22)
-    mov  r12d, [mk_opt_nfiles] ; v1: mb_test scratch #23
-    test r12d, r12d ; v1: mb_test scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_test:24)
-    jnz  .args ; v1: mb_test scratch #25
-    lea  rcx, [mk_s_tests] ; v1: mb_test scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_test:26)
-    lea  rdx, LOC(0) ; v1: mb_test scratch #27
-    call mk_collect_tests ; v1: mb_test scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_test:28)
-    jmp  .collected ; v1: mb_test scratch #29
-.args: ; v1: mb_test scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_test:30)
-    xor  esi, esi ; v1: mb_test scratch #31
+    lea  rdi, LOC(0)
+    xor  eax, eax
+    mov  ecx, 96
+    rep  stosb
+    mov  r12d, [mk_opt_nfiles]
+    test r12d, r12d
+    jnz  .args
+    lea  rcx, [mk_s_tests]
+    lea  rdx, LOC(0)
+    call mk_collect_tests
+    jmp  .collected
+.args:
+    xor  esi, esi
 .arg:
     cmp  esi, r12d
     jae  .collected
@@ -1134,45 +1120,157 @@ PROC mk_cmd_test, MK_PATH+96 ; v1: mb_test scratch #16
     call mk_mkdirs
     lea  rcx, [mk_s_t_head1]
     call mk_print
-    ; v1 temporary guard (mb_test #14)
-    xor     r11d, r11d ; clear v1 slot 14
-    ; v1 temporary guard (mb_test #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (mb_test #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (mb_test #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (mb_test #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (mb_test #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (mb_test #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (mb_test #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (mb_test #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (mb_test #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (mb_test #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (mb_test #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (mb_test #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (mb_test #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (mb_test #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (mb_test #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (mb_test #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (mb_test #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (mb_test #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (mb_test #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (mb_test #54)
-    xor     r11d, r11d ; clear v1 slot 54
+    mov  ecx, r12d
+    call mk_print_u
+    lea  rcx, [mk_s_t_head2]
+    call mk_print
+    mov  ecx, r14d
+    call mk_print_u
+    lea  rcx, [mk_s_t_head3]
+    call mk_println
+    call mk_now_ms
+    mov  r15, rax
+    lea  rcx, [mk_test_job]
+    mov  rdx, r13
+    mov  r8d, r12d
+    mov  r9d, r14d
+    call mk_parallel
+    call mk_now_ms
+    sub  r15, rax
+    neg  r15
+    xor  esi, esi
+.oc:
+    cmp  esi, [mk_oc_count]
+    jae  .ocd
+    imul rax, rsi, MK_OC_SIZE
+    add  rax, [mk_oc_entries]
+    mov  rcx, [rax+MK_OC_OBJ]
+    call DeleteFileA
+    inc  esi
+    jmp  .oc
+.ocd:
+    lea  rcx, [mk_t_cachedir]
+    call RemoveDirectoryA
+    lea  rdi, LOC(24)
+    mov  rcx, rdi
+    lea  rdx, [mk_s_crlf]
+    call mk_buf_addz
+    mov  rcx, rdi
+    lea  rdx, [mk_s_rule]
+    call mk_buf_addz
+    mov  rcx, rdi
+    lea  rdx, [mk_s_thead]
+    call mk_buf_addz
+    mov  rcx, rdi
+    lea  rdx, [mk_s_rule2]
+    call mk_buf_addz
+    xor  esi, esi
+.row:
+    cmp  esi, r12d
+    jae  .rowd
+    imul rbx, rsi, MK_TJ_SIZE
+    add  rbx, r13
+    mov  eax, [rbx+MK_TJ_RESULT]
+    inc  dword [rsp+FRAME_OUT+48+rax*4]          ; counters per result
+    mov  rcx, rdi
+    lea  rdx, [mk_s_sp2]
+    call mk_buf_addz
+    mov  rax, [rdi+MK_BUF_LEN]
+    mov  LOC(72), rax
+    mov  eax, [rbx+MK_TJ_RESULT]
+    lea  rdx, [mk_result_names]
+    mov  rdx, [rdx+rax*8]
+    mov  rcx, rdi
+    call mk_buf_addz
+    mov  rcx, rdi
+    mov  rdx, LOC(72)
+    mov  r8d, 12
+    call mk_buf_padto
+    mov  rax, [rdi+MK_BUF_LEN]
+    mov  LOC(72), rax
+    mov  rcx, rbx                       ; right-aligned time, 8 wide
+    mov  rax, [rbx+MK_TJ_MS]
+    xor  ecx, ecx
+    cmp  rax, 10000
+    adc  ecx, 0
+    cmp  rax, 100000
+    adc  ecx, 0
+    cmp  rax, 1000000
+    adc  ecx, 0
+    mov  r8d, ecx
+    mov  rcx, rdi
+    mov  edx, ' '
+    call mk_buf_rep
+    mov  rcx, rdi
+    mov  rdx, [rbx+MK_TJ_MS]
+    call mk_buf_addsecs
+    mov  rcx, rdi
+    lea  rdx, [mk_s_sp2]
+    call mk_buf_addz
+    mov  rcx, rdi
+    mov  rdx, [rbx+MK_TJ_PATH]
+    call mk_buf_addz
+    mov  rcx, rdi
+    mov  rdx, rbx
+    call mk_result_detail
+    mov  rcx, rdi
+    lea  rdx, [mk_s_crlf]
+    call mk_buf_addz
+    inc  esi
+    jmp  .row
+.rowd:
+    mov  rcx, rdi
+    lea  rdx, [mk_s_rule]
+    call mk_buf_addz
+    mov  rcx, rdi                       ; "  P passed, F failed, S skipped, N total"
+    lea  rdx, [mk_s_sp2]
+    call mk_buf_addz
+    mov  rcx, rdi
+    mov  edx, [rsp+FRAME_OUT+48+MK_R_PASS*4]
+    call mk_buf_addu
+    mov  rcx, rdi
+    lea  rdx, [mk_s_sum1]
+    call mk_buf_addz
+    mov  edx, [rsp+FRAME_OUT+48+MK_R_FAIL*4]
+    add  edx, [rsp+FRAME_OUT+48+MK_R_TIMEOUT*4]
+    add  edx, [rsp+FRAME_OUT+48+MK_R_BUILD*4]
+    mov  LOC(80), edx
+    mov  rcx, rdi
+    call mk_buf_addu
+    mov  rcx, rdi
+    lea  rdx, [mk_s_sum2]
+    call mk_buf_addz
+    mov  rcx, rdi
+    mov  edx, [rsp+FRAME_OUT+48+MK_R_SKIP*4]
+    call mk_buf_addu
+    mov  rcx, rdi
+    lea  rdx, [mk_s_sum3]
+    call mk_buf_addz
+    mov  rcx, rdi
+    mov  edx, r12d
+    call mk_buf_addu
+    mov  rcx, rdi
+    lea  rdx, [mk_s_sum4]
+    call mk_buf_addz
+    mov  rcx, rdi
+    mov  rdx, r15
+    call mk_buf_addsecs
+    mov  rcx, rdi
+    lea  rdx, [mk_s_sum5]
+    call mk_buf_addz
+    mov  rcx, rdi
+    mov  edx, r14d
+    call mk_buf_addu
+    mov  rcx, rdi
+    lea  rdx, [mk_s_sum6]
+    call mk_buf_addz
+    call mk_lock
+    mov  rcx, [rdi+MK_BUF_PTR]
+    mov  rdx, [rdi+MK_BUF_LEN]
+    call mk_write
+    call mk_unlock
+    xor  eax, eax
+    cmp  dword LOC(80), 0
+    setne al
+.done:
+ENDP
