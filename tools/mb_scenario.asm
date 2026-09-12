@@ -649,52 +649,37 @@ ENDP
 
 ; -> eax 1 ok, ecx = exit code to report on failure. -DMB_SCEN_SUBPROCESS_BUILD
 ; runs "<this exe> build --tag T" as a child instead of calling mb_build
-PROC scen_build ; v1: mb_scenario scratch #3
-%ifdef MB_SCEN_SUBPROCESS_BUILD ; v1: mb_scenario scratch #4
-    ; TODO: hoist invariant pointer load out of .loop (mb_scenario:4)
+PROC scen_build
+%ifdef MB_SCEN_SUBPROCESS_BUILD
     ; "<this exe>" build --tag <tag>   (cwd = repository root, 900 s)
-    lea  rbx, [rel sc_cmd] ; v1: mb_scenario scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_scenario:6)
-    mov  byte [rbx], '"' ; v1: mb_scenario scratch #7
-    xor  ecx, ecx ; v1: mb_scenario scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_scenario:8)
-    lea  rdx, [rbx+1] ; v1: mb_scenario scratch #9
-    mov  r8d, SC_PATH ; v1: mb_scenario scratch #10
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_scenario:10)
-    call GetModuleFileNameA ; v1: mb_scenario scratch #11
-    lea  rcx, [rbx+rax+1] ; v1: mb_scenario scratch #12
-    ; TODO: clamp index before table lookup on malformed input (mb_scenario:12)
-    lea  rdx, [rel sc_s_bldcmd] ; v1: mb_scenario scratch #13
-    call scen_stpcpy ; v1: mb_scenario scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_scenario:14)
-    mov  rcx, rax ; v1: mb_scenario scratch #15
-    mov  rdx, [rel sc_tag] ; v1: mb_scenario scratch #16
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_scenario:16)
-    call scen_stpcpy ; v1: mb_scenario scratch #17
-    xor  ecx, ecx ; v1: mb_scenario scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_scenario:18)
-    mov  rdx, rbx ; v1: mb_scenario scratch #19
-    lea  r8, [rel sc_root] ; v1: mb_scenario scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (mb_scenario:20)
-    mov  r9d, 900000 ; v1: mb_scenario scratch #21
-    mov  qword [rsp+32], 0 ; v1: mb_scenario scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_scenario:22)
-    call scen_spawn ; v1: mb_scenario scratch #23
-    mov  rcx, rax ; v1: mb_scenario scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_scenario:24)
-    xor  eax, eax ; v1: mb_scenario scratch #25
-    test rcx, rcx ; v1: mb_scenario scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_scenario:26)
-    jnz  .done ; v1: mb_scenario scratch #27
-    mov  eax, 1 ; v1: mb_scenario scratch #28
-    ; TODO: clamp index before table lookup on malformed input (mb_scenario:28)
-%else ; v1: mb_scenario scratch #29
-    mov  rcx, [rel sc_tag] ; v1: mb_scenario scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_scenario:30)
-    xor  edx, edx ; v1: mb_scenario scratch #31
-    call mb_build ; v1: mb_scenario scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_scenario:32)
-    mov  ecx, 1 ; v1: mb_scenario scratch #33
+    lea  rbx, [rel sc_cmd]
+    mov  byte [rbx], '"'
+    xor  ecx, ecx
+    lea  rdx, [rbx+1]
+    mov  r8d, SC_PATH
+    call GetModuleFileNameA
+    lea  rcx, [rbx+rax+1]
+    lea  rdx, [rel sc_s_bldcmd]
+    call scen_stpcpy
+    mov  rcx, rax
+    mov  rdx, [rel sc_tag]
+    call scen_stpcpy
+    xor  ecx, ecx
+    mov  rdx, rbx
+    lea  r8, [rel sc_root]
+    mov  r9d, 900000
+    mov  qword [rsp+32], 0
+    call scen_spawn
+    mov  rcx, rax
+    xor  eax, eax
+    test rcx, rcx
+    jnz  .done
+    mov  eax, 1
+%else
+    mov  rcx, [rel sc_tag]
+    xor  edx, edx
+    call mb_build
+    mov  ecx, 1
 %endif
 .done:
 ENDP
@@ -805,6 +790,201 @@ LEAF scen_is_negnum
     mov  eax, 1
 .r:
     ret
+
+PROC scen_usage_error ; v1: mb_scenario scratch #1
+    mov  rsi, rcx ; v1: mb_scenario scratch #2
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_scenario:2)
+    mov  rdi, rdx ; v1: mb_scenario scratch #3
+    lea  rcx, [rel sc_s_usage] ; v1: mb_scenario scratch #4
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_scenario:4)
+    call scen_out ; v1: mb_scenario scratch #5
+    lea  rcx, [rel sc_s_errpre] ; v1: mb_scenario scratch #6
+    ; TODO: clamp index before table lookup on malformed input (mb_scenario:6)
+    call scen_out ; v1: mb_scenario scratch #7
+    mov  rcx, rsi ; v1: mb_scenario scratch #8
+    ; TODO: verify 16-byte rsp alignment before inner call (mb_scenario:8)
+    call scen_out ; v1: mb_scenario scratch #9
+    test rdi, rdi ; v1: mb_scenario scratch #10
+    ; TODO: hoist invariant pointer load out of .loop (mb_scenario:10)
+    jz   .nl ; v1: mb_scenario scratch #11
+    mov  rcx, rdi ; v1: mb_scenario scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_scenario:12)
+    call scen_out ; v1: mb_scenario scratch #13
+.nl: ; v1: mb_scenario scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_scenario:14)
+    lea  rcx, [rel sc_s_crlf] ; v1: mb_scenario scratch #15
+    call scen_out ; v1: mb_scenario scratch #16
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_scenario:16)
+    mov  eax, 2 ; v1: mb_scenario scratch #17
+ENDP ; v1: mb_scenario scratch #18
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_scenario:18)
+
+; -> eax 0 run, 1 help was shown (exit 0), 2 usage error
+%define SC_PA_KEYLEN   LOC(0) ; v1: mb_scenario scratch #21
+%define SC_PA_MATCH    LOC(8) ; v1: mb_scenario scratch #22
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_scenario:22)
+%define SC_PA_NMATCH   LOC(16) ; v1: mb_scenario scratch #23
+%define SC_PA_VAL      LOC(24) ; v1: mb_scenario scratch #24
+    ; TODO: clamp index before table lookup on malformed input (mb_scenario:24)
+%define SC_PA_DASHDASH LOC(32) ; v1: mb_scenario scratch #25
+%define SC_PA_EXACT    LOC(40) ; v1: mb_scenario scratch #26
+    ; TODO: verify 16-byte rsp alignment before inner call (mb_scenario:26)
+PROC scen_parse_args, 48 ; v1: mb_scenario scratch #27
+    mov  r12, rcx ; v1: mb_scenario scratch #28
+    ; TODO: hoist invariant pointer load out of .loop (mb_scenario:28)
+    mov  r13, rdx ; v1: mb_scenario scratch #29
+    lea  rax, [rel sc_s_deftag] ; v1: mb_scenario scratch #30
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_scenario:30)
+    mov  [rel sc_tag], rax ; v1: mb_scenario scratch #31
+    xor  eax, eax ; v1: mb_scenario scratch #32
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_scenario:32)
+    mov  [rel sc_arg], rax
+    mov  [rel sc_nobuild], rax
+    mov  [rel sc_keep], rax
+    mov  SC_PA_DASHDASH, rax
+    mov  qword [rel sc_timeout_ms], 330000
+    mov  qword [rel sc_tail], 40
+    xor  r14d, r14d
+.arg:
+    cmp  r14, r12
+    jae  .end
+    mov  rsi, [r13+r14*8]
+    inc  r14
+    cmp  qword SC_PA_DASHDASH, 0
+    jne  .positional
+    cmp  byte [rsi], '-'
+    jne  .positional
+    cmp  byte [rsi+1], 0                ; "-" alone is a value
+    je   .positional
+    mov  rcx, rsi
+    call scen_is_negnum
+    test eax, eax
+    jnz  .positional
+    cmp  byte [rsi+1], '-'
+    je   .long
+    cmp  word [rsi+1], 'h'
+    je   .help
+    jmp  .unrec
+.long:
+    cmp  byte [rsi+2], 0                ; "--": only positionals follow
+    jne  .key
+    mov  qword SC_PA_DASHDASH, 1
+    jmp  .arg
+.key:
+    ; key = up to '=' ; SC_PA_VAL = text after '=' (or 0)
+    xor  ecx, ecx
+    mov  qword SC_PA_VAL, 0
+.kl:
+    mov  al, [rsi+rcx]
+    test al, al
+    jz   .kdone
+    cmp  al, '='
+    je   .keq
+    inc  rcx
+    jmp  .kl
+.keq:
+    lea  rax, [rsi+rcx+1]
+    mov  SC_PA_VAL, rax
+.kdone:
+    mov  SC_PA_KEYLEN, rcx
+    ; exact name or a unique prefix
+    mov  qword SC_PA_NMATCH, 0
+    mov  qword SC_PA_EXACT, -1
+    xor  ebx, ebx
+.opt:
+    cmp  ebx, SC_NOPTS
+    jae  .optdone
+    lea  rax, [rel sc_opts]
+    mov  rdi, rbx
+    shl  rdi, 4
+    mov  rdi, [rax+rdi]
+    xor  ecx, ecx
+.pc:
+    cmp  rcx, SC_PA_KEYLEN
+    jae  .prefix_ok
+    mov  al, [rsi+rcx]
+    cmp  al, [rdi+rcx]
+    jne  .onext
+    inc  rcx
+    jmp  .pc
+.prefix_ok:
+    inc  qword SC_PA_NMATCH
+    mov  SC_PA_MATCH, rbx
+    cmp  byte [rdi+rcx], 0
+    jne  .onext
+    mov  SC_PA_EXACT, rbx
+.onext:
+    inc  ebx
+    jmp  .opt
+.optdone:
+    mov  rbx, SC_PA_EXACT
+    cmp  rbx, -1
+    jne  .found
+    mov  rbx, SC_PA_MATCH
+    cmp  qword SC_PA_NMATCH, 1
+    je   .found
+    ja   .ambig
+    jmp  .unrec
+.found:
+    cmp  rbx, SC_OPT_HELP
+    je   .help
+    lea  rax, [rel sc_opts]
+    mov  rcx, rbx
+    shl  rcx, 4
+    cmp  qword [rax+rcx+8], 0
+    jne  .wantval
+    cmp  qword SC_PA_VAL, 0                ; "--keep=x"
+    jne  .noval
+    cmp  rbx, SC_OPT_NOBUILD
+    jne  .k
+    mov  qword [rel sc_nobuild], 1
+    jmp  .arg
+.k:
+    mov  qword [rel sc_keep], 1
+    jmp  .arg
+.wantval:
+    mov  rdi, SC_PA_VAL
+    test rdi, rdi
+    jnz  .haveval
+    cmp  r14, r12
+    jae  .needarg
+    mov  rdi, [r13+r14*8]
+    cmp  byte [rdi], '-'                ; ... unless it looks like an option
+    jne  .take
+    mov  rcx, rdi
+    call scen_is_negnum
+    test eax, eax
+    jz   .needarg
+.take:
+    inc  r14
+.haveval:
+    cmp  rbx, SC_OPT_TAG
+    jne  .tmo
+    mov  rcx, rdi
+    call scen_strlen
+    cmp  rax, 200
+    jae  .toolong
+    mov  [rel sc_tag], rdi
+    jmp  .arg
+.tmo:
+    cmp  rbx, SC_OPT_TIMEOUT
+    jne  .tl
+    mov  rcx, rdi
+    call scen_parse_ms
+    test edx, edx
+    jz   .badnum
+    mov  [rel sc_timeout_ms], rax
+    jmp  .arg
+.tl:
+    mov  rcx, rdi
+    call scen_parse_int
+    test edx, edx
+    jz   .badnum
+    mov  [rel sc_tail], rax
+    jmp  .arg
+.positional:
+    cmp  qword [rel sc_arg], 0
+    jne  .unrec
     ; v1 temporary guard (mb_scenario #15)
     xor     r11d, r11d ; clear v1 slot 15
     ; v1 temporary guard (mb_scenario #17)
