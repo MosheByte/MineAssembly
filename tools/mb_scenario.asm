@@ -1320,59 +1320,41 @@ PROC scenario_main, 32
     lea  rcx, [rel sc_exe]
     call scen_out
     lea  rcx, [rel sc_s_run2]
-    call scen_out ; v1: mb_scenario scratch #0
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_scenario:0)
-    lea  rcx, [rel sc_base] ; v1: mb_scenario scratch #1
-    call scen_out ; v1: mb_scenario scratch #2
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_scenario:2)
-    lea  rcx, [rel sc_s_run3] ; v1: mb_scenario scratch #3
-    call scen_out ; v1: mb_scenario scratch #4
-    ; TODO: clamp index before table lookup on malformed input (mb_scenario:4)
-    lea  rcx, [rel sc_work] ; v1: mb_scenario scratch #5
-    call scen_out ; v1: mb_scenario scratch #6
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_scenario:6)
-    lea  rcx, [rel sc_s_run4] ; v1: mb_scenario scratch #7
-    call scen_outln ; v1: mb_scenario scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_scenario:8)
-    lea  rbx, [rel sc_cmd] ; v1: mb_scenario scratch #9
-    mov  byte [rbx], '"' ; v1: mb_scenario scratch #10
-    ; TODO: hoist invariant pointer load out of .loop (mb_scenario:10)
-    lea  rcx, [rbx+1] ; v1: mb_scenario scratch #11
-    lea  rdx, [rel sc_exe] ; v1: mb_scenario scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_scenario:12)
-    call scen_stpcpy ; v1: mb_scenario scratch #13
-    mov  byte [rax], '"' ; v1: mb_scenario scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_scenario:14)
-    lea  rcx, [rax+1] ; v1: mb_scenario scratch #15
-    lea  rdx, [rel sc_s_run2] ; v1: mb_scenario scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_scenario:16)
-    call scen_stpcpy ; v1: mb_scenario scratch #17
-    mov  rdi, rax ; v1: mb_scenario scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_scenario:18)
-    lea  rsi, [rel sc_base] ; v1: mb_scenario scratch #19
-    xor  ecx, ecx ; v1: mb_scenario scratch #20
-    ; TODO: clamp index before table lookup on malformed input (mb_scenario:20)
-    xor  r8d, r8d ; v1: mb_scenario scratch #21
-.blank: ; v1: mb_scenario scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_scenario:22)
-    mov  al, [rsi+rcx] ; v1: mb_scenario scratch #23
-    test al, al ; v1: mb_scenario scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_scenario:24)
-    jz   .blank_done ; v1: mb_scenario scratch #25
-    inc  rcx ; v1: mb_scenario scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (mb_scenario:26)
-    cmp  al, ' ' ; v1: mb_scenario scratch #27
-    je   .has_blank ; v1: mb_scenario scratch #28
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_scenario:28)
-    cmp  al, 9 ; v1: mb_scenario scratch #29
-    jne  .blank ; v1: mb_scenario scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (mb_scenario:30)
-.has_blank: ; v1: mb_scenario scratch #31
-    mov  r8d, 1 ; v1: mb_scenario scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_scenario:32)
-    jmp  .blank ; v1: mb_scenario scratch #33
-.blank_done: ; v1: mb_scenario scratch #34
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_scenario:34)
+    call scen_out
+    lea  rcx, [rel sc_base]
+    call scen_out
+    lea  rcx, [rel sc_s_run3]
+    call scen_out
+    lea  rcx, [rel sc_work]
+    call scen_out
+    lea  rcx, [rel sc_s_run4]
+    call scen_outln
+    lea  rbx, [rel sc_cmd]
+    mov  byte [rbx], '"'
+    lea  rcx, [rbx+1]
+    lea  rdx, [rel sc_exe]
+    call scen_stpcpy
+    mov  byte [rax], '"'
+    lea  rcx, [rax+1]
+    lea  rdx, [rel sc_s_run2]
+    call scen_stpcpy
+    mov  rdi, rax
+    lea  rsi, [rel sc_base]             ; quote the file name if it has blanks
+    xor  ecx, ecx
+    xor  r8d, r8d
+.blank:
+    mov  al, [rsi+rcx]
+    test al, al
+    jz   .blank_done
+    inc  rcx
+    cmp  al, ' '
+    je   .has_blank
+    cmp  al, 9
+    jne  .blank
+.has_blank:
+    mov  r8d, 1
+    jmp  .blank
+.blank_done:
     mov  r12d, r8d
     test r12d, r12d
     jz   .nq1
@@ -1518,35 +1500,44 @@ PROC scenario_main, 32
     lea  rcx, [rel sc_tmp]
     call scen_outln
 .lp_png_nx:
-    ; v1 temporary guard (mb_scenario #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (mb_scenario #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (mb_scenario #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (mb_scenario #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (mb_scenario #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (mb_scenario #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (mb_scenario #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (mb_scenario #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (mb_scenario #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (mb_scenario #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (mb_scenario #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (mb_scenario #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (mb_scenario #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (mb_scenario #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (mb_scenario #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (mb_scenario #48)
-    xor     r11d, r11d ; clear v1 slot 48
+    inc  r13
+    jmp  .lp_png
+.no_png:
+    test r12, r12
+    jz   .no_shots
+    mov  rcx, r12
+    call scen_outi
+    lea  rcx, [rel sc_s_nbmp]
+    call scen_outln
+    xor  r13d, r13d
+.lp_bmp:
+    cmp  r13, r12
+    jae  .listed
+    lea  rcx, [rel sc_s_indent]
+    call scen_out
+    mov  rcx, [r14+r13*8]
+    call scen_outln
+    inc  r13
+    jmp  .lp_bmp
+.no_shots:
+    lea  rcx, [rel sc_s_noshots]
+    call scen_outln
+.listed:
+    mov  eax, [rel sc_code]
+    jmp  .ret
+
+    ; sc_tmp = rsi with ".bmp" swapped for ".png". reached by call, uses no locals
+.pngname:
+    lea  rcx, [rel sc_tmp]
+    mov  rdx, rsi
+    call scen_stpcpy
+    mov  edx, [rel sc_s_png]
+    mov  [rax-4], edx
+    ret
+.ret:
+ENDP
+
+section .rdata
+align 8
+sc_meanings:    dq sc_m_0, sc_m_1, sc_m_2, sc_m_3, sc_m_4, sc_m_5
+section .text
