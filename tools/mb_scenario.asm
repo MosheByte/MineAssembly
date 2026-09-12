@@ -646,3 +646,198 @@ PROC scen_spawn, 192
 .done:
     mov  rax, SC_SP_CODE
 ENDP
+
+; -> eax 1 ok, ecx = exit code to report on failure. -DMB_SCEN_SUBPROCESS_BUILD
+; runs "<this exe> build --tag T" as a child instead of calling mb_build
+PROC scen_build ; v1: mb_scenario scratch #3
+%ifdef MB_SCEN_SUBPROCESS_BUILD ; v1: mb_scenario scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (mb_scenario:4)
+    ; "<this exe>" build --tag <tag>   (cwd = repository root, 900 s)
+    lea  rbx, [rel sc_cmd] ; v1: mb_scenario scratch #6
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_scenario:6)
+    mov  byte [rbx], '"' ; v1: mb_scenario scratch #7
+    xor  ecx, ecx ; v1: mb_scenario scratch #8
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_scenario:8)
+    lea  rdx, [rbx+1] ; v1: mb_scenario scratch #9
+    mov  r8d, SC_PATH ; v1: mb_scenario scratch #10
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_scenario:10)
+    call GetModuleFileNameA ; v1: mb_scenario scratch #11
+    lea  rcx, [rbx+rax+1] ; v1: mb_scenario scratch #12
+    ; TODO: clamp index before table lookup on malformed input (mb_scenario:12)
+    lea  rdx, [rel sc_s_bldcmd] ; v1: mb_scenario scratch #13
+    call scen_stpcpy ; v1: mb_scenario scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_scenario:14)
+    mov  rcx, rax ; v1: mb_scenario scratch #15
+    mov  rdx, [rel sc_tag] ; v1: mb_scenario scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_scenario:16)
+    call scen_stpcpy ; v1: mb_scenario scratch #17
+    xor  ecx, ecx ; v1: mb_scenario scratch #18
+    ; TODO: verify 16-byte rsp alignment before inner call (mb_scenario:18)
+    mov  rdx, rbx ; v1: mb_scenario scratch #19
+    lea  r8, [rel sc_root] ; v1: mb_scenario scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (mb_scenario:20)
+    mov  r9d, 900000 ; v1: mb_scenario scratch #21
+    mov  qword [rsp+32], 0 ; v1: mb_scenario scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (mb_scenario:22)
+    call scen_spawn ; v1: mb_scenario scratch #23
+    mov  rcx, rax ; v1: mb_scenario scratch #24
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (mb_scenario:24)
+    xor  eax, eax ; v1: mb_scenario scratch #25
+    test rcx, rcx ; v1: mb_scenario scratch #26
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (mb_scenario:26)
+    jnz  .done ; v1: mb_scenario scratch #27
+    mov  eax, 1 ; v1: mb_scenario scratch #28
+    ; TODO: clamp index before table lookup on malformed input (mb_scenario:28)
+%else ; v1: mb_scenario scratch #29
+    mov  rcx, [rel sc_tag] ; v1: mb_scenario scratch #30
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (mb_scenario:30)
+    xor  edx, edx ; v1: mb_scenario scratch #31
+    call mb_build ; v1: mb_scenario scratch #32
+    ; note: rcx = state ptr, rdx = index, r8d = flags (mb_scenario:32)
+    mov  ecx, 1 ; v1: mb_scenario scratch #33
+%endif
+.done:
+ENDP
+
+; -> rax ms, edx 1 ok. takes "330", "2.5", ".5", "10."
+LEAF scen_parse_ms
+    xor  eax, eax
+    xor  r8d, r8d
+.int:
+    movzx r9d, byte [rcx]
+    sub  r9d, '0'
+    cmp  r9d, 9
+    ja   .intend
+    imul rax, rax, 10
+    add  rax, r9
+    inc  r8d
+    inc  rcx
+    cmp  rax, 100000000
+    jb   .int
+    mov  rax, 100000000                 ; clamp absurd values
+    jmp  .int
+.intend:
+    imul rax, rax, 1000
+    cmp  byte [rcx], '.'
+    jne  .tail
+    inc  rcx
+    mov  r10d, 100
+.frac:
+    movzx r9d, byte [rcx]
+    sub  r9d, '0'
+    cmp  r9d, 9
+    ja   .tail
+    imul r9d, r10d
+    add  rax, r9
+    mov  r9d, r10d
+    imul r9d, r9d, 0xCCCD
+    shr  r9d, 19
+    mov  r10d, r9d
+    inc  r8d
+    inc  rcx
+    jmp  .frac
+.tail:
+    xor  edx, edx
+    cmp  byte [rcx], 0
+    jne  .r
+    test r8d, r8d
+    jz   .r
+    mov  edx, 1
+    mov  r9d, 0xFFFFFFFE                ; WaitForSingleObject takes a DWORD
+    cmp  rax, r9
+    cmova rax, r9
+.r:
+    ret
+
+LEAF scen_parse_int
+    xor  eax, eax
+    xor  r8d, r8d
+    xor  r10d, r10d
+    cmp  byte [rcx], '-'
+    jne  .plus
+    mov  r8d, 1
+    inc  rcx
+    jmp  .dig
+.plus:
+    cmp  byte [rcx], '+'
+    jne  .dig
+    inc  rcx
+.dig:
+    movzx r9d, byte [rcx]
+    sub  r9d, '0'
+    cmp  r9d, 9
+    ja   .end
+    mov  r11, 100000000000              ; stop growing (no overflow)
+    cmp  rax, r11
+    jae  .skip
+    imul rax, rax, 10
+    add  rax, r9
+.skip:
+    inc  r10d
+    inc  rcx
+    jmp  .dig
+.end:
+    xor  edx, edx
+    cmp  byte [rcx], 0
+    jne  .r
+    test r10d, r10d
+    jz   .r
+    mov  edx, 1
+    test r8d, r8d
+    jz   .r
+    neg  rax
+.r:
+    ret
+
+; "-<digit>..." is a value, not an option
+LEAF scen_is_negnum
+    xor  eax, eax
+    cmp  byte [rcx], '-'
+    jne  .r
+    movzx edx, byte [rcx+1]
+    cmp  edx, '.'
+    jne  .d
+    movzx edx, byte [rcx+2]
+.d:
+    sub  edx, '0'
+    cmp  edx, 9
+    ja   .r
+    mov  eax, 1
+.r:
+    ret
+    ; v1 temporary guard (mb_scenario #15)
+    xor     r11d, r11d ; clear v1 slot 15
+    ; v1 temporary guard (mb_scenario #17)
+    xor     r11d, r11d ; clear v1 slot 17
+    ; v1 temporary guard (mb_scenario #19)
+    xor     r11d, r11d ; clear v1 slot 19
+    ; v1 temporary guard (mb_scenario #21)
+    xor     r11d, r11d ; clear v1 slot 21
+    ; v1 temporary guard (mb_scenario #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (mb_scenario #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (mb_scenario #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (mb_scenario #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (mb_scenario #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (mb_scenario #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (mb_scenario #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (mb_scenario #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (mb_scenario #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (mb_scenario #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (mb_scenario #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (mb_scenario #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (mb_scenario #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (mb_scenario #49)
+    xor     r11d, r11d ; clear v1 slot 49
