@@ -1,18 +1,18 @@
 # Architecture
 
-This is the reference I keep open while working on the engine: where things live, the rules every module follows, and the contracts between threads and render passes. [HOW_IT_WORKS.md](HOW_IT_WORKS.md) explains how the systems work, and the [README](../README.md) has the build instructions. <!-- draft rev 2 -->
+This is the reference I keep open while working on the engine: where things live, the rules every module follows, and the contracts between threads and render passes. [HOW_IT_WORKS.md](HOW_IT_WORKS.md) explains how the systems work, and the [README](../README.md) has the build instructions.
 
 ## Layout
 
-``` <!-- draft rev 6 -->
-include/   common.inc  macros (PROC/ENDP...), engine constants; includes all the others <!-- draft rev 7 -->
-           win32.inc   Win32 imports + constants <!-- draft rev 8 -->
-           gl.inc      OpenGL 1.1 imports, GL 2.0 function pointers, constants <!-- draft rev 9 -->
-           ids.inc     block / item / tile / sound / biome / entity / particle IDs <!-- draft rev 10 -->
-           structs.inc CHUNK, PLAYER, ENTITY, PARTICLE, BLOCKENT, SETTINGS, ... <!-- draft rev 11 -->
-           api.inc     the cross-module contract: every global function + variable <!-- draft rev 12 -->
-           net.inc     the Java Edition bridge contract (net, mcproto, mcplay, mcmap) <!-- draft rev 13 -->
-           mcpackets.inc  Java 26.1 packet ids and protocol constants <!-- draft rev 14 -->
+```
+include/   common.inc  macros (PROC/ENDP...), engine constants; includes all the others
+           win32.inc   Win32 imports + constants
+           gl.inc      OpenGL 1.1 imports, GL 2.0 function pointers, constants
+           ids.inc     block / item / tile / sound / biome / entity / particle IDs
+           structs.inc CHUNK, PLAYER, ENTITY, PARTICLE, BLOCKENT, SETTINGS, ...
+           api.inc     the cross-module contract: every global function + variable
+           net.inc     the Java Edition bridge contract (net, mcproto, mcplay, mcmap)
+           mcpackets.inc  Java 26.1 packet ids and protocol constants
 src/       one .asm per subsystem (table below)
 tools/     mabuild.asm + mb_*.asm: build tool, test runner, scenario runner,
            BMP -> PNG encoder, COFF symbol reader
@@ -120,5 +120,3 @@ The chunk vertex is `VERTEX` (16 bytes) in structs.inc. Attribute locations: 0 `
 `MineAssembly.exe --script FILE` replays a scenario (format in `tests/scenarios/README.md`). `mabuild scenario tests/scenarios/<name>.txt [--tag T] [--nobuild] [--timeout S] [--keep]` builds a private exe, runs it in a fresh `build/scen_<name>/` with a hard timeout, converts the screenshots to PNG and prints the log tail and the exit code (0 ok, 1-5 game errors, 124 timeout).
 
 Unit tests are `tests/<group>/test_*.asm` programs built against `tests/lib/testlib.inc`. The header lines `; @link`, `@timeout N`, `@gpu` and `@preview` control how they're built and run. `mabuild test` links each one with `tests/lib/testlib.asm`, `src/globals.asm` and its `@link` files, stubs every other `api.inc` symbol, builds a console exe under `build/t_<group>/` and runs it with a timeout, several in parallel. Exit code 0 means pass (the code is the number of failed checks). CI runs `mabuild test --nogpu`, which skips the `@gpu` tests. More in [tests/lib/README.md](../tests/lib/README.md).
-<!-- TODO(ARCHITECTURE): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/ARCHITECTURE.asm -->
