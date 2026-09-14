@@ -110,22 +110,22 @@ map_pick:
     ...
 ```
 
-An `outline` pass adds the dark 1-pixel border around item icons automatically. <!-- draft rev 0 -->
+An `outline` pass adds the dark 1-pixel border around item icons automatically.
 
-Mipmapping an atlas usually bleeds neighbouring tiles into each other. Here every tile is 16×16 and aligned to a multiple of 16, so a plain 2×2 box filter never mixes two tiles until the 1×1 level. The filter is alpha-aware (`rgb = Σ(rgb·a) / Σa`), which stops the empty texels behind leaf holes from darkening distant trees. The mesher also insets every UV by 1/1024 of a texel. <!-- draft rev 2 -->
+Mipmapping an atlas usually bleeds neighbouring tiles into each other. Here every tile is 16×16 and aligned to a multiple of 16, so a plain 2×2 box filter never mixes two tiles until the 1×1 level. The filter is alpha-aware (`rgb = Σ(rgb·a) / Σa`), which stops the empty texels behind leaf holes from darkening distant trees. The mesher also insets every UV by 1/1024 of a texel.
 
-Water and lava animate by repainting their tiles every tick (32-tick and 64-tick loops). Both are noise fields scrolled by exactly one noise period per loop and domain-warped through a sine table, so they loop cleanly in space and time. The font is an 8×8 bitmap for ASCII 0 to 127 with per-glyph widths, and the cloud map is a 256×256 tileable fbm field thresholded into banks. <!-- draft rev 4 -->
+Water and lava animate by repainting their tiles every tick (32-tick and 64-tick loops). Both are noise fields scrolled by exactly one noise period per loop and domain-warped through a sine table, so they loop cleanly in space and time. The font is an 8×8 bitmap for ASCII 0 to 127 with per-glyph widths, and the cloud map is a 256×256 tileable fbm field thresholded into banks.
 
 ## Chunks and the hash map
 
-A chunk is 16×16×128 blocks and lives in one fixed-size slot: <!-- draft rev 8 -->
+A chunk is 16×16×128 blocks and lives in one fixed-size slot:
 
-``` <!-- draft rev 10 -->
- CHUNK slot (66,560 bytes) <!-- draft rev 11 -->
- +--------------------+-------------------------------+-------------------------------+ <!-- draft rev 12 -->
- | header   1 KiB     | blocks[32768]  u8 block id    | light[32768]  sky<<4 | block | <!-- draft rev 13 -->
- | state, dirty bits, | idx = x + (z<<4) + (y<<8)     | same index                    | <!-- draft rev 14 -->
- | VBOs, heightmap,   |                               |                               | <!-- draft rev 15 -->
+```
+ CHUNK slot (66,560 bytes)
+ +--------------------+-------------------------------+-------------------------------+
+ | header   1 KiB     | blocks[32768]  u8 block id    | light[32768]  sky<<4 | block |
+ | state, dirty bits, | idx = x + (z<<4) + (y<<8)     | same index                    |
+ | VBOs, heightmap,   |                               |                               |
  | biome map          |                               |                               |
  +--------------------+-------------------------------+-------------------------------+
 ```
@@ -219,6 +219,116 @@ Trees, boulders and ore veins cross chunk borders, which is the annoying part of
 *Top-down render of one seed (`tests/world/test_worldgen_preview.asm`, then `mabuild png`).*
 
 ## Lighting
+
+Each block stores one light byte, `(sky << 4) | block`, both channels 0 to 15, and the same flood-fill code solves both (specialized per channel by assembly-time macros). The model: <!-- draft rev 0 -->
+
+``` <!-- draft rev 2 -->
+step(v, n) = v - 1 - opacity(n)          every direction <!-- draft rev 3 -->
+step(15, n below) = 15 - opacity(n)      sky channel only: daylight pours down shafts <!-- draft rev 4 -->
+
+L(c) = max( source(c), max over 6 neighbours n of step(L(n), c) ) <!-- draft rev 6 -->
+``` <!-- draft rev 7 -->
+
+The light field is the least fixpoint of that, which is exactly what a BFS from the sources computes. <!-- draft rev 9 -->
+
+It happens in two passes. On the worker thread, a top-down column pass computes the heightmap and the straight-down sky light. Then on the main thread, once all 8 neighbours exist, a BFS spreads light sideways, seeded from the column-lit cells, every emitter, and the neighbours' boundary faces. That BFS runs in a 5×5 window of chunk pointers with each position packed into one dword: <!-- draft rev 11 -->
+
+``` <!-- draft rev 13 -->
+ packed = wx | wz<<7 | y<<14 | value<<21        (wx, wz in 0..79) <!-- draft rev 14 -->
+ +X = +1    +Z = +128    +Y = +16384             neighbour step = one add
+```
+
+So the hot loop never touches the hash map, and crossing a chunk border is just indexing a different window slot.
+
+When you place or break a block, `light_on_block_changed` runs the usual two-phase relight per channel. First a removal BFS from the changed cell darkens every neighbour that was dimmer (its light might have come from here) to 0, or to its own emission level for block light, and adds the ones at least as bright to a border list. Then a re-propagation BFS starts from those borders, any new emitter, and the changed cell's neighbours. One invariant makes the sky channel much easier: below the heightmap a cell can never get back to 15, so `sky == 15 ⇔ y ≥ heightmap`. Direct-sky cells are fixed sources and the removal pass never has to darken them. Build a roof and the cells that lost the sky become removal seeds; dig a shaft and the newly exposed cells go to 15.
+
+Smooth lighting samples diagonal neighbours, so every changed cell dirties the mesh sections of its whole 3×3×3 neighbourhood. A 128-entry table built with NASM `%rep` gives the section mask for each y.
+
+## Meshing
+
+`mesher_build_section` turns one 16×16×16 section into two vertex buffers (opaque+cutout and translucent) of plain `GL_TRIANGLES`. It ORs the 4,096 block bytes together 16 at a time first, so an all-air section bails out immediately. Otherwise it looks up the 3×3 surrounding chunks once and copies everything into an 18×18×18 scratch volume, after which every neighbour access in the inner loop is a single `movzx` at a constant offset (`+X = +1, +Z = +18, +Y = +324`). Grass, foliage and water tints get box-blurred over 3×3 columns so colours fade across biome edges.
+
+AO and smooth light are computed per face corner from the four cells just outside the face that touch that corner:
+
+```
+     +----+----+          C  = face neighbour
+     | S1 | K  |          S1, S2 = edge cells
+     +----*----+          K  = diagonal cell
+     | C  | S2 |          * = the corner being lit
+     +----+----+
+
+ AO level = 0 if S1 and S2 are both solid (K is hidden), else 3 - (S1 + S2 + K)
+```
+
+The AO level and the directional face shade get folded into one byte through a table:
+
+```nasm
+; round(255 * face shade * ao). ao .5/.65/.8/1, X .6, top 1, bottom .5, Z .8
+shade_tab:
+    db  77,  99, 122, 153
+    db  77,  99, 122, 153
+    db 128, 166, 204, 255
+    db  64,  83, 102, 128
+    db 102, 133, 163, 204
+    db 102, 133, 163, 204
+
+; bits 1 side1, 2 side2, 4 corner -> ao level
+ao_tab: db 3, 2, 2, 0, 2, 1, 1, 0
+```
+
+Sky and block light are averaged over the samples that aren't occluded (dividing by 1 to 4 is a multiply by a reciprocal table), and each quad is split along its brighter diagonal so the AO gradients stay symmetric.
+
+A vertex is 28 bytes: position, UV, then four normalized bytes `sky, block, shade, flags` and a 4-byte tint. Light stays per vertex instead of being baked into the colour, so the day/night cycle costs nothing on the CPU; the shader just multiplies by the current daylight.
+
+Positions are relative to the chunk origin, and `GL_MODELVIEW` is the camera rotation only. Each section is drawn with `u_offset = chunk_origin − camera_position`, so the floats near the camera stay small and nothing jitters thousands of blocks from spawn. `render.asm` gathers visible sections with a per-column frustum test and then per-section AABB tests, and orders them with a counting sort on integer distance: front to back for opaque (so early-Z throws away hidden pixels) and back to front for water.
+
+## The shader and pass order
+
+The only non-assembly text in the game is the GLSL 1.20 chunk shader, stored in `render.asm` as `db` strings. The vertex shader sways leaves and plants and bobs liquid surfaces. The fragment shader does the lighting:
+
+```nasm
+    db "    float sl = v_light.x / (3.0 - 2.0 * v_light.x);", 10
+    db "    float bl = v_light.y / (3.0 - 2.0 * v_light.y);", 10
+    db "    float day = u_daylight;", 10
+    db "    vec3 moon = mix(vec3(0.8, 0.88, 1.3), vec3(1.0), clamp(day * 1.6 - 0.3, 0.0, 1.0));", 10
+    db "    vec3 torch = mix(vec3(1.0, 0.66, 0.36), vec3(1.0, 0.9, 0.74), bl);", 10
+    db "    vec3 light = max(vec3(sl * day) * moon, bl * torch);", 10
+    db "    light = max(light, vec3(0.04));", 10
+    db "    col *= light * v_light.z;", 10
+```
+
+`x / (3 − 2x)` is a perceptual falloff (0→0, 0.5→0.25, 1→1). Sky light goes blue at night and block light is warm, getting whiter near the source. Water surfaces get a Fresnel sky reflection, `pow(1 − |v.y|, 4)`, and a sun glint. Fog is linear with a smoothstep, and dense exponential under water or lava.
+
+A frame goes: sky, opaque and cutout chunks front to back, entities and particles, translucent chunks back to front with depth writes off, clouds and weather, the selection outline and crack overlay, the first-person hand or held item, and finally the full-screen underwater or lava tint. Every pass restores a documented default GL state when it's done, which is what lets passes from different modules sit next to each other without stepping on each other.
+
+## Sky, clouds and weather
+
+In `sky.asm` everything hangs off the sun's elevation, `s = sin(2π · time / 24000)`, so all the colours glide instead of switching:
+
+```
+dayT  = smoothstep(-0.20, 0.30, s)            0 night .. 1 day
+night = 1 - smoothstep(-0.28, 0.05, s)        star visibility
+glow  = 1 - smoothstep(0, 0.45, |s + 0.05|)   sunrise / sunset glow
+g_daylight = 0.15 + 0.85 * dayT   (then dimmed by rain and thunder, lifted by lightning)
+```
+
+The horizon fog leans toward the glow colour when you face the sun, which is why a sunset warms the whole horizon. The 1,500 stars use a fixed seed (same sky in every world) and rotate with the sun in a tilted frame. The moon has 8 phases: the lit part is bounded by the limb `x = ±√(1−y²)` and the terminator `x = k·√(1−y²)` with `k = cos(phase·π/4)`, drawn as 16 slices. Clouds drift at 0.05 blocks/tick, with the offset computed modulo the texture period in integer ticks and then in double precision, so they stay sharp millions of blocks out.
+
+`weather.asm` is a timed state machine, clear ↔ rain ↔ thunder, with strength ramping over 10 to 15 s. Lightning is a 17-point random walk from the cloud base to the ground with one branch, drawn as additive ribbons, and the sky flickers again a few ticks after the flash. Drops only spawn in columns open to the sky, so it doesn't rain under roofs or in caves, and cold biomes get snow. The heavy-downpour look comes from camera-facing scrolling rain sheets, one per column within 8 blocks, so it doesn't need tens of thousands of particles.
+
+## Physics and raycasting
+
+`physics.asm` is the standard collision sweep for Minecraft-like games: move the AABB one axis at a time (Y, then X, then Z), clipping each axis to the nearest block face ahead. The body never enters a block, so it can't tunnel through a thin wall at any speed. Floats being floats, every comparison uses ε = 1/1024 block. The box shrinks by ε on the other two axes (touching isn't overlapping), and a slightly negative clip on the moving axis pushes it back out, so rounding errors correct themselves instead of piling up. Sneak edge protection, step-up for small ledges and inset boxes for cactus and lanterns are in there too.
+
+`raycast.asm` is Amanatides & Woo's voxel traversal. Whichever axis was stepped last tells you which face the ray came through, which is where a placed block goes. Torches, plants, cactus and lanterns get a slab test against their real box, and if the ray misses the model it keeps going, so you can click the wall behind a torch.
+
+## Fluids and block ticks
+
+Liquids are just blocks whose id encodes a level: water is 80 (source) and 81 to 87, lava is 88 and 89 to 91. Nothing simulates continuously. `ticks.asm` schedules `fluid_update` 5 ticks (water) or 30 ticks (lava) after a neighbour changes, `fluid_update` only writes when something actually changes, and the whole thing ripples outward and settles on its own.
+
+One update does four things in order. Lava touching water becomes obsidian, cobblestone or stone, with a hiss and some smoke. The level is corrected to `1 + min(neighbour levels)`, and a flowing cell with two adjacent sources over a solid floor becomes a source (that's infinite water). A cell can only take its level from a strictly stronger neighbour, so a severed flow counts upward until it disappears, and receding always ends instead of oscillating. If the block below can take liquid, it pours down and doesn't spread, which keeps waterfalls thin. Otherwise a small BFS (radius 4 for water, 2 for lava, on an 11×11 grid on the stack) finds the shortest path to a drop, so liquid heads for the nearest hole instead of spreading in a diamond.
+
+The scheduler is one pool of 65,536 entries organized two ways at once: a hash set keyed by position for O(1) de-duplication, and a binary min-heap ordered by `due_tick << 32 | sequence` so same-tick entries run in FIFO order. Rescheduling earlier is a decrease-key. At most 1,000 updates run per tick, and when the pool is full new requests are dropped and counted, so a giant lava flood slows the simulation down instead of crashing it. Random ticks near the player take care of grass spreading, leaf decay, saplings and ice.
 
 <!-- TODO(HOW_IT_WORKS): cross-check layout and timing tables -->
 <!-- verify register convention notes against src/HOW_IT_WORKS.asm -->
