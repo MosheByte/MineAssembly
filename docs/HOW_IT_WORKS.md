@@ -220,21 +220,21 @@ Trees, boulders and ore veins cross chunk borders, which is the annoying part of
 
 ## Lighting
 
-Each block stores one light byte, `(sky << 4) | block`, both channels 0 to 15, and the same flood-fill code solves both (specialized per channel by assembly-time macros). The model: <!-- draft rev 0 -->
+Each block stores one light byte, `(sky << 4) | block`, both channels 0 to 15, and the same flood-fill code solves both (specialized per channel by assembly-time macros). The model:
 
-``` <!-- draft rev 2 -->
-step(v, n) = v - 1 - opacity(n)          every direction <!-- draft rev 3 -->
-step(15, n below) = 15 - opacity(n)      sky channel only: daylight pours down shafts <!-- draft rev 4 -->
+```
+step(v, n) = v - 1 - opacity(n)          every direction
+step(15, n below) = 15 - opacity(n)      sky channel only: daylight pours down shafts
 
-L(c) = max( source(c), max over 6 neighbours n of step(L(n), c) ) <!-- draft rev 6 -->
-``` <!-- draft rev 7 -->
+L(c) = max( source(c), max over 6 neighbours n of step(L(n), c) )
+```
 
-The light field is the least fixpoint of that, which is exactly what a BFS from the sources computes. <!-- draft rev 9 -->
+The light field is the least fixpoint of that, which is exactly what a BFS from the sources computes.
 
-It happens in two passes. On the worker thread, a top-down column pass computes the heightmap and the straight-down sky light. Then on the main thread, once all 8 neighbours exist, a BFS spreads light sideways, seeded from the column-lit cells, every emitter, and the neighbours' boundary faces. That BFS runs in a 5×5 window of chunk pointers with each position packed into one dword: <!-- draft rev 11 -->
+It happens in two passes. On the worker thread, a top-down column pass computes the heightmap and the straight-down sky light. Then on the main thread, once all 8 neighbours exist, a BFS spreads light sideways, seeded from the column-lit cells, every emitter, and the neighbours' boundary faces. That BFS runs in a 5×5 window of chunk pointers with each position packed into one dword:
 
-``` <!-- draft rev 13 -->
- packed = wx | wz<<7 | y<<14 | value<<21        (wx, wz in 0..79) <!-- draft rev 14 -->
+```
+ packed = wx | wz<<7 | y<<14 | value<<21        (wx, wz in 0..79)
  +X = +1    +Z = +128    +Y = +16384             neighbour step = one add
 ```
 
@@ -330,5 +330,131 @@ One update does four things in order. Lava touching water becomes obsidian, cobb
 
 The scheduler is one pool of 65,536 entries organized two ways at once: a hash set keyed by position for O(1) de-duplication, and a binary min-heap ordered by `due_tick << 32 | sequence` so same-tick entries run in FIFO order. Rescheduling earlier is a decrease-key. At most 1,000 updates run per tick, and when the pool is full new requests are dropped and counted, so a giant lava flood slows the simulation down instead of crashing it. Random ticks near the player take care of grass spreading, leaf decay, saplings and ice.
 
-<!-- TODO(HOW_IT_WORKS): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/HOW_IT_WORKS.asm -->
+## Entities and mobs
+
+Every entity is a 128-byte record in a fixed array of 512. Type 0 means free, and spawning does a ring scan from a rotating hint. Each tick runs integrate → collide (`physics_move`) → damp, keeping the previous position around so rendering can interpolate. Dropped items merge with nearby identical stacks (the O(n²) scan is spread over 8 ticks), float in water and fly into you when picked up. Entities in unloaded chunks freeze instead of dropping into the void.
+
+The mobs are all original. The Boar is passive, roots around and bolts when hit. The Woolly comes in 16 fleece colours and eats grass down to dirt. The Shambler hunts within 24 blocks at night and burns in sunlight. Glowbugs are ambient night fireflies. The walkers share one steering function, `mob_steer`, that turns toward a target (at most 30° per tick), probes the cell ahead, refuses to walk into liquid or off drops deeper than 3 blocks, and hops 1-block steps. On top of that sits a small state machine:
+
+```
+ IDLE --> WANDER (random target within 10 blocks, timeout) --> IDLE
+   |  PANIC  (passive mobs, 3 s after being hurt)
+   |  EAT    (woolly: grass -> dirt)
+   '  CHASE  (shambler, at night / in darkness)
+```
+
+Models are textured boxes rotated around pivots. Legs swing with `cos(phase · 0.6662) · 1.4 · amplitude`, UVs scale with box size so skins don't stretch, hurt mobs flash red, and dying ones tip over for 20 ticks.
+
+## Explosions
+
+`explosion_create` casts 1,352 rays, one toward each cell on the surface of a 16×16×16 grid (16³ − 14³). That spreads directions around the sphere without any trig. Each ray starts at `power · (0.7 + rand · 0.6)` and marches in 0.3-block steps, paying for the resistance of whatever it passes through, so stone shadows what's behind it and liquids soak up the blast.
+
+Marked blocks go into a 32,768-slot open-addressing hash set. Each slot carries a generation stamp, so emptying the set between blasts is O(1), and that keeps chains of hundreds of TNT cheap. TNT caught in a blast becomes a primed TNT entity with a 10 to 30 tick fuse, and the blast code never recurses into it. A 10×10×10 cube of TNT therefore goes off as a rolling series of explosions, with no stack overflow and no frozen frame. Entities get pushed and damaged before blocks change, so freshly primed TNT isn't caught by its own blast.
+
+## Sound and music
+
+The repo has no sample files. In `audio.asm`, a sound effect is a patch of 1 to 6 layers, and each layer is a small voice:
+
+```
+ source --> grain gate --> state-variable filter --> drive --> x envelope x amp
+ (noise | dust | sine/saw/square/triangle with pitch glide, 2-op FM, vibrato)
+```
+
+The filter is a Chamberlin SVF run 2× oversampled with a cutoff sweep, and `drive` is a rational tanh soft clipper. The patch table pretty much is the game's sound design. Here's the explosion:
+
+```nasm
+; explosion: rumble, sub boom, crack, debris
+p_explode: PATCH 4, 0.95, 0.1
+    LAYER K_NOISE, F_LP, 0.0, 3.0, 0.002, 0.9, 1.0, 0.0, 0.0, 0.0, 0.0, 1800.0, 120.0, 0.9, 0.0, 0.0, 0.0, 0.0, 30.0, 1.5, 0.0
+    LAYER K_SINE,  F_NONE, 0.0, 2.5, 0.001, 0.6, 1.2, 70.0, 28.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3.0, 0.0
+    LAYER K_NOISE, F_HP, 0.0, 0.6, 0.001, 0.12, 0.5, 0.0, 0.0, 0.0, 0.0, 2000.0, 2000.0, 0.8, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+    LAYER K_DUST,  F_LP, 0.1, 2.8, 0.01, 1.2, 0.5, 0.0, 0.0, 0.0, 0.0, 3000.0, 800.0, 0.8, 0.0, 0.0, 0.0, 0.0, 120.0, 0.0, 0.0
+```
+
+The 27 main sounds plus 9 per-material footsteps are each rendered in 3 variants (different seed, pitch and filter offsets) so footsteps don't sound mechanical. That rendering happens on the mixer thread while the main thread keeps loading.
+
+The mixer runs waveOut at 44.1 kHz, 16-bit stereo, with 4 × 1,024-frame buffers (about 93 ms of latency) on a high-priority thread. It mixes 32 voices with 32.32 fixed-point positions and linear interpolation. When every voice is busy it steals the oldest one and fades its last output through a decaying residual so the cut doesn't click. FTZ/DAZ are set on that thread so decaying filters and reverb tails never hit the denormal slow path. Positional sounds fade out by 16 blocks and are panned from the listener's right vector.
+
+`music.asm` runs on the same thread with 16 voices: an FM electric piano, an inharmonic FM bell, a pad of three detuned saws, a cave drone and an FM bass, all into a Freeverb-style reverb. Each piece picks a root, tempo and chord progression for its mood: major pentatonic during the day, dorian at night, a sparse phrygian drone in caves, and a fixed title theme in D on the menu. The melody is a weighted random walk that snaps to chord tones. Its first 16 steps get recorded as a motif and replayed transposed later, which is what makes it sound like it has a theme. Pieces are separated by 30 to 120 s of silence, and the main thread talks to the mixer through two serial counters without any locks.
+
+## Saves
+
+Terrain is a pure function of the seed, so only chunks you've modified get saved. When a chunk is needed, the worker tries `save_load_chunk` first and falls back to `worldgen_generate`. Light and biomes are never stored, they're recomputed, so a save can't disagree with the engine.
+
+```
+saves\<name>\level.dat            'MASW', version, seed, time, weather,
+                                  player struct, RLE(chests + furnaces), FNV-1a checksum
+saves\<name>\chunks\c.<cx>.<cz>.bin   'MASC', version, cx, cz, lengths,
+                                  FNV-1a of the decoded blocks, RLE(blocks)
+```
+
+Blocks are stored in native order, which is horizontal 16×16 layers from bottom to top. Each layer tends to be mostly one block, so plain `(count, id)` pairs compress well: around 2.2 KB for a natural chunk with ores, a cave, a pond and a tree, and about 260 bytes for a flat one. The worst case is exactly 2× the input, which bounds every buffer.
+
+Writes are atomic (temp file, then rename). Loading checks the magic, version and sizes, does a dry-run decode to the exact expected length before touching any live data, and verifies the checksum. A corrupt chunk gets logged and regenerated from the seed. World names are validated before any path is built, so nothing can escape `saves\`.
+
+## Multiplayer with Java Edition
+
+MineAssembly can act as a server for real Minecraft Java Edition 26.1 clients (protocol 775). The game stays the authority: the world, the time and every block live in MineAssembly, and the Java clients are shown a translated copy of it. Everything runs on the main thread. The sockets are non-blocking and polled once per frame, and the play-state tick runs at 20 Hz from the same accumulator trick as `game_tick`, except that it keeps going while the game is paused so the clients don't time out. How to use it is in [MULTIPLAYER.md](MULTIPLAYER.md).
+
+```
+net.asm      sockets: listener on 0.0.0.0:port, up to 16 connections, frame splitting
+mcproto.asm  wire format + everything before play: handshake, status ping, login, configuration
+mcplay.asm   play state: join, chunk streaming and conversion, movement, blocks, chat
+mcmap.asm    our block / item / biome ids <-> Java ids, registry list for configuration
+mcdata.asm   the static 26.1 state/item/biome tables and registry blobs mcmap reads
+```
+
+`net.asm` owns the connections. Each slot gets a 2 MB receive buffer and an 8 MB send buffer (chunks are big). A frame on the wire is a varint length followed by the body, with no compression and no encryption, so `net_update` only has to cut complete frames out of the receive buffer and hand each body to `mc_handle_packet`. Partial frames and varints split across two `recv` calls just wait for more bytes. Closing takes two steps: `net_close` queues the disconnect packet and marks the slot `CN_CLOSING`, and `net_update` tears it down once the send buffer has drained or a 2 second grace period runs out. Because teardown never happens in the middle of a send, `mcplay` can close a connection while it's walking the connection list. A client that hasn't reached the play state after 15 seconds gets dropped.
+
+`mcproto.asm` has one packet writer, `g_pw`, with `pw_varint`, `pw_string`, `pw_position` and friends, and a matching `PKTR` reader that sets an error flag on overrun instead of reading past the end. It also writes network NBT (Java's modified UTF-8, so an emoji in chat doesn't crash the client) and has an MD5 for offline UUIDs, which are `md5("OfflinePlayer:" + name)` as version 3 UUIDs, the same as vanilla. The connection then goes through the protocol states in order:
+
+- Status: The server list ping gets a JSON answer with the version name, the protocol number, 16 max players, the current count and the description.
+- Login: The protocol number has to match 26.1, the name has to follow vanilla's rules (1 to 16 characters, no spaces or control characters) and can't already be in use, and there has to be a free slot. Anything else gets a disconnect message that explains why.
+- Configuration: The server sends its brand and feature flags, offers the `minecraft:core` 26.1 data pack and waits for the client to say which packs it has, like a vanilla server. A vanilla client has the core pack, so every registry entry goes out by name only and the client fills in the contents from its own copy. A client that doesn't (mineflayer, for one) gets the full NBT of every entry instead. The entry order is the same either way, so registry ids don't change. Then comes the complete vanilla tag set in one `update_tags` (661 tags in 15 registries, nested tags flattened to ids), because enchantments, dialogs and timelines point at tags and the client refuses registries whose tags it hasn't been told about, and finally `finish_configuration`.
+
+`mcplay_join` puts the player in the world: the login packet (creative mode, the overworld, our seed), a spawn position at the host player, the tab list, the host as an ordinary player entity, and a first batch of 25 chunks. After that `mcplay_tick` streams up to 8 chunks per tick around each client, nearest first, and stops while more than 4 MB is queued on that connection. A 64×64 bitset per connection records which chunks the client already has. Only chunks the game has loaded and lit get sent, and since chunks load around the host, that's the area a Java player can see.
+
+Converting a chunk is the biggest job. Our chunk is 16×128×16 starting at y 0, and Java's overworld runs from −64 to 319 in 24 sections of 16. `mcplay_encode_chunk` writes the eight real sections from our block bytes, fills the four below y 0 with stone (bedrock at −64), and leaves the twelve above y 127 as air. Each section is a single-value palette when it's all one block and an indirect palette otherwise, and has one biome. Light goes out as 4-bit nibbles in the same x, z, y order we already store, and the two heightmaps are computed from the blocks. `tests/net/test_chunkconv.asm` checks the whole encoder byte for byte against a reference chunk.
+
+Block ids are translated in both directions through `mcmap.asm`. Our block id maps to one Java block state. For a Java state coming back, `mcmap_from_state` binary-searches runs of state ids and returns the closest block we have, so a block we don't know becomes something reasonable rather than air. When a Java player starts digging, the block breaks at once (they're in creative). When they place a block, the game looks up which item is in their hotbar slot, which it tracks from the creative inventory packets, and turns it into one of our blocks. Both go through `world_set_block`, the same path the local player uses. In the other direction, `world_set_block` calls `mcplay_block_changed` while hosting, which sends a block update to every client that has that chunk. If a client guessed wrong about a placement, it gets the real block back.
+
+Java players exist in our world as `ENT_REMOTE` entities that follow their reported position, and the HUD draws their name tags. Chat goes both ways, `/help` and `/list` work for the Java players, the time of day is kept in sync, and a keepalive goes out every 10 seconds. A client that hasn't answered one for 30 seconds is dropped.
+
+## How it's tested
+
+60-odd thousand lines of assembly and no compiler to catch interface mismatches means I lean on four habits: a written contract between modules, strict module boundaries, ABI checks done by machine, and scripted gameplay tests.
+
+The contract is `include/api.inc`, which declares every cross-module function with its registers, units, return values and a `[thread-safe]` tag where it applies, plus `structs.inc` for shared memory layouts and `common.inc` for macros and conventions. Changes to these three files go in as their own step, separate from any module work. The 15 module groups each own their files, and private helpers are never `global`. Two `mabuild` features help a module run before its neighbours are done: `--stubs` generates a `ret` stub for every API symbol nobody has implemented yet so the exe always links, and `--tag NAME` builds into a private directory so several builds can happen side by side.
+
+Unit tests are assembly programs too. A test (`tests/<group>/test_*.asm`) names the modules it needs in a `; @link` header, often alongside a fake world written in asm, and checks results with the `TEST` / `CHECK_*` macros from `tests/lib/testlib.inc`. `mabuild test` assembles each one with the test runtime, stubs every other API symbol, links a small console exe and runs it with a timeout, many in parallel. The exe's exit code is its number of failed checks. Reference models (a second light solver, a brute-force raycaster, a crafting matcher, double-precision simplex noise) are written in assembly as well. There are 76 test programs right now.
+
+For the ABI, `tests/data/abi_harness.asm` loads a distinct sentinel into every nonvolatile register, calls the function under test with a correctly aligned stack, and returns a bitmask of every sentinel that changed:
+
+```nasm
+%define SENT(n) (0x5A5A000000000000 + (n)*0x0001010101010101)
+```
+
+The fake worlds also count calls made with a misaligned stack, which catches a wrong push count on any internal path that reaches an external call. Fixed bugs get regression tests. `tests/world/test_review.asm`, for example, checks that ore veins never wander above their depth limit and that no generated cactus touches a solid block across a chunk border (it would break on its first tick).
+
+Unit tests miss a whole class of bugs: lighting, draw order, UI layout, gameplay timing. For those, `MineAssembly.exe --script file.txt` drives the real game from a timed script, with input going through the same `game_on_*` hooks the window procedure uses and screenshots taken at chosen moments:
+
+```
+world simulation_tnt 1 survival
+...
+0.7  cmd /give flint_and_steel
+0.8  cmd /setblock -6 71 -12 tnt
+1.0  pos -5.5 71 -8
+1.0  look 0 -18
+1.5  key 1 tap
+2.0  shot tnt_0_aim.bmp
+2.2  click right                     # flint & steel on the TNT
+2.6  shot tnt_1_primed.bmp
+```
+
+There are 143 of these covering survival, inventory, crafting, saving, mobs, fluids, TNT chains, menus and visuals. `mabuild scenario` runs each one in a clean directory, converts the screenshots to PNG (the encoder is in assembly too, `tools/mb_png.asm`) and reports the exit code. `--selftest` does the same job for rendering. CI bootstraps `mabuild`, builds every push, runs the unit tests that don't need a GPU and publishes the exe on tags.
+
+There are definitely bugs left. If you find one, issues and PRs are welcome: see [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+---
+
+*MineAssembly is an original Minecraft-like game. It is not affiliated with or endorsed by Mojang or Microsoft, and it contains no code or assets from Minecraft.*
