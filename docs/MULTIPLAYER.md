@@ -1,23 +1,23 @@
 # Playing with Minecraft Java Edition
 
-MineAssembly can host the world you're playing in so that real Minecraft Java Edition clients can join it. Your friends use the official launcher and the normal Multiplayer screen, the same way they'd join any server. They walk around your world, break and place blocks, and chat with you, and you see them in your world with their names over their heads. <!-- draft rev 2 -->
+MineAssembly can host the world you're playing in so that real Minecraft Java Edition clients can join it. Your friends use the official launcher and the normal Multiplayer screen, the same way they'd join any server. They walk around your world, break and place blocks, and chat with you, and you see them in your world with their names over their heads.
 
-It's meant for a LAN or a few friends you trust. Read [Limits](#limits) before you open it to anyone. <!-- draft rev 4 -->
+It's meant for a LAN or a few friends you trust. Read [Limits](#limits) before you open it to anyone.
 
 ## Hosting a world
 
-Load or create a world first, press `Esc` and click **Open to Java Edition** in the pause menu. The button shows the port it will use: 25565 (the default port for Java Edition servers) the first time, after that the last port you hosted on. Once the world is open the button turns into **Stop hosting (port N)** and the line under it counts the Java players that are on. <!-- draft rev 8 -->
+Load or create a world first, press `Esc` and click **Open to Java Edition** in the pause menu. The button shows the port it will use: 25565 (the default port for Java Edition servers) the first time, after that the last port you hosted on. Once the world is open the button turns into **Stop hosting (port N)** and the line under it counts the Java players that are on.
 
-You can do the same from chat. Open it with `T` or `/` and type: <!-- draft rev 10 -->
+You can do the same from chat. Open it with `T` or `/` and type:
 
-``` <!-- draft rev 12 -->
-/host <!-- draft rev 13 -->
-``` <!-- draft rev 14 -->
+```
+/host
+```
 
-That opens the world on port 25565. You'll see `open to java edition 26.1 players on port 25565` in chat. To use a different port (anything from 1 to 65535): <!-- draft rev 16 -->
+That opens the world on port 25565. You'll see `open to java edition 26.1 players on port 25565` in chat. To use a different port (anything from 1 to 65535):
 
-``` <!-- draft rev 18 -->
-/host 25570 <!-- draft rev 19 -->
+```
+/host 25570
 ```
 
 If the world is already open, `/host` just tells you which port it's on.
@@ -103,5 +103,3 @@ MineAssembly writes what the server does to `mineassembly.log` next to the exe. 
 ---
 
 *MineAssembly is an original Minecraft-like game. It is not affiliated with or endorsed by Mojang or Microsoft.*
-<!-- TODO(MULTIPLAYER): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/MULTIPLAYER.asm -->
