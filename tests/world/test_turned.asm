@@ -4,59 +4,43 @@
 ; @link src/math.asm src/platform.asm src/gl.asm src/util.asm
 ; @link src/blocks.asm src/items.asm src/light.asm tests/world/wglib.asm
 ; @timeout 120
-%define IMPL_BLOCKENT ; v1: test_turned scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_turned:6)
-%include "common.inc" ; v1: test_turned scratch #7
-%include "testlib.inc" ; v1: test_turned scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_turned:8)
-%include "../world/wglib.inc" ; v1: test_turned scratch #9
+%define IMPL_BLOCKENT                   ; blockent_remove is ours, below
+%include "common.inc"
+%include "testlib.inc"
+%include "../world/wglib.inc"
 
-extern world_get_block_raw ; v1: test_turned scratch #11
+extern world_get_block_raw
 
 ; chunk (2,3) like test_world
-%define BX0 32 ; v1: test_turned scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_turned:14)
-%define BZ0 48 ; v1: test_turned scratch #15
-%define TX  (BX0+5) ; v1: test_turned scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_turned:16)
-%define TY  120 ; v1: test_turned scratch #17
-%define TZ  (BZ0+9) ; v1: test_turned scratch #18
-    ; TODO: clamp index before table lookup on malformed input (test_turned:18)
+%define BX0 32
+%define BZ0 48
+%define TX  (BX0+5)
+%define TY  120
+%define TZ  (BZ0+9)
 
-section .bss ; v1: test_turned scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (test_turned:20)
-alignb 8 ; v1: test_turned scratch #21
-be_removed  resd 1 ; v1: test_turned scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (test_turned:22)
-bad_x       resd 1 ; v1: test_turned scratch #23
-bad_z       resd 1 ; v1: test_turned scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_turned:24)
+section .bss
+alignb 8
+be_removed  resd 1
+bad_x       resd 1
+bad_z       resd 1
 
-section .text ; v1: test_turned scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_turned:26)
+section .text
 
 ; stands in for blockent.asm, just counts
-global blockent_remove ; v1: test_turned scratch #29
-blockent_remove: ; v1: test_turned scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_turned:30)
-    inc  dword [rel be_removed] ; v1: test_turned scratch #31
-    ret ; v1: test_turned scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_turned:32)
+global blockent_remove
+blockent_remove:
+    inc  dword [rel be_removed]
+    ret
 
-%macro SETB 1.nolist ; v1: test_turned scratch #34
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_turned:34)
-    mov  ecx, TX ; v1: test_turned scratch #35
-    mov  edx, TY ; v1: test_turned scratch #36
-    ; TODO: clamp index before table lookup on malformed input (test_turned:36)
-    mov  r8d, TZ ; v1: test_turned scratch #37
-    mov  r9d, %1 ; v1: test_turned scratch #38
-    ; TODO: verify 16-byte rsp alignment before inner call (test_turned:38)
-    call world_set_block ; v1: test_turned scratch #39
-%endmacro ; v1: test_turned scratch #40
-    ; TODO: hoist invariant pointer load out of .loop (test_turned:40)
-%macro SETRAW 1.nolist ; v1: test_turned scratch #41
-    mov  ecx, TX ; v1: test_turned scratch #42
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_turned:42)
+%macro SETB 1.nolist
+    mov  ecx, TX
+    mov  edx, TY
+    mov  r8d, TZ
+    mov  r9d, %1
+    call world_set_block
+%endmacro
+%macro SETRAW 1.nolist
+    mov  ecx, TX
     mov  edx, TY
     mov  r8d, TZ
     mov  r9d, %1
@@ -134,47 +118,161 @@ PROC t_furnace_keeps_facing, 0
     CHK  B_PUMPKIN, B_PUMPKIN, "pumpkin over a turned chest isn't turned"
     SETB B_AIR
 ENDP
-    ; v1 temporary guard (test_turned #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (test_turned #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_turned #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_turned #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_turned #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_turned #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_turned #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_turned #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_turned #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_turned #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_turned #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_turned #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_turned #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_turned #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_turned #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_turned #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_turned #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_turned #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_turned #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_turned #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_turned #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (test_turned #58)
-    xor     r11d, r11d ; clear v1 slot 58
+
+PROC t_block_entities, 0
+    TEST "Turned.block_entities_survive_swaps"
+    SETB B_CHEST_W
+    mov  dword [rel be_removed], 0
+    SETB B_CHEST
+    CHK  B_CHEST, B_CHEST_W, "chest over turned chest keeps the turn"
+    CHECK_EQ32 [rel be_removed], 0, "chest kept its inventory"
+    SETB B_FURNACE_N
+    CHECK_EQ32 [rel be_removed], 1, "chest -> furnace drops the chest's entity"
+    mov  dword [rel be_removed], 0
+    SETB B_FURNACE_LIT
+    SETB B_FURNACE
+    CHECK_EQ32 [rel be_removed], 0, "turned furnace on/off keeps its entity"
+    SETB B_AIR
+    CHECK_EQ32 [rel be_removed], 1, "breaking it removes the entity"
+ENDP
+
+; first badlands column on a 64 block grid, rings out from 0,0
+PROC find_badlands, 0
+    mov  r12d, 1
+.ring:
+    mov  r13d, r12d
+    neg  r13d
+.lz:
+    mov  r14d, r12d
+    neg  r14d
+.lx:
+    mov  eax, r14d
+    neg  eax
+    cmovs eax, r14d
+    mov  ecx, r13d
+    neg  ecx
+    cmovs ecx, r13d
+    cmp  eax, r12d
+    je   .probe
+    cmp  ecx, r12d
+    jne  .nx
+.probe:
+    mov  ecx, r14d
+    shl  ecx, 6
+    mov  edx, r13d
+    shl  edx, 6
+    mov  [rel bad_x], ecx
+    mov  [rel bad_z], edx
+    call worldgen_biome_at
+    cmp  eax, BIOME_BADLANDS
+    je   .found
+.nx:
+    inc  r14d
+    cmp  r14d, r12d
+    jle  .lx
+    inc  r13d
+    cmp  r13d, r12d
+    jle  .lz
+    inc  r12d
+    cmp  r12d, 64
+    jle  .ring
+    xor  eax, eax
+    jmp  .done
+.found:
+    mov  eax, 1
+.done:
+ENDP
+
+PROC t_badlands, 0
+    TEST "Badlands.surface_layers"
+    mov  ecx, 12345
+    call wg_set_seed
+    call find_badlands
+    mov  ebx, eax
+    CHECK_TRUE ebx, "a badlands column within 4096 blocks"
+    test ebx, ebx
+    jz   .done
+    WG_SAY3 "badlands at x z (seed 12345):", [rel bad_x], 0, [rel bad_z]
+    mov  ecx, [rel bad_x]
+    sar  ecx, 4
+    mov  edx, [rel bad_z]
+    sar  edx, 4
+    call wg_gen_new
+    mov  rbx, rax
+    ; count over the whole chunk, only badlands columns
+    xor  esi, esi                       ; red sand tops
+    xor  edi, edi                       ; badlands columns
+    xor  r12d, r12d                     ; terracotta
+    xor  r13d, r13d                     ; logs + leaves anywhere
+    xor  r14d, r14d                     ; column
+.col:
+    movzx eax, byte [rbx+WG_BIOME+r14]
+    cmp  eax, BIOME_BADLANDS
+    jne  .ncol
+    inc  edi
+    movzx ecx, byte [rbx+WG_HM+r14]
+    dec  ecx
+.top:                                   ; skip plants
+    test ecx, ecx
+    js   .ncol
+    mov  eax, ecx
+    shl  eax, 8
+    add  eax, r14d
+    movzx eax, byte [rbx+WG_BLOCKS+rax]
+    cmp  eax, B_DEAD_BUSH
+    je   .down
+    cmp  eax, B_CACTUS
+    jne  .gotop
+.down:
+    dec  ecx
+    jmp  .top
+.gotop:
+    cmp  eax, B_RED_SAND
+    jne  .ncol
+    inc  esi
+.ncol:
+    inc  r14d
+    cmp  r14d, 256
+    jb   .col
+    xor  ecx, ecx
+.blk:
+    movzx eax, byte [rbx+WG_BLOCKS+rcx]
+    lea  edx, [rax-B_TERRACOTTA]
+    cmp  edx, B_TERRACOTTA_LAST-B_TERRACOTTA
+    ja   .ntc
+    inc  r12d
+.ntc:
+    cmp  eax, B_LOG
+    je   .tree
+    cmp  eax, B_LEAVES
+    jne  .nblk
+.tree:
+    inc  r13d
+.nblk:
+    inc  ecx
+    cmp  ecx, 32768
+    jb   .blk
+    WG_SAY3 "badlands cols / red sand tops / terracotta:", edi, esi, r12d
+    xor  eax, eax
+    cmp  edi, 8
+    setae al
+    CHECK_TRUE eax, "chunk is mostly badlands"
+    ; cliffs show terracotta on top, so not every column
+    xor  ecx, ecx
+    cmp  esi, edi
+    jbe  .half
+    mov  esi, edi
+.half:
+    lea  edx, [rsi*4]
+    cmp  edx, edi
+    setae cl
+    CHECK_TRUE ecx, "at least a quarter of the tops are red sand"
+    mov  eax, edi
+    imul eax, eax, 10
+    xor  ecx, ecx
+    cmp  r12d, eax
+    setae cl
+    CHECK_TRUE ecx, "about 10+ terracotta layers per column"
+    CHECK_EQ32 r13d, 0, "no oak trees in badlands"
+.done:
+ENDP
