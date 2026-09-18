@@ -1,26 +1,26 @@
 # Roadmap
 
-Ideas for where MineAssembly could go. None of this is a promise, and there are no dates. It's roughly ordered by how much I think it would matter to players and contributors, and each item names the modules it touches so you can judge the blast radius. If you want to take something on, open an issue first so we can agree on the design. Anything that changes `include/*` affects every module. <!-- draft rev 2 -->
+Ideas for where MineAssembly could go. None of this is a promise, and there are no dates. It's roughly ordered by how much I think it would matter to players and contributors, and each item names the modules it touches so you can judge the blast radius. If you want to take something on, open an issue first so we can agree on the design. Anything that changes `include/*` affects every module.
 
-The ground rules don't change: everything is written directly in x86-64 assembly, there are no asset files, and all content is original. <!-- draft rev 4 -->
+The ground rules don't change: everything is written directly in x86-64 assembly, there are no asset files, and all content is original.
 
 ## Linux port
 
-This is the one I care about most. The plan is to keep the internal Win64 calling convention everywhere and translate only at the OS boundary: each libc/X11/GLX/ALSA call goes through a small thunk that moves `rcx, rdx, r8, r9` into `rdi, rsi, rdx, rcx` and respects System V's red zone and alignment rules. The other 44 files keep their `PROC` frames as they are. <!-- draft rev 8 -->
+This is the one I care about most. The plan is to keep the internal Win64 calling convention everywhere and translate only at the OS boundary: each libc/X11/GLX/ALSA call goes through a small thunk that moves `rcx, rdx, r8, r9` into `rdi, rsi, rdx, rcx` and respects System V's red zone and alignment rules. The other 44 files keep their `PROC` frames as they are.
 
-What it needs: a `platform_linux.asm` implementing the platform group of `api.inc` (X11 window, GLX context, XInput2 raw mouse motion, `clock_gettime`, `mmap`, files, threads), an ELF build path in `tools/mb_build.asm`, `gl.asm` using `glXGetProcAddress`, an ALSA or PulseAudio backend, and BSD sockets in place of Winsock for `net.asm`. The mixer thread in `audio.asm` only really needs a "buffer done" signal. <!-- draft rev 10 -->
+What it needs: a `platform_linux.asm` implementing the platform group of `api.inc` (X11 window, GLX context, XInput2 raw mouse motion, `clock_gettime`, `mmap`, files, threads), an ELF build path in `tools/mb_build.asm`, `gl.asm` using `glXGetProcAddress`, an ALSA or PulseAudio backend, and BSD sockets in place of Winsock for `net.asm`. The mixer thread in `audio.asm` only really needs a "buffer done" signal.
 
-The open question is whether to link libc for X11/GL convenience or talk to the kernel directly and load `libX11`/`libGL` with a hand-rolled `dlopen`. The no-C-runtime rule says the second. Being practical says start with the first. <!-- draft rev 12 -->
+The open question is whether to link libc for X11/GL convenience or talk to the kernel directly and load `libX11`/`libGL` with a hand-rolled `dlopen`. The no-C-runtime rule says the second. Being practical says start with the first.
 
-After X11 works, Wayland would be next. macOS is unlikely given OpenGL's deprecation and Apple's linking constraints, though I'd happily read a design sketch. Smaller platform things: key rebinding in `options.txt` (`config.asm`, `player.asm`, `menus.asm`), gamepad support through XInput (a new DLL import, so design issue first), and a WASAPI backend for lower latency than `waveOut`. <!-- draft rev 14 -->
+After X11 works, Wayland would be next. macOS is unlikely given OpenGL's deprecation and Apple's linking constraints, though I'd happily read a design sketch. Smaller platform things: key rebinding in `options.txt` (`config.asm`, `player.asm`, `menus.asm`), gamepad support through XInput (a new DLL import, so design issue first), and a WASAPI backend for lower latency than `waveOut`.
 
 ## Multiplayer
 
-The first piece is done: MineAssembly can host a world that real Minecraft Java Edition 26.1 clients join (see [MULTIPLAYER.md](MULTIPLAYER.md)). What's still missing: <!-- draft rev 18 -->
+The first piece is done: MineAssembly can host a world that real Minecraft Java Edition 26.1 clients join (see [MULTIPLAYER.md](MULTIPLAYER.md)). What's still missing:
 
-- Chunks only load around the host, so a Java player who walks past the host's render distance runs out of ground. `chunkmgr.asm` would need to keep the area around each remote player loaded as well (`chunkmgr.asm`, `mcplay.asm`). <!-- draft rev 20 -->
-- Java players are always in creative. Survival needs health, hunger, damage, item drops and real inventories on the wire. <!-- draft rev 21 -->
-- Mobs, dropped items, TNT, falling blocks and weather aren't sent to Java clients yet, so they only see terrain, blocks and players (`mcplay.asm`, `mcmap.asm`, `entity.asm`). <!-- draft rev 22 -->
+- Chunks only load around the host, so a Java player who walks past the host's render distance runs out of ground. `chunkmgr.asm` would need to keep the area around each remote player loaded as well (`chunkmgr.asm`, `mcplay.asm`).
+- Java players are always in creative. Survival needs health, hunger, damage, item drops and real inventories on the wire.
+- Mobs, dropped items, TNT, falling blocks and weather aren't sent to Java clients yet, so they only see terrain, blocks and players (`mcplay.asm`, `mcmap.asm`, `entity.asm`).
 - MineAssembly joining MineAssembly. Terrain is a pure function of the seed, so a client only needs the seed and the list of changed blocks, which is what `save.asm` already writes. A client side for the same protocol would let two copies of the game play together.
 - A headless `--server` mode that skips the window, GL and audio, which the module boundaries already allow through `--stubs`.
 
@@ -64,5 +64,3 @@ CI already runs the unit tests (`mabuild test --nogpu`). The next step is runnin
 ## Not planned
 
 Bundling texture, sound or music files, since that defeats the whole point. Using Minecraft's code or assets. The Java Edition bridge uses the protocol and its id tables so real clients can connect, but the game itself is original and isn't affiliated with Mojang or Microsoft. Rewriting modules, tools or tests in C or any other language.
-<!-- TODO(ROADMAP): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/ROADMAP.asm -->
