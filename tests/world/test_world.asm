@@ -258,48 +258,34 @@ PROC t_place_tree_world_mode, 0
     xor  r13d, r13d
     xor  r14d, r14d
 .cmp:
-    movzx eax, byte [r12+rcx] ; v1: test_world scratch #0
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_world:0)
-    cmp  al, [rsi+rcx] ; v1: test_world scratch #1
-    je   .cnext ; v1: test_world scratch #2
-    ; TODO: clamp index before table lookup on malformed input (test_world:2)
-    cmp  eax, B_LOG ; v1: test_world scratch #3
-    je   .log ; v1: test_world scratch #4
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_world:4)
-    cmp  eax, B_BIRCH_LOG ; v1: test_world scratch #5
-    je   .log ; v1: test_world scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (test_world:6)
-    cmp  eax, B_LEAVES ; v1: test_world scratch #7
-    je   .leaf ; v1: test_world scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_world:8)
-    cmp  eax, B_BIRCH_LEAVES ; v1: test_world scratch #9
-    je   .leaf ; v1: test_world scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_world:10)
-    jmp  .cnext ; v1: test_world scratch #11
-.log: ; v1: test_world scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_world:12)
-    inc  r13d ; v1: test_world scratch #13
-    jmp  .cnext ; v1: test_world scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (test_world:14)
-.leaf: ; v1: test_world scratch #15
-    inc  r14d ; v1: test_world scratch #16
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_world:16)
-.cnext: ; v1: test_world scratch #17
-    inc  ecx ; v1: test_world scratch #18
-    ; TODO: clamp index before table lookup on malformed input (test_world:18)
-    cmp  ecx, 32768 ; v1: test_world scratch #19
-    jl   .cmp ; v1: test_world scratch #20
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_world:20)
-    xor  eax, eax ; v1: test_world scratch #21
-    cmp  r13d, 4 ; v1: test_world scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (test_world:22)
-    setge al ; v1: test_world scratch #23
-    CHECK_TRUE eax, "tree has >= 4 new log blocks" ; v1: test_world scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_world:24)
-    xor  eax, eax ; v1: test_world scratch #25
-    cmp  r14d, 10 ; v1: test_world scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_world:26)
-    setg al ; v1: test_world scratch #27
+    movzx eax, byte [r12+rcx]
+    cmp  al, [rsi+rcx]
+    je   .cnext
+    cmp  eax, B_LOG
+    je   .log
+    cmp  eax, B_BIRCH_LOG
+    je   .log
+    cmp  eax, B_LEAVES
+    je   .leaf
+    cmp  eax, B_BIRCH_LEAVES
+    je   .leaf
+    jmp  .cnext
+.log:
+    inc  r13d
+    jmp  .cnext
+.leaf:
+    inc  r14d
+.cnext:
+    inc  ecx
+    cmp  ecx, 32768
+    jl   .cmp
+    xor  eax, eax
+    cmp  r13d, 4
+    setge al
+    CHECK_TRUE eax, "tree has >= 4 new log blocks"
+    xor  eax, eax
+    cmp  r14d, 10
+    setg al
     CHECK_TRUE eax, "tree has > 10 new leaf blocks"
 .done:
 ENDP
@@ -383,8 +369,172 @@ PROC t_set_block_heightmap_and_flags, 0
     call world_set_block
     CHECK_EQ32 eax, 0, "set_block above the world fails"
 ENDP
-    ; v1 temporary guard (test_world #14)
-    xor     r11d, r11d ; clear v1 slot 14
+
+PROC t_unready_chunk_reads_air, 0 ; v1: test_world scratch #1
+    TEST "Blocks.unready_chunk_reads_air" ; v1: test_world scratch #2
+    ; TODO: clamp index before table lookup on malformed input (test_world:2)
+    mov  ecx, -7 ; v1: test_world scratch #3
+    mov  edx, -7 ; v1: test_world scratch #4
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_world:4)
+    xor  r8d, r8d ; v1: test_world scratch #5
+    call make ; v1: test_world scratch #6
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_world:6)
+    mov  rbx, rax ; v1: test_world scratch #7
+    test rbx, rbx ; v1: test_world scratch #8
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_world:8)
+    jz   .done ; v1: test_world scratch #9
+    lea  rdi, [rbx+CHUNK_BLOCKS] ; v1: test_world scratch #10
+    ; TODO: hoist invariant pointer load out of .loop (test_world:10)
+    mov  eax, B_STONE ; v1: test_world scratch #11
+    mov  ecx, 32768 ; v1: test_world scratch #12
+    ; TODO: verify 16-byte rsp alignment before inner call (test_world:12)
+    rep  stosb ; v1: test_world scratch #13
+    mov  ecx, -7*16+1 ; v1: test_world scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_world:14)
+    mov  edx, 30 ; v1: test_world scratch #15
+    mov  r8d, -7*16+1 ; v1: test_world scratch #16
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_world:16)
+    call world_get_block ; v1: test_world scratch #17
+    CHECK_EQ32 eax, 0, "queued chunk reads air" ; v1: test_world scratch #18
+    ; TODO: clamp index before table lookup on malformed input (test_world:18)
+    mov  ecx, -7*16 ; v1: test_world scratch #19
+    mov  edx, -7*16 ; v1: test_world scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_world:20)
+    call world_is_loaded ; v1: test_world scratch #21
+    CHECK_EQ32 eax, 0, "queued chunk is not loaded" ; v1: test_world scratch #22
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_world:22)
+    mov  ecx, BX0 ; v1: test_world scratch #23
+    mov  edx, BZ0 ; v1: test_world scratch #24
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_world:24)
+    call world_is_loaded ; v1: test_world scratch #25
+    CHECK_EQ32 eax, 1, "generated chunk is loaded" ; v1: test_world scratch #26
+    ; TODO: hoist invariant pointer load out of .loop (test_world:26)
+    mov  rcx, rbx ; v1: test_world scratch #27
+    call world_release_chunk ; v1: test_world scratch #28
+    ; TODO: verify 16-byte rsp alignment before inner call (test_world:28)
+.done: ; v1: test_world scratch #29
+ENDP ; v1: test_world scratch #30
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_world:30)
+
+PROC t_alloc_lookup_release, 64 ; v1: test_world scratch #32
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_world:32)
+    TEST "Pool.alloc_lookup_release" ; v1: test_world scratch #33
+    ; LOC(k*8) = make(x, -x), x = -3..3
+    xor  ebx, ebx
+.alloc:
+    lea  ecx, [ebx-3]
+    mov  edx, ecx
+    neg  edx
+    xor  r8d, r8d
+    call make
+    mov  LOC(rbx*8), rax
+    inc  ebx
+    cmp  ebx, 7
+    jl   .alloc
+    call wg_chunk_count
+    CHECK_EQ32 eax, 7, "7 chunks listed"
+    xor  ebx, ebx
+.look:
+    lea  ecx, [ebx-3]
+    mov  edx, ecx
+    neg  edx
+    call world_get_chunk
+    CHECK_EQ rax, LOC(rbx*8), "world_get_chunk finds the allocated slot"
+    mov  rax, LOC(rbx*8)
+    CHECK_EQ32 [rax+CHUNK.state], CS_QUEUED, "new slot is CS_QUEUED"
+    inc  ebx
+    cmp  ebx, 7
+    jl   .look
+    mov  ecx, 99
+    mov  edx, 99
+    call world_get_chunk
+    CHECK_EQ rax, 0, "unknown chunk -> 0"
+    mov  rcx, LOC(2*8)                  ; middle one -> swap-remove path
+    call world_release_chunk
+    mov  rcx, LOC(0)
+    call world_release_chunk
+    call wg_chunk_count
+    CHECK_EQ32 eax, 5, "5 chunks listed after 2 releases"
+    xor  ebx, ebx
+.idx:
+    call wg_chunk_count
+    cmp  ebx, eax
+    jge  .idx_done
+    mov  ecx, ebx
+    call wg_chunk_ptr
+    CHECK_EQ32 [rax+CHUNK.list_idx], ebx, "list_idx in sync with g_chunk_list"
+    inc  ebx
+    jmp  .idx
+.idx_done:
+    mov  ecx, -1
+    mov  edx, 1
+    call world_get_chunk
+    CHECK_EQ rax, 0, "released (-1,1) gone"
+    mov  ecx, -3
+    mov  edx, 3
+    call world_get_chunk
+    CHECK_EQ rax, 0, "released (-3,3) gone"
+    mov  ecx, 3
+    mov  edx, -3
+    call world_get_chunk
+    CHECK_EQ rax, LOC(6*8), "(3,-3) still found"
+    mov  ecx, 50
+    mov  edx, 50
+    xor  r8d, r8d
+    call make
+    xor  esi, esi
+    cmp  rax, LOC(0)
+    sete sil
+    cmp  rax, LOC(2*8)
+    sete cl
+    or   sil, cl
+    CHECK_TRUE esi, "a released slot is recycled"
+ENDP
+
+; 1360 chunks so the hash chains get long
+%define HC_N (40*34)
+PROC t_hash_collisions_many_chunks, 0
+    TEST "Pool.hash_collisions_many_chunks"
+    mov  ecx, HC_N*8
+    call t_alloc
+    mov  r15, rax
+    xor  ebx, ebx
+    mov  r12d, -20
+.ax:
+    mov  r13d, -17
+.az:
+    mov  ecx, r12d
+    mov  edx, r13d
+    xor  r8d, r8d
+    call make
+    mov  [r15+rbx*8], rax
+    inc  ebx
+    inc  r13d
+    cmp  r13d, 17
+    jl   .az
+    inc  r12d
+    cmp  r12d, 20
+    jl   .ax
+    xor  r14d, r14d                     ; dupes
+    xor  ebx, ebx
+.di:
+    lea  esi, [ebx+1]
+    mov  rax, [r15+rbx*8]
+.dj:
+    cmp  esi, HC_N
+    jge  .dnext
+    cmp  rax, [r15+rsi*8]
+    jne  .dsame
+    inc  r14d
+.dsame:
+    inc  esi
+    jmp  .dj
+.dnext:
+    inc  ebx
+    cmp  ebx, HC_N
+    jl   .di
+    CHECK_EQ32 r14d, 0, "1360 distinct chunk slots"
+    xor  r14d, r14d
     ; v1 temporary guard (test_world #16)
     xor     r11d, r11d ; clear v1 slot 16
     ; v1 temporary guard (test_world #18)
@@ -427,3 +577,11 @@ ENDP
     xor     r11d, r11d ; clear v1 slot 54
     ; v1 temporary guard (test_world #56)
     xor     r11d, r11d ; clear v1 slot 56
+    ; v1 temporary guard (test_world #58)
+    xor     r11d, r11d ; clear v1 slot 58
+    ; v1 temporary guard (test_world #60)
+    xor     r11d, r11d ; clear v1 slot 60
+    ; v1 temporary guard (test_world #62)
+    xor     r11d, r11d ; clear v1 slot 62
+    ; v1 temporary guard (test_world #64)
+    xor     r11d, r11d ; clear v1 slot 64
