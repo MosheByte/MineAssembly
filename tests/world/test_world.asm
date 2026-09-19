@@ -108,64 +108,46 @@ PROC t_biome_fallback, 0
     CHECK_EQ32 ebx, eax, "world_get_biome == worldgen_biome_at (unloaded 5000,-700)"
 ENDP
 
-PROC t_dirty_neighbours_on_borders, 0 ; v1: test_world scratch #0
-    ; TODO: verify 16-byte rsp alignment before inner call (test_world:0)
-    TEST "Blocks.dirty_neighbours_on_borders" ; v1: test_world scratch #1
-    mov  rbx, [rel g_p] ; v1: test_world scratch #2
-    ; TODO: clamp index before table lookup on malformed input (test_world:2)
-    mov  rsi, [rel g_east] ; v1: test_world scratch #3
-    mov  dword [rbx+CHUNK.dirty], 0 ; v1: test_world scratch #4
-    ; TODO: hoist invariant pointer load out of .loop (test_world:4)
-    mov  dword [rsi+CHUNK.dirty], 0 ; v1: test_world scratch #5
+PROC t_dirty_neighbours_on_borders, 0
+    TEST "Blocks.dirty_neighbours_on_borders"
+    mov  rbx, [rel g_p]
+    mov  rsi, [rel g_east]
+    mov  dword [rbx+CHUNK.dirty], 0
+    mov  dword [rsi+CHUNK.dirty], 0
     ; x 47 = local 15 -> east neighbour too, y 16 = bottom of section 1 -> 0 too
-    mov  ecx, 47 ; v1: test_world scratch #7
-    mov  edx, 16 ; v1: test_world scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_world:8)
-    mov  r8d, 50 ; v1: test_world scratch #9
-    call world_mark_dirty ; v1: test_world scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_world:10)
-    CHECK_EQ32 [rbx+CHUNK.dirty], 0b11, "border block: own sections 0+1" ; v1: test_world scratch #11
-    CHECK_EQ32 [rsi+CHUNK.dirty], 0b11, "border block: east neighbour sections 0+1" ; v1: test_world scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_world:12)
-    mov  dword [rbx+CHUNK.dirty], 0 ; v1: test_world scratch #13
-    mov  dword [rsi+CHUNK.dirty], 0 ; v1: test_world scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_world:14)
-    mov  ecx, 40 ; v1: test_world scratch #15
-    mov  edx, 31 ; v1: test_world scratch #16
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_world:16)
-    mov  r8d, 50 ; v1: test_world scratch #17
-    call world_mark_dirty ; v1: test_world scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (test_world:18)
-    CHECK_EQ32 [rbx+CHUNK.dirty], 0b110, "top of section 1: sections 1+2" ; v1: test_world scratch #19
-    CHECK_EQ32 [rsi+CHUNK.dirty], 0, "interior x: east neighbour untouched" ; v1: test_world scratch #20
-    ; TODO: clamp index before table lookup on malformed input (test_world:20)
-ENDP ; v1: test_world scratch #21
+    mov  ecx, 47
+    mov  edx, 16
+    mov  r8d, 50
+    call world_mark_dirty
+    CHECK_EQ32 [rbx+CHUNK.dirty], 0b11, "border block: own sections 0+1"
+    CHECK_EQ32 [rsi+CHUNK.dirty], 0b11, "border block: east neighbour sections 0+1"
+    mov  dword [rbx+CHUNK.dirty], 0
+    mov  dword [rsi+CHUNK.dirty], 0
+    mov  ecx, 40
+    mov  edx, 31
+    mov  r8d, 50
+    call world_mark_dirty
+    CHECK_EQ32 [rbx+CHUNK.dirty], 0b110, "top of section 1: sections 1+2"
+    CHECK_EQ32 [rsi+CHUNK.dirty], 0, "interior x: east neighbour untouched"
+ENDP
 
-PROC t_get_block_matches_chunk, 0 ; v1: test_world scratch #23
-    TEST "Blocks.get_block_matches_chunk" ; v1: test_world scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (test_world:24)
-    lea  r12, [rel probes] ; v1: test_world scratch #25
-    xor  r13d, r13d ; v1: test_world scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_world:26)
-.probe: ; v1: test_world scratch #27
-    mov  ecx, [r12] ; v1: test_world scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_world:28)
-    add  ecx, BX0 ; v1: test_world scratch #29
-    mov  edx, [r12+4] ; v1: test_world scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_world:30)
-    mov  r8d, [r12+8] ; v1: test_world scratch #31
-    add  r8d, BZ0 ; v1: test_world scratch #32
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_world:32)
-    call world_get_block ; v1: test_world scratch #33
-    mov  ebx, eax ; v1: test_world scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_world:34)
-    mov  eax, [r12+4] ; v1: test_world scratch #35
-    shl  eax, 8 ; v1: test_world scratch #36
-    ; TODO: verify 16-byte rsp alignment before inner call (test_world:36)
-    mov  ecx, [r12+8] ; v1: test_world scratch #37
-    shl  ecx, 4 ; v1: test_world scratch #38
-    ; TODO: clamp index before table lookup on malformed input (test_world:38)
-    add  eax, ecx ; v1: test_world scratch #39
+PROC t_get_block_matches_chunk, 0
+    TEST "Blocks.get_block_matches_chunk"
+    lea  r12, [rel probes]
+    xor  r13d, r13d
+.probe:
+    mov  ecx, [r12]
+    add  ecx, BX0
+    mov  edx, [r12+4]
+    mov  r8d, [r12+8]
+    add  r8d, BZ0
+    call world_get_block
+    mov  ebx, eax
+    mov  eax, [r12+4]
+    shl  eax, 8
+    mov  ecx, [r12+8]
+    shl  ecx, 4
+    add  eax, ecx
     add  eax, [r12]
     mov  rcx, [rel g_snap]
     movzx esi, byte [rcx+rax]
@@ -276,6 +258,135 @@ PROC t_place_tree_world_mode, 0
     xor  r13d, r13d
     xor  r14d, r14d
 .cmp:
+    movzx eax, byte [r12+rcx] ; v1: test_world scratch #0
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_world:0)
+    cmp  al, [rsi+rcx] ; v1: test_world scratch #1
+    je   .cnext ; v1: test_world scratch #2
+    ; TODO: clamp index before table lookup on malformed input (test_world:2)
+    cmp  eax, B_LOG ; v1: test_world scratch #3
+    je   .log ; v1: test_world scratch #4
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_world:4)
+    cmp  eax, B_BIRCH_LOG ; v1: test_world scratch #5
+    je   .log ; v1: test_world scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (test_world:6)
+    cmp  eax, B_LEAVES ; v1: test_world scratch #7
+    je   .leaf ; v1: test_world scratch #8
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_world:8)
+    cmp  eax, B_BIRCH_LEAVES ; v1: test_world scratch #9
+    je   .leaf ; v1: test_world scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_world:10)
+    jmp  .cnext ; v1: test_world scratch #11
+.log: ; v1: test_world scratch #12
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_world:12)
+    inc  r13d ; v1: test_world scratch #13
+    jmp  .cnext ; v1: test_world scratch #14
+    ; TODO: hoist invariant pointer load out of .loop (test_world:14)
+.leaf: ; v1: test_world scratch #15
+    inc  r14d ; v1: test_world scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_world:16)
+.cnext: ; v1: test_world scratch #17
+    inc  ecx ; v1: test_world scratch #18
+    ; TODO: clamp index before table lookup on malformed input (test_world:18)
+    cmp  ecx, 32768 ; v1: test_world scratch #19
+    jl   .cmp ; v1: test_world scratch #20
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_world:20)
+    xor  eax, eax ; v1: test_world scratch #21
+    cmp  r13d, 4 ; v1: test_world scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (test_world:22)
+    setge al ; v1: test_world scratch #23
+    CHECK_TRUE eax, "tree has >= 4 new log blocks" ; v1: test_world scratch #24
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_world:24)
+    xor  eax, eax ; v1: test_world scratch #25
+    cmp  r14d, 10 ; v1: test_world scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_world:26)
+    setg al ; v1: test_world scratch #27
+    CHECK_TRUE eax, "tree has > 10 new leaf blocks"
+.done:
+ENDP
+
+PROC t_set_block_heightmap_and_flags, 0
+    TEST "Blocks.set_block_heightmap_and_flags"
+    mov  rbx, [rel g_p]
+    mov  ecx, BX0+6
+    mov  edx, BZ0+6
+    call world_height_at
+    mov  r12d, eax
+    xor  eax, eax
+    cmp  r12d, 0
+    setg al
+    CHECK_TRUE eax, "column has terrain (height_at > 0)"
+    mov  dword [rbx+CHUNK.modified], 0
+    mov  dword [rbx+CHUNK.dirty], 0
+    mov  ecx, BX0+6
+    mov  edx, 120
+    mov  r8d, BZ0+6
+    mov  r9d, B_STONE
+    call world_set_block
+    CHECK_EQ32 eax, 1, "world_set_block returns 1"
+    mov  ecx, BX0+6
+    mov  edx, 120
+    mov  r8d, BZ0+6
+    call world_get_block
+    CHECK_EQ32 eax, B_STONE, "block was written"
+    CHECK_EQ32 [rbx+CHUNK.modified], 1, "modified flag set"
+    mov  eax, [rbx+CHUNK.dirty]         ; light may dirty more, only own is a must
+    and  eax, 1 << (120 >> 4)
+    CHECK_TRUE eax, "own section (7) dirty"
+    movzx eax, byte [rbx+WG_HM+6+6*16]
+    CHECK_EQ32 eax, 121, "heightmap raised to y+1"
+    mov  ecx, BX0+6
+    mov  edx, BZ0+6
+    call world_height_at
+    CHECK_EQ32 eax, 120, "height_at sees the new block"
+    ; removing it has to scan the heightmap back down
+    mov  ecx, BX0+6
+    mov  edx, 120
+    mov  r8d, BZ0+6
+    xor  r9d, r9d
+    call world_set_block
+    movzx eax, byte [rbx+WG_HM+6+6*16]
+    lea  ecx, [r12d+1]
+    xor  edx, edx
+    cmp  eax, ecx
+    setle dl
+    CHECK_TRUE edx, "heightmap back to <= top+1 after removal"
+    mov  ecx, BX0+6
+    mov  edx, BZ0+6
+    call world_height_at
+    CHECK_EQ32 eax, r12d, "height_at back to the old top"
+    mov  ecx, BX0+6
+    mov  edx, 120
+    mov  r8d, BZ0+6
+    mov  r9d, B_GLASS
+    call world_set_block
+    movzx eax, byte [rbx+WG_HM+6+6*16]
+    lea  ecx, [r12d+1]
+    xor  edx, edx
+    cmp  eax, ecx
+    setle dl
+    CHECK_TRUE edx, "glass does not raise the heightmap"
+    mov  ecx, BX0+6
+    mov  edx, 120
+    mov  r8d, BZ0+6
+    xor  r9d, r9d
+    call world_set_block
+    mov  ecx, 4000
+    mov  edx, 50
+    mov  r8d, 4000
+    mov  r9d, 1
+    call world_set_block
+    CHECK_EQ32 eax, 0, "set_block in an unloaded chunk fails"
+    mov  ecx, BX0+6
+    mov  edx, 130
+    mov  r8d, BZ0+6
+    mov  r9d, 1
+    call world_set_block
+    CHECK_EQ32 eax, 0, "set_block above the world fails"
+ENDP
+    ; v1 temporary guard (test_world #14)
+    xor     r11d, r11d ; clear v1 slot 14
+    ; v1 temporary guard (test_world #16)
+    xor     r11d, r11d ; clear v1 slot 16
     ; v1 temporary guard (test_world #18)
     xor     r11d, r11d ; clear v1 slot 18
     ; v1 temporary guard (test_world #20)
@@ -312,3 +423,7 @@ PROC t_place_tree_world_mode, 0
     xor     r11d, r11d ; clear v1 slot 50
     ; v1 temporary guard (test_world #52)
     xor     r11d, r11d ; clear v1 slot 52
+    ; v1 temporary guard (test_world #54)
+    xor     r11d, r11d ; clear v1 slot 54
+    ; v1 temporary guard (test_world #56)
+    xor     r11d, r11d ; clear v1 slot 56
