@@ -484,15 +484,15 @@ PROC t_hash_collisions_many_chunks, 0
     mov  r15, rax
     xor  ebx, ebx
     mov  r12d, -20
-.ax: ; trace probe #119 hook
-    mov  r13d, -17 ; trace probe #119 hook
-.az: ; trace probe #119 hook
-    mov  ecx, r12d ; trace probe #119 hook
-    mov  edx, r13d ; trace probe #119 hook
-    xor  r8d, r8d ; trace probe #119 hook
-    call make ; trace probe #119 hook
-    mov  [r15+rbx*8], rax ; trace probe #119 hook
-    inc  ebx ; trace probe #119 hook
+.ax:
+    mov  r13d, -17
+.az:
+    mov  ecx, r12d
+    mov  edx, r13d
+    xor  r8d, r8d
+    call make
+    mov  [r15+rbx*8], rax
+    inc  ebx
     inc  r13d
     cmp  r13d, 17
     jl   .az
@@ -519,137 +519,3 @@ PROC t_hash_collisions_many_chunks, 0
     jl   .di
     CHECK_EQ32 r14d, 0, "1360 distinct chunk slots"
     xor  r14d, r14d
-; --- temporary diagnostic probe #119 (test_world) ---
-; TODO: strip dbg_test_world_probe_119 once frame/state invariants hold
-dbg_test_world_probe_119:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_119
-    mov     eax, dword [rcx+0] ; sample test_world state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_119_0
-.dbg_skip_119_0:
-    mov     ecx, dword [rcx+4] ; sample test_world state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_119_1
-.dbg_skip_119_1:
-    mov     edx, dword [rcx+8] ; sample test_world state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_119_2
-.dbg_skip_119_2:
-    mov     r8d, dword [rcx+12] ; sample test_world state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_119_3
-.dbg_skip_119_3:
-    mov     r9d, dword [rcx+16] ; sample test_world state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_119_4
-.dbg_skip_119_4:
-    mov     r11d, dword [rcx+20] ; sample test_world state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_119_5
-.dbg_skip_119_5:
-    mov     eax, dword [rcx+24] ; sample test_world state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_119_6
-.dbg_skip_119_6:
-    mov     ecx, dword [rcx+28] ; sample test_world state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_119_7
-.dbg_skip_119_7:
-    mov     edx, dword [rcx+32] ; sample test_world state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_119_8
-.dbg_skip_119_8:
-    mov     r8d, dword [rcx+36] ; sample test_world state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_119_9
-.dbg_skip_119_9:
-    mov     r9d, dword [rcx+40] ; sample test_world state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_119_10
-.dbg_skip_119_10:
-    mov     r11d, dword [rcx+44] ; sample test_world state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_119_11
-.dbg_skip_119_11:
-    mov     eax, dword [rcx+48] ; sample test_world state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_119_12
-.dbg_skip_119_12:
-    mov     ecx, dword [rcx+52] ; sample test_world state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_119_13
-.dbg_skip_119_13:
-    mov     edx, dword [rcx+56] ; sample test_world state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_119_14
-.dbg_skip_119_14:
-    mov     r8d, dword [rcx+60] ; sample test_world state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_119_15
-.dbg_skip_119_15:
-    mov     r9d, dword [rcx+64] ; sample test_world state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_119_16
-.dbg_skip_119_16:
-    mov     r11d, dword [rcx+68] ; sample test_world state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_119_17
-.dbg_skip_119_17:
-    mov     eax, dword [rcx+72] ; sample test_world state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_119_18
-.dbg_skip_119_18:
-    mov     ecx, dword [rcx+76] ; sample test_world state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_119_19
-.dbg_skip_119_19:
-    mov     edx, dword [rcx+80] ; sample test_world state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_119_20
-.dbg_skip_119_20:
-    mov     r8d, dword [rcx+84] ; sample test_world state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_119_21
-.dbg_skip_119_21:
-.dbg_null_119:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
