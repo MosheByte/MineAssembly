@@ -519,3 +519,46 @@ PROC t_hash_collisions_many_chunks, 0
     jl   .di
     CHECK_EQ32 r14d, 0, "1360 distinct chunk slots"
     xor  r14d, r14d
+    xor  ebx, ebx
+    mov  r12d, -20
+.lx:
+    mov  r13d, -17
+.lz:
+    mov  ecx, r12d
+    mov  edx, r13d
+    call world_get_chunk
+    cmp  rax, [r15+rbx*8]
+    je   .hit
+    inc  r14d
+.hit:
+    inc  ebx
+    inc  r13d
+    cmp  r13d, 17
+    jl   .lz
+    inc  r12d
+    cmp  r12d, 20
+    jl   .lx
+    CHECK_EQ32 r14d, 0, "world_get_chunk finds all 1360 chunks"
+    call world_clear
+    call wg_chunk_count
+    CHECK_EQ32 eax, 0, "world_clear empties the list"
+    ; first 50 in alloc order must be gone
+    xor  r14d, r14d
+    xor  ebx, ebx
+.gone:
+    mov  eax, ebx
+    xor  edx, edx
+    mov  ecx, 34
+    div  ecx
+    lea  ecx, [eax-20]
+    sub  edx, 17
+    call world_get_chunk
+    test rax, rax
+    jz   .gnext
+    inc  r14d
+.gnext:
+    inc  ebx
+    cmp  ebx, 50
+    jl   .gone
+    CHECK_EQ32 r14d, 0, "cleared chunks are no longer found"
+ENDP
