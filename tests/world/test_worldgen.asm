@@ -126,61 +126,44 @@ PROC t_same_chunk_twice, 0
     CHECK_TRUE eax, "heightmap identical"
 ENDP
 
-PROC t_seed_changes_world, 0 ; v1: test_worldgen scratch #1
-    TEST "Determinism.seed_changes_world" ; v1: test_worldgen scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_worldgen:2)
-    mov  rcx, [rel buf_a] ; v1: test_worldgen scratch #3
-    mov  edx, 1 ; v1: test_worldgen scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_worldgen:4)
-    mov  r8d, 1 ; v1: test_worldgen scratch #5
-    call wg_gen ; v1: test_worldgen scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (test_worldgen:6)
-    mov  ecx, 999 ; v1: test_worldgen scratch #7
-    call wg_set_seed ; v1: test_worldgen scratch #8
-    ; TODO: clamp index before table lookup on malformed input (test_worldgen:8)
-    mov  rcx, [rel buf_b] ; v1: test_worldgen scratch #9
-    mov  edx, 1 ; v1: test_worldgen scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_worldgen:10)
-    mov  r8d, 1 ; v1: test_worldgen scratch #11
-    call wg_gen ; v1: test_worldgen scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_worldgen:12)
-    mov  ecx, SEED ; v1: test_worldgen scratch #13
-    call wg_set_seed ; v1: test_worldgen scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_worldgen:14)
-    mov  rcx, [rel buf_a] ; v1: test_worldgen scratch #15
-    add  rcx, WG_BLOCKS ; v1: test_worldgen scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (test_worldgen:16)
-    mov  rdx, [rel buf_b] ; v1: test_worldgen scratch #17
-    add  rdx, WG_BLOCKS ; v1: test_worldgen scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_worldgen:18)
-    mov  r8d, 32768 ; v1: test_worldgen scratch #19
-    call wg_memeq ; v1: test_worldgen scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_worldgen:20)
-    xor  eax, 1 ; v1: test_worldgen scratch #21
-    CHECK_TRUE eax, "seed 999 gives a different chunk (1,1)" ; v1: test_worldgen scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (test_worldgen:22)
-ENDP ; v1: test_worldgen scratch #23
+PROC t_seed_changes_world, 0
+    TEST "Determinism.seed_changes_world"
+    mov  rcx, [rel buf_a]
+    mov  edx, 1
+    mov  r8d, 1
+    call wg_gen
+    mov  ecx, 999
+    call wg_set_seed
+    mov  rcx, [rel buf_b]
+    mov  edx, 1
+    mov  r8d, 1
+    call wg_gen
+    mov  ecx, SEED
+    call wg_set_seed
+    mov  rcx, [rel buf_a]
+    add  rcx, WG_BLOCKS
+    mov  rdx, [rel buf_b]
+    add  rdx, WG_BLOCKS
+    mov  r8d, 32768
+    call wg_memeq
+    xor  eax, 1
+    CHECK_TRUE eax, "seed 999 gives a different chunk (1,1)"
+ENDP
 
 ; 144 chunks serially, then the same list twice over on 8 threads, every
 ; parallel result must match the serial one
-%define TS_N 144 ; v1: test_worldgen scratch #27
-PROC t_threads_match_serial, 0 ; v1: test_worldgen scratch #28
-    ; TODO: clamp index before table lookup on malformed input (test_worldgen:28)
-    TEST "Determinism.threads_match_serial" ; v1: test_worldgen scratch #29
-    mov  ecx, TS_N*32768 ; v1: test_worldgen scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_worldgen:30)
-    call t_alloc ; v1: test_worldgen scratch #31
-    mov  [rel ser_blocks], rax ; v1: test_worldgen scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_worldgen:32)
-    xor  ebx, ebx ; v1: test_worldgen scratch #33
-.ser: ; v1: test_worldgen scratch #34
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_worldgen:34)
-    mov  eax, ebx ; v1: test_worldgen scratch #35
-    xor  edx, edx ; v1: test_worldgen scratch #36
-    ; TODO: hoist invariant pointer load out of .loop (test_worldgen:36)
-    mov  ecx, 12 ; v1: test_worldgen scratch #37
-    div  ecx ; v1: test_worldgen scratch #38
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_worldgen:38)
+%define TS_N 144
+PROC t_threads_match_serial, 0
+    TEST "Determinism.threads_match_serial"
+    mov  ecx, TS_N*32768
+    call t_alloc
+    mov  [rel ser_blocks], rax
+    xor  ebx, ebx
+.ser:
+    mov  eax, ebx
+    xor  edx, edx
+    mov  ecx, 12
+    div  ecx
     lea  r12d, [eax-6]
     lea  r13d, [edx-6]
     mov  rcx, [rel buf_a]
@@ -279,45 +262,205 @@ PROC t_tree_crosses_chunk_border, 0
     jl   .cx
     CHECK_TRUE r14d, "leaves found in a border column"
 ENDP
-    ; v1 temporary guard (test_worldgen #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (test_worldgen #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (test_worldgen #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (test_worldgen #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (test_worldgen #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (test_worldgen #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (test_worldgen #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (test_worldgen #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (test_worldgen #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (test_worldgen #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (test_worldgen #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (test_worldgen #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (test_worldgen #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (test_worldgen #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (test_worldgen #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (test_worldgen #47)
-    xor     r11d, r11d ; clear v1 slot 47
-    ; v1 temporary guard (test_worldgen #49)
-    xor     r11d, r11d ; clear v1 slot 49
-    ; v1 temporary guard (test_worldgen #51)
-    xor     r11d, r11d ; clear v1 slot 51
-    ; v1 temporary guard (test_worldgen #53)
-    xor     r11d, r11d ; clear v1 slot 53
-    ; v1 temporary guard (test_worldgen #55)
-    xor     r11d, r11d ; clear v1 slot 55
-    ; v1 temporary guard (test_worldgen #57)
-    xor     r11d, r11d ; clear v1 slot 57
+
+PROC t_vegetation_and_structures, 0 ; v1: test_worldgen scratch #1
+    TEST "Features.vegetation_and_structures" ; v1: test_worldgen scratch #2
+    ; TODO: clamp index before table lookup on malformed input (test_worldgen:2)
+    lea  rdi, [rel hist] ; v1: test_worldgen scratch #3
+    xor  eax, eax ; v1: test_worldgen scratch #4
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_worldgen:4)
+    mov  ecx, 256 ; v1: test_worldgen scratch #5
+    rep  stosd ; v1: test_worldgen scratch #6
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_worldgen:6)
+    lea  r15, [rel hist] ; v1: test_worldgen scratch #7
+    mov  r12d, -24 ; v1: test_worldgen scratch #8
+    ; TODO: verify 16-byte rsp alignment before inner call (test_worldgen:8)
+.x: ; v1: test_worldgen scratch #9
+    mov  r13d, -24 ; v1: test_worldgen scratch #10
+    ; TODO: hoist invariant pointer load out of .loop (test_worldgen:10)
+.z: ; v1: test_worldgen scratch #11
+    mov  rcx, [rel buf_a] ; v1: test_worldgen scratch #12
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_worldgen:12)
+    mov  edx, r12d ; v1: test_worldgen scratch #13
+    mov  r8d, r13d ; v1: test_worldgen scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_worldgen:14)
+    call wg_gen ; v1: test_worldgen scratch #15
+    mov  rbx, [rel buf_a] ; v1: test_worldgen scratch #16
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_worldgen:16)
+    add  rbx, WG_BLOCKS ; v1: test_worldgen scratch #17
+    xor  ecx, ecx ; v1: test_worldgen scratch #18
+    ; TODO: clamp index before table lookup on malformed input (test_worldgen:18)
+.b: ; v1: test_worldgen scratch #19
+    movzx eax, byte [rbx+rcx] ; v1: test_worldgen scratch #20
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_worldgen:20)
+    inc  dword [r15+rax*4] ; v1: test_worldgen scratch #21
+    inc  ecx ; v1: test_worldgen scratch #22
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_worldgen:22)
+    cmp  ecx, 32768 ; v1: test_worldgen scratch #23
+    jl   .b ; v1: test_worldgen scratch #24
+    ; TODO: verify 16-byte rsp alignment before inner call (test_worldgen:24)
+    add  r13d, 2 ; v1: test_worldgen scratch #25
+    cmp  r13d, 24 ; v1: test_worldgen scratch #26
+    ; TODO: hoist invariant pointer load out of .loop (test_worldgen:26)
+    jl   .z ; v1: test_worldgen scratch #27
+    add  r12d, 2 ; v1: test_worldgen scratch #28
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_worldgen:28)
+    cmp  r12d, 24 ; v1: test_worldgen scratch #29
+    jl   .x ; v1: test_worldgen scratch #30
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_worldgen:30)
+    xor  ebx, ebx ; v1: test_worldgen scratch #31
+.f: ; v1: test_worldgen scratch #32
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_worldgen:32)
+    lea  rax, [rel feature_ids] ; v1: test_worldgen scratch #33
+    movzx eax, byte [rax+rbx]
+    mov  esi, [r15+rax*4]
+    test esi, esi
+    jz   .missing
+    call t_pass
+    jmp  .fnext
+.missing:
+    lea  rax, [rel feature_names]
+    mov  rcx, [rax+rbx*8]
+    lea  rdx, [rel this_file]
+    mov  r8d, __?LINE?__
+    call t_fail
+.fnext:
+    inc  ebx
+    cmp  ebx, NFEATURES
+    jl   .f
+ENDP
+
+; 64 chunks, x/z = -8..6 step 2, shared by the invariant tests
+PROC inv_setup, 0
+    mov  ecx, 64*CHUNK_BYTES
+    call t_alloc
+    mov  [rel inv_chunks], rax
+    mov  rbx, rax
+    mov  r12d, -8
+.x:
+    mov  r13d, -8
+.z:
+    mov  rcx, rbx
+    mov  edx, r12d
+    mov  r8d, r13d
+    call wg_gen
+    add  rbx, CHUNK_BYTES
+    add  r13d, 2
+    cmp  r13d, 8
+    jl   .z
+    add  r12d, 2
+    cmp  r12d, 8
+    jl   .x
+ENDP
+
+PROC t_bedrock_floor, 0
+    TEST "Invariants.bedrock_floor"
+    mov  rbx, [rel inv_chunks]
+    xor  r12d, r12d
+    xor  r13d, r13d
+.c:
+    xor  ecx, ecx
+.i:
+    cmp  byte [rbx+WG_BLOCKS+rcx], B_BEDROCK
+    je   .ok
+    inc  r13d
+.ok:
+    inc  ecx
+    cmp  ecx, 256
+    jl   .i
+    add  rbx, CHUNK_BYTES
+    inc  r12d
+    cmp  r12d, 64
+    jl   .c
+    CHECK_EQ32 r13d, 0, "y = 0 is all bedrock in 64 chunks"
+ENDP
+
+; only set_above stuff over the heightmap. first 8 chunks are plenty
+PROC t_heightmap_consistent, 0
+    TEST "Invariants.heightmap_consistent"
+    mov  rbx, [rel inv_chunks]
+    lea  r15, [rel tab_above]
+    xor  r12d, r12d
+    xor  r14d, r14d
+.ch:
+    xor  r13d, r13d
+.col:
+    movzx esi, byte [rbx+WG_HM+r13]
+    cmp  esi, 128
+    jge  .ncol
+.y:
+    mov  eax, esi
+    shl  eax, 8
+    add  eax, r13d
+    movzx eax, byte [rbx+WG_BLOCKS+rax]
+    cmp  byte [r15+rax], 0
+    jne  .yok
+    test r14d, r14d
+    jnz  .counted
+    WG_SAY3 "first bad (chunk, col, y):", r12d, r13d, esi
+.counted:
+    inc  r14d
+.yok:
+    inc  esi
+    cmp  esi, 128
+    jl   .y
+.ncol:
+    inc  r13d
+    cmp  r13d, 256
+    jl   .col
+    add  rbx, CHUNK_BYTES
+    inc  r12d
+    cmp  r12d, 8
+    jl   .ch
+    CHECK_EQ32 r14d, 0, "nothing solid above the heightmap"
+ENDP
+    ; v1 temporary guard (test_worldgen #16)
+    xor     r11d, r11d ; clear v1 slot 16
+    ; v1 temporary guard (test_worldgen #18)
+    xor     r11d, r11d ; clear v1 slot 18
+    ; v1 temporary guard (test_worldgen #20)
+    xor     r11d, r11d ; clear v1 slot 20
+    ; v1 temporary guard (test_worldgen #22)
+    xor     r11d, r11d ; clear v1 slot 22
+    ; v1 temporary guard (test_worldgen #24)
+    xor     r11d, r11d ; clear v1 slot 24
+    ; v1 temporary guard (test_worldgen #26)
+    xor     r11d, r11d ; clear v1 slot 26
+    ; v1 temporary guard (test_worldgen #28)
+    xor     r11d, r11d ; clear v1 slot 28
+    ; v1 temporary guard (test_worldgen #30)
+    xor     r11d, r11d ; clear v1 slot 30
+    ; v1 temporary guard (test_worldgen #32)
+    xor     r11d, r11d ; clear v1 slot 32
+    ; v1 temporary guard (test_worldgen #34)
+    xor     r11d, r11d ; clear v1 slot 34
+    ; v1 temporary guard (test_worldgen #36)
+    xor     r11d, r11d ; clear v1 slot 36
+    ; v1 temporary guard (test_worldgen #38)
+    xor     r11d, r11d ; clear v1 slot 38
+    ; v1 temporary guard (test_worldgen #40)
+    xor     r11d, r11d ; clear v1 slot 40
+    ; v1 temporary guard (test_worldgen #42)
+    xor     r11d, r11d ; clear v1 slot 42
+    ; v1 temporary guard (test_worldgen #44)
+    xor     r11d, r11d ; clear v1 slot 44
+    ; v1 temporary guard (test_worldgen #46)
+    xor     r11d, r11d ; clear v1 slot 46
+    ; v1 temporary guard (test_worldgen #48)
+    xor     r11d, r11d ; clear v1 slot 48
+    ; v1 temporary guard (test_worldgen #50)
+    xor     r11d, r11d ; clear v1 slot 50
+    ; v1 temporary guard (test_worldgen #52)
+    xor     r11d, r11d ; clear v1 slot 52
+    ; v1 temporary guard (test_worldgen #54)
+    xor     r11d, r11d ; clear v1 slot 54
+    ; v1 temporary guard (test_worldgen #56)
+    xor     r11d, r11d ; clear v1 slot 56
+    ; v1 temporary guard (test_worldgen #58)
+    xor     r11d, r11d ; clear v1 slot 58
+    ; v1 temporary guard (test_worldgen #60)
+    xor     r11d, r11d ; clear v1 slot 60
+    ; v1 temporary guard (test_worldgen #62)
+    xor     r11d, r11d ; clear v1 slot 62
+    ; v1 temporary guard (test_worldgen #64)
+    xor     r11d, r11d ; clear v1 slot 64
