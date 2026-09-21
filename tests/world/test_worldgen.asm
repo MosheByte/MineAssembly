@@ -534,3 +534,176 @@ PROCX t_under_5ms, 16
     setb bl
     CHECK_TRUE ebx, "worldgen under 5 ms per chunk"
 ENDPX
+
+PROC t_biome_at_matches_chunks, 0
+    TEST "PureFunctions.biome_at_matches_chunks"
+    xor  r15d, r15d
+    xor  ebx, ebx
+.c:
+    lea  rax, [rel biome_chunks]
+    mov  r12d, [rax+rbx*8]
+    mov  r13d, [rax+rbx*8+4]
+    mov  rcx, [rel buf_a]
+    mov  edx, r12d
+    mov  r8d, r13d
+    call wg_gen
+    shl  r12d, 4
+    shl  r13d, 4
+    xor  esi, esi
+.lz:
+    xor  edi, edi
+.lx:
+    lea  ecx, [r12d+edi]
+    lea  edx, [r13d+esi]
+    call worldgen_biome_at
+    mov  ecx, esi
+    shl  ecx, 4
+    add  ecx, edi
+    mov  rdx, [rel buf_a]
+    movzx ecx, byte [rdx+WG_BIOME+rcx]
+    cmp  eax, ecx
+    je   .ok
+    inc  r15d
+.ok:
+    add  edi, 3
+    cmp  edi, 16
+    jl   .lx
+    add  esi, 3
+    cmp  esi, 16
+    jl   .lz
+    inc  ebx
+    cmp  ebx, 5
+    jl   .c
+    CHECK_EQ32 r15d, 0, "worldgen_biome_at == chunk biome[] (5 chunks, 36 columns each)"
+ENDP
+
+; height_at is the 2D surface only. boulders, cave mouths and (on mountain
+; ridges) the 3D overhang noise move the real surface, so: |diff| <= 12
+; everywhere, and every chunk but the mountain one (20,-31) agrees on
+; > 97% of its columns
+PROC t_height_at_matches_terrain, 32
+    TEST "PureFunctions.height_at_matches_terrain"
+    mov  dword LOC(0), 0                ; chunks <= 97%
+    mov  dword LOC(4), 0                ; columns off by > 12
+    xor  ebx, ebx
+.c:
+    lea  rax, [rel height_chunks]
+    mov  r12d, [rax+rbx*8]
+    mov  r13d, [rax+rbx*8+4]
+    mov  LOC(8), ebx
+    mov  rcx, [rel buf_a]
+    mov  edx, r12d
+    mov  r8d, r13d
+    call wg_gen
+    shl  r12d, 4
+    shl  r13d, 4
+    mov  dword LOC(12), 0               ; exact
+    mov  dword LOC(16), 0
+    xor  r14d, r14d
+.col:
+    mov  r15, [rel buf_a]
+    add  r15, WG_BLOCKS
+    add  r15, r14
+    ; boulders sit half sunk in the ground, skip those columns
+    xor  esi, esi
+.boulder:
+    mov  eax, esi
+    shl  eax, 8
+    movzx eax, byte [r15+rax]
+    cmp  eax, B_MOSSY_COBBLE
+    je   .ncol
+    cmp  eax, B_COBBLE
+    je   .ncol
+    inc  esi
+    cmp  esi, 128
+    jl   .boulder
+    ; highest ground block, water / ice don't count
+    mov  esi, 127
+    lea  rdi, [rel tab_ground]
+.scan:
+    mov  eax, esi
+    shl  eax, 8
+    movzx eax, byte [r15+rax]
+    cmp  byte [rdi+rax], 0
+    jne  .top
+    dec  esi
+    jnz  .scan
+.top:
+    mov  ecx, r14d
+    and  ecx, 15
+    add  ecx, r12d
+    mov  edx, r14d
+    shr  edx, 4
+    add  edx, r13d
+    call worldgen_height_at
+    inc  dword LOC(16)
+    cmp  eax, esi
+    jne  .diff
+    inc  dword LOC(12)
+.diff:
+    sub  eax, esi
+    mov  ecx, eax
+    neg  ecx
+    cmovl ecx, eax
+    cmp  ecx, 12
+    jle  .ncol
+    cmp  dword LOC(4), 0
+    jne  .cnt
+    mov  edx, r14d
+    and  edx, 15
+    mov  r8d, r14d
+    shr  r8d, 4
+    WG_SAY3 "first |y-h| > 12 (chunk idx, lx, lz):", LOC(8), edx, r8d
+.cnt:
+    inc  dword LOC(4)
+.ncol:
+    inc  r14d
+    cmp  r14d, 256
+    jl   .col
+    ; good/max(1,total) <= 0.97, in integers
+    mov  eax, LOC(16)
+    mov  ecx, 1
+    test eax, eax
+    cmovz eax, ecx
+    imul eax, eax, 97
+    mov  ecx, LOC(12)
+    imul ecx, ecx, 100
+    cmp  ecx, eax
+    jg   .agree
+    inc  dword LOC(0)
+.agree:
+    mov  ebx, LOC(8)
+    inc  ebx
+    cmp  ebx, 6
+    jl   .c
+    CHECK_EQ32 LOC(4), 0, "|generated surface - height_at| <= 12 everywhere"
+    xor  ebx, ebx
+    cmp  dword LOC(0), 1
+    setle bl
+    CHECK_TRUE ebx, "sorted ratios[1] > 0.97 (at most one chunk below)"
+ENDP
+
+PROC t_spawn_is_dry_land, 16
+    TEST "PureFunctions.spawn_is_dry_land"
+    lea  rcx, LOC(0)
+    call worldgen_find_spawn
+    mov  r12d, LOC(0)
+    mov  r13d, LOC(4)
+    mov  r14d, LOC(8)
+    xor  ebx, ebx
+    cmp  r13d, WG_SEA
+    setg bl
+    CHECK_TRUE ebx, "spawn above sea level"
+    mov  ecx, r12d
+    mov  edx, r14d
+    call worldgen_biome_at
+    xor  ebx, ebx
+    test eax, eax
+    setnz bl
+    CHECK_TRUE ebx, "spawn biome is not ocean"
+    mov  ecx, r12d
+    mov  edx, r14d
+    call worldgen_height_at
+    inc  eax
+    CHECK_EQ32 eax, r13d, "spawn y = height_at + 1"
+ENDP
