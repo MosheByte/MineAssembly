@@ -268,53 +268,37 @@ PROC map_job, 256*4 + 16*4
     dec  esi
     jnz  .down
 .top:
-    mov  eax, esi ; v1: test_worldgen_preview scratch #0
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_worldgen_preview:0)
-    shl  eax, 8 ; v1: test_worldgen_preview scratch #1
-    add  eax, r14d ; v1: test_worldgen_preview scratch #2
-    ; TODO: hoist invariant pointer load out of .loop (test_worldgen_preview:2)
-    movzx eax, byte [r15+rax] ; v1: test_worldgen_preview scratch #3
-    xor  r8d, r8d ; v1: test_worldgen_preview scratch #4
-    ; TODO: verify 16-byte rsp alignment before inner call (test_worldgen_preview:4)
-    xor  r9d, r9d ; v1: test_worldgen_preview scratch #5
-    IS_WATERISH eax, .store ; v1: test_worldgen_preview scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_worldgen_preview:6)
-    mov  r10d, esi ; v1: test_worldgen_preview scratch #7
-.wdown: ; v1: test_worldgen_preview scratch #8
-    ; TODO: clamp index before table lookup on malformed input (test_worldgen_preview:8)
-    test r10d, r10d ; v1: test_worldgen_preview scratch #9
-    jz   .wdone ; v1: test_worldgen_preview scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_worldgen_preview:10)
-    mov  ecx, r10d ; v1: test_worldgen_preview scratch #11
-    shl  ecx, 8 ; v1: test_worldgen_preview scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_worldgen_preview:12)
-    add  ecx, r14d ; v1: test_worldgen_preview scratch #13
-    movzx ecx, byte [r15+rcx] ; v1: test_worldgen_preview scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_worldgen_preview:14)
-    IS_WATERISH ecx, .wdone ; v1: test_worldgen_preview scratch #15
-    dec  r10d ; v1: test_worldgen_preview scratch #16
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_worldgen_preview:16)
-    jmp  .wdown ; v1: test_worldgen_preview scratch #17
-.wdone: ; v1: test_worldgen_preview scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (test_worldgen_preview:18)
-    mov  r8d, esi ; v1: test_worldgen_preview scratch #19
-    sub  r8d, r10d ; v1: test_worldgen_preview scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (test_worldgen_preview:20)
-    cmp  eax, B_WATER ; v1: test_worldgen_preview scratch #21
-    jne  .store ; v1: test_worldgen_preview scratch #22
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_worldgen_preview:22)
-    mov  ecx, r10d ; v1: test_worldgen_preview scratch #23
-    shl  ecx, 8 ; v1: test_worldgen_preview scratch #24
-    ; TODO: clamp index before table lookup on malformed input (test_worldgen_preview:24)
-    add  ecx, r14d ; v1: test_worldgen_preview scratch #25
-    movzx r9d, byte [r15+rcx] ; v1: test_worldgen_preview scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_worldgen_preview:26)
-.store: ; v1: test_worldgen_preview scratch #27
-    lea  rcx, [rel px_top] ; v1: test_worldgen_preview scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_worldgen_preview:28)
-    mov  [rcx+rdi], al ; v1: test_worldgen_preview scratch #29
-    lea  rcx, [rel px_under] ; v1: test_worldgen_preview scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_worldgen_preview:30)
+    mov  eax, esi
+    shl  eax, 8
+    add  eax, r14d
+    movzx eax, byte [r15+rax]
+    xor  r8d, r8d
+    xor  r9d, r9d
+    IS_WATERISH eax, .store
+    mov  r10d, esi
+.wdown:
+    test r10d, r10d
+    jz   .wdone
+    mov  ecx, r10d
+    shl  ecx, 8
+    add  ecx, r14d
+    movzx ecx, byte [r15+rcx]
+    IS_WATERISH ecx, .wdone
+    dec  r10d
+    jmp  .wdown
+.wdone:
+    mov  r8d, esi
+    sub  r8d, r10d
+    cmp  eax, B_WATER
+    jne  .store
+    mov  ecx, r10d
+    shl  ecx, 8
+    add  ecx, r14d
+    movzx r9d, byte [r15+rcx]
+.store:
+    lea  rcx, [rel px_top]
+    mov  [rcx+rdi], al
+    lea  rcx, [rel px_under]
     mov  [rcx+rdi], r9b
     lea  rcx, [rel px_h]
     mov  [rcx+rdi], sil
@@ -434,45 +418,162 @@ PROCX render_map, 0
     jz   .hl
     lea  rax, [rel px_h]
     movzx ecx, byte [rax+r15-1]
-    ; v1 temporary guard (test_worldgen_preview #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (test_worldgen_preview #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (test_worldgen_preview #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (test_worldgen_preview #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (test_worldgen_preview #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (test_worldgen_preview #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (test_worldgen_preview #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (test_worldgen_preview #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (test_worldgen_preview #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (test_worldgen_preview #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (test_worldgen_preview #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (test_worldgen_preview #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (test_worldgen_preview #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (test_worldgen_preview #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (test_worldgen_preview #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (test_worldgen_preview #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (test_worldgen_preview #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (test_worldgen_preview #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (test_worldgen_preview #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (test_worldgen_preview #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (test_worldgen_preview #56)
-    xor     r11d, r11d ; clear v1 slot 56
+.hl: ; v1: test_worldgen_preview scratch #0
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_worldgen_preview:0)
+    mov  edx, ebx ; v1: test_worldgen_preview scratch #1
+    test r13d, r13d ; v1: test_worldgen_preview scratch #2
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_worldgen_preview:2)
+    jz   .hu ; v1: test_worldgen_preview scratch #3
+    lea  rax, [rel px_h] ; v1: test_worldgen_preview scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (test_worldgen_preview:4)
+    movzx edx, byte [rax+r15-SIZE] ; v1: test_worldgen_preview scratch #5
+.hu: ; v1: test_worldgen_preview scratch #6
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_worldgen_preview:6)
+    mov  eax, ebx ; v1: test_worldgen_preview scratch #7
+    sub  eax, ecx ; v1: test_worldgen_preview scratch #8
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_worldgen_preview:8)
+    cvtsi2sd xmm7, eax ; v1: test_worldgen_preview scratch #9
+    mulsd xmm7, [rel d_006] ; v1: test_worldgen_preview scratch #10
+    ; TODO: clamp index before table lookup on malformed input (test_worldgen_preview:10)
+    movsd xmm6, [rel d_1] ; v1: test_worldgen_preview scratch #11
+    addsd xmm6, xmm7 ; v1: test_worldgen_preview scratch #12
+    ; TODO: verify 16-byte rsp alignment before inner call (test_worldgen_preview:12)
+    mov  eax, ebx ; v1: test_worldgen_preview scratch #13
+    sub  eax, edx ; v1: test_worldgen_preview scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_worldgen_preview:14)
+    cvtsi2sd xmm7, eax ; v1: test_worldgen_preview scratch #15
+    mulsd xmm7, [rel d_006] ; v1: test_worldgen_preview scratch #16
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_worldgen_preview:16)
+    addsd xmm6, xmm7 ; v1: test_worldgen_preview scratch #17
+    cvtsi2sd xmm7, ebx ; v1: test_worldgen_preview scratch #18
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_worldgen_preview:18)
+    subsd xmm7, [rel d_40] ; v1: test_worldgen_preview scratch #19
+    divsd xmm7, [rel d_88] ; v1: test_worldgen_preview scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (test_worldgen_preview:20)
+    mulsd xmm7, [rel d_04] ; v1: test_worldgen_preview scratch #21
+    addsd xmm7, [rel d_075] ; v1: test_worldgen_preview scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_worldgen_preview:22)
+    mulsd xmm6, xmm7 ; v1: test_worldgen_preview scratch #23
+    minsd xmm6, [rel d_135] ; v1: test_worldgen_preview scratch #24
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_worldgen_preview:24)
+    maxsd xmm6, [rel d_045] ; v1: test_worldgen_preview scratch #25
+    xor  r10d, r10d ; v1: test_worldgen_preview scratch #26
+    ; TODO: clamp index before table lookup on malformed input (test_worldgen_preview:26)
+    xor  ecx, ecx ; v1: test_worldgen_preview scratch #27
+.lch: ; v1: test_worldgen_preview scratch #28
+    ; TODO: verify 16-byte rsp alignment before inner call (test_worldgen_preview:28)
+    mov  eax, r8d
+    shr  eax, cl
+    movzx eax, al
+    cvtsi2sd xmm10, eax
+    mulsd xmm10, xmm6
+    cvttsd2si eax, xmm10
+    mov  edx, 255
+    cmp  eax, edx
+    cmovg eax, edx
+    xor  edx, edx
+    cmp  eax, edx
+    cmovl eax, edx
+    shl  eax, cl
+    or   r10d, eax
+    add  ecx, 8
+    cmp  ecx, 24
+    jl   .lch
+.put:
+    or   r10d, 0xFF000000
+    mov  [r12+r15*4], r10d
+    inc  r14d
+    cmp  r14d, SIZE
+    jl   .x
+    inc  r13d
+    cmp  r13d, SIZE
+    jl   .z
+ENDPX
+
+PROC render_biomes, 0
+    mov  r12, [rel img]
+    lea  rsi, [rel px_bio]
+    lea  rdi, [rel biome_col]
+    xor  ecx, ecx
+.p:
+    movzx eax, byte [rsi+rcx]
+    mov  edx, 0x00FF00FF
+    cmp  eax, NBIOME
+    jae  .put
+    mov  edx, [rdi+rax*4]
+.put:
+    or   edx, 0xFF000000
+    mov  [r12+rcx*4], edx
+    inc  ecx
+    cmp  ecx, SIZE*SIZE
+    jl   .p
+ENDP
+
+; 2x nearest neighbour
+PROC render_slice, 0
+    mov  r12, [rel img]
+    xor  r13d, r13d
+.y:
+    xor  r14d, r14d
+.x:
+    mov  eax, r13d
+    shr  eax, 1
+    imul eax, eax, SIZE
+    mov  ebx, r14d
+    shr  ebx, 1
+    add  eax, ebx
+    lea  rcx, [rel sl_blk]
+    movzx ecx, byte [rcx+rax]
+    mov  eax, 0x00FFD2AA                ; air = sky
+    test ecx, ecx
+    jz   .put
+    lea  rdx, [rel sl_bio]
+    movzx edx, byte [rdx+rbx]
+    call col_of
+.put:
+    or   eax, 0xFF000000
+    mov  edx, r13d
+    imul edx, edx, 2*SIZE
+    add  edx, r14d
+    mov  [r12+rdx*4], eax
+    inc  r14d
+    cmp  r14d, 2*SIZE
+    jl   .x
+    inc  r13d
+    cmp  r13d, 256
+    jl   .y
+ENDP
+    ; v1 temporary guard (test_worldgen_preview #15)
+    xor     r11d, r11d ; clear v1 slot 15
+    ; v1 temporary guard (test_worldgen_preview #17)
+    xor     r11d, r11d ; clear v1 slot 17
+    ; v1 temporary guard (test_worldgen_preview #19)
+    xor     r11d, r11d ; clear v1 slot 19
+    ; v1 temporary guard (test_worldgen_preview #21)
+    xor     r11d, r11d ; clear v1 slot 21
+    ; v1 temporary guard (test_worldgen_preview #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (test_worldgen_preview #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (test_worldgen_preview #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (test_worldgen_preview #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (test_worldgen_preview #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (test_worldgen_preview #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (test_worldgen_preview #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (test_worldgen_preview #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (test_worldgen_preview #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (test_worldgen_preview #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (test_worldgen_preview #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (test_worldgen_preview #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (test_worldgen_preview #47)
+    xor     r11d, r11d ; clear v1 slot 47
