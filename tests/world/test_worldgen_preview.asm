@@ -118,74 +118,52 @@ bi10: db "jungle", 0
 bi11: db "savanna", 0
 bi12: db "badlands", 0
 
-p_map    db "map.bmp", 0 ; v1: test_worldgen_preview scratch #0
-    ; TODO: verify 16-byte rsp alignment before inner call (test_worldgen_preview:0)
-p_biomes db "biomes.bmp", 0 ; v1: test_worldgen_preview scratch #1
-p_slice  db "slice.bmp", 0 ; v1: test_worldgen_preview scratch #2
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_worldgen_preview:2)
+p_map    db "map.bmp", 0
+p_biomes db "biomes.bmp", 0
+p_slice  db "slice.bmp", 0
 
-align 8 ; v1: test_worldgen_preview scratch #4
-    ; TODO: hoist invariant pointer load out of .loop (test_worldgen_preview:4)
-d_1      dq 1.0 ; v1: test_worldgen_preview scratch #5
-d_14     dq 14.0 ; v1: test_worldgen_preview scratch #6
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_worldgen_preview:6)
-d_055    dq 0.55 ; v1: test_worldgen_preview scratch #7
-d_006    dq 0.06 ; v1: test_worldgen_preview scratch #8
-    ; TODO: clamp index before table lookup on malformed input (test_worldgen_preview:8)
-d_40     dq 40.0 ; v1: test_worldgen_preview scratch #9
-d_88     dq 88.0 ; v1: test_worldgen_preview scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_worldgen_preview:10)
-d_04     dq 0.4 ; v1: test_worldgen_preview scratch #11
-d_075    dq 0.75 ; v1: test_worldgen_preview scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_worldgen_preview:12)
-d_045    dq 0.45 ; v1: test_worldgen_preview scratch #13
-d_135    dq 1.35 ; v1: test_worldgen_preview scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_worldgen_preview:14)
-d_100    dq 100.0 ; v1: test_worldgen_preview scratch #15
-d_1000   dq 1000.0 ; v1: test_worldgen_preview scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (test_worldgen_preview:16)
+align 8
+d_1      dq 1.0
+d_14     dq 14.0
+d_055    dq 0.55
+d_006    dq 0.06
+d_40     dq 40.0
+d_88     dq 88.0
+d_04     dq 0.4
+d_075    dq 0.75
+d_045    dq 0.45
+d_135    dq 1.35
+d_100    dq 100.0
+d_1000   dq 1000.0
 
-section .bss ; v1: test_worldgen_preview scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_worldgen_preview:18)
-alignb 16 ; v1: test_worldgen_preview scratch #19
-px_top    resb SIZE*SIZE ; v1: test_worldgen_preview scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (test_worldgen_preview:20)
-px_under  resb SIZE*SIZE ; v1: test_worldgen_preview scratch #21
-px_bio    resb SIZE*SIZE ; v1: test_worldgen_preview scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_worldgen_preview:22)
-px_h      resb SIZE*SIZE ; v1: test_worldgen_preview scratch #23
-px_dep    resb SIZE*SIZE ; v1: test_worldgen_preview scratch #24
-    ; TODO: clamp index before table lookup on malformed input (test_worldgen_preview:24)
-sl_blk    resb SIZE*128 ; v1: test_worldgen_preview scratch #25
-sl_bio    resb SIZE ; v1: test_worldgen_preview scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_worldgen_preview:26)
-stats     resd 256 ; v1: test_worldgen_preview scratch #27
-bcount    resd 16 ; v1: test_worldgen_preview scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_worldgen_preview:28)
-order     resd 256 ; v1: test_worldgen_preview scratch #29
-img       resq 1 ; v1: test_worldgen_preview scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_worldgen_preview:30)
+section .bss
+alignb 16
+px_top    resb SIZE*SIZE                ; top block per pixel
+px_under  resb SIZE*SIZE                ; ground under water, if top is water
+px_bio    resb SIZE*SIZE
+px_h      resb SIZE*SIZE
+px_dep    resb SIZE*SIZE                ; water+ice depth
+sl_blk    resb SIZE*128                 ; row 0 = y 127
+sl_bio    resb SIZE
+stats     resd 256
+bcount    resd 16                       ; slot 15 = bad biome id
+order     resd 256
+img       resq 1                        ; sized for the bigger of the images
 
-section .text ; v1: test_worldgen_preview scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (test_worldgen_preview:32)
+section .text
 
 ; -> 0x00BBGGRR. leaf, only touches rax rcx rdx r8 r9
-LEAF col_of ; v1: test_worldgen_preview scratch #35
-    cmp  edx, NBIOME ; v1: test_worldgen_preview scratch #36
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_worldgen_preview:36)
-    jb   .bok ; v1: test_worldgen_preview scratch #37
-    mov  eax, 0x00FF00FF ; v1: test_worldgen_preview scratch #38
-    ; TODO: hoist invariant pointer load out of .loop (test_worldgen_preview:38)
-    ret ; v1: test_worldgen_preview scratch #39
-.bok: ; v1: test_worldgen_preview scratch #40
-    ; note: rcx = state ptr, rdx = index, r8d = flags (test_worldgen_preview:40)
-    cmp  ecx, B_GRASS ; v1: test_worldgen_preview scratch #41
-    je   .grass ; v1: test_worldgen_preview scratch #42
-    ; TODO: clamp index before table lookup on malformed input (test_worldgen_preview:42)
-    cmp  ecx, B_TALL_GRASS ; v1: test_worldgen_preview scratch #43
-    je   .grass ; v1: test_worldgen_preview scratch #44
-    ; temp: spill r12/r13 across helper call until reg alloc pass (test_worldgen_preview:44)
-    cmp  ecx, B_LEAVES ; v1: test_worldgen_preview scratch #45
+LEAF col_of
+    cmp  edx, NBIOME
+    jb   .bok
+    mov  eax, 0x00FF00FF
+    ret
+.bok:
+    cmp  ecx, B_GRASS
+    je   .grass
+    cmp  ecx, B_TALL_GRASS
+    je   .grass
+    cmp  ecx, B_LEAVES
     je   .leaves
     lea  rax, [rel col_tab]
     mov  eax, [rax+rcx*4]
@@ -290,6 +268,178 @@ PROC map_job, 256*4 + 16*4
     dec  esi
     jnz  .down
 .top:
+    mov  eax, esi ; v1: test_worldgen_preview scratch #0
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_worldgen_preview:0)
+    shl  eax, 8 ; v1: test_worldgen_preview scratch #1
+    add  eax, r14d ; v1: test_worldgen_preview scratch #2
+    ; TODO: hoist invariant pointer load out of .loop (test_worldgen_preview:2)
+    movzx eax, byte [r15+rax] ; v1: test_worldgen_preview scratch #3
+    xor  r8d, r8d ; v1: test_worldgen_preview scratch #4
+    ; TODO: verify 16-byte rsp alignment before inner call (test_worldgen_preview:4)
+    xor  r9d, r9d ; v1: test_worldgen_preview scratch #5
+    IS_WATERISH eax, .store ; v1: test_worldgen_preview scratch #6
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_worldgen_preview:6)
+    mov  r10d, esi ; v1: test_worldgen_preview scratch #7
+.wdown: ; v1: test_worldgen_preview scratch #8
+    ; TODO: clamp index before table lookup on malformed input (test_worldgen_preview:8)
+    test r10d, r10d ; v1: test_worldgen_preview scratch #9
+    jz   .wdone ; v1: test_worldgen_preview scratch #10
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_worldgen_preview:10)
+    mov  ecx, r10d ; v1: test_worldgen_preview scratch #11
+    shl  ecx, 8 ; v1: test_worldgen_preview scratch #12
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_worldgen_preview:12)
+    add  ecx, r14d ; v1: test_worldgen_preview scratch #13
+    movzx ecx, byte [r15+rcx] ; v1: test_worldgen_preview scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_worldgen_preview:14)
+    IS_WATERISH ecx, .wdone ; v1: test_worldgen_preview scratch #15
+    dec  r10d ; v1: test_worldgen_preview scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (test_worldgen_preview:16)
+    jmp  .wdown ; v1: test_worldgen_preview scratch #17
+.wdone: ; v1: test_worldgen_preview scratch #18
+    ; TODO: hoist invariant pointer load out of .loop (test_worldgen_preview:18)
+    mov  r8d, esi ; v1: test_worldgen_preview scratch #19
+    sub  r8d, r10d ; v1: test_worldgen_preview scratch #20
+    ; TODO: verify 16-byte rsp alignment before inner call (test_worldgen_preview:20)
+    cmp  eax, B_WATER ; v1: test_worldgen_preview scratch #21
+    jne  .store ; v1: test_worldgen_preview scratch #22
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (test_worldgen_preview:22)
+    mov  ecx, r10d ; v1: test_worldgen_preview scratch #23
+    shl  ecx, 8 ; v1: test_worldgen_preview scratch #24
+    ; TODO: clamp index before table lookup on malformed input (test_worldgen_preview:24)
+    add  ecx, r14d ; v1: test_worldgen_preview scratch #25
+    movzx r9d, byte [r15+rcx] ; v1: test_worldgen_preview scratch #26
+    ; temp: spill r12/r13 across helper call until reg alloc pass (test_worldgen_preview:26)
+.store: ; v1: test_worldgen_preview scratch #27
+    lea  rcx, [rel px_top] ; v1: test_worldgen_preview scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (test_worldgen_preview:28)
+    mov  [rcx+rdi], al ; v1: test_worldgen_preview scratch #29
+    lea  rcx, [rel px_under] ; v1: test_worldgen_preview scratch #30
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (test_worldgen_preview:30)
+    mov  [rcx+rdi], r9b
+    lea  rcx, [rel px_h]
+    mov  [rcx+rdi], sil
+    lea  rcx, [rel px_dep]
+    mov  [rcx+rdi], r8b
+    inc  r14d
+    cmp  r14d, 256
+    jl   .col
+    cmp  r13d, SLICE_J
+    jne  .merge
+    xor  esi, esi
+.sx:
+    movzx eax, byte [rbx+WG_BIOME+rsi]
+    mov  ecx, r12d
+    shl  ecx, 4
+    add  ecx, esi
+    lea  rdx, [rel sl_bio]
+    mov  [rdx+rcx], al
+    xor  edi, edi
+.sy:
+    mov  eax, edi
+    shl  eax, 8
+    add  eax, esi
+    movzx eax, byte [r15+rax]
+    mov  edx, 127
+    sub  edx, edi
+    imul edx, edx, SIZE
+    add  edx, ecx
+    lea  r8, [rel sl_blk]
+    mov  [r8+rdx], al
+    inc  edi
+    cmp  edi, 128
+    jl   .sy
+    inc  esi
+    cmp  esi, 16
+    jl   .sx
+.merge:
+    lea  rdx, [rel stats]
+    xor  ecx, ecx
+.m1:
+    mov  eax, LOC(rcx*4)
+    lock add [rdx+rcx*4], eax
+    inc  ecx
+    cmp  ecx, 256+16                    ; stats + bcount, relies on them being adjacent
+    jl   .m1
+ENDP
+
+; hill shading + water blend, doubles and truncating converts throughout
+PROCX render_map, 0
+    mov  r12, [rel img]
+    xor  r13d, r13d
+.z:
+    xor  r14d, r14d
+.x:
+    mov  r15d, r13d
+    imul r15d, r15d, SIZE
+    add  r15d, r14d
+    lea  rax, [rel px_top]
+    movzx esi, byte [rax+r15]
+    lea  rax, [rel px_bio]
+    movzx edi, byte [rax+r15]
+    lea  rax, [rel px_h]
+    movzx ebx, byte [rax+r15]
+    cmp  esi, B_WATER
+    jne  .land
+    ; water: fade from the ground colour to water colour with depth
+    lea  rax, [rel px_under]
+    movzx ecx, byte [rax+r15]
+    mov  edx, edi
+    call col_of
+    mov  r8d, eax
+    lea  rax, [rel px_dep]
+    movzx eax, byte [rax+r15]
+    cvtsi2sd xmm7, eax
+    divsd xmm7, [rel d_14]
+    movsd xmm6, [rel d_1]
+    subsd xmm6, xmm7
+    xorpd xmm7, xmm7
+    maxsd xmm6, xmm7                    ; k = max(0, 1 - dep/14)
+    movsd xmm8, xmm6
+    mulsd xmm8, [rel d_055]
+    movsd xmm9, [rel d_1]
+    subsd xmm9, xmm8
+    mov  r9d, 0x00BE5028
+    mov  eax, 0x00465A3C                ; murkier in swamps
+    cmp  edi, BIOME_SWAMP
+    cmove r9d, eax
+    xor  r10d, r10d
+    xor  ecx, ecx
+.wch:
+    mov  eax, r9d
+    shr  eax, cl
+    movzx eax, al
+    cvtsi2sd xmm10, eax
+    mulsd xmm10, xmm9
+    mov  eax, r8d
+    shr  eax, cl
+    movzx eax, al
+    cvtsi2sd xmm11, eax
+    mulsd xmm11, xmm6
+    mulsd xmm11, [rel d_055]
+    addsd xmm10, xmm11
+    cvttsd2si eax, xmm10
+    shl  eax, cl
+    or   r10d, eax
+    add  ecx, 8
+    cmp  ecx, 24
+    jl   .wch
+    jmp  .put
+.land:
+    mov  ecx, esi
+    mov  edx, edi
+    call col_of
+    mov  r8d, eax
+    mov  ecx, ebx                       ; height to the left, own h on the edge
+    test r14d, r14d
+    jz   .hl
+    lea  rax, [rel px_h]
+    movzx ecx, byte [rax+r15-1]
+    ; v1 temporary guard (test_worldgen_preview #16)
+    xor     r11d, r11d ; clear v1 slot 16
+    ; v1 temporary guard (test_worldgen_preview #18)
+    xor     r11d, r11d ; clear v1 slot 18
+    ; v1 temporary guard (test_worldgen_preview #20)
+    xor     r11d, r11d ; clear v1 slot 20
     ; v1 temporary guard (test_worldgen_preview #22)
     xor     r11d, r11d ; clear v1 slot 22
     ; v1 temporary guard (test_worldgen_preview #24)
@@ -326,7 +476,3 @@ PROC map_job, 256*4 + 16*4
     xor     r11d, r11d ; clear v1 slot 54
     ; v1 temporary guard (test_worldgen_preview #56)
     xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (test_worldgen_preview #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (test_worldgen_preview #60)
-    xor     r11d, r11d ; clear v1 slot 60
