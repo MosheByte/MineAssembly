@@ -1,0 +1,57 @@
+# visuals_misc: underwater view, first-person hand / held items, lava at night,
+# render distance 4/12/16 with F3 (fps, sections), seed 42.
+world vis_misc 42 creative
+0.2 cmd /time set noon
+0.2 cmd /weather clear
+0.3 cmd /fly
+# --- underwater: seed-42 ocean (1000,0)
+0.4 pos 1000.5 52 0.5
+0.4 look 0 -10
+4.0 hidehud on
+4.0 shot m_01_underwater.bmp
+4.1 look 0 70
+4.8 shot m_02_underwater_up.bmp
+4.9 pos 1000.5 61.75 0.5
+4.9 look 0 -5
+5.8 shot m_03_waterline.bmp
+5.9 pos 1000.5 66 0.5
+5.9 look 0 -25
+6.8 shot m_04_water_above.bmp
+# --- held items on a plains hill (500,-500), HUD on
+6.9 hidehud off
+6.9 pos 500.5 90 -500.5
+6.9 look 45 -10
+9.0 key 1 tap
+9.5 shot m_05_held_grass.bmp
+9.6 key 6 tap
+10.1 shot m_06_held_torch.bmp
+10.2 key 9 tap
+10.7 shot m_07_held_bucket.bmp
+10.8 cmd /give diamond_sword 1
+10.8 cmd /clear
+11.0 cmd /give diamond_sword 1
+11.2 key 1 tap
+11.7 shot m_08_held_sword.bmp
+11.8 key 2 tap
+12.3 shot m_09_empty_hand.bmp
+# --- lava pool at midnight (plains)
+12.4 cmd /time set midnight
+12.4 hidehud on
+12.4 cmd /fill ~2 ~-6 ~-3 ~7 ~-6 ~3 88
+12.5 look 90 -35
+15.0 shot m_10_lava_night.bmp
+# --- render distance from a mountain top (0,0) at noon, F3 on
+15.1 cmd /time set noon
+15.1 hidehud off
+15.1 key F3 tap
+15.1 pos 0.5 128 0.5
+15.1 look 135 -8
+15.2 cmd /render 4
+20.0 shot m_11_rd4.bmp
+20.1 cmd /render 12
+30.0 shot m_12_rd12.bmp
+30.1 cmd /render 16
+45.0 shot m_13_rd16.bmp
+45.1 key F3 tap
+45.1 hidehud on
+45.6 shot m_14_rd16_nohud.bmp

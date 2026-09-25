@@ -1,0 +1,10 @@
+# visuals_probe: check the F3 layout and teleport loading speed
+world vis_probe 42 creative
+0.3 cmd /time set noon
+0.5 key F3 tap
+1.0 shot probe_0.bmp
+1.2 cmd /tp 1500 120 1500
+1.2 look 0 -20
+2.0 shot probe_1.bmp
+3.0 shot probe_2.bmp
+5.0 shot probe_3.bmp
