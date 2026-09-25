@@ -2,16 +2,16 @@
 # build/scen_visuals_clouds_fast/options.txt holding clouds:1 and
 # fancyLeaves:0, and with the --keep flag (the default options are fancy
 # clouds and fancy leaves).
-world vis_clouds 42 creative <!-- draft rev 4 -->
-0.2 cmd /time set noon <!-- draft rev 5 -->
-0.2 cmd /weather clear <!-- draft rev 6 -->
-0.3 cmd /fly <!-- draft rev 7 -->
-0.4 hidehud on <!-- draft rev 8 -->
-0.5 pos 1000.5 75 -500.5 <!-- draft rev 9 -->
-0.5 look 0 45 <!-- draft rev 10 -->
-4.0 shot cl_1_up_north.bmp <!-- draft rev 11 -->
-4.1 look 135 25 <!-- draft rev 12 -->
-4.8 shot cl_2_up_se.bmp <!-- draft rev 13 -->
+world vis_clouds 42 creative
+0.2 cmd /time set noon
+0.2 cmd /weather clear
+0.3 cmd /fly
+0.4 hidehud on
+0.5 pos 1000.5 75 -500.5
+0.5 look 0 45
+4.0 shot cl_1_up_north.bmp
+4.1 look 135 25
+4.8 shot cl_2_up_se.bmp
 4.9 look 270 10
 5.6 shot cl_3_west.bmp
 5.7 pos 1000.5 135 -500.5
@@ -26,5 +26,3 @@ world vis_clouds 42 creative <!-- draft rev 4 -->
 13.0 shot cl_6_forest.bmp
 13.1 look 300 30
 13.8 shot cl_7_canopy.bmp
-<!-- TODO(visuals_clouds_fast): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/visuals_clouds_fast.asm -->
