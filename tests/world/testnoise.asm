@@ -148,63 +148,44 @@ PROCX noise2, 64
     movaps xmm1, xmm7
     addss xmm1, [rel G2x2m1]
     lea  ecx, [r12+1]
-    lea  edx, [r13+1] ; v1: testnoise scratch #0
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (testnoise:0)
-    call contrib2 ; v1: testnoise scratch #1
-    addss xmm0, xmm8 ; v1: testnoise scratch #2
-    ; TODO: hoist invariant pointer load out of .loop (testnoise:2)
-    mulss xmm0, [rel seventy] ; v1: testnoise scratch #3
-ENDPX ; v1: testnoise scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (testnoise:4)
+    lea  edx, [r13+1]
+    call contrib2
+    addss xmm0, xmm8
+    mulss xmm0, [rel seventy]
+ENDPX
 
-PROC contrib3, 0 ; v1: testnoise scratch #6
-    ; TODO: clamp index before table lookup on malformed input (testnoise:6)
-    movss xmm4, [rel six] ; v1: testnoise scratch #7
-    movaps xmm3, xmm0 ; v1: testnoise scratch #8
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (testnoise:8)
-    mulss xmm3, xmm0 ; v1: testnoise scratch #9
-    subss xmm4, xmm3 ; v1: testnoise scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (testnoise:10)
-    movaps xmm3, xmm1 ; v1: testnoise scratch #11
-    mulss xmm3, xmm1 ; v1: testnoise scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (testnoise:12)
-    subss xmm4, xmm3 ; v1: testnoise scratch #13
-    movaps xmm3, xmm2 ; v1: testnoise scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (testnoise:14)
-    mulss xmm3, xmm2 ; v1: testnoise scratch #15
-    subss xmm4, xmm3 ; v1: testnoise scratch #16
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (testnoise:16)
-    xorps xmm5, xmm5 ; v1: testnoise scratch #17
-    comiss xmm4, xmm5 ; v1: testnoise scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (testnoise:18)
-    jbe  .zero ; v1: testnoise scratch #19
-    movss LOC(0), xmm0 ; v1: testnoise scratch #20
-    ; temp: spill r12/r13 across helper call until reg alloc pass (testnoise:20)
-    movss LOC(4), xmm1 ; v1: testnoise scratch #21
-    movss LOC(8), xmm2 ; v1: testnoise scratch #22
-    ; TODO: clamp index before table lookup on malformed input (testnoise:22)
-    movss LOC(12), xmm4 ; v1: testnoise scratch #23
-    call ihash ; v1: testnoise scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (testnoise:24)
-    and  eax, 15 ; v1: testnoise scratch #25
-    shl  eax, 4 ; v1: testnoise scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (testnoise:26)
-    lea  rdx, [rel grad3] ; v1: testnoise scratch #27
-    add  rdx, rax ; v1: testnoise scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (testnoise:28)
-    movss xmm0, LOC(0) ; v1: testnoise scratch #29
-    mulss xmm0, [rdx] ; v1: testnoise scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (testnoise:30)
-    movss xmm1, LOC(4) ; v1: testnoise scratch #31
-    mulss xmm1, [rdx+4] ; v1: testnoise scratch #32
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (testnoise:32)
-    addss xmm0, xmm1 ; v1: testnoise scratch #33
-    movss xmm1, LOC(8) ; v1: testnoise scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (testnoise:34)
-    mulss xmm1, [rdx+8] ; v1: testnoise scratch #35
-    addss xmm0, xmm1 ; v1: testnoise scratch #36
-    ; temp: spill r12/r13 across helper call until reg alloc pass (testnoise:36)
-    movss xmm4, LOC(12) ; v1: testnoise scratch #37
+PROC contrib3, 0
+    movss xmm4, [rel six]
+    movaps xmm3, xmm0
+    mulss xmm3, xmm0
+    subss xmm4, xmm3
+    movaps xmm3, xmm1
+    mulss xmm3, xmm1
+    subss xmm4, xmm3
+    movaps xmm3, xmm2
+    mulss xmm3, xmm2
+    subss xmm4, xmm3
+    xorps xmm5, xmm5
+    comiss xmm4, xmm5
+    jbe  .zero
+    movss LOC(0), xmm0
+    movss LOC(4), xmm1
+    movss LOC(8), xmm2
+    movss LOC(12), xmm4
+    call ihash
+    and  eax, 15
+    shl  eax, 4
+    lea  rdx, [rel grad3]
+    add  rdx, rax
+    movss xmm0, LOC(0)
+    mulss xmm0, [rdx]
+    movss xmm1, LOC(4)
+    mulss xmm1, [rdx+4]
+    addss xmm0, xmm1
+    movss xmm1, LOC(8)
+    mulss xmm1, [rdx+8]
+    addss xmm0, xmm1
+    movss xmm4, LOC(12)
     mulss xmm4, xmm4
     mulss xmm4, xmm4
     mulss xmm0, xmm4
@@ -317,33 +298,151 @@ PROCX noise3, 64
     movss xmm0, LOC(32+16)
     subss xmm0, xmm4
     addss xmm0, xmm3
-    ; v1 temporary guard (testnoise #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (testnoise #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (testnoise #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (testnoise #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (testnoise #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (testnoise #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (testnoise #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (testnoise #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (testnoise #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (testnoise #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (testnoise #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (testnoise #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (testnoise #43)
-    xor     r11d, r11d ; clear v1 slot 43
-    ; v1 temporary guard (testnoise #45)
-    xor     r11d, r11d ; clear v1 slot 45
-    ; v1 temporary guard (testnoise #47)
-    xor     r11d, r11d ; clear v1 slot 47
+    lea  ecx, [r12+rax]
+    test ebx, 2
+    setnz al
+    cvtsi2ss xmm4, eax
+    movss xmm1, LOC(36+16)
+    subss xmm1, xmm4
+    addss xmm1, xmm3
+    lea  edx, [r13+rax]
+    test ebx, 4
+    setnz al
+    cvtsi2ss xmm4, eax
+    movss xmm2, LOC(40+16)
+    subss xmm2, xmm4
+    addss xmm2, xmm3
+    lea  r8d, [r14+rax]
+    call contrib3
+    add  rsp, 8
+    ret
+.done:
+ENDPX
+
+PROCX fbm2, 32
+    movaps xmm6, xmm0
+    movaps xmm7, xmm1
+    mov  ebx, r8d
+    xorps xmm8, xmm8                ; sum
+    xorps xmm9, xmm9                ; norm
+    movss xmm10, [rel one]          ; amp
+    xor  esi, esi
+.l:
+    cmp  esi, ebx
+    jge  .end
+    cvtsi2ss xmm2, esi
+    mulss xmm2, [rel thirtytwo]
+    movaps xmm0, xmm6
+    addss xmm0, xmm2
+    movaps xmm1, xmm7
+    subss xmm1, xmm2
+    call noise2
+    mulss xmm0, xmm10
+    addss xmm8, xmm0
+    addss xmm9, xmm10
+    mulss xmm10, [rel half]
+    addss xmm6, xmm6
+    addss xmm7, xmm7
+    inc  esi
+    jmp  .l
+.end:
+    movaps xmm0, xmm8
+    divss xmm0, xmm9
+ENDPX
+
+PROCX fbm3, 32
+    movaps xmm6, xmm0
+    movaps xmm7, xmm1
+    movaps xmm11, xmm2
+    mov  ebx, r9d
+    xorps xmm8, xmm8
+    xorps xmm9, xmm9
+    movss xmm10, [rel one]
+    xor  esi, esi
+.l:
+    cmp  esi, ebx
+    jge  .end
+    cvtsi2ss xmm3, esi
+    mulss xmm3, [rel thirtytwo]
+    movaps xmm0, xmm6
+    addss xmm0, xmm3
+    movaps xmm1, xmm7
+    movaps xmm2, xmm11
+    subss xmm2, xmm3
+    call noise3
+    mulss xmm0, xmm10
+    addss xmm8, xmm0
+    addss xmm9, xmm10
+    mulss xmm10, [rel half]
+    addss xmm6, xmm6
+    addss xmm7, xmm7
+    addss xmm11, xmm11
+    inc  esi
+    jmp  .l
+.end:
+    movaps xmm0, xmm8
+    divss xmm0, xmm9
+ENDPX
+
+; sum amp*(1-|n|)^2 / sum amp -> 0..1
+PROCX ridged2, 32
+    movaps xmm6, xmm0
+    movaps xmm7, xmm1
+    mov  ebx, r8d
+    xorps xmm8, xmm8
+    xorps xmm9, xmm9
+    movss xmm10, [rel one]
+    xor  esi, esi
+.l:
+    cmp  esi, ebx
+    jge  .end
+    cvtsi2ss xmm2, esi
+    mulss xmm2, [rel thirtytwo]
+    movaps xmm0, xmm6
+    addss xmm0, xmm2
+    movaps xmm1, xmm7
+    addss xmm1, xmm2
+    call noise2
+    andps xmm0, [rel absmask]
+    movss xmm1, [rel one]
+    subss xmm1, xmm0
+    mulss xmm1, xmm1
+    mulss xmm1, xmm10
+    addss xmm8, xmm1
+    addss xmm9, xmm10
+    mulss xmm10, [rel half]
+    addss xmm6, xmm6
+    addss xmm7, xmm7
+    inc  esi
+    jmp  .l
+.end:
+    movaps xmm0, xmm8
+    divss xmm0, xmm9
+ENDPX
+
+PROCX warp2, 32
+    movaps xmm6, xmm0
+    movaps xmm7, xmm1
+    mov  ebx, r8d
+    mov  eax, __float32__(3.1)
+    movd xmm2, eax
+    addss xmm0, xmm2
+    mov  r8d, 2
+    call fbm2
+    movaps xmm8, xmm0
+    movaps xmm0, xmm6
+    movaps xmm1, xmm7
+    mov  eax, __float32__(7.7)
+    movd xmm2, eax
+    addss xmm1, xmm2
+    mov  r8d, 2
+    call fbm2
+    movaps xmm1, xmm0
+    mulss xmm1, [rel two]
+    addss xmm1, xmm7
+    movaps xmm0, xmm8
+    mulss xmm0, [rel two]
+    addss xmm0, xmm6
+    mov  r8d, ebx
+    call fbm2
+ENDPX
