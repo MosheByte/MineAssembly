@@ -1,0 +1,156 @@
+# visuals_scan_999: biome survey on a 7x7 grid, spacing 500, F3 on, one shot
+# per point. Crop the Biome line from each shot to build a survey sheet.
+world vis_scan_999 999 creative <!-- draft rev 2 -->
+0.2 cmd /time set noon <!-- draft rev 3 -->
+0.2 cmd /weather clear <!-- draft rev 4 -->
+0.3 cmd /fly <!-- draft rev 5 -->
+0.5 key F3 tap <!-- draft rev 6 -->
+1.00 cmd /tp -1500 140 -1500 <!-- draft rev 7 -->
+1.00 look 0 -35 <!-- draft rev 8 -->
+2.60 shot s_00_-1500_-1500.bmp <!-- draft rev 9 -->
+2.80 cmd /tp -1000 140 -1500 <!-- draft rev 10 -->
+2.80 look 0 -35 <!-- draft rev 11 -->
+4.40 shot s_01_-1000_-1500.bmp
+4.60 cmd /tp -500 140 -1500
+4.60 look 0 -35
+6.20 shot s_02_-500_-1500.bmp
+6.40 cmd /tp 0 140 -1500
+6.40 look 0 -35
+8.00 shot s_03_0_-1500.bmp
+8.20 cmd /tp 500 140 -1500
+8.20 look 0 -35
+9.80 shot s_04_500_-1500.bmp
+10.00 cmd /tp 1000 140 -1500
+10.00 look 0 -35
+11.60 shot s_05_1000_-1500.bmp
+11.80 cmd /tp 1500 140 -1500
+11.80 look 0 -35
+13.40 shot s_06_1500_-1500.bmp
+13.60 cmd /tp -1500 140 -1000
+13.60 look 0 -35
+15.20 shot s_07_-1500_-1000.bmp
+15.40 cmd /tp -1000 140 -1000
+15.40 look 0 -35
+17.00 shot s_08_-1000_-1000.bmp
+17.20 cmd /tp -500 140 -1000
+17.20 look 0 -35
+18.80 shot s_09_-500_-1000.bmp
+19.00 cmd /tp 0 140 -1000
+19.00 look 0 -35
+20.60 shot s_10_0_-1000.bmp
+20.80 cmd /tp 500 140 -1000
+20.80 look 0 -35
+22.40 shot s_11_500_-1000.bmp
+22.60 cmd /tp 1000 140 -1000
+22.60 look 0 -35
+24.20 shot s_12_1000_-1000.bmp
+24.40 cmd /tp 1500 140 -1000
+24.40 look 0 -35
+26.00 shot s_13_1500_-1000.bmp
+26.20 cmd /tp -1500 140 -500
+26.20 look 0 -35
+27.80 shot s_14_-1500_-500.bmp
+28.00 cmd /tp -1000 140 -500
+28.00 look 0 -35
+29.60 shot s_15_-1000_-500.bmp
+29.80 cmd /tp -500 140 -500
+29.80 look 0 -35
+31.40 shot s_16_-500_-500.bmp
+31.60 cmd /tp 0 140 -500
+31.60 look 0 -35
+33.20 shot s_17_0_-500.bmp
+33.40 cmd /tp 500 140 -500
+33.40 look 0 -35
+35.00 shot s_18_500_-500.bmp
+35.20 cmd /tp 1000 140 -500
+35.20 look 0 -35
+36.80 shot s_19_1000_-500.bmp
+37.00 cmd /tp 1500 140 -500
+37.00 look 0 -35
+38.60 shot s_20_1500_-500.bmp
+38.80 cmd /tp -1500 140 0
+38.80 look 0 -35
+40.40 shot s_21_-1500_0.bmp
+40.60 cmd /tp -1000 140 0
+40.60 look 0 -35
+42.20 shot s_22_-1000_0.bmp
+42.40 cmd /tp -500 140 0
+42.40 look 0 -35
+44.00 shot s_23_-500_0.bmp
+44.20 cmd /tp 0 140 0
+44.20 look 0 -35
+45.80 shot s_24_0_0.bmp
+46.00 cmd /tp 500 140 0
+46.00 look 0 -35
+47.60 shot s_25_500_0.bmp
+47.80 cmd /tp 1000 140 0
+47.80 look 0 -35
+49.40 shot s_26_1000_0.bmp
+49.60 cmd /tp 1500 140 0
+49.60 look 0 -35
+51.20 shot s_27_1500_0.bmp
+51.40 cmd /tp -1500 140 500
+51.40 look 0 -35
+53.00 shot s_28_-1500_500.bmp
+53.20 cmd /tp -1000 140 500
+53.20 look 0 -35
+54.80 shot s_29_-1000_500.bmp
+55.00 cmd /tp -500 140 500
+55.00 look 0 -35
+56.60 shot s_30_-500_500.bmp
+56.80 cmd /tp 0 140 500
+56.80 look 0 -35
+58.40 shot s_31_0_500.bmp
+58.60 cmd /tp 500 140 500
+58.60 look 0 -35
+60.20 shot s_32_500_500.bmp
+60.40 cmd /tp 1000 140 500
+60.40 look 0 -35
+62.00 shot s_33_1000_500.bmp
+62.20 cmd /tp 1500 140 500
+62.20 look 0 -35
+63.80 shot s_34_1500_500.bmp
+64.00 cmd /tp -1500 140 1000
+64.00 look 0 -35
+65.60 shot s_35_-1500_1000.bmp
+65.80 cmd /tp -1000 140 1000
+65.80 look 0 -35
+67.40 shot s_36_-1000_1000.bmp
+67.60 cmd /tp -500 140 1000
+67.60 look 0 -35
+69.20 shot s_37_-500_1000.bmp
+69.40 cmd /tp 0 140 1000
+69.40 look 0 -35
+71.00 shot s_38_0_1000.bmp
+71.20 cmd /tp 500 140 1000
+71.20 look 0 -35
+72.80 shot s_39_500_1000.bmp
+73.00 cmd /tp 1000 140 1000
+73.00 look 0 -35
+74.60 shot s_40_1000_1000.bmp
+74.80 cmd /tp 1500 140 1000
+74.80 look 0 -35
+76.40 shot s_41_1500_1000.bmp
+76.60 cmd /tp -1500 140 1500
+76.60 look 0 -35
+78.20 shot s_42_-1500_1500.bmp
+78.40 cmd /tp -1000 140 1500
+78.40 look 0 -35
+80.00 shot s_43_-1000_1500.bmp
+80.20 cmd /tp -500 140 1500
+80.20 look 0 -35
+81.80 shot s_44_-500_1500.bmp
+82.00 cmd /tp 0 140 1500
+82.00 look 0 -35
+83.60 shot s_45_0_1500.bmp
+83.80 cmd /tp 500 140 1500
+83.80 look 0 -35
+85.40 shot s_46_500_1500.bmp
+85.60 cmd /tp 1000 140 1500
+85.60 look 0 -35
+87.20 shot s_47_1000_1500.bmp
+87.40 cmd /tp 1500 140 1500
+87.40 look 0 -35
+89.00 shot s_48_1500_1500.bmp
+<!-- TODO(visuals_scan_999): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/visuals_scan_999.asm -->
