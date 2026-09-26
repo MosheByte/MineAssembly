@@ -1,15 +1,15 @@
 # visuals_tour_42: ground-level biome tour, seed 42. Per point an F3 shot (biome check)
 # and a HUD-less shot from the other side. Points come from visuals_scan_42.
-world vis_tour_42 42 creative <!-- draft rev 2 -->
-0.2 cmd /time set noon <!-- draft rev 3 -->
-0.2 cmd /weather clear <!-- draft rev 4 -->
-0.5 key F3 tap <!-- draft rev 5 -->
-1.00 cmd /tp 0 125 0   # mountains <!-- draft rev 6 -->
-1.00 look 45 -12 <!-- draft rev 7 -->
-7.50 shot t_mountains_a.bmp <!-- draft rev 8 -->
-7.60 hidehud on <!-- draft rev 9 -->
-7.60 look 225 -8 <!-- draft rev 10 -->
-8.60 shot t_mountains_b.bmp <!-- draft rev 11 -->
+world vis_tour_42 42 creative
+0.2 cmd /time set noon
+0.2 cmd /weather clear
+0.5 key F3 tap
+1.00 cmd /tp 0 125 0   # mountains
+1.00 look 45 -12
+7.50 shot t_mountains_a.bmp
+7.60 hidehud on
+7.60 look 225 -8
+8.60 shot t_mountains_b.bmp
 8.70 hidehud off
 9.00 cmd /tp -500 125 -500   # jungle
 9.00 look 45 -12
@@ -81,5 +81,3 @@ world vis_tour_42 42 creative <!-- draft rev 2 -->
 87.60 look 225 -8
 88.60 shot t_jungle2_b.bmp
 88.70 hidehud off
-<!-- TODO(visuals_tour_42): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/visuals_tour_42.asm -->
