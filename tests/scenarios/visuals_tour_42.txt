@@ -1,0 +1,85 @@
+# visuals_tour_42: ground-level biome tour, seed 42. Per point an F3 shot (biome check)
+# and a HUD-less shot from the other side. Points come from visuals_scan_42.
+world vis_tour_42 42 creative <!-- draft rev 2 -->
+0.2 cmd /time set noon <!-- draft rev 3 -->
+0.2 cmd /weather clear <!-- draft rev 4 -->
+0.5 key F3 tap <!-- draft rev 5 -->
+1.00 cmd /tp 0 125 0   # mountains <!-- draft rev 6 -->
+1.00 look 45 -12 <!-- draft rev 7 -->
+7.50 shot t_mountains_a.bmp <!-- draft rev 8 -->
+7.60 hidehud on <!-- draft rev 9 -->
+7.60 look 225 -8 <!-- draft rev 10 -->
+8.60 shot t_mountains_b.bmp <!-- draft rev 11 -->
+8.70 hidehud off
+9.00 cmd /tp -500 125 -500   # jungle
+9.00 look 45 -12
+15.50 shot t_jungle_a.bmp
+15.60 hidehud on
+15.60 look 225 -8
+16.60 shot t_jungle_b.bmp
+16.70 hidehud off
+17.00 cmd /tp -1000 125 500   # desert
+17.00 look 45 -12
+23.50 shot t_desert_a.bmp
+23.60 hidehud on
+23.60 look 225 -8
+24.60 shot t_desert_b.bmp
+24.70 hidehud off
+25.00 cmd /tp -1500 125 500   # taiga
+25.00 look 45 -12
+31.50 shot t_taiga_a.bmp
+31.60 hidehud on
+31.60 look 225 -8
+32.60 shot t_taiga_b.bmp
+32.70 hidehud off
+33.00 cmd /tp 0 125 500   # tundra
+33.00 look 45 -12
+39.50 shot t_tundra_a.bmp
+39.60 hidehud on
+39.60 look 225 -8
+40.60 shot t_tundra_b.bmp
+40.70 hidehud off
+41.00 cmd /tp 500 125 0   # swamp
+41.00 look 45 -12
+47.50 shot t_swamp_a.bmp
+47.60 hidehud on
+47.60 look 225 -8
+48.60 shot t_swamp_b.bmp
+48.70 hidehud off
+49.00 cmd /tp -1000 125 -1000   # birch
+49.00 look 45 -12
+55.50 shot t_birch_a.bmp
+55.60 hidehud on
+55.60 look 225 -8
+56.60 shot t_birch_b.bmp
+56.70 hidehud off
+57.00 cmd /tp 1000 125 0   # ocean
+57.00 look 45 -12
+63.50 shot t_ocean_a.bmp
+63.60 hidehud on
+63.60 look 225 -8
+64.60 shot t_ocean_b.bmp
+64.70 hidehud off
+65.00 cmd /tp 1000 125 -1500   # forest
+65.00 look 45 -12
+71.50 shot t_forest_a.bmp
+71.60 hidehud on
+71.60 look 225 -8
+72.60 shot t_forest_b.bmp
+72.70 hidehud off
+73.00 cmd /tp 1000 125 -500   # beach
+73.00 look 45 -12
+79.50 shot t_beach_a.bmp
+79.60 hidehud on
+79.60 look 225 -8
+80.60 shot t_beach_b.bmp
+80.70 hidehud off
+81.00 cmd /tp -1000 125 1000   # jungle2
+81.00 look 45 -12
+87.50 shot t_jungle2_a.bmp
+87.60 hidehud on
+87.60 look 225 -8
+88.60 shot t_jungle2_b.bmp
+88.70 hidehud off
+<!-- TODO(visuals_tour_42): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/visuals_tour_42.asm -->
