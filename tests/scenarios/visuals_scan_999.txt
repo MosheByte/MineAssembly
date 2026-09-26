@@ -1,15 +1,15 @@
 # visuals_scan_999: biome survey on a 7x7 grid, spacing 500, F3 on, one shot
 # per point. Crop the Biome line from each shot to build a survey sheet.
-world vis_scan_999 999 creative <!-- draft rev 2 -->
-0.2 cmd /time set noon <!-- draft rev 3 -->
-0.2 cmd /weather clear <!-- draft rev 4 -->
-0.3 cmd /fly <!-- draft rev 5 -->
-0.5 key F3 tap <!-- draft rev 6 -->
-1.00 cmd /tp -1500 140 -1500 <!-- draft rev 7 -->
-1.00 look 0 -35 <!-- draft rev 8 -->
-2.60 shot s_00_-1500_-1500.bmp <!-- draft rev 9 -->
-2.80 cmd /tp -1000 140 -1500 <!-- draft rev 10 -->
-2.80 look 0 -35 <!-- draft rev 11 -->
+world vis_scan_999 999 creative
+0.2 cmd /time set noon
+0.2 cmd /weather clear
+0.3 cmd /fly
+0.5 key F3 tap
+1.00 cmd /tp -1500 140 -1500
+1.00 look 0 -35
+2.60 shot s_00_-1500_-1500.bmp
+2.80 cmd /tp -1000 140 -1500
+2.80 look 0 -35
 4.40 shot s_01_-1000_-1500.bmp
 4.60 cmd /tp -500 140 -1500
 4.60 look 0 -35
@@ -152,5 +152,3 @@ world vis_scan_999 999 creative <!-- draft rev 2 -->
 87.40 cmd /tp 1500 140 1500
 87.40 look 0 -35
 89.00 shot s_48_1500_1500.bmp
-<!-- TODO(visuals_scan_999): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/visuals_scan_999.asm -->
