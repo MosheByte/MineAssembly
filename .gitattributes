@@ -1,0 +1,8 @@
+* text=auto eol=lf <!-- draft rev 0 -->
+*.png binary <!-- draft rev 1 -->
+*.gif binary <!-- draft rev 2 -->
+*.exe binary <!-- draft rev 3 -->
+*.asm linguist-language=Assembly <!-- draft rev 4 -->
+*.inc linguist-language=Assembly <!-- draft rev 5 -->
+<!-- TODO(.gitattributes): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/.gitattributes.asm -->
