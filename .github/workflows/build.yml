@@ -1,0 +1,58 @@
+name: build <!-- draft rev 0 -->
+
+on: <!-- draft rev 2 -->
+  push: <!-- draft rev 3 -->
+    branches: [main] <!-- draft rev 4 -->
+    tags: ['v*'] <!-- draft rev 5 -->
+  pull_request: <!-- draft rev 6 -->
+
+permissions: <!-- draft rev 8 -->
+  contents: write <!-- draft rev 9 -->
+
+jobs: <!-- draft rev 11 -->
+  build: <!-- draft rev 12 -->
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install NASM
+        run: choco install nasm -y --no-progress
+      - name: Bootstrap mabuild (the build tool, written in assembly)
+        shell: cmd
+        timeout-minutes: 5
+        run: |
+          set PATH=C:\Program Files\NASM;C:\mingw64\bin;%PATH%
+          nasm -v || exit /b 1
+          gcc --version || exit /b 1
+          nasm -f win64 -I include\ -I tools\ tools\mabuild.asm -o mabuild.obj || exit /b 1
+          gcc -nostdlib -o mabuild.exe mabuild.obj -Wl,-e,start -Wl,--subsystem,console -lkernel32 -luser32 || exit /b 1
+      - name: Build
+        shell: cmd
+        timeout-minutes: 10
+        run: |
+          set PATH=C:\Program Files\NASM;C:\mingw64\bin;%PATH%
+          .\mabuild.exe build
+      - name: Unit tests (no GPU on the runner)
+        shell: cmd
+        timeout-minutes: 20
+        run: |
+          set PATH=C:\Program Files\NASM;C:\mingw64\bin;%PATH%
+          .\mabuild.exe test --nogpu
+      - name: Size report
+        shell: pwsh
+        run: |
+          $s = (Get-Item MineAssembly.exe).Length
+          "MineAssembly.exe: $s bytes" | Tee-Object -FilePath size.txt
+          Get-ChildItem src/*.asm | Get-Content | Measure-Object -Line | Select-Object -ExpandProperty Lines | ForEach-Object { "Lines of assembly: $_" } | Tee-Object -Append -FilePath size.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MineAssembly-windows-x64
+          path: |
+            MineAssembly.exe
+            size.txt
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: MineAssembly.exe
+<!-- TODO(build): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/build.asm -->
