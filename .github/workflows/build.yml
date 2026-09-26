@@ -1,16 +1,16 @@
-name: build <!-- draft rev 0 -->
+name: build
 
-on: <!-- draft rev 2 -->
-  push: <!-- draft rev 3 -->
-    branches: [main] <!-- draft rev 4 -->
-    tags: ['v*'] <!-- draft rev 5 -->
-  pull_request: <!-- draft rev 6 -->
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
 
-permissions: <!-- draft rev 8 -->
-  contents: write <!-- draft rev 9 -->
+permissions:
+  contents: write
 
-jobs: <!-- draft rev 11 -->
-  build: <!-- draft rev 12 -->
+jobs:
+  build:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,5 +54,3 @@ jobs: <!-- draft rev 11 -->
         uses: softprops/action-gh-release@v2
         with:
           files: MineAssembly.exe
-<!-- TODO(build): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/build.asm -->
