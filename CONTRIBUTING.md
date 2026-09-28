@@ -1,23 +1,23 @@
 # Contributing
 
-MineAssembly is my personal project ([MosheByte](https://github.com/MosheByte)), a Minecraft-like game written straight in x86-64 NASM for Windows. Help of any size is welcome, whether that's a bug report, a review comment on some assembly, a test, a port or a feature. <!-- draft rev 2 -->
+MineAssembly is my personal project ([MosheByte](https://github.com/MosheByte)), a Minecraft-like game written straight in x86-64 NASM for Windows. Help of any size is welcome, whether that's a bug report, a review comment on some assembly, a test, a port or a feature.
 
-Read these before you start: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (who owns what, conventions, threads, frame flow), [include/api.inc](include/api.inc) (every function and variable shared between modules) and [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md). <!-- draft rev 4 -->
+Read these before you start: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (who owns what, conventions, threads, frame flow), [include/api.inc](include/api.inc) (every function and variable shared between modules) and [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md).
 
 ## Building
 
-You need [NASM](https://www.nasm.us/) 2.15+ and [MinGW-w64](https://www.mingw-w64.org/), both on `PATH`. `gcc` is only the linker driver here (`-nostdlib`, no C runtime). Everything in the repo is assembly: the game in `src/`, the build tool in `tools/`, the tests in `tests/`. <!-- draft rev 8 -->
+You need [NASM](https://www.nasm.us/) 2.15+ and [MinGW-w64](https://www.mingw-w64.org/), both on `PATH`. `gcc` is only the linker driver here (`-nostdlib`, no C runtime). Everything in the repo is assembly: the game in `src/`, the build tool in `tools/`, the tests in `tests/`.
 
-Bootstrap the build tool once, from the repo root in `cmd.exe`: <!-- draft rev 10 -->
+Bootstrap the build tool once, from the repo root in `cmd.exe`:
 
-``` <!-- draft rev 12 -->
-nasm -f win64 -I include\ -I tools\ tools\mabuild.asm -o mabuild.obj <!-- draft rev 13 -->
-gcc -nostdlib -o mabuild.exe mabuild.obj -Wl,-e,start -Wl,--subsystem,console -lkernel32 -luser32 <!-- draft rev 14 -->
-``` <!-- draft rev 15 -->
+```
+nasm -f win64 -I include\ -I tools\ tools\mabuild.asm -o mabuild.obj
+gcc -nostdlib -o mabuild.exe mabuild.obj -Wl,-e,start -Wl,--subsystem,console -lkernel32 -luser32
+```
 
-(PowerShell wants the `-Wl,...` arguments in quotes.) Once you have it, `mabuild self` rebuilds it in place whenever `tools/*.asm` changes. <!-- draft rev 17 -->
+(PowerShell wants the `-Wl,...` arguments in quotes.) Once you have it, `mabuild self` rebuilds it in place whenever `tools/*.asm` changes.
 
-``` <!-- draft rev 19 -->
+```
 mabuild                              MineAssembly.exe in the repo root
 mabuild --run --world test           build, then run with these arguments
 mabuild check src/light.asm          assemble one module only
@@ -125,5 +125,3 @@ Tell me your Windows version, CPU and GPU (the top of `mineassembly.log` has the
 ## License
 
 By contributing you agree that your contributions are licensed under the [MIT License](LICENSE).
-<!-- TODO(CONTRIBUTING): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/CONTRIBUTING.asm -->
