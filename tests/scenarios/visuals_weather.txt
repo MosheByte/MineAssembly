@@ -1,0 +1,44 @@
+# visuals_weather: rain, thunder and snow (seed 42), HUD hidden except for the F3 checks.
+# Plains (500,-500): rain, thunder; tundra (0,500): snow; desert (-1000,500): rain in a dry
+# biome; then clear weather again to see that the sky recovers.
+world vis_weather 42 creative
+0.2 cmd /time set noon
+0.2 cmd /weather clear
+0.3 cmd /fly
+0.4 pos 500.5 90 -500.5
+0.4 look 45 -5
+3.0 hidehud on
+3.0 shot w_01_clear.bmp
+3.1 cmd /weather rain
+6.0 shot w_02_rain.bmp
+6.1 look 45 50
+6.8 shot w_03_rain_up.bmp
+6.9 look 45 -40
+7.6 shot w_04_rain_down.bmp
+7.7 cmd /weather thunder
+7.7 look 45 -5
+11.0 shot w_05_thunder.bmp
+11.0 frames 6 20 w_06_thunder_burst
+15.0 hidehud off
+15.0 key F3 tap
+15.5 shot w_07_thunder_f3.bmp
+15.6 key F3 tap
+15.6 hidehud on
+# snow in the tundra
+15.7 cmd /weather rain
+15.7 pos 0.5 95 500.5
+15.7 look 200 -10
+20.0 shot w_08_snow.bmp
+20.1 look 200 45
+20.8 shot w_09_snow_up.bmp
+# desert
+20.9 pos -1000.5 90 500.5
+20.9 look 90 -5
+25.0 shot w_10_desert_rain.bmp
+# night rain with torches on a plains patch
+25.1 pos 500.5 90 -500.5
+25.1 cmd /time set midnight
+25.1 look 45 -10
+27.0 shot w_11_night_rain.bmp
+27.1 cmd /weather clear
+32.0 shot w_12_cleared.bmp

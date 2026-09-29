@@ -1,0 +1,58 @@
+# visuals_tint: biome tint check. At each survey point (seed 42) a 5x5 grass_block pad
+# and a 3x5 oak_leaves pad are built in the air and photographed straight down with F3,
+# so the pixel colour can be compared with biome_grass_color[F3 biome].
+world vis_tint 42 creative
+0.2 cmd /time set noon
+0.2 cmd /weather clear
+0.3 cmd /fly
+0.5 key F3 tap
+1.00 pos 1000.5 110 -1499.5   # forest
+1.00 look 0 -89.9
+3.50 cmd /fill ~-2 ~-3 ~-2 ~2 ~-3 ~2 grass_block
+3.50 cmd /fill ~3 ~-3 ~-2 ~5 ~-3 ~2 oak_leaves
+4.60 shot tint_forest.bmp
+5.00 pos -499.5 110 -499.5   # jungle
+5.00 look 0 -89.9
+7.50 cmd /fill ~-2 ~-3 ~-2 ~2 ~-3 ~2 grass_block
+7.50 cmd /fill ~3 ~-3 ~-2 ~5 ~-3 ~2 oak_leaves
+8.60 shot tint_jungle.bmp
+9.00 pos -559.5 110 -499.5   # jungleW
+9.00 look 0 -89.9
+11.50 cmd /fill ~-2 ~-3 ~-2 ~2 ~-3 ~2 grass_block
+11.50 cmd /fill ~3 ~-3 ~-2 ~5 ~-3 ~2 oak_leaves
+12.60 shot tint_jungleW.bmp
+13.00 pos 500.5 110 -499.5   # plains
+13.00 look 0 -89.9
+15.50 cmd /fill ~-2 ~-3 ~-2 ~2 ~-3 ~2 grass_block
+15.50 cmd /fill ~3 ~-3 ~-2 ~5 ~-3 ~2 oak_leaves
+16.60 shot tint_plains.bmp
+17.00 pos -999.5 110 500.5   # desert
+17.00 look 0 -89.9
+19.50 cmd /fill ~-2 ~-3 ~-2 ~2 ~-3 ~2 grass_block
+19.50 cmd /fill ~3 ~-3 ~-2 ~5 ~-3 ~2 oak_leaves
+20.60 shot tint_desert.bmp
+21.00 pos -999.5 110 -999.5   # birch
+21.00 look 0 -89.9
+23.50 cmd /fill ~-2 ~-3 ~-2 ~2 ~-3 ~2 grass_block
+23.50 cmd /fill ~3 ~-3 ~-2 ~5 ~-3 ~2 oak_leaves
+24.60 shot tint_birch.bmp
+25.00 pos 0.5 110 500.5   # tundra
+25.00 look 0 -89.9
+27.50 cmd /fill ~-2 ~-3 ~-2 ~2 ~-3 ~2 grass_block
+27.50 cmd /fill ~3 ~-3 ~-2 ~5 ~-3 ~2 oak_leaves
+28.60 shot tint_tundra.bmp
+29.00 pos 500.5 110 0.5   # swamp
+29.00 look 0 -89.9
+31.50 cmd /fill ~-2 ~-3 ~-2 ~2 ~-3 ~2 grass_block
+31.50 cmd /fill ~3 ~-3 ~-2 ~5 ~-3 ~2 oak_leaves
+32.60 shot tint_swamp.bmp
+33.00 pos -1499.5 110 500.5   # taiga
+33.00 look 0 -89.9
+35.50 cmd /fill ~-2 ~-3 ~-2 ~2 ~-3 ~2 grass_block
+35.50 cmd /fill ~3 ~-3 ~-2 ~5 ~-3 ~2 oak_leaves
+36.60 shot tint_taiga.bmp
+37.00 pos 0.5 110 0.5   # mountains
+37.00 look 0 -89.9
+39.50 cmd /fill ~-2 ~-3 ~-2 ~2 ~-3 ~2 grass_block
+39.50 cmd /fill ~3 ~-3 ~-2 ~5 ~-3 ~2 oak_leaves
+40.60 shot tint_mountains.bmp

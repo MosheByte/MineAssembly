@@ -1,0 +1,40 @@
+# visuals_sky: sky over the open sea at the seed-42 beach (1000,-500), HUD hidden:
+# sunrise facing east / west, noon, sunset facing west, dusk, night sky (stars, moon),
+# and a time-lapse frame burst for a GIF.
+world vis_sky 42 creative
+0.2 cmd /weather clear
+0.3 cmd /fly
+0.4 pos 1000.5 72 -500.5
+0.5 hidehud on
+0.6 cmd /time set 0
+0.6 look 90 5
+4.0 shot sky_01_sunrise_east.bmp
+4.1 look 270 5
+4.8 shot sky_02_sunrise_west.bmp
+4.9 cmd /time set 6000
+4.9 look 0 20
+5.8 shot sky_03_noon.bmp
+5.9 look 0 80
+6.6 shot sky_04_noon_up.bmp
+6.7 cmd /time set 12000
+6.7 look 270 5
+7.6 shot sky_05_sunset_west.bmp
+7.7 look 90 5
+8.4 shot sky_06_sunset_east.bmp
+8.5 cmd /time set 13000
+8.5 look 270 5
+9.4 shot sky_07_dusk_west.bmp
+9.5 cmd /time set 18000
+9.5 look 0 30
+10.4 shot sky_08_midnight_north.bmp
+10.5 look 90 75
+11.2 shot sky_09_midnight_up.bmp
+11.3 look 270 75
+12.0 shot sky_10_midnight_up_west.bmp
+12.1 look 0 -10
+12.8 shot sky_11_midnight_sea.bmp
+12.9 cmd /time set 22500
+12.9 look 90 5
+13.8 shot sky_12_dawn_east.bmp
+13.9 cmd /time set 23500
+14.8 shot sky_13_dawn2_east.bmp
