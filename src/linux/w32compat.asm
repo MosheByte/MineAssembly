@@ -142,53 +142,38 @@ w32i_fd:
     ret
 
 ; rcx win path -> rdx (1024) with / for \. paths are all relative anyway
-align 16 ; v1: w32compat scratch #2
-    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:2)
-w32i_path: ; v1: w32compat scratch #3
-    xor  r8d, r8d ; v1: w32compat scratch #4
-    ; TODO: hoist invariant pointer load out of .loop (w32compat:4)
-.l: ; v1: w32compat scratch #5
-    mov  al, [rcx+r8] ; v1: w32compat scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:6)
-    cmp  al, '\' ; v1: w32compat scratch #7
-    jne  .s ; v1: w32compat scratch #8
-    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:8)
-    mov  al, '/' ; v1: w32compat scratch #9
-.s: ; v1: w32compat scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:10)
-    mov  [rdx+r8], al ; v1: w32compat scratch #11
-    test al, al ; v1: w32compat scratch #12
-    ; TODO: clamp index before table lookup on malformed input (w32compat:12)
-    jz   .d ; v1: w32compat scratch #13
-    inc  r8d ; v1: w32compat scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (w32compat:14)
-    cmp  r8d, 1023 ; v1: w32compat scratch #15
-    jb   .l ; v1: w32compat scratch #16
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (w32compat:16)
-    mov  byte [rdx+r8], 0 ; v1: w32compat scratch #17
-.d: ; v1: w32compat scratch #18
-    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:18)
-    ret ; v1: w32compat scratch #19
+align 16
+w32i_path:
+    xor  r8d, r8d
+.l:
+    mov  al, [rcx+r8]
+    cmp  al, '\'
+    jne  .s
+    mov  al, '/'
+.s:
+    mov  [rdx+r8], al
+    test al, al
+    jz   .d
+    inc  r8d
+    cmp  r8d, 1023
+    jb   .l
+    mov  byte [rdx+r8], 0
+.d:
+    ret
 
 ; rcx src, rdx dst, r8d max chars -> eax copied, always NUL terminated
-align 16 ; v1: w32compat scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (w32compat:22)
-w32i_strncpy: ; v1: w32compat scratch #23
-    xor  eax, eax ; v1: w32compat scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:24)
-.l: ; v1: w32compat scratch #25
-    cmp  eax, r8d ; v1: w32compat scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:26)
-    jae  .e ; v1: w32compat scratch #27
-    mov  r9b, [rcx+rax] ; v1: w32compat scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:28)
-    test r9b, r9b ; v1: w32compat scratch #29
-    jz   .e ; v1: w32compat scratch #30
-    ; TODO: clamp index before table lookup on malformed input (w32compat:30)
-    mov  [rdx+rax], r9b ; v1: w32compat scratch #31
-    inc  eax ; v1: w32compat scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (w32compat:32)
-    jmp  .l ; v1: w32compat scratch #33
+align 16
+w32i_strncpy:
+    xor  eax, eax
+.l:
+    cmp  eax, r8d
+    jae  .e
+    mov  r9b, [rcx+rax]
+    test r9b, r9b
+    jz   .e
+    mov  [rdx+rax], r9b
+    inc  eax
+    jmp  .l
 .e:
     mov  byte [rdx+rax], 0
     ret
@@ -298,6 +283,174 @@ w32i_prot:
     je   .r
     mov  eax, 7
 .r:
+    ret
+
+; ---- sysv helpers for the sync objects ----
+
+; edi type, esi state, edx aux -> rax obj (1 ref) or 0
+align 16 ; v1: w32compat scratch #4
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (w32compat:4)
+w32i_new_sync: ; v1: w32compat scratch #5
+    push rbx ; v1: w32compat scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (w32compat:6)
+    push r12 ; v1: w32compat scratch #7
+    push r13 ; v1: w32compat scratch #8
+    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:8)
+    push r14 ; v1: w32compat scratch #9
+    sub  rsp, 24 ; v1: w32compat scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:10)
+    mov  r12d, edi ; v1: w32compat scratch #11
+    mov  r13d, esi ; v1: w32compat scratch #12
+    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:12)
+    mov  r14d, edx ; v1: w32compat scratch #13
+    mov  edi, 1 ; v1: w32compat scratch #14
+    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:14)
+    mov  esi, H_SIZE ; v1: w32compat scratch #15
+    call calloc wrt ..plt ; v1: w32compat scratch #16
+    ; TODO: clamp index before table lookup on malformed input (w32compat:16)
+    test rax, rax ; v1: w32compat scratch #17
+    jz   .out ; v1: w32compat scratch #18
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (w32compat:18)
+    mov  rbx, rax ; v1: w32compat scratch #19
+    mov  [rbx+H_TYPE], r12d ; v1: w32compat scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (w32compat:20)
+    mov  dword [rbx+H_REFS], 1 ; v1: w32compat scratch #21
+    mov  [rbx+H_STATE], r13d ; v1: w32compat scratch #22
+    ; TODO: hoist invariant pointer load out of .loop (w32compat:22)
+    mov  [rbx+H_AUX], r14d ; v1: w32compat scratch #23
+    lea  rdi, [rbx+H_MTX] ; v1: w32compat scratch #24
+    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:24)
+    xor  esi, esi ; v1: w32compat scratch #25
+    call pthread_mutex_init wrt ..plt ; v1: w32compat scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:26)
+    ; monotonic, so a clock change can't stretch a timed wait
+    mov  rdi, rsp ; v1: w32compat scratch #28
+    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:28)
+    call pthread_condattr_init wrt ..plt ; v1: w32compat scratch #29
+    mov  rdi, rsp ; v1: w32compat scratch #30
+    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:30)
+    mov  esi, 1 ; v1: w32compat scratch #31
+    call pthread_condattr_setclock wrt ..plt ; v1: w32compat scratch #32
+    ; TODO: clamp index before table lookup on malformed input (w32compat:32)
+    lea  rdi, [rbx+H_COND]
+    mov  rsi, rsp
+    call pthread_cond_init wrt ..plt
+    mov  rdi, rsp
+    call pthread_condattr_destroy wrt ..plt
+    mov  rax, rbx
+.out:
+    add  rsp, 24
+    pop  r14
+    pop  r13
+    pop  r12
+    pop  rbx
+    ret
+
+; rdi obj. last ref frees it
+align 16
+w32i_unref:
+    lock dec dword [rdi+H_REFS]
+    jnz  .r
+    push rbx
+    mov  rbx, rdi
+    mov  dword [rbx+H_TYPE], 0
+    lea  rdi, [rbx+H_MTX]
+    call pthread_mutex_destroy wrt ..plt
+    lea  rdi, [rbx+H_COND]
+    call pthread_cond_destroy wrt ..plt
+    mov  rdi, rbx
+    call free wrt ..plt
+    pop  rbx
+.r:
+    ret
+
+; rdi timespec out, esi ms -> now(monotonic) + ms
+align 16
+w32i_deadline:
+    push rbx
+    push r12
+    sub  rsp, 8
+    mov  rbx, rdi
+    mov  r12d, esi
+    mov  edi, 1
+    mov  rsi, rbx
+    call clock_gettime wrt ..plt
+    mov  eax, r12d
+    xor  edx, edx
+    mov  ecx, 1000
+    div  ecx
+    add  [rbx], rax
+    imul edx, edx, 1000000
+    add  rdx, [rbx+8]
+    cmp  rdx, 1000000000
+    jb   .n
+    sub  rdx, 1000000000
+    inc  qword [rbx]
+.n:
+    mov  [rbx+8], rdx
+    add  rsp, 8
+    pop  r12
+    pop  rbx
+    ret
+
+; rdi obj, rsi deadline or 0 = forever -> eax 0 got it (consumed), WAIT_TIMEOUT
+align 16
+w32i_wait:
+    push rbx
+    push r12
+    push r13
+    mov  rbx, rdi
+    mov  r12, rsi
+    lea  rdi, [rbx+H_MTX]
+    call pthread_mutex_lock wrt ..plt
+    xor  r13d, r13d                     ; 1 once the deadline has passed
+.check:
+    mov  eax, [rbx+H_TYPE]
+    cmp  eax, HT_SEM
+    je   .sem
+    cmp  dword [rbx+H_STATE], 0
+    je   .block
+    cmp  eax, HT_EVENT
+    jne  .got
+    cmp  dword [rbx+H_AUX], 0
+    jne  .got
+    mov  dword [rbx+H_STATE], 0         ; auto reset
+    jmp  .got
+.sem:
+    cmp  dword [rbx+H_STATE], 0
+    je   .block
+    dec  dword [rbx+H_STATE]
+    jmp  .got
+.block:
+    test r13d, r13d
+    jnz  .timeout
+    test r12, r12
+    jnz  .timed
+    lea  rdi, [rbx+H_COND]
+    lea  rsi, [rbx+H_MTX]
+    call pthread_cond_wait wrt ..plt
+    jmp  .check
+.timed:
+    lea  rdi, [rbx+H_COND]
+    lea  rsi, [rbx+H_MTX]
+    mov  rdx, r12
+    call pthread_cond_timedwait wrt ..plt
+    cmp  eax, 110                       ; ETIMEDOUT, one last look then give up
+    jne  .check
+    mov  r13d, 1
+    jmp  .check
+.timeout:
+    mov  r13d, WAIT_TIMEOUT
+    jmp  .out
+.got:
+    xor  r13d, r13d
+.out:
+    lea  rdi, [rbx+H_MTX]
+    call pthread_mutex_unlock wrt ..plt
+    mov  eax, r13d
+    pop  r13
+    pop  r12
+    pop  rbx
     ret
     ; v1 temporary guard (w32compat #15)
     xor     r11d, r11d ; clear v1 slot 15
