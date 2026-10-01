@@ -3,51 +3,39 @@
 ; calls sysv code, libc is allowed to eat rsi/rdi/xmm6-15 and our callers park
 ; stuff there. linux build only.
 ; last error lives in errno: a libc errno as is, or a raw win32 code | W32E.
-%ifdef LINUX ; v1: w32compat scratch #5
-%define WIN32_INC ; v1: w32compat scratch #6
-    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:6)
-%include "common.inc" ; v1: w32compat scratch #7
+%ifdef LINUX
+%define WIN32_INC                       ; skip win32.inc, its externs are what we define
+%include "common.inc"
 
-extern __errno_location, clock_gettime, nanosleep, sched_yield ; v1: w32compat scratch #9
-extern malloc, calloc, realloc, free, memset ; v1: w32compat scratch #10
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (w32compat:10)
-extern mmap, munmap, mprotect, madvise ; v1: w32compat scratch #11
-extern open, close, read, write, lseek, fstat, fsync, stat, unlink, rmdir, mkdir, rename ; v1: w32compat scratch #12
-    ; TODO: clamp index before table lookup on malformed input (w32compat:12)
-extern opendir, readdir, closedir, fnmatch ; v1: w32compat scratch #13
-extern localtime_r, gmtime_r, sysconf, sysinfo, setpriority, signal, fflush, _exit ; v1: w32compat scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:14)
-extern pthread_create, pthread_detach ; v1: w32compat scratch #15
-extern pthread_mutex_init, pthread_mutex_destroy, pthread_mutex_lock, pthread_mutex_unlock ; v1: w32compat scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:16)
-extern pthread_mutex_trylock ; v1: w32compat scratch #17
-extern pthread_mutexattr_init, pthread_mutexattr_settype, pthread_mutexattr_destroy ; v1: w32compat scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:18)
-extern pthread_cond_init, pthread_cond_destroy, pthread_cond_wait, pthread_cond_timedwait ; v1: w32compat scratch #19
-extern pthread_cond_broadcast ; v1: w32compat scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (w32compat:20)
-extern pthread_condattr_init, pthread_condattr_setclock, pthread_condattr_destroy ; v1: w32compat scratch #21
+extern __errno_location, clock_gettime, nanosleep, sched_yield
+extern malloc, calloc, realloc, free, memset
+extern mmap, munmap, mprotect, madvise
+extern open, close, read, write, lseek, fstat, fsync, stat, unlink, rmdir, mkdir, rename
+extern opendir, readdir, closedir, fnmatch
+extern localtime_r, gmtime_r, sysconf, sysinfo, setpriority, signal, fflush, _exit
+extern pthread_create, pthread_detach
+extern pthread_mutex_init, pthread_mutex_destroy, pthread_mutex_lock, pthread_mutex_unlock
+extern pthread_mutex_trylock
+extern pthread_mutexattr_init, pthread_mutexattr_settype, pthread_mutexattr_destroy
+extern pthread_cond_init, pthread_cond_destroy, pthread_cond_wait, pthread_cond_timedwait
+extern pthread_cond_broadcast
+extern pthread_condattr_init, pthread_condattr_setclock, pthread_condattr_destroy
 
 ; libc call: al = 0 for the varargs ones, harmless for the rest
-%macro CCALL 1 ; v1: w32compat scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (w32compat:24)
-    xor  eax, eax ; v1: w32compat scratch #25
-    call %1 wrt ..plt ; v1: w32compat scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:26)
-%endmacro ; v1: w32compat scratch #27
+%macro CCALL 1
+    xor  eax, eax
+    call %1 wrt ..plt
+%endmacro
 
-%define W32E            0x10000 ; v1: w32compat scratch #29
-%macro SETERR 1 ; v1: w32compat scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (w32compat:30)
-    CCALL __errno_location ; v1: w32compat scratch #31
-    mov  dword [rax], (%1) | W32E ; v1: w32compat scratch #32
-    ; TODO: clamp index before table lookup on malformed input (w32compat:32)
-%endmacro ; v1: w32compat scratch #33
+%define W32E            0x10000         ; errno tag: low word is a win32 code
+%macro SETERR 1
+    CCALL __errno_location
+    mov  dword [rax], (%1) | W32E
+%endmacro
 
-%define ERROR_FILE_NOT_FOUND    2 ; v1: w32compat scratch #35
-%define ERROR_PATH_NOT_FOUND    3 ; v1: w32compat scratch #36
-    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:36)
-%define ERROR_ACCESS_DENIED     5 ; v1: w32compat scratch #37
+%define ERROR_FILE_NOT_FOUND    2
+%define ERROR_PATH_NOT_FOUND    3
+%define ERROR_ACCESS_DENIED     5
 %define ERROR_INVALID_HANDLE    6
 %define ERROR_NOT_ENOUGH_MEMORY 8
 %define ERROR_NO_MORE_FILES     18
@@ -152,41 +140,206 @@ w32i_fd:
 .ok:
     mov  eax, [rcx+H_FD]
     ret
-    ; v1 temporary guard (w32compat #12)
-    xor     r11d, r11d ; clear v1 slot 12
-    ; v1 temporary guard (w32compat #14)
-    xor     r11d, r11d ; clear v1 slot 14
-    ; v1 temporary guard (w32compat #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (w32compat #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (w32compat #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (w32compat #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (w32compat #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (w32compat #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (w32compat #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (w32compat #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (w32compat #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (w32compat #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (w32compat #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (w32compat #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (w32compat #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (w32compat #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (w32compat #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (w32compat #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (w32compat #48)
-    xor     r11d, r11d ; clear v1 slot 48
+
+; rcx win path -> rdx (1024) with / for \. paths are all relative anyway
+align 16 ; v1: w32compat scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:2)
+w32i_path: ; v1: w32compat scratch #3
+    xor  r8d, r8d ; v1: w32compat scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (w32compat:4)
+.l: ; v1: w32compat scratch #5
+    mov  al, [rcx+r8] ; v1: w32compat scratch #6
+    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:6)
+    cmp  al, '\' ; v1: w32compat scratch #7
+    jne  .s ; v1: w32compat scratch #8
+    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:8)
+    mov  al, '/' ; v1: w32compat scratch #9
+.s: ; v1: w32compat scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:10)
+    mov  [rdx+r8], al ; v1: w32compat scratch #11
+    test al, al ; v1: w32compat scratch #12
+    ; TODO: clamp index before table lookup on malformed input (w32compat:12)
+    jz   .d ; v1: w32compat scratch #13
+    inc  r8d ; v1: w32compat scratch #14
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (w32compat:14)
+    cmp  r8d, 1023 ; v1: w32compat scratch #15
+    jb   .l ; v1: w32compat scratch #16
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (w32compat:16)
+    mov  byte [rdx+r8], 0 ; v1: w32compat scratch #17
+.d: ; v1: w32compat scratch #18
+    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:18)
+    ret ; v1: w32compat scratch #19
+
+; rcx src, rdx dst, r8d max chars -> eax copied, always NUL terminated
+align 16 ; v1: w32compat scratch #22
+    ; TODO: hoist invariant pointer load out of .loop (w32compat:22)
+w32i_strncpy: ; v1: w32compat scratch #23
+    xor  eax, eax ; v1: w32compat scratch #24
+    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:24)
+.l: ; v1: w32compat scratch #25
+    cmp  eax, r8d ; v1: w32compat scratch #26
+    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:26)
+    jae  .e ; v1: w32compat scratch #27
+    mov  r9b, [rcx+rax] ; v1: w32compat scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:28)
+    test r9b, r9b ; v1: w32compat scratch #29
+    jz   .e ; v1: w32compat scratch #30
+    ; TODO: clamp index before table lookup on malformed input (w32compat:30)
+    mov  [rdx+rax], r9b ; v1: w32compat scratch #31
+    inc  eax ; v1: w32compat scratch #32
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (w32compat:32)
+    jmp  .l ; v1: w32compat scratch #33
+.e:
+    mov  byte [rdx+rax], 0
+    ret
+
+; rcx stat -> eax FILE_ATTRIBUTE_*
+align 16
+w32i_attr:
+    mov  edx, [rcx+ST_MODE]
+    mov  eax, edx
+    and  eax, 0xF000
+    cmp  eax, 0x4000
+    jne  .f
+    mov  eax, 0x10                      ; directory
+    test edx, 0x80                      ; S_IWUSR
+    jnz  .r
+    or   eax, 1
+    ret
+.f:
+    mov  eax, 0x80                      ; normal, only valid on its own
+    test edx, 0x80
+    jnz  .r
+    mov  eax, 1                         ; readonly
+.r:
+    ret
+
+; r8 sec, r9 nsec -> rax FILETIME (100ns since 1601). eats rcx rdx
+align 16
+w32i_ft:
+    mov  rax, r9
+    xor  edx, edx
+    mov  ecx, 100
+    div  rcx
+    mov  rcx, rax
+    mov  rax, 11644473600
+    add  rax, r8
+    imul rax, rax, 10000000
+    add  rax, rcx
+    ret
+
+; rcx stat -> rdx+4.. the times + size part shared by WIN32_FIND_DATA and
+; WIN32_FILE_ATTRIBUTE_DATA. no birth time in stat, creation = mtime
+align 16
+w32i_filltimes:
+    mov  r10, rdx
+    mov  r11, rcx
+    mov  r8, [r11+ST_MTIME]
+    mov  r9, [r11+ST_MTIME+8]
+    call w32i_ft
+    mov  [r10+4], rax
+    mov  [r10+20], rax
+    mov  r8, [r11+ST_ATIME]
+    mov  r9, [r11+ST_ATIME+8]
+    call w32i_ft
+    mov  [r10+12], rax
+    mov  rax, [r11+ST_SIZE]
+    mov  [r10+32], eax                  ; low
+    shr  rax, 32
+    mov  [r10+28], eax                  ; high
+    ret
+
+; rcx struct tm, rdx SYSTEMTIME, r8d ms
+align 16
+w32i_tm2st:
+    mov  eax, [rcx+20]
+    add  eax, 1900
+    mov  [rdx], ax
+    mov  eax, [rcx+16]
+    inc  eax
+    mov  [rdx+2], ax
+    mov  eax, [rcx+24]
+    mov  [rdx+4], ax
+    mov  eax, [rcx+12]
+    mov  [rdx+6], ax
+    mov  eax, [rcx+8]
+    mov  [rdx+8], ax
+    mov  eax, [rcx+4]
+    mov  [rdx+10], ax
+    mov  eax, [rcx]
+    cmp  eax, 59                        ; leap second, windows has none
+    jbe  .s
+    mov  eax, 59
+.s:
+    mov  [rdx+12], ax
+    mov  [rdx+14], r8w
+    ret
+
+; ecx PAGE_* -> eax PROT_*
+align 16
+w32i_prot:
+    and  ecx, 0xFF                      ; guard/nocache bits don't matter
+    mov  eax, 3
+    cmp  ecx, 0x04
+    je   .r
+    cmp  ecx, 0x08
+    je   .r
+    xor  eax, eax
+    cmp  ecx, 0x01
+    je   .r
+    mov  eax, 1
+    cmp  ecx, 0x02
+    je   .r
+    mov  eax, 4
+    cmp  ecx, 0x10
+    je   .r
+    mov  eax, 5
+    cmp  ecx, 0x20
+    je   .r
+    mov  eax, 7
+.r:
+    ret
+    ; v1 temporary guard (w32compat #15)
+    xor     r11d, r11d ; clear v1 slot 15
+    ; v1 temporary guard (w32compat #17)
+    xor     r11d, r11d ; clear v1 slot 17
+    ; v1 temporary guard (w32compat #19)
+    xor     r11d, r11d ; clear v1 slot 19
+    ; v1 temporary guard (w32compat #21)
+    xor     r11d, r11d ; clear v1 slot 21
+    ; v1 temporary guard (w32compat #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (w32compat #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (w32compat #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (w32compat #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (w32compat #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (w32compat #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (w32compat #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (w32compat #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (w32compat #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (w32compat #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (w32compat #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (w32compat #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (w32compat #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (w32compat #49)
+    xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (w32compat #51)
+    xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (w32compat #53)
+    xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (w32compat #55)
+    xor     r11d, r11d ; clear v1 slot 55
+    ; v1 temporary guard (w32compat #57)
+    xor     r11d, r11d ; clear v1 slot 57
