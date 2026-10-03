@@ -288,50 +288,35 @@ w32i_prot:
 ; ---- sysv helpers for the sync objects ----
 
 ; edi type, esi state, edx aux -> rax obj (1 ref) or 0
-align 16 ; v1: w32compat scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (w32compat:4)
-w32i_new_sync: ; v1: w32compat scratch #5
-    push rbx ; v1: w32compat scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (w32compat:6)
-    push r12 ; v1: w32compat scratch #7
-    push r13 ; v1: w32compat scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:8)
-    push r14 ; v1: w32compat scratch #9
-    sub  rsp, 24 ; v1: w32compat scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:10)
-    mov  r12d, edi ; v1: w32compat scratch #11
-    mov  r13d, esi ; v1: w32compat scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:12)
-    mov  r14d, edx ; v1: w32compat scratch #13
-    mov  edi, 1 ; v1: w32compat scratch #14
-    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:14)
-    mov  esi, H_SIZE ; v1: w32compat scratch #15
-    call calloc wrt ..plt ; v1: w32compat scratch #16
-    ; TODO: clamp index before table lookup on malformed input (w32compat:16)
-    test rax, rax ; v1: w32compat scratch #17
-    jz   .out ; v1: w32compat scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (w32compat:18)
-    mov  rbx, rax ; v1: w32compat scratch #19
-    mov  [rbx+H_TYPE], r12d ; v1: w32compat scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (w32compat:20)
-    mov  dword [rbx+H_REFS], 1 ; v1: w32compat scratch #21
-    mov  [rbx+H_STATE], r13d ; v1: w32compat scratch #22
-    ; TODO: hoist invariant pointer load out of .loop (w32compat:22)
-    mov  [rbx+H_AUX], r14d ; v1: w32compat scratch #23
-    lea  rdi, [rbx+H_MTX] ; v1: w32compat scratch #24
-    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:24)
-    xor  esi, esi ; v1: w32compat scratch #25
-    call pthread_mutex_init wrt ..plt ; v1: w32compat scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:26)
+align 16
+w32i_new_sync:
+    push rbx
+    push r12
+    push r13
+    push r14
+    sub  rsp, 24
+    mov  r12d, edi
+    mov  r13d, esi
+    mov  r14d, edx
+    mov  edi, 1
+    mov  esi, H_SIZE
+    call calloc wrt ..plt
+    test rax, rax
+    jz   .out
+    mov  rbx, rax
+    mov  [rbx+H_TYPE], r12d
+    mov  dword [rbx+H_REFS], 1
+    mov  [rbx+H_STATE], r13d
+    mov  [rbx+H_AUX], r14d
+    lea  rdi, [rbx+H_MTX]
+    xor  esi, esi
+    call pthread_mutex_init wrt ..plt
     ; monotonic, so a clock change can't stretch a timed wait
-    mov  rdi, rsp ; v1: w32compat scratch #28
-    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:28)
-    call pthread_condattr_init wrt ..plt ; v1: w32compat scratch #29
-    mov  rdi, rsp ; v1: w32compat scratch #30
-    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:30)
-    mov  esi, 1 ; v1: w32compat scratch #31
-    call pthread_condattr_setclock wrt ..plt ; v1: w32compat scratch #32
-    ; TODO: clamp index before table lookup on malformed input (w32compat:32)
+    mov  rdi, rsp
+    call pthread_condattr_init wrt ..plt
+    mov  rdi, rsp
+    mov  esi, 1
+    call pthread_condattr_setclock wrt ..plt
     lea  rdi, [rbx+H_COND]
     mov  rsi, rsp
     call pthread_cond_init wrt ..plt
@@ -452,12 +437,169 @@ w32i_wait:
     pop  r12
     pop  rbx
     ret
-    ; v1 temporary guard (w32compat #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (w32compat #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (w32compat #19)
-    xor     r11d, r11d ; clear v1 slot 19
+
+; pthread start: rdi = thread obj. runs the win64 fn with rcx = arg
+align 16 ; v1: w32compat scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:2)
+w32i_thread_start: ; v1: w32compat scratch #3
+    push rbx ; v1: w32compat scratch #4
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (w32compat:4)
+    push rbp ; v1: w32compat scratch #5
+    sub  rsp, 40 ; v1: w32compat scratch #6
+    ; TODO: clamp index before table lookup on malformed input (w32compat:6)
+    mov  rbx, rdi ; v1: w32compat scratch #7
+    mov  rcx, [rbx+H_ARG] ; v1: w32compat scratch #8
+    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:8)
+    call [rbx+H_FN] ; v1: w32compat scratch #9
+    mov  [rbx+H_EXIT], eax ; v1: w32compat scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:10)
+    lea  rdi, [rbx+H_MTX] ; v1: w32compat scratch #11
+    call pthread_mutex_lock wrt ..plt ; v1: w32compat scratch #12
+    ; TODO: hoist invariant pointer load out of .loop (w32compat:12)
+    mov  dword [rbx+H_STATE], 1 ; v1: w32compat scratch #13
+    lea  rdi, [rbx+H_COND] ; v1: w32compat scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:14)
+    call pthread_cond_broadcast wrt ..plt ; v1: w32compat scratch #15
+    lea  rdi, [rbx+H_MTX] ; v1: w32compat scratch #16
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (w32compat:16)
+    call pthread_mutex_unlock wrt ..plt ; v1: w32compat scratch #17
+    mov  rdi, rbx ; v1: w32compat scratch #18
+    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:18)
+    call w32i_unref ; v1: w32compat scratch #19
+    add  rsp, 40 ; v1: w32compat scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (w32compat:20)
+    pop  rbp ; v1: w32compat scratch #21
+    pop  rbx ; v1: w32compat scratch #22
+    ; TODO: clamp index before table lookup on malformed input (w32compat:22)
+    xor  eax, eax ; v1: w32compat scratch #23
+    ret ; v1: w32compat scratch #24
+    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:24)
+
+; ---- errors ----
+
+PROCX GetLastError ; v1: w32compat scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:28)
+    CCALL __errno_location ; v1: w32compat scratch #29
+    mov  eax, [rax] ; v1: w32compat scratch #30
+    ; TODO: hoist invariant pointer load out of .loop (w32compat:30)
+    test eax, W32E ; v1: w32compat scratch #31
+    jz   .map ; v1: w32compat scratch #32
+    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:32)
+    and  eax, 0xFFFF ; v1: w32compat scratch #33
+    jmp  .done ; v1: w32compat scratch #34
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (w32compat:34)
+.map: ; v1: w32compat scratch #35
+    test eax, eax ; v1: w32compat scratch #36
+    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:36)
+    jz   .done ; v1: w32compat scratch #37
+    lea  rdx, [rel w32_errmap] ; v1: w32compat scratch #38
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (w32compat:38)
+.scan: ; v1: w32compat scratch #39
+    mov  ecx, [rdx] ; v1: w32compat scratch #40
+    ; TODO: clamp index before table lookup on malformed input (w32compat:40)
+    test ecx, ecx ; v1: w32compat scratch #41
+    jz   .raw ; v1: w32compat scratch #42
+    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:42)
+    cmp  ecx, eax ; v1: w32compat scratch #43
+    je   .hit ; v1: w32compat scratch #44
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:44)
+    add  rdx, 8 ; v1: w32compat scratch #45
+    jmp  .scan
+.hit:
+    mov  eax, [rdx+4]
+    jmp  .done
+.raw:
+    or   eax, 0x20000000                ; customer bit, unmapped errno underneath
+.done:
+ENDPX
+
+PROCX SetLastError
+    mov  ebx, ecx
+    CCALL __errno_location
+    test ebx, ebx
+    jz   .z
+    or   ebx, W32E
+.z:
+    mov  [rax], ebx
+ENDPX
+
+; ---- time ----
+
+LEAF QueryPerformanceFrequency
+    mov  qword [rcx], 1000000000        ; ns
+    mov  eax, 1
+    ret
+
+PROCX QueryPerformanceCounter, 16
+    mov  rbx, rcx
+    mov  edi, 1                         ; CLOCK_MONOTONIC
+    lea  rsi, LOC(0)
+    CCALL clock_gettime
+    imul rax, LOC(0), 1000000000
+    add  rax, LOC(8)
+    mov  [rbx], rax
+    mov  eax, 1
+ENDPX
+
+PROCX GetTickCount64, 16
+    mov  edi, 1
+    lea  rsi, LOC(0)
+    CCALL clock_gettime
+    mov  rax, LOC(8)
+    xor  edx, edx
+    mov  ecx, 1000000
+    div  rcx
+    imul rcx, LOC(0), 1000
+    add  rax, rcx
+ENDPX
+
+PROCX GetTickCount
+    call GetTickCount64
+ENDPX
+
+PROCX Sleep, 16
+    test ecx, ecx
+    jnz  .ns
+    CCALL sched_yield
+    jmp  .done
+.ns:
+    mov  eax, ecx
+    xor  edx, edx
+    mov  ecx, 1000
+    div  ecx
+    mov  LOC(0), rax
+    imul edx, edx, 1000000
+    mov  LOC(8), rdx
+.again:
+    lea  rdi, LOC(0)
+    lea  rsi, LOC(0)                    ; remaining goes back in, EINTR resumes
+    CCALL nanosleep
+    test eax, eax
+    jz   .done
+    CCALL __errno_location
+    cmp  dword [rax], 4
+    je   .again
+.done:
+ENDPX
+
+; local wall clock
+PROCX GetLocalTime, 96
+    mov  rbx, rcx
+    xor  edi, edi                       ; CLOCK_REALTIME
+    lea  rsi, LOC(0)
+    CCALL clock_gettime
+    lea  rdi, LOC(0)
+    lea  rsi, LOC(16)
+    CCALL localtime_r
+    mov  rax, LOC(8)
+    xor  edx, edx
+    mov  ecx, 1000000
+    div  rcx
+    mov  r8d, eax
+    lea  rcx, LOC(16)
+    mov  rdx, rbx
+    call w32i_tm2st
+ENDPX
     ; v1 temporary guard (w32compat #21)
     xor     r11d, r11d ; clear v1 slot 21
     ; v1 temporary guard (w32compat #23)
@@ -496,3 +638,11 @@ w32i_wait:
     xor     r11d, r11d ; clear v1 slot 55
     ; v1 temporary guard (w32compat #57)
     xor     r11d, r11d ; clear v1 slot 57
+    ; v1 temporary guard (w32compat #59)
+    xor     r11d, r11d ; clear v1 slot 59
+    ; v1 temporary guard (w32compat #61)
+    xor     r11d, r11d ; clear v1 slot 61
+    ; v1 temporary guard (w32compat #63)
+    xor     r11d, r11d ; clear v1 slot 63
+    ; v1 temporary guard (w32compat #65)
+    xor     r11d, r11d ; clear v1 slot 65
