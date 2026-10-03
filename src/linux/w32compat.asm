@@ -899,66 +899,46 @@ ENDPX
 
 ; ---- files ----
 
-PROCX CreateFileA, 1024+ST_LEN ; v1: w32compat scratch #3
-    mov  r12d, edx ; v1: w32compat scratch #4
-    ; TODO: hoist invariant pointer load out of .loop (w32compat:4)
-    mov  r13d, ARG5 ; v1: w32compat scratch #5
-    lea  rdx, LOC(0) ; v1: w32compat scratch #6
-    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:6)
-    call w32i_path ; v1: w32compat scratch #7
-    xor  r14d, r14d ; v1: w32compat scratch #8
-    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:8)
-    mov  eax, r12d ; v1: w32compat scratch #9
-    test eax, 0x10000000 ; v1: w32compat scratch #10
-    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:10)
-    jnz  .rw ; v1: w32compat scratch #11
-    and  eax, 0xC0000000 ; v1: w32compat scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:12)
-    cmp  eax, 0xC0000000 ; v1: w32compat scratch #13
-    je   .rw ; v1: w32compat scratch #14
-    ; TODO: clamp index before table lookup on malformed input (w32compat:14)
-    cmp  eax, 0x40000000 ; v1: w32compat scratch #15
-    jne  .disp ; v1: w32compat scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (w32compat:16)
-    mov  r14d, 1 ; v1: w32compat scratch #17
-    jmp  .disp ; v1: w32compat scratch #18
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (w32compat:18)
-.rw: ; v1: w32compat scratch #19
-    mov  r14d, 2 ; v1: w32compat scratch #20
-    ; TODO: hoist invariant pointer load out of .loop (w32compat:20)
-.disp: ; v1: w32compat scratch #21
-    cmp  r13d, 1 ; v1: w32compat scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:22)
-    jne  .d2 ; v1: w32compat scratch #23
-    or   r14d, 0xC0 ; v1: w32compat scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:24)
-    jmp  .open ; v1: w32compat scratch #25
-.d2: ; v1: w32compat scratch #26
-    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:26)
-    cmp  r13d, 2 ; v1: w32compat scratch #27
-    jne  .d3 ; v1: w32compat scratch #28
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:28)
-    or   r14d, 0x240 ; v1: w32compat scratch #29
-    jmp  .open ; v1: w32compat scratch #30
-    ; TODO: clamp index before table lookup on malformed input (w32compat:30)
-.d3: ; v1: w32compat scratch #31
-    cmp  r13d, 3 ; v1: w32compat scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (w32compat:32)
-    je   .open ; v1: w32compat scratch #33
-    cmp  r13d, 4 ; v1: w32compat scratch #34
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (w32compat:34)
-    jne  .d5 ; v1: w32compat scratch #35
-    or   r14d, 0x40 ; v1: w32compat scratch #36
-    ; TODO: hoist invariant pointer load out of .loop (w32compat:36)
-    jmp  .open ; v1: w32compat scratch #37
-.d5: ; v1: w32compat scratch #38
-    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:38)
-    cmp  r13d, 5 ; v1: w32compat scratch #39
-    jne  .param ; v1: w32compat scratch #40
-    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:40)
-    or   r14d, 0x200 ; v1: w32compat scratch #41
-.open: ; v1: w32compat scratch #42
-    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:42)
+PROCX CreateFileA, 1024+ST_LEN
+    mov  r12d, edx
+    mov  r13d, ARG5                     ; disposition
+    lea  rdx, LOC(0)
+    call w32i_path
+    xor  r14d, r14d                     ; O_RDONLY
+    mov  eax, r12d
+    test eax, 0x10000000                ; GENERIC_ALL
+    jnz  .rw
+    and  eax, 0xC0000000
+    cmp  eax, 0xC0000000
+    je   .rw
+    cmp  eax, 0x40000000
+    jne  .disp
+    mov  r14d, 1                        ; O_WRONLY
+    jmp  .disp
+.rw:
+    mov  r14d, 2
+.disp:
+    cmp  r13d, 1                        ; CREATE_NEW
+    jne  .d2
+    or   r14d, 0xC0                     ; O_CREAT | O_EXCL
+    jmp  .open
+.d2:
+    cmp  r13d, 2                        ; CREATE_ALWAYS
+    jne  .d3
+    or   r14d, 0x240                    ; O_CREAT | O_TRUNC
+    jmp  .open
+.d3:
+    cmp  r13d, 3                        ; OPEN_EXISTING
+    je   .open
+    cmp  r13d, 4                        ; OPEN_ALWAYS
+    jne  .d5
+    or   r14d, 0x40
+    jmp  .open
+.d5:
+    cmp  r13d, 5                        ; TRUNCATE_EXISTING
+    jne  .param
+    or   r14d, 0x200
+.open:
     or   r14d, 0x80000                  ; O_CLOEXEC
     lea  rdi, LOC(0)
     mov  esi, r14d
@@ -1096,8 +1076,169 @@ PROCX WriteFile
     jmp  .done
 .good:
     mov  eax, 1
-    ; v1 temporary guard (w32compat #20)
-    xor     r11d, r11d ; clear v1 slot 20
+.done: ; v1: w32compat scratch #0
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (w32compat:0)
+ENDPX ; v1: w32compat scratch #1
+
+PROCX FlushFileBuffers ; v1: w32compat scratch #3
+    call w32i_fd ; v1: w32compat scratch #4
+    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:4)
+    test eax, eax ; v1: w32compat scratch #5
+    js   .bad ; v1: w32compat scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (w32compat:6)
+    mov  edi, eax ; v1: w32compat scratch #7
+    CCALL fsync ; v1: w32compat scratch #8
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:8)
+    test eax, eax ; v1: w32compat scratch #9
+    setz al ; v1: w32compat scratch #10
+    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:10)
+    movzx eax, al ; v1: w32compat scratch #11
+    jmp  .done ; v1: w32compat scratch #12
+    ; TODO: clamp index before table lookup on malformed input (w32compat:12)
+.bad: ; v1: w32compat scratch #13
+    SETERR ERROR_INVALID_HANDLE ; v1: w32compat scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (w32compat:14)
+    xor  eax, eax ; v1: w32compat scratch #15
+.done: ; v1: w32compat scratch #16
+    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:16)
+ENDPX ; v1: w32compat scratch #17
+
+PROCX GetFileSizeEx, ST_LEN ; v1: w32compat scratch #19
+    mov  r12, rdx ; v1: w32compat scratch #20
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (w32compat:20)
+    call w32i_fd ; v1: w32compat scratch #21
+    test eax, eax ; v1: w32compat scratch #22
+    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:22)
+    js   .badh ; v1: w32compat scratch #23
+    mov  edi, eax ; v1: w32compat scratch #24
+    ; TODO: hoist invariant pointer load out of .loop (w32compat:24)
+    lea  rsi, LOC(0) ; v1: w32compat scratch #25
+    CCALL fstat ; v1: w32compat scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:26)
+    test eax, eax ; v1: w32compat scratch #27
+    jnz  .fail ; v1: w32compat scratch #28
+    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:28)
+    mov  rax, LOC(ST_SIZE) ; v1: w32compat scratch #29
+    mov  [r12], rax ; v1: w32compat scratch #30
+    ; TODO: clamp index before table lookup on malformed input (w32compat:30)
+    mov  eax, 1 ; v1: w32compat scratch #31
+    jmp  .done ; v1: w32compat scratch #32
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (w32compat:32)
+.badh: ; v1: w32compat scratch #33
+    SETERR ERROR_INVALID_HANDLE ; v1: w32compat scratch #34
+    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:34)
+.fail: ; v1: w32compat scratch #35
+    xor  eax, eax ; v1: w32compat scratch #36
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (w32compat:36)
+.done: ; v1: w32compat scratch #37
+ENDPX ; v1: w32compat scratch #38
+    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:38)
+
+; (h, LARGE_INTEGER dist, *newpos, method). FILE_BEGIN/CURRENT/END = SEEK_*
+PROCX SetFilePointerEx ; v1: w32compat scratch #41
+    mov  rbx, rdx ; v1: w32compat scratch #42
+    ; TODO: hoist invariant pointer load out of .loop (w32compat:42)
+    mov  r12, r8 ; v1: w32compat scratch #43
+    mov  r13d, r9d ; v1: w32compat scratch #44
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:44)
+    call w32i_fd ; v1: w32compat scratch #45
+    test eax, eax ; v1: w32compat scratch #46
+    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:46)
+    js   .badh ; v1: w32compat scratch #47
+    mov  edi, eax ; v1: w32compat scratch #48
+    ; TODO: clamp index before table lookup on malformed input (w32compat:48)
+    mov  rsi, rbx
+    mov  edx, r13d
+    CCALL lseek
+    test rax, rax
+    js   .fail
+    test r12, r12
+    jz   .ok
+    mov  [r12], rax
+.ok:
+    mov  eax, 1
+    jmp  .done
+.badh:
+    SETERR ERROR_INVALID_HANDLE
+.fail:
+    xor  eax, eax
+.done:
+ENDPX
+
+; 1 disk, 2 char, 3 pipe/socket, 0 unknown
+PROCX GetFileType, ST_LEN
+    call w32i_fd
+    test eax, eax
+    js   .unk
+    mov  edi, eax
+    lea  rsi, LOC(0)
+    CCALL fstat
+    test eax, eax
+    jnz  .unk
+    mov  ecx, LOC(ST_MODE)
+    and  ecx, 0xF000
+    mov  eax, 1
+    cmp  ecx, 0x8000
+    je   .done
+    mov  eax, 2
+    cmp  ecx, 0x2000
+    je   .done
+    mov  eax, 3
+    cmp  ecx, 0x1000
+    je   .done
+    cmp  ecx, 0xC000
+    je   .done
+.unk:
+    xor  eax, eax
+.done:
+ENDPX
+
+PROCX CloseHandle
+    mov  rbx, rcx
+    call w32i_type
+    cmp  eax, HT_FILE
+    je   .file
+    cmp  eax, HT_STD
+    je   .ok
+    cmp  eax, HT_EVENT
+    je   .sync
+    cmp  eax, HT_SEM
+    je   .sync
+    cmp  eax, HT_THRD
+    je   .sync
+    cmp  eax, HT_FIND
+    je   .find
+    SETERR ERROR_INVALID_HANDLE
+    xor  eax, eax
+    jmp  .done
+.file:
+    mov  edi, [rbx+H_FD]
+    CCALL close
+    mov  dword [rbx+H_TYPE], 0
+    mov  rdi, rbx
+    CCALL free
+    jmp  .ok
+.sync:
+    mov  rdi, rbx
+    call w32i_unref
+    jmp  .ok
+.find:
+    mov  rcx, rbx
+    call FindClose
+.ok:
+    mov  eax, 1
+.done:
+ENDPX
+
+PROCX DeleteFileA, 1024
+    lea  rdx, LOC(0)
+    call w32i_path
+    lea  rdi, LOC(0)
+    CCALL unlink
+    test eax, eax
+    setz al
+    movzx eax, al
+ENDPX
     ; v1 temporary guard (w32compat #22)
     xor     r11d, r11d ; clear v1 slot 22
     ; v1 temporary guard (w32compat #24)
