@@ -1218,62 +1218,45 @@ PROCX DeleteFileA, 1024
     movzx eax, al
 ENDPX
 
-PROCX RemoveDirectoryA, 1024 ; v1: w32compat scratch #1
-    lea  rdx, LOC(0) ; v1: w32compat scratch #2
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:2)
-    call w32i_path ; v1: w32compat scratch #3
-    lea  rdi, LOC(0) ; v1: w32compat scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:4)
-    CCALL rmdir ; v1: w32compat scratch #5
-    test eax, eax ; v1: w32compat scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (w32compat:6)
-    setz al ; v1: w32compat scratch #7
-    movzx eax, al ; v1: w32compat scratch #8
-    ; TODO: clamp index before table lookup on malformed input (w32compat:8)
-ENDPX ; v1: w32compat scratch #9
+PROCX RemoveDirectoryA, 1024
+    lea  rdx, LOC(0)
+    call w32i_path
+    lea  rdi, LOC(0)
+    CCALL rmdir
+    test eax, eax
+    setz al
+    movzx eax, al
+ENDPX
 
-PROCX CreateDirectoryA, 1024 ; v1: w32compat scratch #11
-    lea  rdx, LOC(0) ; v1: w32compat scratch #12
-    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:12)
-    call w32i_path ; v1: w32compat scratch #13
-    lea  rdi, LOC(0) ; v1: w32compat scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:14)
-    mov  esi, 511 ; v1: w32compat scratch #15
-    CCALL mkdir ; v1: w32compat scratch #16
-    ; TODO: hoist invariant pointer load out of .loop (w32compat:16)
-    test eax, eax ; v1: w32compat scratch #17
-    setz al ; v1: w32compat scratch #18
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (w32compat:18)
-    movzx eax, al ; v1: w32compat scratch #19
-ENDPX ; v1: w32compat scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:20)
+PROCX CreateDirectoryA, 1024
+    lea  rdx, LOC(0)
+    call w32i_path
+    lea  rdi, LOC(0)
+    mov  esi, 511                       ; 0777
+    CCALL mkdir
+    test eax, eax
+    setz al
+    movzx eax, al
+ENDPX
 
 ; rename replaces atomically. without REPLACE_EXISTING an existing dst fails
-PROCX MoveFileExA, 2048+ST_LEN ; v1: w32compat scratch #23
-    mov  rbx, rdx ; v1: w32compat scratch #24
-    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:24)
-    mov  r12d, r8d ; v1: w32compat scratch #25
-    lea  rdx, LOC(0) ; v1: w32compat scratch #26
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (w32compat:26)
-    call w32i_path ; v1: w32compat scratch #27
-    test rbx, rbx ; v1: w32compat scratch #28
-    ; TODO: clamp index before table lookup on malformed input (w32compat:28)
-    jz   .param ; v1: w32compat scratch #29
-    mov  rcx, rbx ; v1: w32compat scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:30)
-    lea  rdx, LOC(1024) ; v1: w32compat scratch #31
-    call w32i_path ; v1: w32compat scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:32)
-    test r12d, 1 ; v1: w32compat scratch #33
-    jnz  .mv ; v1: w32compat scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (w32compat:34)
-    lea  rdi, LOC(1024) ; v1: w32compat scratch #35
-    lea  rsi, LOC(2048) ; v1: w32compat scratch #36
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (w32compat:36)
-    CCALL stat ; v1: w32compat scratch #37
-    test eax, eax ; v1: w32compat scratch #38
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:38)
-    jnz  .mv ; v1: w32compat scratch #39
+PROCX MoveFileExA, 2048+ST_LEN
+    mov  rbx, rdx
+    mov  r12d, r8d
+    lea  rdx, LOC(0)
+    call w32i_path
+    test rbx, rbx
+    jz   .param
+    mov  rcx, rbx
+    lea  rdx, LOC(1024)
+    call w32i_path
+    test r12d, 1
+    jnz  .mv
+    lea  rdi, LOC(1024)
+    lea  rsi, LOC(2048)
+    CCALL stat
+    test eax, eax
+    jnz  .mv
     SETERR ERROR_ALREADY_EXISTS
     xor  eax, eax
     jmp  .done
@@ -1414,12 +1397,196 @@ PROCX FindFirstFileA, 1024
     SETERR ERROR_PATH_NOT_FOUND
     jmp  .fail
 .nomem:
-    ; v1 temporary guard (w32compat #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (w32compat #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (w32compat #21)
-    xor     r11d, r11d ; clear v1 slot 21
+    SETERR ERROR_NOT_ENOUGH_MEMORY ; v1: w32compat scratch #0
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:0)
+.fail: ; v1: w32compat scratch #1
+    mov  rax, -1 ; v1: w32compat scratch #2
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (w32compat:2)
+    jmp  .done ; v1: w32compat scratch #3
+.ok: ; v1: w32compat scratch #4
+    ; TODO: clamp index before table lookup on malformed input (w32compat:4)
+    mov  rax, rbx ; v1: w32compat scratch #5
+.done: ; v1: w32compat scratch #6
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (w32compat:6)
+ENDPX ; v1: w32compat scratch #7
+
+; (find obj, WIN32_FIND_DATAA*) -> eax 1 filled, 0 no more
+PROCX w32i_find_next, 1280+ST_LEN ; v1: w32compat scratch #10
+    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:10)
+    mov  rbx, rcx ; v1: w32compat scratch #11
+    mov  r12, rdx ; v1: w32compat scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:12)
+.next: ; v1: w32compat scratch #13
+    mov  rdi, [rbx+H_FD] ; v1: w32compat scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:14)
+    CCALL readdir ; v1: w32compat scratch #15
+    test rax, rax ; v1: w32compat scratch #16
+    ; TODO: hoist invariant pointer load out of .loop (w32compat:16)
+    jz   .none ; v1: w32compat scratch #17
+    lea  r13, [rax+19] ; v1: w32compat scratch #18
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:18)
+    cmp  byte [r13], '.' ; v1: w32compat scratch #19
+    jne  .m ; v1: w32compat scratch #20
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (w32compat:20)
+    cmp  byte [r13+1], 0 ; v1: w32compat scratch #21
+    je   .next ; v1: w32compat scratch #22
+    ; TODO: clamp index before table lookup on malformed input (w32compat:22)
+    cmp  byte [r13+1], '.' ; v1: w32compat scratch #23
+    jne  .m ; v1: w32compat scratch #24
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (w32compat:24)
+    cmp  byte [r13+2], 0 ; v1: w32compat scratch #25
+    je   .next ; v1: w32compat scratch #26
+    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:26)
+.m: ; v1: w32compat scratch #27
+    lea  rdi, [rbx+F_PAT] ; v1: w32compat scratch #28
+    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:28)
+    mov  rsi, r13 ; v1: w32compat scratch #29
+    mov  edx, 16 ; v1: w32compat scratch #30
+    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:30)
+    CCALL fnmatch ; v1: w32compat scratch #31
+    test eax, eax ; v1: w32compat scratch #32
+    ; TODO: hoist invariant pointer load out of .loop (w32compat:32)
+    jnz  .next ; v1: w32compat scratch #33
+    xor  eax, eax ; v1: w32compat scratch #34
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:34)
+.len: ; v1: w32compat scratch #35
+    cmp  byte [r13+rax], 0 ; v1: w32compat scratch #36
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (w32compat:36)
+    je   .ld ; v1: w32compat scratch #37
+    inc  eax ; v1: w32compat scratch #38
+    ; TODO: clamp index before table lookup on malformed input (w32compat:38)
+    jmp  .len ; v1: w32compat scratch #39
+.ld: ; v1: w32compat scratch #40
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (w32compat:40)
+    cmp  eax, 259 ; v1: w32compat scratch #41
+    ja   .next ; v1: w32compat scratch #42
+    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:42)
+    ; dir/name for the stat
+    lea  rcx, [rbx+F_DIR] ; v1: w32compat scratch #44
+    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:44)
+    lea  rdx, LOC(0) ; v1: w32compat scratch #45
+    mov  r8d, 1000 ; v1: w32compat scratch #46
+    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:46)
+    call w32i_strncpy ; v1: w32compat scratch #47
+    mov  byte [rsp+FRAME_OUT+rax], '/'
+    lea  rdx, LOC(1)
+    add  rdx, rax
+    mov  rcx, r13
+    mov  r8d, 260
+    call w32i_strncpy
+    mov  rdi, r12
+    xor  esi, esi
+    mov  edx, 320
+    CCALL memset
+    lea  rdi, LOC(0)
+    lea  rsi, LOC(1280)
+    CCALL stat
+    test eax, eax
+    jnz  .nostat
+    lea  rcx, LOC(1280)
+    call w32i_attr
+    mov  [r12], eax
+    lea  rcx, LOC(1280)
+    mov  rdx, r12
+    call w32i_filltimes
+    jmp  .name
+.nostat:
+    mov  dword [r12], 0x80              ; dangling link or so
+.name:
+    mov  rcx, r13
+    lea  rdx, [r12+44]
+    mov  r8d, 259
+    call w32i_strncpy
+    mov  eax, 1
+    jmp  .done
+.none:
+    xor  eax, eax
+.done:
+ENDPX
+
+PROCX FindNextFileA
+    mov  rbx, rcx
+    mov  r12, rdx
+    call w32i_type
+    cmp  eax, HT_FIND
+    jne  .bad
+    mov  rcx, rbx
+    mov  rdx, r12
+    call w32i_find_next
+    test eax, eax
+    jnz  .done
+    SETERR ERROR_NO_MORE_FILES
+    xor  eax, eax
+    jmp  .done
+.bad:
+    SETERR ERROR_INVALID_HANDLE
+    xor  eax, eax
+.done:
+ENDPX
+
+PROCX FindClose
+    mov  rbx, rcx
+    call w32i_type
+    cmp  eax, HT_FIND
+    jne  .bad
+    mov  rdi, [rbx+H_FD]
+    CCALL closedir
+    mov  dword [rbx+H_TYPE], 0
+    mov  rdi, rbx
+    CCALL free
+    mov  eax, 1
+    jmp  .done
+.bad:
+    SETERR ERROR_INVALID_HANDLE
+    xor  eax, eax
+.done:
+ENDPX
+
+; ---- threads + sync ----
+
+; (sa, stack, fn, arg, flags, *tid). fn is ms x64, gets rcx = arg.
+; suspended start and the stack size are ignored
+PROCX CreateThread, 16
+    mov  r12, r8
+    mov  r13, r9
+    mov  edi, HT_THRD
+    xor  esi, esi
+    xor  edx, edx
+    call w32i_new_sync
+    test rax, rax
+    jz   .nomem
+    mov  rbx, rax
+    mov  dword [rbx+H_REFS], 2          ; handle + the running thread
+    mov  [rbx+H_FN], r12
+    mov  [rbx+H_ARG], r13
+    lea  rdi, LOC(0)
+    xor  esi, esi
+    lea  rdx, [rel w32i_thread_start]
+    mov  rcx, rbx
+    CCALL pthread_create
+    test eax, eax
+    jnz  .fail
+    mov  rdi, LOC(0)
+    CCALL pthread_detach                ; waits go through the done flag
+    mov  rax, ARG6
+    test rax, rax
+    jz   .ret
+    mov  ecx, 1
+    lock xadd [rel w32_tid_next], ecx
+    add  ecx, 0x1000
+    mov  [rax], ecx
+.ret:
+    mov  rax, rbx
+    jmp  .done
+.fail:
+    mov  dword [rbx+H_REFS], 1
+    mov  rdi, rbx
+    call w32i_unref
+.nomem:
+    SETERR ERROR_NOT_ENOUGH_MEMORY
+    xor  eax, eax
+.done:
+ENDPX
     ; v1 temporary guard (w32compat #23)
     xor     r11d, r11d ; clear v1 slot 23
     ; v1 temporary guard (w32compat #25)
