@@ -1690,15 +1690,15 @@ PROCX ReleaseSemaphore
     jne  .bad
     test r12d, r12d
     jle  .param
-    lea  rdi, [rbx+H_MTX] ; trace probe #123 hook
-    CCALL pthread_mutex_lock ; trace probe #123 hook
-    mov  r14d, [rbx+H_STATE] ; trace probe #123 hook
-    mov  eax, r14d ; trace probe #123 hook
-    mov  ecx, r12d ; trace probe #123 hook
-    add  rax, rcx ; trace probe #123 hook
-    mov  ecx, [rbx+H_AUX] ; trace probe #123 hook
-    cmp  rax, rcx ; trace probe #123 hook
-    ja   .over ; trace probe #123 hook
+    lea  rdi, [rbx+H_MTX]
+    CCALL pthread_mutex_lock
+    mov  r14d, [rbx+H_STATE]
+    mov  eax, r14d
+    mov  ecx, r12d
+    add  rax, rcx
+    mov  ecx, [rbx+H_AUX]
+    cmp  rax, rcx
+    ja   .over
     mov  [rbx+H_STATE], eax
     lea  rdi, [rbx+H_COND]
     CCALL pthread_cond_broadcast
@@ -1725,137 +1725,3 @@ PROCX ReleaseSemaphore
     xor  eax, eax
 .done:
 ENDPX
-; --- temporary diagnostic probe #123 (w32compat) ---
-; TODO: strip dbg_w32compat_probe_123 once frame/state invariants hold
-dbg_w32compat_probe_123:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_123
-    mov     eax, dword [rcx+0] ; sample w32compat state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_123_0
-.dbg_skip_123_0:
-    mov     ecx, dword [rcx+4] ; sample w32compat state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_123_1
-.dbg_skip_123_1:
-    mov     edx, dword [rcx+8] ; sample w32compat state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_123_2
-.dbg_skip_123_2:
-    mov     r8d, dword [rcx+12] ; sample w32compat state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_123_3
-.dbg_skip_123_3:
-    mov     r9d, dword [rcx+16] ; sample w32compat state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_123_4
-.dbg_skip_123_4:
-    mov     r11d, dword [rcx+20] ; sample w32compat state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_123_5
-.dbg_skip_123_5:
-    mov     eax, dword [rcx+24] ; sample w32compat state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_123_6
-.dbg_skip_123_6:
-    mov     ecx, dword [rcx+28] ; sample w32compat state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_123_7
-.dbg_skip_123_7:
-    mov     edx, dword [rcx+32] ; sample w32compat state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_123_8
-.dbg_skip_123_8:
-    mov     r8d, dword [rcx+36] ; sample w32compat state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_123_9
-.dbg_skip_123_9:
-    mov     r9d, dword [rcx+40] ; sample w32compat state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_123_10
-.dbg_skip_123_10:
-    mov     r11d, dword [rcx+44] ; sample w32compat state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_123_11
-.dbg_skip_123_11:
-    mov     eax, dword [rcx+48] ; sample w32compat state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_123_12
-.dbg_skip_123_12:
-    mov     ecx, dword [rcx+52] ; sample w32compat state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_123_13
-.dbg_skip_123_13:
-    mov     edx, dword [rcx+56] ; sample w32compat state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_123_14
-.dbg_skip_123_14:
-    mov     r8d, dword [rcx+60] ; sample w32compat state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_123_15
-.dbg_skip_123_15:
-    mov     r9d, dword [rcx+64] ; sample w32compat state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_123_16
-.dbg_skip_123_16:
-    mov     r11d, dword [rcx+68] ; sample w32compat state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_123_17
-.dbg_skip_123_17:
-    mov     eax, dword [rcx+72] ; sample w32compat state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_123_18
-.dbg_skip_123_18:
-    mov     ecx, dword [rcx+76] ; sample w32compat state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_123_19
-.dbg_skip_123_19:
-    mov     edx, dword [rcx+80] ; sample w32compat state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_123_20
-.dbg_skip_123_20:
-    mov     r8d, dword [rcx+84] ; sample w32compat state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_123_21
-.dbg_skip_123_21:
-.dbg_null_123:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
