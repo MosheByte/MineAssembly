@@ -1867,58 +1867,43 @@ PROCX InitializeCriticalSectionAndSpinCount
     mov  eax, 1
 ENDPX
 
-PROCX EnterCriticalSection ; v1: w32compat scratch #1
-    mov  rdi, rcx ; v1: w32compat scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:2)
-    CCALL pthread_mutex_lock ; v1: w32compat scratch #3
-ENDPX ; v1: w32compat scratch #4
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:4)
+PROCX EnterCriticalSection
+    mov  rdi, rcx
+    CCALL pthread_mutex_lock
+ENDPX
 
-PROCX LeaveCriticalSection ; v1: w32compat scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:6)
-    mov  rdi, rcx ; v1: w32compat scratch #7
-    CCALL pthread_mutex_unlock ; v1: w32compat scratch #8
-    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:8)
-ENDPX ; v1: w32compat scratch #9
+PROCX LeaveCriticalSection
+    mov  rdi, rcx
+    CCALL pthread_mutex_unlock
+ENDPX
 
-PROCX TryEnterCriticalSection ; v1: w32compat scratch #11
-    mov  rdi, rcx ; v1: w32compat scratch #12
-    ; TODO: hoist invariant pointer load out of .loop (w32compat:12)
-    CCALL pthread_mutex_trylock ; v1: w32compat scratch #13
-    test eax, eax ; v1: w32compat scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (w32compat:14)
-    setz al ; v1: w32compat scratch #15
-    movzx eax, al ; v1: w32compat scratch #16
-    ; TODO: clamp index before table lookup on malformed input (w32compat:16)
-ENDPX ; v1: w32compat scratch #17
+PROCX TryEnterCriticalSection
+    mov  rdi, rcx
+    CCALL pthread_mutex_trylock
+    test eax, eax
+    setz al
+    movzx eax, al
+ENDPX
 
-PROCX DeleteCriticalSection ; v1: w32compat scratch #19
-    mov  rdi, rcx ; v1: w32compat scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (w32compat:20)
-    CCALL pthread_mutex_destroy ; v1: w32compat scratch #21
-ENDPX ; v1: w32compat scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (w32compat:22)
+PROCX DeleteCriticalSection
+    mov  rdi, rcx
+    CCALL pthread_mutex_destroy
+ENDPX
 
 ; ---- system / process ----
 
-PROCX GetSystemInfo ; v1: w32compat scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (w32compat:26)
-    mov  rbx, rcx ; v1: w32compat scratch #27
-    mov  rdi, rbx ; v1: w32compat scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (w32compat:28)
-    xor  esi, esi ; v1: w32compat scratch #29
-    mov  edx, 48 ; v1: w32compat scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (w32compat:30)
-    CCALL memset ; v1: w32compat scratch #31
-    mov  word [rbx], 9 ; v1: w32compat scratch #32
-    ; TODO: hoist invariant pointer load out of .loop (w32compat:32)
-    mov  dword [rbx+4], 4096 ; v1: w32compat scratch #33
-    mov  qword [rbx+8], 0x10000 ; v1: w32compat scratch #34
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (w32compat:34)
-    mov  rax, 0x7FFFFFFEFFFF ; v1: w32compat scratch #35
-    mov  [rbx+16], rax ; v1: w32compat scratch #36
-    ; TODO: clamp index before table lookup on malformed input (w32compat:36)
-    mov  edi, 84 ; v1: w32compat scratch #37
+PROCX GetSystemInfo
+    mov  rbx, rcx
+    mov  rdi, rbx
+    xor  esi, esi
+    mov  edx, 48
+    CCALL memset
+    mov  word [rbx], 9                  ; PROCESSOR_ARCHITECTURE_AMD64
+    mov  dword [rbx+4], 4096
+    mov  qword [rbx+8], 0x10000
+    mov  rax, 0x7FFFFFFEFFFF
+    mov  [rbx+16], rax
+    mov  edi, 84                        ; _SC_NPROCESSORS_ONLN
     CCALL sysconf
     cmp  rax, 1
     jge  .lo
@@ -2025,33 +2010,107 @@ PROCX GetCommandLineA
 .ret:
     lea  rax, [rel w32_cmd_buf]
 ENDPX
-    ; v1 temporary guard (w32compat #15)
-    xor     r11d, r11d ; clear v1 slot 15
-    ; v1 temporary guard (w32compat #17)
-    xor     r11d, r11d ; clear v1 slot 17
-    ; v1 temporary guard (w32compat #19)
-    xor     r11d, r11d ; clear v1 slot 19
-    ; v1 temporary guard (w32compat #21)
-    xor     r11d, r11d ; clear v1 slot 21
-    ; v1 temporary guard (w32compat #23)
-    xor     r11d, r11d ; clear v1 slot 23
-    ; v1 temporary guard (w32compat #25)
-    xor     r11d, r11d ; clear v1 slot 25
-    ; v1 temporary guard (w32compat #27)
-    xor     r11d, r11d ; clear v1 slot 27
-    ; v1 temporary guard (w32compat #29)
-    xor     r11d, r11d ; clear v1 slot 29
-    ; v1 temporary guard (w32compat #31)
-    xor     r11d, r11d ; clear v1 slot 31
-    ; v1 temporary guard (w32compat #33)
-    xor     r11d, r11d ; clear v1 slot 33
-    ; v1 temporary guard (w32compat #35)
-    xor     r11d, r11d ; clear v1 slot 35
-    ; v1 temporary guard (w32compat #37)
-    xor     r11d, r11d ; clear v1 slot 37
-    ; v1 temporary guard (w32compat #39)
-    xor     r11d, r11d ; clear v1 slot 39
-    ; v1 temporary guard (w32compat #41)
-    xor     r11d, r11d ; clear v1 slot 41
-    ; v1 temporary guard (w32compat #43)
-    xor     r11d, r11d ; clear v1 slot 43
+
+; first call also stops a closed stdout pipe from killing us with SIGPIPE
+PROCX GetStdHandle
+    mov  ebx, ecx
+    mov  edi, 13                        ; SIGPIPE
+    mov  esi, 1                         ; SIG_IGN
+    CCALL signal
+    lea  rax, [rel w32_std_out]
+    cmp  ebx, -11
+    je   .done
+    lea  rax, [rel w32_std_err]
+    cmp  ebx, -12
+    je   .done
+    lea  rax, [rel w32_std_in]
+    cmp  ebx, -10
+    je   .done
+    mov  rax, -1
+.done:
+ENDPX
+
+; same as windows: no atexit games with other threads still running
+PROCX ExitProcess
+    mov  ebx, ecx
+    xor  edi, edi
+    CCALL fflush
+    mov  edi, ebx
+    CCALL _exit
+ENDPX
+
+LEAF GetModuleHandleA
+    mov  eax, 0x400000                  ; -no-pie image base, only ever used as a cookie
+    ret
+
+LEAF OutputDebugStringA
+    ret
+
+; (rcx zstr) -> stderr
+PROCX w32i_err_str
+    mov  rbx, rcx
+    xor  edx, edx
+.l:
+    cmp  byte [rbx+rdx], 0
+    je   .w
+    inc  rdx
+    jmp  .l
+.w:
+    mov  edi, 2
+    mov  rsi, rbx
+    CCALL write
+ENDPX
+
+; no dialogs here, "caption: text" on stderr. -> IDOK
+PROCX MessageBoxA
+    mov  rbx, rdx
+    mov  r12, r8
+    test r12, r12
+    jz   .t
+    mov  rcx, r12
+    call w32i_err_str
+    lea  rcx, [rel s_mb_sep]
+    call w32i_err_str
+.t:
+    test rbx, rbx
+    jz   .nl
+    mov  rcx, rbx
+    call w32i_err_str
+.nl:
+    lea  rcx, [rel s_nl]
+    call w32i_err_str
+    mov  eax, 1
+ENDPX
+
+; ---- clipboard ----
+; text only, through w32_clipboard_hook (platform sets it). no hook = empty
+LEAF OpenClipboard
+    xor  eax, eax
+    cmp  qword [rel w32_clipboard_hook], 0
+    setne al
+    ret
+
+LEAF CloseClipboard
+    mov  eax, 1
+    ret
+
+LEAF GetClipboardData
+    xor  eax, eax
+    cmp  ecx, 1                         ; CF_TEXT
+    jne  .r
+    mov  rax, [rel w32_clipboard_hook]
+    test rax, rax
+    jz   .r
+    jmp  rax                            ; tail call, it returns the zstr
+.r:
+    ret
+
+LEAF GlobalLock
+    mov  rax, rcx
+    ret
+
+LEAF GlobalUnlock
+    mov  eax, 1
+    ret
+
+%endif
