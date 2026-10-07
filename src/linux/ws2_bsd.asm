@@ -109,56 +109,40 @@ PROCX ws_socket
 ENDPX
 
 ; sockaddr_in is laid out the same on both
-PROCX ws_bind ; v1: ws2_bsd scratch #1
-    mov  edi, ecx ; v1: ws2_bsd scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (ws2_bsd:2)
-    mov  rsi, rdx ; v1: ws2_bsd scratch #3
-    mov  edx, r8d ; v1: ws2_bsd scratch #4
-    ; temp: spill r12/r13 across helper call until reg alloc pass (ws2_bsd:4)
-    CCALL bind ; v1: ws2_bsd scratch #5
-ENDPX ; v1: ws2_bsd scratch #6
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ws2_bsd:6)
+PROCX ws_bind
+    mov  edi, ecx
+    mov  rsi, rdx
+    mov  edx, r8d
+    CCALL bind
+ENDPX
 
-PROCX ws_listen ; v1: ws2_bsd scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (ws2_bsd:8)
-    mov  edi, ecx ; v1: ws2_bsd scratch #9
-    mov  esi, edx ; v1: ws2_bsd scratch #10
-    ; TODO: clamp index before table lookup on malformed input (ws2_bsd:10)
-    CCALL listen ; v1: ws2_bsd scratch #11
-ENDPX ; v1: ws2_bsd scratch #12
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ws2_bsd:12)
+PROCX ws_listen
+    mov  edi, ecx
+    mov  esi, edx
+    CCALL listen
+ENDPX
 
 ; windows hands back a socket in the listener's blocking mode, linux doesn't
-PROCX ws_accept ; v1: ws2_bsd scratch #15
-    mov  ebx, ecx ; v1: ws2_bsd scratch #16
-    ; TODO: verify 16-byte rsp alignment before inner call (ws2_bsd:16)
-    mov  r12, rdx ; v1: ws2_bsd scratch #17
-    mov  r13, r8 ; v1: ws2_bsd scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (ws2_bsd:18)
-    mov  edi, ebx ; v1: ws2_bsd scratch #19
-    mov  esi, 3 ; v1: ws2_bsd scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (ws2_bsd:20)
-    CCALL fcntl ; v1: ws2_bsd scratch #21
-    mov  r14d, SOCK_CLOEXEC ; v1: ws2_bsd scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (ws2_bsd:22)
-    test eax, eax ; v1: ws2_bsd scratch #23
-    js   .acc ; v1: ws2_bsd scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (ws2_bsd:24)
-    test eax, O_NONBLOCK ; v1: ws2_bsd scratch #25
-    jz   .acc ; v1: ws2_bsd scratch #26
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (ws2_bsd:26)
-    or   r14d, O_NONBLOCK ; v1: ws2_bsd scratch #27
-.acc: ; v1: ws2_bsd scratch #28
-    ; TODO: clamp index before table lookup on malformed input (ws2_bsd:28)
-    mov  edi, ebx ; v1: ws2_bsd scratch #29
-    mov  rsi, r12 ; v1: ws2_bsd scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (ws2_bsd:30)
-    mov  rdx, r13 ; v1: ws2_bsd scratch #31
-    mov  ecx, r14d ; v1: ws2_bsd scratch #32
-    ; TODO: verify 16-byte rsp alignment before inner call (ws2_bsd:32)
-    CCALL accept4 ; v1: ws2_bsd scratch #33
-    movsxd rax, eax ; v1: ws2_bsd scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (ws2_bsd:34)
+PROCX ws_accept
+    mov  ebx, ecx
+    mov  r12, rdx
+    mov  r13, r8
+    mov  edi, ebx
+    mov  esi, 3                         ; F_GETFL
+    CCALL fcntl
+    mov  r14d, SOCK_CLOEXEC
+    test eax, eax
+    js   .acc
+    test eax, O_NONBLOCK
+    jz   .acc
+    or   r14d, O_NONBLOCK               ; == SOCK_NONBLOCK
+.acc:
+    mov  edi, ebx
+    mov  rsi, r12
+    mov  rdx, r13
+    mov  ecx, r14d
+    CCALL accept4
+    movsxd rax, eax
 ENDPX
 
 ; (s, buf, len, flags) -> eax bytes, 0 = peer closed, -1 = error
@@ -268,31 +252,49 @@ PROCX ws_setsockopt, 16
     mov  r8d, r15d
     CCALL setsockopt
 ENDPX
-    ; v1 temporary guard (ws2_bsd #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (ws2_bsd #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (ws2_bsd #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (ws2_bsd #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (ws2_bsd #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (ws2_bsd #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (ws2_bsd #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (ws2_bsd #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (ws2_bsd #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (ws2_bsd #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (ws2_bsd #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (ws2_bsd #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (ws2_bsd #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (ws2_bsd #42)
-    xor     r11d, r11d ; clear v1 slot 42
+
+; FIONBIO -> O_NONBLOCK, FIONREAD -> ioctl FIONREAD. anything else EINVAL
+PROCX ioctlsocket, 16
+    mov  ebx, ecx
+    mov  r12, r8
+    cmp  edx, 0x8004667E
+    je   .nbio
+    cmp  edx, 0x4004667F
+    je   .nread
+    CCALL __errno_location
+    mov  dword [rax], 22
+    mov  eax, -1
+    jmp  .done
+.nbio:
+    mov  edi, ebx
+    mov  esi, 3                         ; F_GETFL
+    CCALL fcntl
+    test eax, eax
+    js   .done
+    mov  edx, eax
+    and  edx, ~O_NONBLOCK
+    cmp  dword [r12], 0
+    je   .set
+    or   edx, O_NONBLOCK
+.set:
+    mov  edi, ebx
+    mov  esi, 4                         ; F_SETFL
+    CCALL fcntl
+    test eax, eax
+    js   .done
+    xor  eax, eax
+    jmp  .done
+.nread:
+    mov  edi, ebx
+    mov  esi, 0x541B
+    lea  rdx, LOC(0)
+    CCALL ioctl
+    test eax, eax
+    js   .done
+    mov  eax, LOC(0)
+    mov  [r12], eax
+    xor  eax, eax
+.done:
+ENDPX
+
+%endif
