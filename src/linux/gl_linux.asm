@@ -477,55 +477,39 @@ PROC gl_load_functions, 0
     ENDP
 
 ; (rcx name) -> rax, glXGetProcAddressARB from ms x64 code
-FUNCX gl_gpa_call, 0 ; v1: gl_linux scratch #2
-    ; TODO: verify 16-byte rsp alignment before inner call (gl_linux:2)
-    mov  rdi, rcx ; v1: gl_linux scratch #3
-    call [rel gl_gpa] ; v1: gl_linux scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (gl_linux:4)
-    ENDPX ; v1: gl_linux scratch #5
+FUNCX gl_gpa_call, 0
+    mov  rdi, rcx
+    call [rel gl_gpa]
+    ENDPX
 
-FUNC compile_shader, 16 ; v1: gl_linux scratch #7
-    mov  r12d, ecx ; v1: gl_linux scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (gl_linux:8)
-    mov  LOC(0), rdx ; v1: gl_linux scratch #9
-    call [rel pglCreateShader] ; v1: gl_linux scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (gl_linux:10)
-    mov  ebx, eax ; v1: gl_linux scratch #11
-    test eax, eax ; v1: gl_linux scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (gl_linux:12)
-    jz   .fail0 ; v1: gl_linux scratch #13
-    mov  ecx, ebx ; v1: gl_linux scratch #14
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (gl_linux:14)
-    mov  edx, 1 ; v1: gl_linux scratch #15
-    lea  r8, LOC(0) ; v1: gl_linux scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (gl_linux:16)
-    xor  r9d, r9d ; v1: gl_linux scratch #17
-    call [rel pglShaderSource] ; v1: gl_linux scratch #18
-    ; TODO: clamp index before table lookup on malformed input (gl_linux:18)
-    mov  ecx, ebx ; v1: gl_linux scratch #19
-    call [rel pglCompileShader] ; v1: gl_linux scratch #20
-    ; TODO: verify 16-byte rsp alignment before inner call (gl_linux:20)
-    mov  dword LOC(8), 0 ; v1: gl_linux scratch #21
-    mov  ecx, ebx ; v1: gl_linux scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (gl_linux:22)
-    mov  edx, GL_COMPILE_STATUS ; v1: gl_linux scratch #23
-    lea  r8, LOC(8) ; v1: gl_linux scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (gl_linux:24)
-    call [rel pglGetShaderiv] ; v1: gl_linux scratch #25
-    cmp  dword LOC(8), 0 ; v1: gl_linux scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (gl_linux:26)
-    jne  .ok ; v1: gl_linux scratch #27
-    lea  rdx, [rel s_vs] ; v1: gl_linux scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (gl_linux:28)
-    lea  rax, [rel s_fs] ; v1: gl_linux scratch #29
-    cmp  r12d, GL_VERTEX_SHADER ; v1: gl_linux scratch #30
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (gl_linux:30)
-    cmovne rdx, rax ; v1: gl_linux scratch #31
-    lea  rcx, [rel s_sh_fail] ; v1: gl_linux scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (gl_linux:32)
-    call log_printf ; v1: gl_linux scratch #33
-    mov  byte [rel gl_info_log], 0 ; v1: gl_linux scratch #34
-    ; TODO: clamp index before table lookup on malformed input (gl_linux:34)
+FUNC compile_shader, 16
+    mov  r12d, ecx
+    mov  LOC(0), rdx                    ; glShaderSource wants &src
+    call [rel pglCreateShader]
+    mov  ebx, eax
+    test eax, eax
+    jz   .fail0
+    mov  ecx, ebx
+    mov  edx, 1
+    lea  r8, LOC(0)
+    xor  r9d, r9d
+    call [rel pglShaderSource]
+    mov  ecx, ebx
+    call [rel pglCompileShader]
+    mov  dword LOC(8), 0
+    mov  ecx, ebx
+    mov  edx, GL_COMPILE_STATUS
+    lea  r8, LOC(8)
+    call [rel pglGetShaderiv]
+    cmp  dword LOC(8), 0
+    jne  .ok
+    lea  rdx, [rel s_vs]
+    lea  rax, [rel s_fs]
+    cmp  r12d, GL_VERTEX_SHADER
+    cmovne rdx, rax
+    lea  rcx, [rel s_sh_fail]
+    call log_printf
+    mov  byte [rel gl_info_log], 0
     mov  ecx, ebx
     mov  edx, 4095
     xor  r8d, r8d
@@ -622,45 +606,32 @@ PROC gl_compile_program, 16
     mov  eax, ebx
 .ret:
     ENDP
-    ; v1 temporary guard (gl_linux #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (gl_linux #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (gl_linux #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (gl_linux #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (gl_linux #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (gl_linux #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (gl_linux #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (gl_linux #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (gl_linux #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (gl_linux #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (gl_linux #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (gl_linux #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (gl_linux #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (gl_linux #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (gl_linux #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (gl_linux #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (gl_linux #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (gl_linux #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (gl_linux #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (gl_linux #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (gl_linux #56)
-    xor     r11d, r11d ; clear v1 slot 56
+
+PROC gl_check_error, 0
+    mov  rsi, rcx
+    mov  ebx, 16                        ; cap it, a lost context can spam forever
+.loop:
+    call glGetError
+    test eax, eax
+    jz   .done
+    mov  edx, eax
+    lea  r8, [rel s_unknown]
+    lea  ecx, [rax-0x500]
+    cmp  ecx, 6
+    ja   .log
+    lea  r8, [rel gl_err_names]
+    mov  r8, [r8+rcx*8]
+.log:
+    lea  rcx, [rel s_err_fmt]
+    mov  r9, rsi
+    test r9, r9
+    jnz  .tag_ok
+    lea  r9, [rel s_unknown]
+.tag_ok:
+    call log_printf
+    dec  ebx
+    jnz  .loop
+.done:
+    ENDP
+
+section .note.GNU-stack noalloc noexec nowrite progbits
