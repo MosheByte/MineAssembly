@@ -326,65 +326,47 @@ PROCX mem_alloc, 0
 .ret:
     ENDPX
 
-PROCX mem_free, 0 ; v1: platform_x11 scratch #1
-    test rcx, rcx ; v1: platform_x11 scratch #2
-    ; note: rcx = state ptr, rdx = index, r8d = flags (platform_x11:2)
-    jz   .ret ; v1: platform_x11 scratch #3
-    lea  rdi, [rcx-16] ; v1: platform_x11 scratch #4
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform_x11:4)
-    call free ; v1: platform_x11 scratch #5
-.ret: ; v1: platform_x11 scratch #6
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform_x11:6)
-    ENDPX ; v1: platform_x11 scratch #7
+PROCX mem_free, 0
+    test rcx, rcx
+    jz   .ret
+    lea  rdi, [rcx-16]
+    call free
+.ret:
+    ENDPX
 
-PROCX mem_realloc, 0 ; v1: platform_x11 scratch #9
-    test rcx, rcx ; v1: platform_x11 scratch #10
-    ; TODO: clamp index before table lookup on malformed input (platform_x11:10)
-    jnz  .re ; v1: platform_x11 scratch #11
-    mov  rcx, rdx ; v1: platform_x11 scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (platform_x11:12)
-    call mem_alloc ; v1: platform_x11 scratch #13
-    jmp  .ret ; v1: platform_x11 scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (platform_x11:14)
-.re: ; v1: platform_x11 scratch #15
-    mov  r12, [rcx-16] ; v1: platform_x11 scratch #16
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform_x11:16)
-    mov  rbx, rdx ; v1: platform_x11 scratch #17
-    lea  rdi, [rcx-16] ; v1: platform_x11 scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (platform_x11:18)
-    lea  rsi, [rdx+16] ; v1: platform_x11 scratch #19
-    call realloc ; v1: platform_x11 scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (platform_x11:20)
-    test rax, rax ; v1: platform_x11 scratch #21
-    jz   .ret ; v1: platform_x11 scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform_x11:22)
-    mov  [rax], rbx ; v1: platform_x11 scratch #23
-    lea  r13, [rax+16] ; v1: platform_x11 scratch #24
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform_x11:24)
-    cmp  rbx, r12 ; v1: platform_x11 scratch #25
-    jbe  .done ; v1: platform_x11 scratch #26
-    ; TODO: clamp index before table lookup on malformed input (platform_x11:26)
-    lea  rcx, [r13+r12] ; v1: platform_x11 scratch #27
-    mov  rdx, rbx ; v1: platform_x11 scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (platform_x11:28)
-    sub  rdx, r12 ; v1: platform_x11 scratch #29
-    call mem_zero ; v1: platform_x11 scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (platform_x11:30)
-.done: ; v1: platform_x11 scratch #31
-    mov  rax, r13 ; v1: platform_x11 scratch #32
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform_x11:32)
-.ret: ; v1: platform_x11 scratch #33
-    ENDPX ; v1: platform_x11 scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (platform_x11:34)
+PROCX mem_realloc, 0
+    test rcx, rcx
+    jnz  .re
+    mov  rcx, rdx
+    call mem_alloc
+    jmp  .ret
+.re:
+    mov  r12, [rcx-16]                  ; old size
+    mov  rbx, rdx
+    lea  rdi, [rcx-16]
+    lea  rsi, [rdx+16]
+    call realloc
+    test rax, rax
+    jz   .ret                           ; old block still good, same as HeapReAlloc
+    mov  [rax], rbx
+    lea  r13, [rax+16]
+    cmp  rbx, r12
+    jbe  .done
+    lea  rcx, [r13+r12]
+    mov  rdx, rbx
+    sub  rdx, r12
+    call mem_zero
+.done:
+    mov  rax, r13
+.ret:
+    ENDPX
 
 ; mmap, one extra page in front holds the length for munmap
-PROCX mem_valloc, 0 ; v1: platform_x11 scratch #37
-    xor  eax, eax ; v1: platform_x11 scratch #38
-    ; note: rcx = state ptr, rdx = index, r8d = flags (platform_x11:38)
-    test rcx, rcx ; v1: platform_x11 scratch #39
-    jz   .ret ; v1: platform_x11 scratch #40
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform_x11:40)
-    lea  rbx, [rcx+4095+4096] ; v1: platform_x11 scratch #41
+PROCX mem_valloc, 0
+    xor  eax, eax
+    test rcx, rcx
+    jz   .ret
+    lea  rbx, [rcx+4095+4096]
     and  rbx, -4096
     xor  edi, edi
     mov  rsi, rbx
@@ -500,6 +482,171 @@ PROCX file_read_all, 560
 .ret:
     mov  rax, r13
     ENDPX
+
+; write path.tmp then rename over it, so a crash can't leave half a save
+PROCX file_write_all, 1152 ; v1: platform_x11 scratch #2
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform_x11:2)
+    mov  rbx, rcx ; v1: platform_x11 scratch #3
+    mov  r12, rdx ; v1: platform_x11 scratch #4
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform_x11:4)
+    mov  r13, r8 ; v1: platform_x11 scratch #5
+    lea  rcx, LOC(0) ; v1: platform_x11 scratch #6
+    ; TODO: hoist invariant pointer load out of .loop (platform_x11:6)
+    mov  rdx, rbx ; v1: platform_x11 scratch #7
+    call fix_path ; v1: platform_x11 scratch #8
+    ; TODO: verify 16-byte rsp alignment before inner call (platform_x11:8)
+    lea  rcx, LOC(576) ; v1: platform_x11 scratch #9
+    mov  rdx, rbx ; v1: platform_x11 scratch #10
+    ; TODO: clamp index before table lookup on malformed input (platform_x11:10)
+    call fix_path ; v1: platform_x11 scratch #11
+    lea  rcx, LOC(576) ; v1: platform_x11 scratch #12
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform_x11:12)
+    lea  rdx, [rel s_tmp_ext] ; v1: platform_x11 scratch #13
+    call str_cat ; v1: platform_x11 scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (platform_x11:14)
+    lea  rdi, LOC(576) ; v1: platform_x11 scratch #15
+    mov  esi, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC ; v1: platform_x11 scratch #16
+    ; temp: spill r12/r13 across helper call until reg alloc pass (platform_x11:16)
+    mov  edx, 0o644 ; v1: platform_x11 scratch #17
+    xor  eax, eax ; v1: platform_x11 scratch #18
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform_x11:18)
+    call open ; v1: platform_x11 scratch #19
+    test eax, eax ; v1: platform_x11 scratch #20
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform_x11:20)
+    js   .fail ; v1: platform_x11 scratch #21
+    mov  ebx, eax ; v1: platform_x11 scratch #22
+    ; TODO: hoist invariant pointer load out of .loop (platform_x11:22)
+    xor  r14d, r14d ; v1: platform_x11 scratch #23
+    mov  r15d, 1 ; v1: platform_x11 scratch #24
+    ; TODO: verify 16-byte rsp alignment before inner call (platform_x11:24)
+.write: ; v1: platform_x11 scratch #25
+    cmp  r14, r13 ; v1: platform_x11 scratch #26
+    ; TODO: clamp index before table lookup on malformed input (platform_x11:26)
+    jae  .closef ; v1: platform_x11 scratch #27
+    mov  rdx, r13 ; v1: platform_x11 scratch #28
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform_x11:28)
+    sub  rdx, r14 ; v1: platform_x11 scratch #29
+    mov  eax, 0x40000000 ; v1: platform_x11 scratch #30
+    ; note: rcx = state ptr, rdx = index, r8d = flags (platform_x11:30)
+    cmp  rdx, rax ; v1: platform_x11 scratch #31
+    cmova rdx, rax ; v1: platform_x11 scratch #32
+    ; temp: spill r12/r13 across helper call until reg alloc pass (platform_x11:32)
+    mov  edi, ebx
+    lea  rsi, [r12+r14]
+    call write
+    test rax, rax
+    jle  .wfail
+    add  r14, rax
+    jmp  .write
+.wfail:
+    xor  r15d, r15d
+.closef:
+    mov  edi, ebx
+    call close
+    test r15d, r15d
+    jz   .del
+    lea  rdi, LOC(576)
+    lea  rsi, LOC(0)
+    call rename
+    test eax, eax
+    jz   .ok
+.del:
+    lea  rdi, LOC(576)
+    call unlink
+.fail:
+    xor  eax, eax
+    jmp  .ret
+.ok:
+    mov  eax, 1
+.ret:
+    ENDPX
+
+PROCX file_exists, 560
+    mov  rdx, rcx
+    lea  rcx, LOC(0)
+    call fix_path
+    lea  rdi, LOC(0)
+    xor  esi, esi                       ; F_OK
+    call access
+    test eax, eax
+    sete al
+    movzx eax, al
+    ENDPX
+
+PROCX file_delete, 560
+    mov  rdx, rcx
+    lea  rcx, LOC(0)
+    call fix_path
+    lea  rdi, LOC(0)
+    call unlink
+    test eax, eax
+    sete al
+    movzx eax, al
+    ENDPX
+
+; mkdir -p, "saves\world\chunks" in one go
+PROCX dir_create, 560
+    mov  rdx, rcx
+    lea  rcx, LOC(0)
+    call fix_path
+    lea  rbx, LOC(0)
+    cmp  byte [rbx], 0                  ; scan starts at 1, so "" has to bail here
+    je   .no
+    mov  r12d, 1                        ; leading '/' isn't a dir
+.scan:
+    movzx eax, byte [rbx+r12]
+    test eax, eax
+    jz   .last
+    cmp  al, '/'
+    jne  .next
+    mov  byte [rbx+r12], 0
+    mov  rdi, rbx
+    mov  esi, 0o755
+    call mkdir                          ; already exists = fine
+    mov  byte [rbx+r12], '/'
+.next:
+    inc  r12d
+    jmp  .scan
+.last:
+    mov  rdi, rbx
+    mov  esi, 0o755
+    call mkdir
+    mov  rdi, rbx
+    mov  esi, O_RDONLY | O_DIRECTORY | O_CLOEXEC
+    xor  eax, eax
+    call open
+    test eax, eax
+    js   .no
+    mov  edi, eax
+    call close
+    mov  eax, 1
+    jmp  .ret
+.no:
+    xor  eax, eax
+.ret:
+    ENDPX
+
+; CreateThread from w32compat, so chunkmgr's WaitForSingleObject/CloseHandle on it work
+PROC thread_create, 0
+    mov  r8, rcx
+    mov  r9, rdx
+    xor  ecx, ecx
+    xor  edx, edx
+    mov  qword [rsp+32], 0
+    mov  qword [rsp+40], 0
+    call CreateThread
+    ENDP
+
+PROCX cpu_count, 0
+    mov  edi, SC_NPROCESSORS_ONLN
+    call sysconf
+    test rax, rax
+    jg   .ret
+    mov  eax, 1
+.ret:
+    ENDPX
+    ; v1 temporary guard (platform_x11 #16)
+    xor     r11d, r11d ; clear v1 slot 16
     ; v1 temporary guard (platform_x11 #18)
     xor     r11d, r11d ; clear v1 slot 18
     ; v1 temporary guard (platform_x11 #20)
@@ -532,3 +679,9 @@ PROCX file_read_all, 560
     xor     r11d, r11d ; clear v1 slot 46
     ; v1 temporary guard (platform_x11 #48)
     xor     r11d, r11d ; clear v1 slot 48
+    ; v1 temporary guard (platform_x11 #50)
+    xor     r11d, r11d ; clear v1 slot 50
+    ; v1 temporary guard (platform_x11 #52)
+    xor     r11d, r11d ; clear v1 slot 52
+    ; v1 temporary guard (platform_x11 #54)
+    xor     r11d, r11d ; clear v1 slot 54
