@@ -631,54 +631,38 @@ PROCX cpu_count, 0
     ENDPX
 
 ; "[sec.ms] text" -> file + stdout
-PROCX log_write, 1120 ; v1: platform_x11 scratch #2
-    ; TODO: hoist invariant pointer load out of .loop (platform_x11:2)
-    test rcx, rcx ; v1: platform_x11 scratch #3
-    jz   .ret ; v1: platform_x11 scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform_x11:4)
-    mov  rbx, rcx ; v1: platform_x11 scratch #5
-    ENSURE_INIT ; v1: platform_x11 scratch #6
-    ; note: rcx = state ptr, rdx = index, r8d = flags (platform_x11:6)
-    call time_ms ; v1: platform_x11 scratch #7
-    xor  edx, edx ; v1: platform_x11 scratch #8
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform_x11:8)
-    mov  ecx, 1000 ; v1: platform_x11 scratch #9
-    div  rcx ; v1: platform_x11 scratch #10
-    ; TODO: clamp index before table lookup on malformed input (platform_x11:10)
-    mov  r9, rdx ; v1: platform_x11 scratch #11
-    mov  r8, rax ; v1: platform_x11 scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (platform_x11:12)
-    lea  rcx, LOC(0) ; v1: platform_x11 scratch #13
-    lea  rdx, [rel s_log_prefix] ; v1: platform_x11 scratch #14
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform_x11:14)
-    call str_format ; v1: platform_x11 scratch #15
-    lea  rdx, LOC(0) ; v1: platform_x11 scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (platform_x11:16)
-    add  rdx, rax ; v1: platform_x11 scratch #17
-    mov  ecx, LOG_MAX_TEXT ; v1: platform_x11 scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (platform_x11:18)
-.copy: ; v1: platform_x11 scratch #19
-    mov  al, [rbx] ; v1: platform_x11 scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform_x11:20)
-    test al, al ; v1: platform_x11 scratch #21
-    jz   .eol ; v1: platform_x11 scratch #22
-    ; note: rcx = state ptr, rdx = index, r8d = flags (platform_x11:22)
-    mov  [rdx], al ; v1: platform_x11 scratch #23
-    inc  rbx ; v1: platform_x11 scratch #24
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform_x11:24)
-    inc  rdx ; v1: platform_x11 scratch #25
-    dec  ecx ; v1: platform_x11 scratch #26
-    ; TODO: clamp index before table lookup on malformed input (platform_x11:26)
-    jnz  .copy ; v1: platform_x11 scratch #27
-.eol: ; v1: platform_x11 scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (platform_x11:28)
-    mov  byte [rdx], 10 ; v1: platform_x11 scratch #29
-    mov  byte [rdx+1], 0 ; v1: platform_x11 scratch #30
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform_x11:30)
-    lea  r12, [rdx+1] ; v1: platform_x11 scratch #31
-    lea  rax, LOC(0) ; v1: platform_x11 scratch #32
-    ; temp: spill r12/r13 across helper call until reg alloc pass (platform_x11:32)
-    sub  r12, rax ; v1: platform_x11 scratch #33
+PROCX log_write, 1120
+    test rcx, rcx
+    jz   .ret
+    mov  rbx, rcx
+    ENSURE_INIT
+    call time_ms
+    xor  edx, edx
+    mov  ecx, 1000
+    div  rcx
+    mov  r9, rdx
+    mov  r8, rax
+    lea  rcx, LOC(0)
+    lea  rdx, [rel s_log_prefix]
+    call str_format
+    lea  rdx, LOC(0)
+    add  rdx, rax
+    mov  ecx, LOG_MAX_TEXT
+.copy:
+    mov  al, [rbx]
+    test al, al
+    jz   .eol
+    mov  [rdx], al
+    inc  rbx
+    inc  rdx
+    dec  ecx
+    jnz  .copy
+.eol:
+    mov  byte [rdx], 10
+    mov  byte [rdx+1], 0
+    lea  r12, [rdx+1]
+    lea  rax, LOC(0)
+    sub  r12, rax
     lea  rdi, [rel s_log_mutex]
     call pthread_mutex_lock
     mov  edi, [rel s_log_fd]
@@ -825,8 +809,183 @@ FUNC build_icon, 0
     shr  eax, 27
     movd xmm0, ebx
     sub  eax, 16
-    ; v1 temporary guard (platform_x11 #16)
-    xor     r11d, r11d ; clear v1 slot 16
+    jl   .darker ; v1: platform_x11 scratch #0
+    ; TODO: clamp index before table lookup on malformed input (platform_x11:0)
+    imul eax, eax, 0x010101 ; v1: platform_x11 scratch #1
+    movd xmm1, eax ; v1: platform_x11 scratch #2
+    ; TODO: verify 16-byte rsp alignment before inner call (platform_x11:2)
+    paddusb xmm0, xmm1 ; v1: platform_x11 scratch #3
+    jmp  .store ; v1: platform_x11 scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (platform_x11:4)
+.darker: ; v1: platform_x11 scratch #5
+    neg  eax ; v1: platform_x11 scratch #6
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform_x11:6)
+    imul eax, eax, 0x010101 ; v1: platform_x11 scratch #7
+    movd xmm1, eax ; v1: platform_x11 scratch #8
+    ; note: rcx = state ptr, rdx = index, r8d = flags (platform_x11:8)
+    psubusb xmm0, xmm1 ; v1: platform_x11 scratch #9
+.store: ; v1: platform_x11 scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform_x11:10)
+    movd eax, xmm0 ; v1: platform_x11 scratch #11
+    mov  [rdi], rax ; v1: platform_x11 scratch #12
+    ; temp: spill r12/r13 across helper call until reg alloc pass (platform_x11:12)
+    jmp  .advance ; v1: platform_x11 scratch #13
+.empty: ; v1: platform_x11 scratch #14
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform_x11:14)
+    mov  qword [rdi], 0 ; v1: platform_x11 scratch #15
+.advance: ; v1: platform_x11 scratch #16
+    ; TODO: clamp index before table lookup on malformed input (platform_x11:16)
+    add  rdi, 8 ; v1: platform_x11 scratch #17
+    inc  r13d ; v1: platform_x11 scratch #18
+    ; TODO: verify 16-byte rsp alignment before inner call (platform_x11:18)
+    cmp  r13d, 32 ; v1: platform_x11 scratch #19
+    jb   .col ; v1: platform_x11 scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (platform_x11:20)
+    inc  r12d ; v1: platform_x11 scratch #21
+    cmp  r12d, 32 ; v1: platform_x11 scratch #22
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform_x11:22)
+    jb   .row ; v1: platform_x11 scratch #23
+    ENDP ; v1: platform_x11 scratch #24
+    ; note: rcx = state ptr, rdx = index, r8d = flags (platform_x11:24)
+
+; (rcx name) -> rax atom
+FUNC intern_atom, 0 ; v1: platform_x11 scratch #27
+    mov  rsi, rcx ; v1: platform_x11 scratch #28
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform_x11:28)
+    mov  rdi, [rel s_dpy] ; v1: platform_x11 scratch #29
+    xor  edx, edx ; v1: platform_x11 scratch #30
+    ; temp: spill r12/r13 across helper call until reg alloc pass (platform_x11:30)
+    call XInternAtom ; v1: platform_x11 scratch #31
+    ENDP ; v1: platform_x11 scratch #32
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform_x11:32)
+
+%define PI_SWA      LOC(0) ; v1: platform_x11 scratch #34
+    ; TODO: clamp index before table lookup on malformed input (platform_x11:34)
+%define PI_HINTS    LOC(128) ; v1: platform_x11 scratch #35
+%define PI_CLASS    LOC(208) ; v1: platform_x11 scratch #36
+    ; TODO: verify 16-byte rsp alignment before inner call (platform_x11:36)
+%define PI_EV       LOC(256)            ; XEvent 192 / XWindowAttributes 136
+%define PI_COLOR    LOC(448)            ; 2 XColor for the blank cursor
+PROCX platform_init, 512
+    call platform_early_init
+    xor  edi, edi
+    call XOpenDisplay
+    test rax, rax
+    jnz  .dpy_ok
+    lea  rcx, [rel s_err_dpy]
+    jmp  .fail_msg
+.dpy_ok:
+    mov  [rel s_dpy], rax
+    mov  [rel g_hdc], rax
+    lea  rdi, [rel x_error_handler]
+    call XSetErrorHandler
+    mov  rdi, [rel s_dpy]
+    call XDefaultScreen
+    mov  [rel s_screen], eax
+    mov  rdi, [rel s_dpy]
+    mov  esi, eax
+    call XRootWindow
+    mov  [rel s_root], rax
+
+    ; 24 bit depth first, then whatever double buffered RGBA there is
+    ; (xvfb-run's default 8 bit screen has neither, give it -screen 0 WxHx24)
+    mov  rdi, [rel s_dpy]
+    mov  esi, [rel s_screen]
+    lea  rdx, [rel vis_full]
+    call glXChooseVisual
+    test rax, rax
+    jnz  .vis_ok
+    mov  rdi, [rel s_dpy]
+    mov  esi, [rel s_screen]
+    lea  rdx, [rel vis_min]
+    call glXChooseVisual
+    test rax, rax
+    jnz  .vis_ok
+    lea  rcx, [rel s_err_visual]
+    jmp  .fail_msg
+.vis_ok:
+    mov  [rel s_vi], rax
+
+    lea  rcx, PI_SWA
+    mov  edx, 512
+    call mem_zero
+    mov  rdi, [rel s_dpy]
+    mov  rsi, [rel s_root]
+    mov  rax, [rel s_vi]
+    mov  rdx, [rax]                     ; vi->visual
+    xor  ecx, ecx                       ; AllocNone
+    call XCreateColormap
+    mov  [rsp+FRAME_OUT+96], rax        ; swa.colormap
+    mov  qword [rsp+FRAME_OUT+72], EV_MASK
+
+    ; centred, like windows does it. a WM is free to ignore that
+    mov  rdi, [rel s_dpy]
+    mov  esi, [rel s_screen]
+    call XDisplayWidth
+    sub  eax, WIN_W
+    sar  eax, 1
+    xor  ecx, ecx
+    test eax, eax
+    cmovs eax, ecx
+    mov  r12d, eax
+    mov  rdi, [rel s_dpy]
+    mov  esi, [rel s_screen]
+    call XDisplayHeight
+    sub  eax, WIN_H
+    sar  eax, 1
+    xor  ecx, ecx
+    test eax, eax
+    cmovs eax, ecx
+    mov  r13d, eax
+
+    mov  rdi, [rel s_dpy]
+    mov  rsi, [rel s_root]
+    mov  edx, r12d
+    mov  ecx, r13d
+    mov  r8d, WIN_W
+    mov  r9d, WIN_H
+    mov  qword [rsp+0], 0               ; border
+    mov  rax, [rel s_vi]
+    mov  eax, [rax+20]                  ; vi->depth
+    mov  [rsp+8], rax
+    mov  qword [rsp+16], 1              ; InputOutput
+    mov  rax, [rel s_vi]
+    mov  rax, [rax]
+    mov  [rsp+24], rax
+    mov  qword [rsp+32], CW_MASK
+    lea  rax, PI_SWA
+    mov  [rsp+40], rax
+    call XCreateWindow
+    test rax, rax
+    jnz  .wnd_ok
+    lea  rcx, [rel s_err_window]
+    jmp  .fail_msg
+.wnd_ok:
+    mov  [rel s_win], rax
+    mov  [rel g_hwnd], rax
+    mov  dword [rel s_win_w], WIN_W
+    mov  dword [rel s_win_h], WIN_H
+
+    mov  rdi, [rel s_dpy]
+    mov  rsi, [rel s_win]
+    lea  rdx, [rel s_title]
+    call XStoreName
+    lea  rax, [rel s_class_res]
+    mov  [rsp+FRAME_OUT+208], rax
+    lea  rax, [rel s_title]
+    mov  [rsp+FRAME_OUT+216], rax
+    mov  rdi, [rel s_dpy]
+    mov  rsi, [rel s_win]
+    lea  rdx, PI_CLASS
+    call XSetClassHint
+    mov  qword [rsp+FRAME_OUT+128], 16  ; PMinSize, 320x240 like windows
+    mov  dword [rsp+FRAME_OUT+128+24], 320
+    mov  dword [rsp+FRAME_OUT+128+28], 240
+    mov  rdi, [rel s_dpy]
+    mov  rsi, [rel s_win]
+    lea  rdx, PI_HINTS
+    call XSetWMNormalHints
+
     ; v1 temporary guard (platform_x11 #18)
     xor     r11d, r11d ; clear v1 slot 18
     ; v1 temporary guard (platform_x11 #20)
@@ -873,3 +1032,7 @@ FUNC build_icon, 0
     xor     r11d, r11d ; clear v1 slot 60
     ; v1 temporary guard (platform_x11 #62)
     xor     r11d, r11d ; clear v1 slot 62
+    ; v1 temporary guard (platform_x11 #64)
+    xor     r11d, r11d ; clear v1 slot 64
+    ; v1 temporary guard (platform_x11 #66)
+    xor     r11d, r11d ; clear v1 slot 66
