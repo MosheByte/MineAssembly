@@ -1263,54 +1263,38 @@ PROCX platform_set_mouse_capture, 0
     ENDPX
 
 ; _NET_WM_STATE_FULLSCREEN via the WM. without a WM (xvfb) nothing happens
-PROCX platform_toggle_fullscreen, 192 ; v1: platform_x11 scratch #2
-    ; TODO: verify 16-byte rsp alignment before inner call (platform_x11:2)
-    cmp  qword [rel s_win], 0 ; v1: platform_x11 scratch #3
-    je   .ret ; v1: platform_x11 scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (platform_x11:4)
-    xor  ebx, ebx ; v1: platform_x11 scratch #5
-    cmp  dword [rel s_fullscreen], 0 ; v1: platform_x11 scratch #6
-    ; TODO: clamp index before table lookup on malformed input (platform_x11:6)
-    sete bl ; v1: platform_x11 scratch #7
-    lea  rcx, LOC(0) ; v1: platform_x11 scratch #8
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform_x11:8)
-    mov  edx, 192 ; v1: platform_x11 scratch #9
-    call mem_zero ; v1: platform_x11 scratch #10
-    ; temp: spill r12/r13 across helper call until reg alloc pass (platform_x11:10)
-    mov  dword [rsp+FRAME_OUT+0], ClientMessage ; v1: platform_x11 scratch #11
-    mov  dword [rsp+FRAME_OUT+16], 1 ; v1: platform_x11 scratch #12
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform_x11:12)
-    mov  rax, [rel s_dpy] ; v1: platform_x11 scratch #13
-    mov  [rsp+FRAME_OUT+24], rax ; v1: platform_x11 scratch #14
-    ; TODO: hoist invariant pointer load out of .loop (platform_x11:14)
-    mov  rax, [rel s_win] ; v1: platform_x11 scratch #15
-    mov  [rsp+FRAME_OUT+32], rax ; v1: platform_x11 scratch #16
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform_x11:16)
-    mov  rax, [rel s_net_state] ; v1: platform_x11 scratch #17
-    mov  [rsp+FRAME_OUT+40], rax ; v1: platform_x11 scratch #18
-    ; TODO: verify 16-byte rsp alignment before inner call (platform_x11:18)
-    mov  dword [rsp+FRAME_OUT+48], 32 ; v1: platform_x11 scratch #19
-    mov  [rsp+FRAME_OUT+56], rbx ; v1: platform_x11 scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (platform_x11:20)
-    mov  rax, [rel s_net_fs] ; v1: platform_x11 scratch #21
-    mov  [rsp+FRAME_OUT+64], rax ; v1: platform_x11 scratch #22
-    ; TODO: clamp index before table lookup on malformed input (platform_x11:22)
-    mov  qword [rsp+FRAME_OUT+80], 1 ; v1: platform_x11 scratch #23
-    mov  rdi, [rel s_dpy] ; v1: platform_x11 scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform_x11:24)
-    mov  rsi, [rel s_root] ; v1: platform_x11 scratch #25
-    xor  edx, edx ; v1: platform_x11 scratch #26
-    ; temp: spill r12/r13 across helper call until reg alloc pass (platform_x11:26)
-    mov  ecx, SUBSTRUCTURE_MASKS ; v1: platform_x11 scratch #27
-    lea  r8, LOC(0) ; v1: platform_x11 scratch #28
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform_x11:28)
-    call XSendEvent ; v1: platform_x11 scratch #29
-    mov  rdi, [rel s_dpy] ; v1: platform_x11 scratch #30
-    ; TODO: hoist invariant pointer load out of .loop (platform_x11:30)
-    call XFlush ; v1: platform_x11 scratch #31
-    mov  [rel s_fullscreen], ebx ; v1: platform_x11 scratch #32
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform_x11:32)
-    test ebx, ebx ; v1: platform_x11 scratch #33
+PROCX platform_toggle_fullscreen, 192
+    cmp  qword [rel s_win], 0
+    je   .ret
+    xor  ebx, ebx
+    cmp  dword [rel s_fullscreen], 0
+    sete bl
+    lea  rcx, LOC(0)
+    mov  edx, 192
+    call mem_zero
+    mov  dword [rsp+FRAME_OUT+0], ClientMessage
+    mov  dword [rsp+FRAME_OUT+16], 1    ; send_event
+    mov  rax, [rel s_dpy]
+    mov  [rsp+FRAME_OUT+24], rax
+    mov  rax, [rel s_win]
+    mov  [rsp+FRAME_OUT+32], rax
+    mov  rax, [rel s_net_state]
+    mov  [rsp+FRAME_OUT+40], rax
+    mov  dword [rsp+FRAME_OUT+48], 32
+    mov  [rsp+FRAME_OUT+56], rbx        ; 1 add, 0 remove
+    mov  rax, [rel s_net_fs]
+    mov  [rsp+FRAME_OUT+64], rax
+    mov  qword [rsp+FRAME_OUT+80], 1    ; source: normal app
+    mov  rdi, [rel s_dpy]
+    mov  rsi, [rel s_root]
+    xor  edx, edx
+    mov  ecx, SUBSTRUCTURE_MASKS
+    lea  r8, LOC(0)
+    call XSendEvent
+    mov  rdi, [rel s_dpy]
+    call XFlush
+    mov  [rel s_fullscreen], ebx
+    test ebx, ebx
     jz   .off
     mov  rdi, [rel s_dpy]
     mov  esi, [rel s_screen]
@@ -1430,55 +1414,225 @@ PROCX platform_pump, 448
     je   .client
     jmp  .loop
 
-    ; v1 temporary guard (platform_x11 #16)
-    xor     r11d, r11d ; clear v1 slot 16
-    ; v1 temporary guard (platform_x11 #18)
-    xor     r11d, r11d ; clear v1 slot 18
-    ; v1 temporary guard (platform_x11 #20)
-    xor     r11d, r11d ; clear v1 slot 20
-    ; v1 temporary guard (platform_x11 #22)
-    xor     r11d, r11d ; clear v1 slot 22
-    ; v1 temporary guard (platform_x11 #24)
-    xor     r11d, r11d ; clear v1 slot 24
-    ; v1 temporary guard (platform_x11 #26)
-    xor     r11d, r11d ; clear v1 slot 26
-    ; v1 temporary guard (platform_x11 #28)
-    xor     r11d, r11d ; clear v1 slot 28
-    ; v1 temporary guard (platform_x11 #30)
-    xor     r11d, r11d ; clear v1 slot 30
-    ; v1 temporary guard (platform_x11 #32)
-    xor     r11d, r11d ; clear v1 slot 32
-    ; v1 temporary guard (platform_x11 #34)
-    xor     r11d, r11d ; clear v1 slot 34
-    ; v1 temporary guard (platform_x11 #36)
-    xor     r11d, r11d ; clear v1 slot 36
-    ; v1 temporary guard (platform_x11 #38)
-    xor     r11d, r11d ; clear v1 slot 38
-    ; v1 temporary guard (platform_x11 #40)
-    xor     r11d, r11d ; clear v1 slot 40
-    ; v1 temporary guard (platform_x11 #42)
-    xor     r11d, r11d ; clear v1 slot 42
-    ; v1 temporary guard (platform_x11 #44)
-    xor     r11d, r11d ; clear v1 slot 44
-    ; v1 temporary guard (platform_x11 #46)
-    xor     r11d, r11d ; clear v1 slot 46
-    ; v1 temporary guard (platform_x11 #48)
-    xor     r11d, r11d ; clear v1 slot 48
-    ; v1 temporary guard (platform_x11 #50)
-    xor     r11d, r11d ; clear v1 slot 50
-    ; v1 temporary guard (platform_x11 #52)
-    xor     r11d, r11d ; clear v1 slot 52
-    ; v1 temporary guard (platform_x11 #54)
-    xor     r11d, r11d ; clear v1 slot 54
-    ; v1 temporary guard (platform_x11 #56)
-    xor     r11d, r11d ; clear v1 slot 56
-    ; v1 temporary guard (platform_x11 #58)
-    xor     r11d, r11d ; clear v1 slot 58
-    ; v1 temporary guard (platform_x11 #60)
-    xor     r11d, r11d ; clear v1 slot 60
-    ; v1 temporary guard (platform_x11 #62)
-    xor     r11d, r11d ; clear v1 slot 62
-    ; v1 temporary guard (platform_x11 #64)
-    xor     r11d, r11d ; clear v1 slot 64
-    ; v1 temporary guard (platform_x11 #66)
-    xor     r11d, r11d ; clear v1 slot 66
+.keyup: ; v1: platform_x11 scratch #0
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform_x11:0)
+    ; no detectable autorepeat? then a repeat is release+press with the same time, drop the release
+    mov  rdi, [rel s_dpy] ; v1: platform_x11 scratch #2
+    ; TODO: hoist invariant pointer load out of .loop (platform_x11:2)
+    call XPending ; v1: platform_x11 scratch #3
+    test eax, eax ; v1: platform_x11 scratch #4
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform_x11:4)
+    jz   .keyup_real ; v1: platform_x11 scratch #5
+    mov  rdi, [rel s_dpy] ; v1: platform_x11 scratch #6
+    ; temp: spill r12/r13 across helper call until reg alloc pass (platform_x11:6)
+    lea  rsi, PP_NEXT ; v1: platform_x11 scratch #7
+    call XPeekEvent ; v1: platform_x11 scratch #8
+    ; TODO: clamp index before table lookup on malformed input (platform_x11:8)
+    cmp  NXD(EV_TYPE), KeyPress ; v1: platform_x11 scratch #9
+    jne  .keyup_real ; v1: platform_x11 scratch #10
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform_x11:10)
+    mov  eax, NXD(EV_CODE) ; v1: platform_x11 scratch #11
+    cmp  eax, EVD(EV_CODE) ; v1: platform_x11 scratch #12
+    ; TODO: verify 16-byte rsp alignment before inner call (platform_x11:12)
+    jne  .keyup_real ; v1: platform_x11 scratch #13
+    mov  rax, [rsp+FRAME_OUT+192+EV_TIME] ; v1: platform_x11 scratch #14
+    ; note: rcx = state ptr, rdx = index, r8d = flags (platform_x11:14)
+    cmp  rax, [rsp+FRAME_OUT+EV_TIME] ; v1: platform_x11 scratch #15
+    je   .loop ; v1: platform_x11 scratch #16
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform_x11:16)
+.keyup_real: ; v1: platform_x11 scratch #17
+    xor  r13d, r13d ; v1: platform_x11 scratch #18
+    ; TODO: hoist invariant pointer load out of .loop (platform_x11:18)
+    jmp  .key ; v1: platform_x11 scratch #19
+.keydown: ; v1: platform_x11 scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform_x11:20)
+    mov  r13d, 1 ; v1: platform_x11 scratch #21
+.key: ; v1: platform_x11 scratch #22
+    ; temp: spill r12/r13 across helper call until reg alloc pass (platform_x11:22)
+    lea  rdi, PP_EV ; v1: platform_x11 scratch #23
+    xor  esi, esi ; v1: platform_x11 scratch #24
+    ; TODO: clamp index before table lookup on malformed input (platform_x11:24)
+    call XLookupKeysym ; v1: platform_x11 scratch #25
+    mov  ecx, eax ; v1: platform_x11 scratch #26
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform_x11:26)
+    call keysym_to_vk ; v1: platform_x11 scratch #27
+    mov  r14d, eax ; v1: platform_x11 scratch #28
+    ; TODO: verify 16-byte rsp alignment before inner call (platform_x11:28)
+    cmp  r14d, VK_RETURN ; v1: platform_x11 scratch #29
+    jne  .not_altenter ; v1: platform_x11 scratch #30
+    ; note: rcx = state ptr, rdx = index, r8d = flags (platform_x11:30)
+    test r13d, r13d ; v1: platform_x11 scratch #31
+    jz   .ret_up ; v1: platform_x11 scratch #32
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform_x11:32)
+    test EVD(EV_STATE), Mod1Mask ; v1: platform_x11 scratch #33
+    jz   .not_altenter ; v1: platform_x11 scratch #34
+    ; TODO: hoist invariant pointer load out of .loop (platform_x11:34)
+    cmp  dword [rel s_altenter], 0 ; v1: platform_x11 scratch #35
+    jne  .loop ; v1: platform_x11 scratch #36
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform_x11:36)
+    mov  dword [rel s_altenter], 1
+    call platform_toggle_fullscreen
+    jmp  .loop
+.ret_up:
+    mov  dword [rel s_altenter], 0
+.not_altenter:
+    test r14d, r14d
+    jz   .chars
+    lea  eax, [r14-0xA0]                ; VK_L/R shift/ctrl/alt -> also the generic one
+    cmp  eax, 5
+    ja   .k_plain
+    mov  ecx, r14d
+    mov  edx, r13d
+    call set_key
+    mov  r15d, r14d
+    and  r15d, ~1
+    lea  rax, [rel g_keys]
+    movzx edx, byte [rax+r15]
+    or   dl, [rax+r15+1]                ; generic is down if either is
+    sub  r15d, 0xA0
+    shr  r15d, 1
+    lea  r14d, [r15+VK_SHIFT]           ; 0x10 shift 0x11 ctrl 0x12 alt
+    mov  ecx, r14d
+    call set_key
+    jmp  .k_notify
+.k_plain:
+    mov  ecx, r14d
+    mov  edx, r13d
+    call set_key
+.k_notify:
+    mov  ecx, r14d
+    mov  edx, r13d
+    call game_on_key                    ; gets every repeat, text boxes need that
+.chars:
+    test r13d, r13d
+    jz   .loop
+    test EVD(EV_STATE), Mod1Mask        ; alt+letter is WM_SYSCHAR on windows, dropped
+    jnz  .loop
+    lea  rdi, PP_EV
+    lea  rsi, PP_CHARS
+    mov  edx, 16
+    xor  ecx, ecx
+    xor  r8d, r8d
+    call XLookupString
+    test eax, eax
+    jle  .loop
+    mov  r15d, eax
+    xor  ebx, ebx
+.char:
+    cmp  ebx, r15d
+    jae  .loop
+    movzx eax, byte [rsp+FRAME_OUT+384+rbx]
+    inc  ebx
+    cmp  eax, 8
+    je   .char_ok
+    cmp  eax, 13
+    je   .char_ok
+    cmp  eax, 32
+    jb   .char
+    cmp  eax, 126
+    ja   .char
+.char_ok:
+    mov  ecx, [rel g_char_count]
+    cmp  ecx, 64
+    jae  .char_hook
+    lea  rdx, [rel g_char_queue]
+    mov  [rdx+rcx], al
+    inc  ecx
+    mov  [rel g_char_count], ecx
+.char_hook:
+    mov  ecx, eax
+    call game_on_char
+    jmp  .char
+
+.btn_down:
+    call .btn_pos
+    mov  eax, EVD(EV_CODE)
+    cmp  eax, 4                         ; wheel up = away from you = +1
+    je   .wheel_up
+    cmp  eax, 5
+    je   .wheel_down
+    call .btn_mask
+    test r13d, r13d
+    jz   .loop
+    test [rel g_mouse_buttons], r13d
+    jnz  .bd_held
+    or   [rel g_mouse_pressed], r13d
+.bd_held:
+    or   [rel g_mouse_buttons], r13d
+    mov  ecx, r13d
+    mov  edx, 1
+    call game_on_mouse_button
+    jmp  .loop
+.btn_up:
+    call .btn_pos
+    mov  eax, EVD(EV_CODE)
+    call .btn_mask
+    test r13d, r13d
+    jz   .loop
+    test [rel g_mouse_buttons], r13d
+    jz   .bu_notheld
+    or   [rel g_mouse_released], r13d
+.bu_notheld:
+    mov  eax, r13d
+    not  eax
+    and  [rel g_mouse_buttons], eax
+    mov  ecx, r13d
+    xor  edx, edx
+    call game_on_mouse_button
+    jmp  .loop
+.wheel_up:
+    mov  ecx, 1
+    jmp  .wheel
+.wheel_down:
+    mov  ecx, -1
+.wheel:
+    add  [rel g_wheel], ecx
+    call game_on_wheel
+    jmp  .loop
+.btn_mask:                              ; local call, eax X button -> r13d MB_* or 0
+    xor  r13d, r13d
+    cmp  eax, 1
+    jne  .bm2
+    mov  r13d, MB_LEFT
+.bm2:
+    cmp  eax, 2
+    jne  .bm3
+    mov  r13d, MB_MIDDLE
+.bm3:
+    cmp  eax, 3
+    jne  .bm_ret
+    mov  r13d, MB_RIGHT
+.bm_ret:
+    ret
+    ; v1 temporary guard (platform_x11 #19)
+    xor     r11d, r11d ; clear v1 slot 19
+    ; v1 temporary guard (platform_x11 #21)
+    xor     r11d, r11d ; clear v1 slot 21
+    ; v1 temporary guard (platform_x11 #23)
+    xor     r11d, r11d ; clear v1 slot 23
+    ; v1 temporary guard (platform_x11 #25)
+    xor     r11d, r11d ; clear v1 slot 25
+    ; v1 temporary guard (platform_x11 #27)
+    xor     r11d, r11d ; clear v1 slot 27
+    ; v1 temporary guard (platform_x11 #29)
+    xor     r11d, r11d ; clear v1 slot 29
+    ; v1 temporary guard (platform_x11 #31)
+    xor     r11d, r11d ; clear v1 slot 31
+    ; v1 temporary guard (platform_x11 #33)
+    xor     r11d, r11d ; clear v1 slot 33
+    ; v1 temporary guard (platform_x11 #35)
+    xor     r11d, r11d ; clear v1 slot 35
+    ; v1 temporary guard (platform_x11 #37)
+    xor     r11d, r11d ; clear v1 slot 37
+    ; v1 temporary guard (platform_x11 #39)
+    xor     r11d, r11d ; clear v1 slot 39
+    ; v1 temporary guard (platform_x11 #41)
+    xor     r11d, r11d ; clear v1 slot 41
+    ; v1 temporary guard (platform_x11 #43)
+    xor     r11d, r11d ; clear v1 slot 43
+    ; v1 temporary guard (platform_x11 #45)
+    xor     r11d, r11d ; clear v1 slot 45
+    ; v1 temporary guard (platform_x11 #47)
+    xor     r11d, r11d ; clear v1 slot 47
+    ; v1 temporary guard (platform_x11 #49)
+    xor     r11d, r11d ; clear v1 slot 49
