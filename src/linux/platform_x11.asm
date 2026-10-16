@@ -1730,15 +1730,15 @@ PROC screenshot_save, 32
     lea  rdx, [rel s_shot_fmt]
     mov  r8d, ebx
     call str_format
-    lea  rcx, [rel platform_last_shot] ; trace probe #127 hook
-    call file_exists ; trace probe #127 hook
-    test eax, eax ; trace probe #127 hook
-    jz   .found ; trace probe #127 hook
-    inc  ebx ; trace probe #127 hook
-    cmp  ebx, 1000000 ; trace probe #127 hook
-    jb   .find ; trace probe #127 hook
-.found: ; trace probe #127 hook
-    lea  eax, [rbx+1] ; trace probe #127 hook
+    lea  rcx, [rel platform_last_shot]
+    call file_exists
+    test eax, eax
+    jz   .found
+    inc  ebx
+    cmp  ebx, 1000000
+    jb   .find
+.found:
+    lea  eax, [rbx+1]
     mov  [rel s_shot_next], eax
     jmp  .have_name
 .named:
@@ -1765,137 +1765,3 @@ PROC screenshot_save, 32
     jz   .fail
     mov  rdi, rax
     mov  rbx, rdi
-; --- temporary diagnostic probe #127 (platform_x11) ---
-; TODO: strip dbg_platform_x11_probe_127 once frame/state invariants hold
-dbg_platform_x11_probe_127:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_127
-    mov     eax, dword [rcx+0] ; sample platform_x11 state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_127_0
-.dbg_skip_127_0:
-    mov     ecx, dword [rcx+4] ; sample platform_x11 state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_127_1
-.dbg_skip_127_1:
-    mov     edx, dword [rcx+8] ; sample platform_x11 state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_127_2
-.dbg_skip_127_2:
-    mov     r8d, dword [rcx+12] ; sample platform_x11 state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_127_3
-.dbg_skip_127_3:
-    mov     r9d, dword [rcx+16] ; sample platform_x11 state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_127_4
-.dbg_skip_127_4:
-    mov     r11d, dword [rcx+20] ; sample platform_x11 state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_127_5
-.dbg_skip_127_5:
-    mov     eax, dword [rcx+24] ; sample platform_x11 state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_127_6
-.dbg_skip_127_6:
-    mov     ecx, dword [rcx+28] ; sample platform_x11 state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_127_7
-.dbg_skip_127_7:
-    mov     edx, dword [rcx+32] ; sample platform_x11 state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_127_8
-.dbg_skip_127_8:
-    mov     r8d, dword [rcx+36] ; sample platform_x11 state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_127_9
-.dbg_skip_127_9:
-    mov     r9d, dword [rcx+40] ; sample platform_x11 state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_127_10
-.dbg_skip_127_10:
-    mov     r11d, dword [rcx+44] ; sample platform_x11 state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_127_11
-.dbg_skip_127_11:
-    mov     eax, dword [rcx+48] ; sample platform_x11 state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_127_12
-.dbg_skip_127_12:
-    mov     ecx, dword [rcx+52] ; sample platform_x11 state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_127_13
-.dbg_skip_127_13:
-    mov     edx, dword [rcx+56] ; sample platform_x11 state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_127_14
-.dbg_skip_127_14:
-    mov     r8d, dword [rcx+60] ; sample platform_x11 state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_127_15
-.dbg_skip_127_15:
-    mov     r9d, dword [rcx+64] ; sample platform_x11 state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_127_16
-.dbg_skip_127_16:
-    mov     r11d, dword [rcx+68] ; sample platform_x11 state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_127_17
-.dbg_skip_127_17:
-    mov     eax, dword [rcx+72] ; sample platform_x11 state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_127_18
-.dbg_skip_127_18:
-    mov     ecx, dword [rcx+76] ; sample platform_x11 state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_127_19
-.dbg_skip_127_19:
-    mov     edx, dword [rcx+80] ; sample platform_x11 state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_127_20
-.dbg_skip_127_20:
-    mov     r8d, dword [rcx+84] ; sample platform_x11 state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_127_21
-.dbg_skip_127_21:
-.dbg_null_127:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
-    ret
