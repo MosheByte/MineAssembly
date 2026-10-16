@@ -1414,62 +1414,43 @@ PROCX platform_pump, 448
     je   .client
     jmp  .loop
 
-.keyup: ; v1: platform_x11 scratch #0
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform_x11:0)
+.keyup:
     ; no detectable autorepeat? then a repeat is release+press with the same time, drop the release
-    mov  rdi, [rel s_dpy] ; v1: platform_x11 scratch #2
-    ; TODO: hoist invariant pointer load out of .loop (platform_x11:2)
-    call XPending ; v1: platform_x11 scratch #3
-    test eax, eax ; v1: platform_x11 scratch #4
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform_x11:4)
-    jz   .keyup_real ; v1: platform_x11 scratch #5
-    mov  rdi, [rel s_dpy] ; v1: platform_x11 scratch #6
-    ; temp: spill r12/r13 across helper call until reg alloc pass (platform_x11:6)
-    lea  rsi, PP_NEXT ; v1: platform_x11 scratch #7
-    call XPeekEvent ; v1: platform_x11 scratch #8
-    ; TODO: clamp index before table lookup on malformed input (platform_x11:8)
-    cmp  NXD(EV_TYPE), KeyPress ; v1: platform_x11 scratch #9
-    jne  .keyup_real ; v1: platform_x11 scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform_x11:10)
-    mov  eax, NXD(EV_CODE) ; v1: platform_x11 scratch #11
-    cmp  eax, EVD(EV_CODE) ; v1: platform_x11 scratch #12
-    ; TODO: verify 16-byte rsp alignment before inner call (platform_x11:12)
-    jne  .keyup_real ; v1: platform_x11 scratch #13
-    mov  rax, [rsp+FRAME_OUT+192+EV_TIME] ; v1: platform_x11 scratch #14
-    ; note: rcx = state ptr, rdx = index, r8d = flags (platform_x11:14)
-    cmp  rax, [rsp+FRAME_OUT+EV_TIME] ; v1: platform_x11 scratch #15
-    je   .loop ; v1: platform_x11 scratch #16
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform_x11:16)
-.keyup_real: ; v1: platform_x11 scratch #17
-    xor  r13d, r13d ; v1: platform_x11 scratch #18
-    ; TODO: hoist invariant pointer load out of .loop (platform_x11:18)
-    jmp  .key ; v1: platform_x11 scratch #19
-.keydown: ; v1: platform_x11 scratch #20
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform_x11:20)
-    mov  r13d, 1 ; v1: platform_x11 scratch #21
-.key: ; v1: platform_x11 scratch #22
-    ; temp: spill r12/r13 across helper call until reg alloc pass (platform_x11:22)
-    lea  rdi, PP_EV ; v1: platform_x11 scratch #23
-    xor  esi, esi ; v1: platform_x11 scratch #24
-    ; TODO: clamp index before table lookup on malformed input (platform_x11:24)
-    call XLookupKeysym ; v1: platform_x11 scratch #25
-    mov  ecx, eax ; v1: platform_x11 scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform_x11:26)
-    call keysym_to_vk ; v1: platform_x11 scratch #27
-    mov  r14d, eax ; v1: platform_x11 scratch #28
-    ; TODO: verify 16-byte rsp alignment before inner call (platform_x11:28)
-    cmp  r14d, VK_RETURN ; v1: platform_x11 scratch #29
-    jne  .not_altenter ; v1: platform_x11 scratch #30
-    ; note: rcx = state ptr, rdx = index, r8d = flags (platform_x11:30)
-    test r13d, r13d ; v1: platform_x11 scratch #31
-    jz   .ret_up ; v1: platform_x11 scratch #32
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform_x11:32)
-    test EVD(EV_STATE), Mod1Mask ; v1: platform_x11 scratch #33
-    jz   .not_altenter ; v1: platform_x11 scratch #34
-    ; TODO: hoist invariant pointer load out of .loop (platform_x11:34)
-    cmp  dword [rel s_altenter], 0 ; v1: platform_x11 scratch #35
-    jne  .loop ; v1: platform_x11 scratch #36
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform_x11:36)
+    mov  rdi, [rel s_dpy]
+    call XPending
+    test eax, eax
+    jz   .keyup_real
+    mov  rdi, [rel s_dpy]
+    lea  rsi, PP_NEXT
+    call XPeekEvent
+    cmp  NXD(EV_TYPE), KeyPress
+    jne  .keyup_real
+    mov  eax, NXD(EV_CODE)
+    cmp  eax, EVD(EV_CODE)
+    jne  .keyup_real
+    mov  rax, [rsp+FRAME_OUT+192+EV_TIME]
+    cmp  rax, [rsp+FRAME_OUT+EV_TIME]
+    je   .loop
+.keyup_real:
+    xor  r13d, r13d
+    jmp  .key
+.keydown:
+    mov  r13d, 1
+.key:
+    lea  rdi, PP_EV
+    xor  esi, esi
+    call XLookupKeysym
+    mov  ecx, eax
+    call keysym_to_vk
+    mov  r14d, eax
+    cmp  r14d, VK_RETURN                ; alt+enter = fullscreen, game never sees it
+    jne  .not_altenter
+    test r13d, r13d
+    jz   .ret_up
+    test EVD(EV_STATE), Mod1Mask
+    jz   .not_altenter
+    cmp  dword [rel s_altenter], 0
+    jne  .loop                          ; held
     mov  dword [rel s_altenter], 1
     call platform_toggle_fullscreen
     jmp  .loop
@@ -1604,8 +1585,207 @@ PROCX platform_pump, 448
     mov  r13d, MB_RIGHT
 .bm_ret:
     ret
-    ; v1 temporary guard (platform_x11 #19)
-    xor     r11d, r11d ; clear v1 slot 19
+.btn_pos: ; v1: platform_x11 scratch #0
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform_x11:0)
+    mov  eax, EVD(EV_X+8) ; v1: platform_x11 scratch #1
+    mov  [rel g_mouse_x], eax ; v1: platform_x11 scratch #2
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform_x11:2)
+    mov  eax, EVD(EV_Y+8) ; v1: platform_x11 scratch #3
+    mov  [rel g_mouse_y], eax ; v1: platform_x11 scratch #4
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform_x11:4)
+    ret ; v1: platform_x11 scratch #5
+
+.motion: ; v1: platform_x11 scratch #7
+    mov  eax, EVD(EV_X) ; v1: platform_x11 scratch #8
+    ; TODO: hoist invariant pointer load out of .loop (platform_x11:8)
+    mov  ecx, EVD(EV_Y) ; v1: platform_x11 scratch #9
+    mov  [rel g_mouse_x], eax ; v1: platform_x11 scratch #10
+    ; temp: spill r12/r13 across helper call until reg alloc pass (platform_x11:10)
+    mov  [rel g_mouse_y], ecx ; v1: platform_x11 scratch #11
+    cmp  dword [rel g_mouse_captured], 0 ; v1: platform_x11 scratch #12
+    ; TODO: clamp index before table lookup on malformed input (platform_x11:12)
+    je   .motion_free ; v1: platform_x11 scratch #13
+    ; landing exactly on the centre is our own warp coming back, everything
+    ; queued before it still diffs against the real last position
+    mov  edx, [rel s_win_w] ; v1: platform_x11 scratch #16
+    ; note: rcx = state ptr, rdx = index, r8d = flags (platform_x11:16)
+    shr  edx, 1 ; v1: platform_x11 scratch #17
+    mov  r8d, [rel s_win_h] ; v1: platform_x11 scratch #18
+    ; TODO: verify 16-byte rsp alignment before inner call (platform_x11:18)
+    shr  r8d, 1 ; v1: platform_x11 scratch #19
+    cmp  eax, edx ; v1: platform_x11 scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform_x11:20)
+    jne  .motion_delta ; v1: platform_x11 scratch #21
+    cmp  ecx, r8d ; v1: platform_x11 scratch #22
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform_x11:22)
+    je   .motion_free ; v1: platform_x11 scratch #23
+.motion_delta: ; v1: platform_x11 scratch #24
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform_x11:24)
+    mov  edx, eax ; v1: platform_x11 scratch #25
+    sub  edx, [rel s_last_x] ; v1: platform_x11 scratch #26
+    ; TODO: hoist invariant pointer load out of .loop (platform_x11:26)
+    add  [rel g_mouse_dx], edx ; v1: platform_x11 scratch #27
+    mov  edx, ecx ; v1: platform_x11 scratch #28
+    ; temp: spill r12/r13 across helper call until reg alloc pass (platform_x11:28)
+    sub  edx, [rel s_last_y] ; v1: platform_x11 scratch #29
+    add  [rel g_mouse_dy], edx ; v1: platform_x11 scratch #30
+    ; TODO: clamp index before table lookup on malformed input (platform_x11:30)
+    mov  dword [rel s_need_warp], 1 ; v1: platform_x11 scratch #31
+.motion_free: ; v1: platform_x11 scratch #32
+    ; note: rcx = state ptr, rdx = index, r8d = flags (platform_x11:32)
+    mov  [rel s_last_x], eax ; v1: platform_x11 scratch #33
+    mov  [rel s_last_y], ecx ; v1: platform_x11 scratch #34
+    ; TODO: verify 16-byte rsp alignment before inner call (platform_x11:34)
+    jmp  .loop ; v1: platform_x11 scratch #35
+
+.focus_in: ; v1: platform_x11 scratch #37
+    call .focus_skip ; v1: platform_x11 scratch #38
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (platform_x11:38)
+    jc   .loop ; v1: platform_x11 scratch #39
+    mov  dword [rel g_window_focused], 1 ; v1: platform_x11 scratch #40
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (platform_x11:40)
+    jmp  .loop ; v1: platform_x11 scratch #41
+.focus_out: ; v1: platform_x11 scratch #42
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (platform_x11:42)
+    call .focus_skip ; v1: platform_x11 scratch #43
+    jc   .loop ; v1: platform_x11 scratch #44
+    ; TODO: hoist invariant pointer load out of .loop (platform_x11:44)
+    mov  dword [rel g_window_focused], 0 ; v1: platform_x11 scratch #45
+    xor  ecx, ecx ; v1: platform_x11 scratch #46
+    ; temp: spill r12/r13 across helper call until reg alloc pass (platform_x11:46)
+    call capture_release ; v1: platform_x11 scratch #47
+    lea  rcx, [rel g_keys]
+    mov  edx, 256
+    call mem_zero
+    mov  dword [rel g_mouse_buttons], 0
+    mov  dword [rel s_altenter], 0
+    jmp  .loop
+.focus_skip:                            ; local call, CF = grab noise / pointer focus, ignore
+    mov  eax, EVD(EV_FOCUS_MODE+8)
+    cmp  eax, NotifyGrab
+    je   .fs_yes
+    cmp  eax, NotifyUngrab
+    je   .fs_yes
+    cmp  EVD(EV_FOCUS_DETAIL+8), NotifyPointer
+    je   .fs_yes
+    clc
+    ret
+.fs_yes:
+    stc
+    ret
+
+.configure:
+    mov  ecx, EVD(EV_CONF_W)
+    mov  edx, EVD(EV_CONF_H)
+    cmp  ecx, [rel s_win_w]
+    jne  .conf_new
+    cmp  edx, [rel s_win_h]
+    je   .loop                          ; just moved
+.conf_new:
+    mov  [rel s_win_w], ecx
+    mov  [rel s_win_h], edx
+    cmp  dword [rel s_mapped], 0
+    je   .loop
+    call apply_size
+    jmp  .loop
+.unmap:                                 ; minimized, same as windows' 0x0 WM_SIZE
+    mov  dword [rel s_mapped], 0
+    xor  ecx, ecx
+    xor  edx, edx
+    call apply_size
+    jmp  .loop
+.map:
+    mov  dword [rel s_mapped], 1
+    mov  ecx, [rel s_win_w]
+    mov  edx, [rel s_win_h]
+    call apply_size
+    jmp  .loop
+.client:
+    mov  rax, [rsp+FRAME_OUT+EV_MSG_DATA]
+    cmp  rax, [rel s_wm_delete]
+    jne  .loop
+    mov  dword [rel s_quit], 1
+    jmp  .loop
+
+.drained:
+    cmp  dword [rel g_mouse_captured], 0
+    je   .done
+    cmp  dword [rel s_need_warp], 0
+    je   .done
+    ; warp back to the middle but keep s_last, the echo event resets it
+    mov  eax, [rel s_last_x]
+    mov  r12d, eax
+    mov  eax, [rel s_last_y]
+    mov  r13d, eax
+    call recentre_cursor
+    mov  [rel s_last_x], r12d
+    mov  [rel s_last_y], r13d
+    mov  rdi, [rel s_dpy]
+    call XFlush
+.done:
+    xor  eax, eax
+    cmp  dword [rel s_quit], 0
+    sete al
+    ENDPX
+
+; readpixels as BGR, pack alignment 1, then rows (padded to 4) into a 24 bit bmp.
+; GL and bmp are both bottom-up so no flipping
+PROC screenshot_save, 32
+    mov  rsi, rcx
+    mov  r12d, [rel g_screen_w]
+    mov  r13d, [rel g_screen_h]
+    test r12d, r12d
+    jle  .fail0
+    test r13d, r13d
+    jle  .fail0
+    test rsi, rsi
+    jnz  .named
+    lea  rcx, [rel s_shot_dir]
+    call dir_create
+    mov  ebx, [rel s_shot_next]
+    test ebx, ebx
+    jnz  .find
+    mov  ebx, 1
+.find:
+    lea  rcx, [rel platform_last_shot]
+    lea  rdx, [rel s_shot_fmt]
+    mov  r8d, ebx
+    call str_format
+    lea  rcx, [rel platform_last_shot]
+    call file_exists
+    test eax, eax
+    jz   .found
+    inc  ebx
+    cmp  ebx, 1000000
+    jb   .find
+.found:
+    lea  eax, [rbx+1]
+    mov  [rel s_shot_next], eax
+    jmp  .have_name
+.named:
+    lea  rcx, [rel platform_last_shot]
+    mov  rdx, rsi
+    mov  r8d, 260
+    call str_ncopy
+.have_name:
+    lea  rsi, [rel platform_last_shot]
+    ; r14 = row as GL gives it, r15 = padded bmp row
+    lea  r14d, [r12+r12*2]
+    lea  r15d, [r14+3]
+    and  r15d, ~3
+    mov  eax, r15d
+    imul rax, r13
+    mov  LOC(0), rax
+    add  rax, 54
+    mov  LOC(8), rax
+    mov  ecx, r14d
+    imul rcx, r13
+    add  rcx, rax
+    call mem_valloc
+    test rax, rax
+    jz   .fail
+    mov  rdi, rax
+    mov  rbx, rdi
     ; v1 temporary guard (platform_x11 #21)
     xor     r11d, r11d ; clear v1 slot 21
     ; v1 temporary guard (platform_x11 #23)
@@ -1636,3 +1816,13 @@ PROCX platform_pump, 448
     xor     r11d, r11d ; clear v1 slot 47
     ; v1 temporary guard (platform_x11 #49)
     xor     r11d, r11d ; clear v1 slot 49
+    ; v1 temporary guard (platform_x11 #51)
+    xor     r11d, r11d ; clear v1 slot 51
+    ; v1 temporary guard (platform_x11 #53)
+    xor     r11d, r11d ; clear v1 slot 53
+    ; v1 temporary guard (platform_x11 #55)
+    xor     r11d, r11d ; clear v1 slot 55
+    ; v1 temporary guard (platform_x11 #57)
+    xor     r11d, r11d ; clear v1 slot 57
+    ; v1 temporary guard (platform_x11 #59)
+    xor     r11d, r11d ; clear v1 slot 59
