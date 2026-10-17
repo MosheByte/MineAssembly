@@ -1765,3 +1765,74 @@ PROC screenshot_save, 32
     jz   .fail
     mov  rdi, rax
     mov  rbx, rdi
+    add  rbx, LOC(8)
+    mov  ecx, GL_PACK_ALIGNMENT
+    mov  edx, 1
+    call glPixelStorei
+    xor  ecx, ecx
+    xor  edx, edx
+    mov  r8d, r12d
+    mov  r9d, r13d
+    mov  qword [rsp+32], GL_BGR
+    mov  qword [rsp+40], GL_UNSIGNED_BYTE
+    mov  [rsp+48], rbx
+    call glReadPixels
+    mov  ecx, GL_PACK_ALIGNMENT
+    mov  edx, 4
+    call glPixelStorei
+    mov  word [rdi+0], 'BM'
+    mov  eax, LOC(8)
+    mov  [rdi+2], eax
+    mov  dword [rdi+10], 54
+    mov  dword [rdi+14], 40
+    mov  [rdi+18], r12d
+    mov  [rdi+22], r13d                 ; biHeight, positive = bottom-up
+    mov  word [rdi+26], 1
+    mov  word [rdi+28], 24
+    mov  eax, LOC(0)
+    mov  [rdi+34], eax
+    mov  dword [rdi+38], 2835           ; 72 dpi in px/m, nobody reads this
+    mov  dword [rdi+42], 2835
+    ; copy rows. padding is already 0, fresh mmap
+    mov  dword LOC(16), 0
+.rows:
+    mov  eax, LOC(16)
+    cmp  eax, r13d
+    jae  .write
+    mov  ecx, r15d
+    imul rcx, rax
+    lea  rcx, [rdi+rcx+54]
+    mov  edx, r14d
+    imul rdx, rax
+    add  rdx, rbx
+    mov  r8d, r14d
+    call mem_copy
+    inc  dword LOC(16)
+    jmp  .rows
+.write:
+    mov  rcx, rsi
+    mov  rdx, rdi
+    mov  r8, LOC(8)
+    call file_write_all
+    mov  LOC(24), eax
+    mov  rcx, rdi
+    call mem_vfree
+    cmp  dword LOC(24), 0
+    je   .fail
+    lea  rcx, [rel s_shot_ok]
+    mov  rdx, rsi
+    mov  r8d, r12d
+    mov  r9d, r13d
+    call log_printf
+    mov  eax, 1
+    jmp  .ret
+.fail:
+    lea  rcx, [rel s_shot_fail]
+    mov  rdx, rsi
+    call log_printf
+.fail0:
+    xor  eax, eax
+.ret:
+    ENDP
+
+section .note.GNU-stack noalloc noexec nowrite progbits
