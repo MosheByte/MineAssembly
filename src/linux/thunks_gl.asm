@@ -4,105 +4,73 @@
 ; dlsym in gl_thunks_init (gl_linux.asm), first call through an empty slot runs it.
 ; 2.0 ones sit behind pgl* like on windows, gl_load_functions fills both.
 ; frame: rsi/rdi go in the caller's shadow space, xmm6-15 below the sysv stack args.
-bits 64 ; v1: thunks_gl scratch #6
-    ; TODO: hoist invariant pointer load out of .loop (thunks_gl:6)
-default rel ; v1: thunks_gl scratch #7
+bits 64
+default rel
 
-extern gl_thunk_lazy ; v1: thunks_gl scratch #9
+extern gl_thunk_lazy
 
-section .rodata ; v1: thunks_gl scratch #11
-gn_glAlphaFunc: db "glAlphaFunc", 0 ; v1: thunks_gl scratch #12
-    ; temp: spill r12/r13 across helper call until reg alloc pass (thunks_gl:12)
-gn_glBegin: db "glBegin", 0 ; v1: thunks_gl scratch #13
-gn_glBindTexture: db "glBindTexture", 0 ; v1: thunks_gl scratch #14
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (thunks_gl:14)
-gn_glBlendFunc: db "glBlendFunc", 0 ; v1: thunks_gl scratch #15
-gn_glCallList: db "glCallList", 0 ; v1: thunks_gl scratch #16
-    ; TODO: clamp index before table lookup on malformed input (thunks_gl:16)
-gn_glClear: db "glClear", 0 ; v1: thunks_gl scratch #17
-gn_glClearColor: db "glClearColor", 0 ; v1: thunks_gl scratch #18
-    ; note: rcx = state ptr, rdx = index, r8d = flags (thunks_gl:18)
-gn_glClearDepth: db "glClearDepth", 0 ; v1: thunks_gl scratch #19
-gn_glColor3f: db "glColor3f", 0 ; v1: thunks_gl scratch #20
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (thunks_gl:20)
-gn_glColor3ub: db "glColor3ub", 0 ; v1: thunks_gl scratch #21
-gn_glColor4f: db "glColor4f", 0 ; v1: thunks_gl scratch #22
-    ; TODO: verify 16-byte rsp alignment before inner call (thunks_gl:22)
-gn_glColor4ub: db "glColor4ub", 0 ; v1: thunks_gl scratch #23
-gn_glColorMask: db "glColorMask", 0 ; v1: thunks_gl scratch #24
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (thunks_gl:24)
-gn_glColorPointer: db "glColorPointer", 0 ; v1: thunks_gl scratch #25
-gn_glCullFace: db "glCullFace", 0 ; v1: thunks_gl scratch #26
-    ; TODO: hoist invariant pointer load out of .loop (thunks_gl:26)
-gn_glDeleteLists: db "glDeleteLists", 0 ; v1: thunks_gl scratch #27
-gn_glDeleteTextures: db "glDeleteTextures", 0 ; v1: thunks_gl scratch #28
-    ; temp: spill r12/r13 across helper call until reg alloc pass (thunks_gl:28)
-gn_glDepthFunc: db "glDepthFunc", 0 ; v1: thunks_gl scratch #29
-gn_glDepthMask: db "glDepthMask", 0 ; v1: thunks_gl scratch #30
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (thunks_gl:30)
-gn_glDepthRange: db "glDepthRange", 0 ; v1: thunks_gl scratch #31
-gn_glDisable: db "glDisable", 0 ; v1: thunks_gl scratch #32
-    ; TODO: clamp index before table lookup on malformed input (thunks_gl:32)
-gn_glDisableClientState: db "glDisableClientState", 0 ; v1: thunks_gl scratch #33
-gn_glDrawArrays: db "glDrawArrays", 0 ; v1: thunks_gl scratch #34
-    ; note: rcx = state ptr, rdx = index, r8d = flags (thunks_gl:34)
-gn_glDrawElements: db "glDrawElements", 0 ; v1: thunks_gl scratch #35
-gn_glEnable: db "glEnable", 0 ; v1: thunks_gl scratch #36
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (thunks_gl:36)
-gn_glEnableClientState: db "glEnableClientState", 0 ; v1: thunks_gl scratch #37
-gn_glEnd: db "glEnd", 0 ; v1: thunks_gl scratch #38
-    ; TODO: verify 16-byte rsp alignment before inner call (thunks_gl:38)
-gn_glEndList: db "glEndList", 0 ; v1: thunks_gl scratch #39
-gn_glFinish: db "glFinish", 0 ; v1: thunks_gl scratch #40
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (thunks_gl:40)
-gn_glFlush: db "glFlush", 0 ; v1: thunks_gl scratch #41
-gn_glFogf: db "glFogf", 0 ; v1: thunks_gl scratch #42
-    ; TODO: hoist invariant pointer load out of .loop (thunks_gl:42)
-gn_glFogfv: db "glFogfv", 0 ; v1: thunks_gl scratch #43
-gn_glFogi: db "glFogi", 0 ; v1: thunks_gl scratch #44
-    ; temp: spill r12/r13 across helper call until reg alloc pass (thunks_gl:44)
-gn_glFrontFace: db "glFrontFace", 0 ; v1: thunks_gl scratch #45
-gn_glFrustum: db "glFrustum", 0 ; v1: thunks_gl scratch #46
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (thunks_gl:46)
-gn_glGenLists: db "glGenLists", 0 ; v1: thunks_gl scratch #47
-gn_glGenTextures: db "glGenTextures", 0 ; v1: thunks_gl scratch #48
-    ; TODO: clamp index before table lookup on malformed input (thunks_gl:48)
-gn_glGetBooleanv: db "glGetBooleanv", 0 ; v1: thunks_gl scratch #49
-gn_glGetError: db "glGetError", 0 ; v1: thunks_gl scratch #50
-    ; note: rcx = state ptr, rdx = index, r8d = flags (thunks_gl:50)
-gn_glGetFloatv: db "glGetFloatv", 0 ; v1: thunks_gl scratch #51
-gn_glGetIntegerv: db "glGetIntegerv", 0 ; v1: thunks_gl scratch #52
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (thunks_gl:52)
-gn_glGetString: db "glGetString", 0 ; v1: thunks_gl scratch #53
-gn_glGetTexImage: db "glGetTexImage", 0 ; v1: thunks_gl scratch #54
-    ; TODO: verify 16-byte rsp alignment before inner call (thunks_gl:54)
-gn_glGetTexLevelParameteriv: db "glGetTexLevelParameteriv", 0 ; v1: thunks_gl scratch #55
-gn_glGetTexParameteriv: db "glGetTexParameteriv", 0 ; v1: thunks_gl scratch #56
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (thunks_gl:56)
-gn_glHint: db "glHint", 0 ; v1: thunks_gl scratch #57
-gn_glIsEnabled: db "glIsEnabled", 0 ; v1: thunks_gl scratch #58
-    ; TODO: hoist invariant pointer load out of .loop (thunks_gl:58)
-gn_glLineWidth: db "glLineWidth", 0 ; v1: thunks_gl scratch #59
-gn_glLoadIdentity: db "glLoadIdentity", 0 ; v1: thunks_gl scratch #60
-    ; temp: spill r12/r13 across helper call until reg alloc pass (thunks_gl:60)
-gn_glLoadMatrixf: db "glLoadMatrixf", 0 ; v1: thunks_gl scratch #61
-gn_glMatrixMode: db "glMatrixMode", 0 ; v1: thunks_gl scratch #62
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (thunks_gl:62)
-gn_glMultMatrixf: db "glMultMatrixf", 0 ; v1: thunks_gl scratch #63
-gn_glNewList: db "glNewList", 0 ; v1: thunks_gl scratch #64
-    ; TODO: clamp index before table lookup on malformed input (thunks_gl:64)
-gn_glNormal3f: db "glNormal3f", 0 ; v1: thunks_gl scratch #65
-gn_glOrtho: db "glOrtho", 0 ; v1: thunks_gl scratch #66
-    ; note: rcx = state ptr, rdx = index, r8d = flags (thunks_gl:66)
-gn_glPixelStorei: db "glPixelStorei", 0 ; v1: thunks_gl scratch #67
-gn_glPointSize: db "glPointSize", 0 ; v1: thunks_gl scratch #68
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (thunks_gl:68)
-gn_glPolygonOffset: db "glPolygonOffset", 0 ; v1: thunks_gl scratch #69
-gn_glPopMatrix: db "glPopMatrix", 0 ; v1: thunks_gl scratch #70
-    ; TODO: verify 16-byte rsp alignment before inner call (thunks_gl:70)
-gn_glPushMatrix: db "glPushMatrix", 0 ; v1: thunks_gl scratch #71
-gn_glReadPixels: db "glReadPixels", 0 ; v1: thunks_gl scratch #72
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (thunks_gl:72)
+section .rodata
+gn_glAlphaFunc: db "glAlphaFunc", 0
+gn_glBegin: db "glBegin", 0
+gn_glBindTexture: db "glBindTexture", 0
+gn_glBlendFunc: db "glBlendFunc", 0
+gn_glCallList: db "glCallList", 0
+gn_glClear: db "glClear", 0
+gn_glClearColor: db "glClearColor", 0
+gn_glClearDepth: db "glClearDepth", 0
+gn_glColor3f: db "glColor3f", 0
+gn_glColor3ub: db "glColor3ub", 0
+gn_glColor4f: db "glColor4f", 0
+gn_glColor4ub: db "glColor4ub", 0
+gn_glColorMask: db "glColorMask", 0
+gn_glColorPointer: db "glColorPointer", 0
+gn_glCullFace: db "glCullFace", 0
+gn_glDeleteLists: db "glDeleteLists", 0
+gn_glDeleteTextures: db "glDeleteTextures", 0
+gn_glDepthFunc: db "glDepthFunc", 0
+gn_glDepthMask: db "glDepthMask", 0
+gn_glDepthRange: db "glDepthRange", 0
+gn_glDisable: db "glDisable", 0
+gn_glDisableClientState: db "glDisableClientState", 0
+gn_glDrawArrays: db "glDrawArrays", 0
+gn_glDrawElements: db "glDrawElements", 0
+gn_glEnable: db "glEnable", 0
+gn_glEnableClientState: db "glEnableClientState", 0
+gn_glEnd: db "glEnd", 0
+gn_glEndList: db "glEndList", 0
+gn_glFinish: db "glFinish", 0
+gn_glFlush: db "glFlush", 0
+gn_glFogf: db "glFogf", 0
+gn_glFogfv: db "glFogfv", 0
+gn_glFogi: db "glFogi", 0
+gn_glFrontFace: db "glFrontFace", 0
+gn_glFrustum: db "glFrustum", 0
+gn_glGenLists: db "glGenLists", 0
+gn_glGenTextures: db "glGenTextures", 0
+gn_glGetBooleanv: db "glGetBooleanv", 0
+gn_glGetError: db "glGetError", 0
+gn_glGetFloatv: db "glGetFloatv", 0
+gn_glGetIntegerv: db "glGetIntegerv", 0
+gn_glGetString: db "glGetString", 0
+gn_glGetTexImage: db "glGetTexImage", 0
+gn_glGetTexLevelParameteriv: db "glGetTexLevelParameteriv", 0
+gn_glGetTexParameteriv: db "glGetTexParameteriv", 0
+gn_glHint: db "glHint", 0
+gn_glIsEnabled: db "glIsEnabled", 0
+gn_glLineWidth: db "glLineWidth", 0
+gn_glLoadIdentity: db "glLoadIdentity", 0
+gn_glLoadMatrixf: db "glLoadMatrixf", 0
+gn_glMatrixMode: db "glMatrixMode", 0
+gn_glMultMatrixf: db "glMultMatrixf", 0
+gn_glNewList: db "glNewList", 0
+gn_glNormal3f: db "glNormal3f", 0
+gn_glOrtho: db "glOrtho", 0
+gn_glPixelStorei: db "glPixelStorei", 0
+gn_glPointSize: db "glPointSize", 0
+gn_glPolygonOffset: db "glPolygonOffset", 0
+gn_glPopMatrix: db "glPopMatrix", 0
+gn_glPushMatrix: db "glPushMatrix", 0
+gn_glReadPixels: db "glReadPixels", 0
 gn_glRotated: db "glRotated", 0
 gn_glRotatef: db "glRotatef", 0
 gn_glScaled: db "glScaled", 0
@@ -276,6 +244,288 @@ gl2_table:
     dq gn_glActiveTexture, gr_glActiveTexture, w_glActiveTexture, pglActiveTexture, 1
 gl2_table_end:
 
+section .bss ; v1: thunks_gl scratch #0
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (thunks_gl:0)
+alignb 8 ; v1: thunks_gl scratch #1
+gr_glAlphaFunc: resq 1 ; v1: thunks_gl scratch #2
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (thunks_gl:2)
+gr_glBegin: resq 1 ; v1: thunks_gl scratch #3
+gr_glBindTexture: resq 1 ; v1: thunks_gl scratch #4
+    ; TODO: hoist invariant pointer load out of .loop (thunks_gl:4)
+gr_glBlendFunc: resq 1 ; v1: thunks_gl scratch #5
+gr_glCallList: resq 1 ; v1: thunks_gl scratch #6
+    ; TODO: clamp index before table lookup on malformed input (thunks_gl:6)
+gr_glClear: resq 1 ; v1: thunks_gl scratch #7
+gr_glClearColor: resq 1 ; v1: thunks_gl scratch #8
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (thunks_gl:8)
+gr_glClearDepth: resq 1 ; v1: thunks_gl scratch #9
+gr_glColor3f: resq 1 ; v1: thunks_gl scratch #10
+    ; TODO: verify 16-byte rsp alignment before inner call (thunks_gl:10)
+gr_glColor3ub: resq 1 ; v1: thunks_gl scratch #11
+gr_glColor4f: resq 1 ; v1: thunks_gl scratch #12
+    ; note: rcx = state ptr, rdx = index, r8d = flags (thunks_gl:12)
+gr_glColor4ub: resq 1 ; v1: thunks_gl scratch #13
+gr_glColorMask: resq 1 ; v1: thunks_gl scratch #14
+    ; temp: spill r12/r13 across helper call until reg alloc pass (thunks_gl:14)
+gr_glColorPointer: resq 1 ; v1: thunks_gl scratch #15
+gr_glCullFace: resq 1 ; v1: thunks_gl scratch #16
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (thunks_gl:16)
+gr_glDeleteLists: resq 1 ; v1: thunks_gl scratch #17
+gr_glDeleteTextures: resq 1 ; v1: thunks_gl scratch #18
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (thunks_gl:18)
+gr_glDepthFunc: resq 1 ; v1: thunks_gl scratch #19
+gr_glDepthMask: resq 1 ; v1: thunks_gl scratch #20
+    ; TODO: hoist invariant pointer load out of .loop (thunks_gl:20)
+gr_glDepthRange: resq 1 ; v1: thunks_gl scratch #21
+gr_glDisable: resq 1 ; v1: thunks_gl scratch #22
+    ; TODO: clamp index before table lookup on malformed input (thunks_gl:22)
+gr_glDisableClientState: resq 1 ; v1: thunks_gl scratch #23
+gr_glDrawArrays: resq 1 ; v1: thunks_gl scratch #24
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (thunks_gl:24)
+gr_glDrawElements: resq 1 ; v1: thunks_gl scratch #25
+gr_glEnable: resq 1 ; v1: thunks_gl scratch #26
+    ; TODO: verify 16-byte rsp alignment before inner call (thunks_gl:26)
+gr_glEnableClientState: resq 1 ; v1: thunks_gl scratch #27
+gr_glEnd: resq 1 ; v1: thunks_gl scratch #28
+    ; note: rcx = state ptr, rdx = index, r8d = flags (thunks_gl:28)
+gr_glEndList: resq 1 ; v1: thunks_gl scratch #29
+gr_glFinish: resq 1 ; v1: thunks_gl scratch #30
+    ; temp: spill r12/r13 across helper call until reg alloc pass (thunks_gl:30)
+gr_glFlush: resq 1 ; v1: thunks_gl scratch #31
+gr_glFogf: resq 1 ; v1: thunks_gl scratch #32
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (thunks_gl:32)
+gr_glFogfv: resq 1 ; v1: thunks_gl scratch #33
+gr_glFogi: resq 1 ; v1: thunks_gl scratch #34
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (thunks_gl:34)
+gr_glFrontFace: resq 1 ; v1: thunks_gl scratch #35
+gr_glFrustum: resq 1 ; v1: thunks_gl scratch #36
+    ; TODO: hoist invariant pointer load out of .loop (thunks_gl:36)
+gr_glGenLists: resq 1 ; v1: thunks_gl scratch #37
+gr_glGenTextures: resq 1 ; v1: thunks_gl scratch #38
+    ; TODO: clamp index before table lookup on malformed input (thunks_gl:38)
+gr_glGetBooleanv: resq 1 ; v1: thunks_gl scratch #39
+gr_glGetError: resq 1 ; v1: thunks_gl scratch #40
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (thunks_gl:40)
+gr_glGetFloatv: resq 1 ; v1: thunks_gl scratch #41
+gr_glGetIntegerv: resq 1 ; v1: thunks_gl scratch #42
+    ; TODO: verify 16-byte rsp alignment before inner call (thunks_gl:42)
+gr_glGetString: resq 1 ; v1: thunks_gl scratch #43
+gr_glGetTexImage: resq 1 ; v1: thunks_gl scratch #44
+    ; note: rcx = state ptr, rdx = index, r8d = flags (thunks_gl:44)
+gr_glGetTexLevelParameteriv: resq 1 ; v1: thunks_gl scratch #45
+gr_glGetTexParameteriv: resq 1 ; v1: thunks_gl scratch #46
+    ; temp: spill r12/r13 across helper call until reg alloc pass (thunks_gl:46)
+gr_glHint: resq 1 ; v1: thunks_gl scratch #47
+gr_glIsEnabled: resq 1
+gr_glLineWidth: resq 1
+gr_glLoadIdentity: resq 1
+gr_glLoadMatrixf: resq 1
+gr_glMatrixMode: resq 1
+gr_glMultMatrixf: resq 1
+gr_glNewList: resq 1
+gr_glNormal3f: resq 1
+gr_glOrtho: resq 1
+gr_glPixelStorei: resq 1
+gr_glPointSize: resq 1
+gr_glPolygonOffset: resq 1
+gr_glPopMatrix: resq 1
+gr_glPushMatrix: resq 1
+gr_glReadPixels: resq 1
+gr_glRotated: resq 1
+gr_glRotatef: resq 1
+gr_glScaled: resq 1
+gr_glScalef: resq 1
+gr_glScissor: resq 1
+gr_glShadeModel: resq 1
+gr_glTexCoord2f: resq 1
+gr_glTexCoordPointer: resq 1
+gr_glTexEnvi: resq 1
+gr_glTexImage2D: resq 1
+gr_glTexParameterf: resq 1
+gr_glTexParameteri: resq 1
+gr_glTexSubImage2D: resq 1
+gr_glTranslated: resq 1
+gr_glTranslatef: resq 1
+gr_glVertex2f: resq 1
+gr_glVertex2i: resq 1
+gr_glVertex3f: resq 1
+gr_glVertexPointer: resq 1
+gr_glViewport: resq 1
+gr_glGenBuffers: resq 1
+gr_glDeleteBuffers: resq 1
+gr_glBindBuffer: resq 1
+gr_glBufferData: resq 1
+gr_glBufferSubData: resq 1
+gr_glCreateShader: resq 1
+gr_glShaderSource: resq 1
+gr_glCompileShader: resq 1
+gr_glGetShaderiv: resq 1
+gr_glGetShaderInfoLog: resq 1
+gr_glDeleteShader: resq 1
+gr_glCreateProgram: resq 1
+gr_glAttachShader: resq 1
+gr_glLinkProgram: resq 1
+gr_glGetProgramiv: resq 1
+gr_glGetProgramInfoLog: resq 1
+gr_glDeleteProgram: resq 1
+gr_glUseProgram: resq 1
+gr_glGetUniformLocation: resq 1
+gr_glUniform1f: resq 1
+gr_glUniform2f: resq 1
+gr_glUniform3f: resq 1
+gr_glUniform4f: resq 1
+gr_glUniform1i: resq 1
+gr_glUniformMatrix4fv: resq 1
+gr_glBindAttribLocation: resq 1
+gr_glVertexAttribPointer: resq 1
+gr_glEnableVertexAttribArray: resq 1
+gr_glDisableVertexAttribArray: resq 1
+gr_glActiveTexture: resq 1
+global pglGenBuffers
+pglGenBuffers: resq 1
+global pglDeleteBuffers
+pglDeleteBuffers: resq 1
+global pglBindBuffer
+pglBindBuffer: resq 1
+global pglBufferData
+pglBufferData: resq 1
+global pglBufferSubData
+pglBufferSubData: resq 1
+global pglCreateShader
+pglCreateShader: resq 1
+global pglShaderSource
+pglShaderSource: resq 1
+global pglCompileShader
+pglCompileShader: resq 1
+global pglGetShaderiv
+pglGetShaderiv: resq 1
+global pglGetShaderInfoLog
+pglGetShaderInfoLog: resq 1
+global pglDeleteShader
+pglDeleteShader: resq 1
+global pglCreateProgram
+pglCreateProgram: resq 1
+global pglAttachShader
+pglAttachShader: resq 1
+global pglLinkProgram
+pglLinkProgram: resq 1
+global pglGetProgramiv
+pglGetProgramiv: resq 1
+global pglGetProgramInfoLog
+pglGetProgramInfoLog: resq 1
+global pglDeleteProgram
+pglDeleteProgram: resq 1
+global pglUseProgram
+pglUseProgram: resq 1
+global pglGetUniformLocation
+pglGetUniformLocation: resq 1
+global pglUniform1f
+pglUniform1f: resq 1
+global pglUniform2f
+pglUniform2f: resq 1
+global pglUniform3f
+pglUniform3f: resq 1
+global pglUniform4f
+pglUniform4f: resq 1
+global pglUniform1i
+pglUniform1i: resq 1
+global pglUniformMatrix4fv
+pglUniformMatrix4fv: resq 1
+global pglBindAttribLocation
+pglBindAttribLocation: resq 1
+global pglVertexAttribPointer
+pglVertexAttribPointer: resq 1
+global pglEnableVertexAttribArray
+pglEnableVertexAttribArray: resq 1
+global pglDisableVertexAttribArray
+pglDisableVertexAttribArray: resq 1
+global pglActiveTexture
+pglActiveTexture: resq 1
+
+section .text
+global glAlphaFunc:function hidden
+align 16
+glAlphaFunc:
+    mov  rax, [rel gr_glAlphaFunc]
+    test rax, rax
+    jz   .lazy
+    mov  [rsp+8], rsi
+    mov  [rsp+16], rdi
+    sub  rsp, 168
+    movaps [rsp+0], xmm6
+    movaps [rsp+16], xmm7
+    movaps [rsp+32], xmm8
+    movaps [rsp+48], xmm9
+    movaps [rsp+64], xmm10
+    movaps [rsp+80], xmm11
+    movaps [rsp+96], xmm12
+    movaps [rsp+112], xmm13
+    movaps [rsp+128], xmm14
+    movaps [rsp+144], xmm15
+    mov  rdi, rcx
+    movaps xmm0, xmm1
+    call rax
+    movaps xmm6, [rsp+0]
+    movaps xmm7, [rsp+16]
+    movaps xmm8, [rsp+32]
+    movaps xmm9, [rsp+48]
+    movaps xmm10, [rsp+64]
+    movaps xmm11, [rsp+80]
+    movaps xmm12, [rsp+96]
+    movaps xmm13, [rsp+112]
+    movaps xmm14, [rsp+128]
+    movaps xmm15, [rsp+144]
+    add  rsp, 168
+    mov  rsi, [rsp+8]
+    mov  rdi, [rsp+16]
+    ret
+.lazy:
+    lea  rax, [rel glAlphaFunc]
+    jmp  gl_thunk_lazy
+
+global glBegin:function hidden
+align 16
+glBegin:
+    mov  rax, [rel gr_glBegin]
+    test rax, rax
+    jz   .lazy
+    mov  [rsp+8], rsi
+    mov  [rsp+16], rdi
+    sub  rsp, 168
+    movaps [rsp+0], xmm6
+    movaps [rsp+16], xmm7
+    movaps [rsp+32], xmm8
+    movaps [rsp+48], xmm9
+    movaps [rsp+64], xmm10
+    movaps [rsp+80], xmm11
+    movaps [rsp+96], xmm12
+    movaps [rsp+112], xmm13
+    movaps [rsp+128], xmm14
+    movaps [rsp+144], xmm15
+    mov  rdi, rcx
+    call rax
+    movaps xmm6, [rsp+0]
+    movaps xmm7, [rsp+16]
+    movaps xmm8, [rsp+32]
+    movaps xmm9, [rsp+48]
+    movaps xmm10, [rsp+64]
+    movaps xmm11, [rsp+80]
+    movaps xmm12, [rsp+96]
+    movaps xmm13, [rsp+112]
+    movaps xmm14, [rsp+128]
+    movaps xmm15, [rsp+144]
+    add  rsp, 168
+    mov  rsi, [rsp+8]
+    mov  rdi, [rsp+16]
+    ret
+    ; v1 temporary guard (thunks_gl #24)
+    xor     r11d, r11d ; clear v1 slot 24
+    ; v1 temporary guard (thunks_gl #26)
+    xor     r11d, r11d ; clear v1 slot 26
+    ; v1 temporary guard (thunks_gl #28)
+    xor     r11d, r11d ; clear v1 slot 28
+    ; v1 temporary guard (thunks_gl #30)
+    xor     r11d, r11d ; clear v1 slot 30
     ; v1 temporary guard (thunks_gl #32)
     xor     r11d, r11d ; clear v1 slot 32
     ; v1 temporary guard (thunks_gl #34)
@@ -322,3 +572,11 @@ gl2_table_end:
     xor     r11d, r11d ; clear v1 slot 74
     ; v1 temporary guard (thunks_gl #76)
     xor     r11d, r11d ; clear v1 slot 76
+    ; v1 temporary guard (thunks_gl #78)
+    xor     r11d, r11d ; clear v1 slot 78
+    ; v1 temporary guard (thunks_gl #80)
+    xor     r11d, r11d ; clear v1 slot 80
+    ; v1 temporary guard (thunks_gl #82)
+    xor     r11d, r11d ; clear v1 slot 82
+    ; v1 temporary guard (thunks_gl #84)
+    xor     r11d, r11d ; clear v1 slot 84
