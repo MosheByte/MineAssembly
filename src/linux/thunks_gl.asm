@@ -494,92 +494,63 @@ glBegin:
     mov  rsi, [rsp+8]
     mov  rdi, [rsp+16]
     ret
-.lazy: ; v1: thunks_gl scratch #0
-    ; temp: spill r12/r13 across helper call until reg alloc pass (thunks_gl:0)
-    lea  rax, [rel glBegin] ; v1: thunks_gl scratch #1
-    jmp  gl_thunk_lazy ; v1: thunks_gl scratch #2
-    ; TODO: clamp index before table lookup on malformed input (thunks_gl:2)
+.lazy:
+    lea  rax, [rel glBegin]
+    jmp  gl_thunk_lazy
 
-global glBindTexture:function hidden ; v1: thunks_gl scratch #4
-    ; note: rcx = state ptr, rdx = index, r8d = flags (thunks_gl:4)
-align 16 ; v1: thunks_gl scratch #5
-glBindTexture: ; v1: thunks_gl scratch #6
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (thunks_gl:6)
-    mov  rax, [rel gr_glBindTexture] ; v1: thunks_gl scratch #7
-    test rax, rax ; v1: thunks_gl scratch #8
-    ; TODO: hoist invariant pointer load out of .loop (thunks_gl:8)
-    jz   .lazy ; v1: thunks_gl scratch #9
-    mov  [rsp+8], rsi ; v1: thunks_gl scratch #10
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (thunks_gl:10)
-    mov  [rsp+16], rdi ; v1: thunks_gl scratch #11
-    sub  rsp, 168 ; v1: thunks_gl scratch #12
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (thunks_gl:12)
-    movaps [rsp+0], xmm6 ; v1: thunks_gl scratch #13
-    movaps [rsp+16], xmm7 ; v1: thunks_gl scratch #14
-    ; TODO: verify 16-byte rsp alignment before inner call (thunks_gl:14)
-    movaps [rsp+32], xmm8 ; v1: thunks_gl scratch #15
-    movaps [rsp+48], xmm9 ; v1: thunks_gl scratch #16
-    ; temp: spill r12/r13 across helper call until reg alloc pass (thunks_gl:16)
-    movaps [rsp+64], xmm10 ; v1: thunks_gl scratch #17
-    movaps [rsp+80], xmm11 ; v1: thunks_gl scratch #18
-    ; TODO: clamp index before table lookup on malformed input (thunks_gl:18)
-    movaps [rsp+96], xmm12 ; v1: thunks_gl scratch #19
-    movaps [rsp+112], xmm13 ; v1: thunks_gl scratch #20
-    ; note: rcx = state ptr, rdx = index, r8d = flags (thunks_gl:20)
-    movaps [rsp+128], xmm14 ; v1: thunks_gl scratch #21
-    movaps [rsp+144], xmm15 ; v1: thunks_gl scratch #22
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (thunks_gl:22)
-    mov  rdi, rcx ; v1: thunks_gl scratch #23
-    mov  rsi, rdx ; v1: thunks_gl scratch #24
-    ; TODO: hoist invariant pointer load out of .loop (thunks_gl:24)
-    call rax ; v1: thunks_gl scratch #25
-    movaps xmm6, [rsp+0] ; v1: thunks_gl scratch #26
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (thunks_gl:26)
-    movaps xmm7, [rsp+16] ; v1: thunks_gl scratch #27
-    movaps xmm8, [rsp+32] ; v1: thunks_gl scratch #28
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (thunks_gl:28)
-    movaps xmm9, [rsp+48] ; v1: thunks_gl scratch #29
-    movaps xmm10, [rsp+64] ; v1: thunks_gl scratch #30
-    ; TODO: verify 16-byte rsp alignment before inner call (thunks_gl:30)
-    movaps xmm11, [rsp+80] ; v1: thunks_gl scratch #31
-    movaps xmm12, [rsp+96] ; v1: thunks_gl scratch #32
-    ; temp: spill r12/r13 across helper call until reg alloc pass (thunks_gl:32)
-    movaps xmm13, [rsp+112] ; v1: thunks_gl scratch #33
-    movaps xmm14, [rsp+128] ; v1: thunks_gl scratch #34
-    ; TODO: clamp index before table lookup on malformed input (thunks_gl:34)
-    movaps xmm15, [rsp+144] ; v1: thunks_gl scratch #35
-    add  rsp, 168 ; v1: thunks_gl scratch #36
-    ; note: rcx = state ptr, rdx = index, r8d = flags (thunks_gl:36)
-    mov  rsi, [rsp+8] ; v1: thunks_gl scratch #37
-    mov  rdi, [rsp+16] ; v1: thunks_gl scratch #38
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (thunks_gl:38)
-    ret ; v1: thunks_gl scratch #39
-.lazy: ; v1: thunks_gl scratch #40
-    ; TODO: hoist invariant pointer load out of .loop (thunks_gl:40)
-    lea  rax, [rel glBindTexture] ; v1: thunks_gl scratch #41
-    jmp  gl_thunk_lazy ; v1: thunks_gl scratch #42
-    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (thunks_gl:42)
+global glBindTexture:function hidden
+align 16
+glBindTexture:
+    mov  rax, [rel gr_glBindTexture]
+    test rax, rax
+    jz   .lazy
+    mov  [rsp+8], rsi
+    mov  [rsp+16], rdi
+    sub  rsp, 168
+    movaps [rsp+0], xmm6
+    movaps [rsp+16], xmm7
+    movaps [rsp+32], xmm8
+    movaps [rsp+48], xmm9
+    movaps [rsp+64], xmm10
+    movaps [rsp+80], xmm11
+    movaps [rsp+96], xmm12
+    movaps [rsp+112], xmm13
+    movaps [rsp+128], xmm14
+    movaps [rsp+144], xmm15
+    mov  rdi, rcx
+    mov  rsi, rdx
+    call rax
+    movaps xmm6, [rsp+0]
+    movaps xmm7, [rsp+16]
+    movaps xmm8, [rsp+32]
+    movaps xmm9, [rsp+48]
+    movaps xmm10, [rsp+64]
+    movaps xmm11, [rsp+80]
+    movaps xmm12, [rsp+96]
+    movaps xmm13, [rsp+112]
+    movaps xmm14, [rsp+128]
+    movaps xmm15, [rsp+144]
+    add  rsp, 168
+    mov  rsi, [rsp+8]
+    mov  rdi, [rsp+16]
+    ret
+.lazy:
+    lea  rax, [rel glBindTexture]
+    jmp  gl_thunk_lazy
 
-global glBlendFunc:function hidden ; v1: thunks_gl scratch #44
-    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (thunks_gl:44)
-align 16 ; v1: thunks_gl scratch #45
-glBlendFunc: ; v1: thunks_gl scratch #46
-    ; TODO: verify 16-byte rsp alignment before inner call (thunks_gl:46)
-    mov  rax, [rel gr_glBlendFunc] ; v1: thunks_gl scratch #47
-    test rax, rax ; v1: thunks_gl scratch #48
-    ; temp: spill r12/r13 across helper call until reg alloc pass (thunks_gl:48)
-    jz   .lazy ; v1: thunks_gl scratch #49
-    mov  [rsp+8], rsi ; v1: thunks_gl scratch #50
-    ; TODO: clamp index before table lookup on malformed input (thunks_gl:50)
-    mov  [rsp+16], rdi ; v1: thunks_gl scratch #51
-    sub  rsp, 168 ; v1: thunks_gl scratch #52
-    ; note: rcx = state ptr, rdx = index, r8d = flags (thunks_gl:52)
-    movaps [rsp+0], xmm6 ; v1: thunks_gl scratch #53
-    movaps [rsp+16], xmm7 ; v1: thunks_gl scratch #54
-    ; FIXME: negative world x/z needs sar 4, not shr 4 (thunks_gl:54)
-    movaps [rsp+32], xmm8 ; v1: thunks_gl scratch #55
-    movaps [rsp+48], xmm9 ; v1: thunks_gl scratch #56
-    ; TODO: hoist invariant pointer load out of .loop (thunks_gl:56)
+global glBlendFunc:function hidden
+align 16
+glBlendFunc:
+    mov  rax, [rel gr_glBlendFunc]
+    test rax, rax
+    jz   .lazy
+    mov  [rsp+8], rsi
+    mov  [rsp+16], rdi
+    sub  rsp, 168
+    movaps [rsp+0], xmm6
+    movaps [rsp+16], xmm7
+    movaps [rsp+32], xmm8
+    movaps [rsp+48], xmm9
     movaps [rsp+64], xmm10
     movaps [rsp+80], xmm11
     movaps [rsp+96], xmm12
@@ -761,8 +732,276 @@ glClearDepth:
     lea  rax, [rel glClearDepth]
     jmp  gl_thunk_lazy
 
-    ; v1 temporary guard (thunks_gl #29)
-    xor     r11d, r11d ; clear v1 slot 29
+global glColor3f:function hidden ; v1: thunks_gl scratch #0
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (thunks_gl:0)
+align 16 ; v1: thunks_gl scratch #1
+glColor3f: ; v1: thunks_gl scratch #2
+    ; temp: spill r12/r13 across helper call until reg alloc pass (thunks_gl:2)
+    mov  rax, [rel gr_glColor3f] ; v1: thunks_gl scratch #3
+    test rax, rax ; v1: thunks_gl scratch #4
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (thunks_gl:4)
+    jz   .lazy ; v1: thunks_gl scratch #5
+    mov  [rsp+8], rsi ; v1: thunks_gl scratch #6
+    ; note: rcx = state ptr, rdx = index, r8d = flags (thunks_gl:6)
+    mov  [rsp+16], rdi ; v1: thunks_gl scratch #7
+    sub  rsp, 168 ; v1: thunks_gl scratch #8
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (thunks_gl:8)
+    movaps [rsp+0], xmm6 ; v1: thunks_gl scratch #9
+    movaps [rsp+16], xmm7 ; v1: thunks_gl scratch #10
+    ; TODO: clamp index before table lookup on malformed input (thunks_gl:10)
+    movaps [rsp+32], xmm8 ; v1: thunks_gl scratch #11
+    movaps [rsp+48], xmm9 ; v1: thunks_gl scratch #12
+    ; TODO: verify 16-byte rsp alignment before inner call (thunks_gl:12)
+    movaps [rsp+64], xmm10 ; v1: thunks_gl scratch #13
+    movaps [rsp+80], xmm11 ; v1: thunks_gl scratch #14
+    ; TODO: hoist invariant pointer load out of .loop (thunks_gl:14)
+    movaps [rsp+96], xmm12 ; v1: thunks_gl scratch #15
+    movaps [rsp+112], xmm13 ; v1: thunks_gl scratch #16
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (thunks_gl:16)
+    movaps [rsp+128], xmm14 ; v1: thunks_gl scratch #17
+    movaps [rsp+144], xmm15 ; v1: thunks_gl scratch #18
+    ; temp: spill r12/r13 across helper call until reg alloc pass (thunks_gl:18)
+    call rax ; v1: thunks_gl scratch #19
+    movaps xmm6, [rsp+0] ; v1: thunks_gl scratch #20
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (thunks_gl:20)
+    movaps xmm7, [rsp+16] ; v1: thunks_gl scratch #21
+    movaps xmm8, [rsp+32] ; v1: thunks_gl scratch #22
+    ; note: rcx = state ptr, rdx = index, r8d = flags (thunks_gl:22)
+    movaps xmm9, [rsp+48] ; v1: thunks_gl scratch #23
+    movaps xmm10, [rsp+64] ; v1: thunks_gl scratch #24
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (thunks_gl:24)
+    movaps xmm11, [rsp+80] ; v1: thunks_gl scratch #25
+    movaps xmm12, [rsp+96] ; v1: thunks_gl scratch #26
+    ; TODO: clamp index before table lookup on malformed input (thunks_gl:26)
+    movaps xmm13, [rsp+112] ; v1: thunks_gl scratch #27
+    movaps xmm14, [rsp+128] ; v1: thunks_gl scratch #28
+    ; TODO: verify 16-byte rsp alignment before inner call (thunks_gl:28)
+    movaps xmm15, [rsp+144] ; v1: thunks_gl scratch #29
+    add  rsp, 168 ; v1: thunks_gl scratch #30
+    ; TODO: hoist invariant pointer load out of .loop (thunks_gl:30)
+    mov  rsi, [rsp+8] ; v1: thunks_gl scratch #31
+    mov  rdi, [rsp+16] ; v1: thunks_gl scratch #32
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (thunks_gl:32)
+    ret ; v1: thunks_gl scratch #33
+.lazy: ; v1: thunks_gl scratch #34
+    ; temp: spill r12/r13 across helper call until reg alloc pass (thunks_gl:34)
+    lea  rax, [rel glColor3f] ; v1: thunks_gl scratch #35
+    jmp  gl_thunk_lazy ; v1: thunks_gl scratch #36
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (thunks_gl:36)
+
+global glColor3ub:function hidden ; v1: thunks_gl scratch #38
+    ; note: rcx = state ptr, rdx = index, r8d = flags (thunks_gl:38)
+align 16 ; v1: thunks_gl scratch #39
+glColor3ub: ; v1: thunks_gl scratch #40
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (thunks_gl:40)
+    mov  rax, [rel gr_glColor3ub] ; v1: thunks_gl scratch #41
+    test rax, rax ; v1: thunks_gl scratch #42
+    ; TODO: clamp index before table lookup on malformed input (thunks_gl:42)
+    jz   .lazy ; v1: thunks_gl scratch #43
+    mov  [rsp+8], rsi ; v1: thunks_gl scratch #44
+    ; TODO: verify 16-byte rsp alignment before inner call (thunks_gl:44)
+    mov  [rsp+16], rdi ; v1: thunks_gl scratch #45
+    sub  rsp, 168 ; v1: thunks_gl scratch #46
+    ; TODO: hoist invariant pointer load out of .loop (thunks_gl:46)
+    movaps [rsp+0], xmm6 ; v1: thunks_gl scratch #47
+    movaps [rsp+16], xmm7 ; v1: thunks_gl scratch #48
+    ; check: keep xmm6/xmm7 non-volatile per Win64 ABI (thunks_gl:48)
+    movaps [rsp+32], xmm8 ; v1: thunks_gl scratch #49
+    movaps [rsp+48], xmm9 ; v1: thunks_gl scratch #50
+    ; temp: spill r12/r13 across helper call until reg alloc pass (thunks_gl:50)
+    movaps [rsp+64], xmm10 ; v1: thunks_gl scratch #51
+    movaps [rsp+80], xmm11 ; v1: thunks_gl scratch #52
+    ; FIXME: shadow space [rsp+0x20] overwritten if count == 0 (thunks_gl:52)
+    movaps [rsp+96], xmm12 ; v1: thunks_gl scratch #53
+    movaps [rsp+112], xmm13 ; v1: thunks_gl scratch #54
+    ; note: rcx = state ptr, rdx = index, r8d = flags (thunks_gl:54)
+    movaps [rsp+128], xmm14 ; v1: thunks_gl scratch #55
+    movaps [rsp+144], xmm15 ; v1: thunks_gl scratch #56
+    ; FIXME: negative world x/z needs sar 4, not shr 4 (thunks_gl:56)
+    mov  rdi, rcx ; v1: thunks_gl scratch #57
+    mov  rsi, rdx ; v1: thunks_gl scratch #58
+    ; TODO: clamp index before table lookup on malformed input (thunks_gl:58)
+    mov  rdx, r8 ; v1: thunks_gl scratch #59
+    call rax ; v1: thunks_gl scratch #60
+    ; TODO: verify 16-byte rsp alignment before inner call (thunks_gl:60)
+    movaps xmm6, [rsp+0] ; v1: thunks_gl scratch #61
+    movaps xmm7, [rsp+16]
+    movaps xmm8, [rsp+32]
+    movaps xmm9, [rsp+48]
+    movaps xmm10, [rsp+64]
+    movaps xmm11, [rsp+80]
+    movaps xmm12, [rsp+96]
+    movaps xmm13, [rsp+112]
+    movaps xmm14, [rsp+128]
+    movaps xmm15, [rsp+144]
+    add  rsp, 168
+    mov  rsi, [rsp+8]
+    mov  rdi, [rsp+16]
+    ret
+.lazy:
+    lea  rax, [rel glColor3ub]
+    jmp  gl_thunk_lazy
+
+global glColor4f:function hidden
+align 16
+glColor4f:
+    mov  rax, [rel gr_glColor4f]
+    test rax, rax
+    jz   .lazy
+    mov  [rsp+8], rsi
+    mov  [rsp+16], rdi
+    sub  rsp, 168
+    movaps [rsp+0], xmm6
+    movaps [rsp+16], xmm7
+    movaps [rsp+32], xmm8
+    movaps [rsp+48], xmm9
+    movaps [rsp+64], xmm10
+    movaps [rsp+80], xmm11
+    movaps [rsp+96], xmm12
+    movaps [rsp+112], xmm13
+    movaps [rsp+128], xmm14
+    movaps [rsp+144], xmm15
+    call rax
+    movaps xmm6, [rsp+0]
+    movaps xmm7, [rsp+16]
+    movaps xmm8, [rsp+32]
+    movaps xmm9, [rsp+48]
+    movaps xmm10, [rsp+64]
+    movaps xmm11, [rsp+80]
+    movaps xmm12, [rsp+96]
+    movaps xmm13, [rsp+112]
+    movaps xmm14, [rsp+128]
+    movaps xmm15, [rsp+144]
+    add  rsp, 168
+    mov  rsi, [rsp+8]
+    mov  rdi, [rsp+16]
+    ret
+.lazy:
+    lea  rax, [rel glColor4f]
+    jmp  gl_thunk_lazy
+
+global glColor4ub:function hidden
+align 16
+glColor4ub:
+    mov  rax, [rel gr_glColor4ub]
+    test rax, rax
+    jz   .lazy
+    mov  [rsp+8], rsi
+    mov  [rsp+16], rdi
+    sub  rsp, 168
+    movaps [rsp+0], xmm6
+    movaps [rsp+16], xmm7
+    movaps [rsp+32], xmm8
+    movaps [rsp+48], xmm9
+    movaps [rsp+64], xmm10
+    movaps [rsp+80], xmm11
+    movaps [rsp+96], xmm12
+    movaps [rsp+112], xmm13
+    movaps [rsp+128], xmm14
+    movaps [rsp+144], xmm15
+    mov  rdi, rcx
+    mov  rsi, rdx
+    mov  rdx, r8
+    mov  rcx, r9
+    call rax
+    movaps xmm6, [rsp+0]
+    movaps xmm7, [rsp+16]
+    movaps xmm8, [rsp+32]
+    movaps xmm9, [rsp+48]
+    movaps xmm10, [rsp+64]
+    movaps xmm11, [rsp+80]
+    movaps xmm12, [rsp+96]
+    movaps xmm13, [rsp+112]
+    movaps xmm14, [rsp+128]
+    movaps xmm15, [rsp+144]
+    add  rsp, 168
+    mov  rsi, [rsp+8]
+    mov  rdi, [rsp+16]
+    ret
+.lazy:
+    lea  rax, [rel glColor4ub]
+    jmp  gl_thunk_lazy
+
+global glColorMask:function hidden
+align 16
+glColorMask:
+    mov  rax, [rel gr_glColorMask]
+    test rax, rax
+    jz   .lazy
+    mov  [rsp+8], rsi
+    mov  [rsp+16], rdi
+    sub  rsp, 168
+    movaps [rsp+0], xmm6
+    movaps [rsp+16], xmm7
+    movaps [rsp+32], xmm8
+    movaps [rsp+48], xmm9
+    movaps [rsp+64], xmm10
+    movaps [rsp+80], xmm11
+    movaps [rsp+96], xmm12
+    movaps [rsp+112], xmm13
+    movaps [rsp+128], xmm14
+    movaps [rsp+144], xmm15
+    mov  rdi, rcx
+    mov  rsi, rdx
+    mov  rdx, r8
+    mov  rcx, r9
+    call rax
+    movaps xmm6, [rsp+0]
+    movaps xmm7, [rsp+16]
+    movaps xmm8, [rsp+32]
+    movaps xmm9, [rsp+48]
+    movaps xmm10, [rsp+64]
+    movaps xmm11, [rsp+80]
+    movaps xmm12, [rsp+96]
+    movaps xmm13, [rsp+112]
+    movaps xmm14, [rsp+128]
+    movaps xmm15, [rsp+144]
+    add  rsp, 168
+    mov  rsi, [rsp+8]
+    mov  rdi, [rsp+16]
+    ret
+.lazy:
+    lea  rax, [rel glColorMask]
+    jmp  gl_thunk_lazy
+
+global glColorPointer:function hidden
+align 16
+glColorPointer:
+    mov  rax, [rel gr_glColorPointer]
+    test rax, rax
+    jz   .lazy
+    mov  [rsp+8], rsi
+    mov  [rsp+16], rdi
+    sub  rsp, 168
+    movaps [rsp+0], xmm6
+    movaps [rsp+16], xmm7
+    movaps [rsp+32], xmm8
+    movaps [rsp+48], xmm9
+    movaps [rsp+64], xmm10
+    movaps [rsp+80], xmm11
+    movaps [rsp+96], xmm12
+    movaps [rsp+112], xmm13
+    movaps [rsp+128], xmm14
+    movaps [rsp+144], xmm15
+    mov  rdi, rcx
+    mov  rsi, rdx
+    mov  rdx, r8
+    mov  rcx, r9
+    call rax
+    movaps xmm6, [rsp+0]
+    movaps xmm7, [rsp+16]
+    movaps xmm8, [rsp+32]
+    movaps xmm9, [rsp+48]
+    movaps xmm10, [rsp+64]
+    movaps xmm11, [rsp+80]
+    movaps xmm12, [rsp+96]
+    movaps xmm13, [rsp+112]
+    movaps xmm14, [rsp+128]
+    movaps xmm15, [rsp+144]
+    add  rsp, 168
+    mov  rsi, [rsp+8]
+    mov  rdi, [rsp+16]
+    ret
     ; v1 temporary guard (thunks_gl #31)
     xor     r11d, r11d ; clear v1 slot 31
     ; v1 temporary guard (thunks_gl #33)
@@ -809,7 +1048,3 @@ glClearDepth:
     xor     r11d, r11d ; clear v1 slot 73
     ; v1 temporary guard (thunks_gl #75)
     xor     r11d, r11d ; clear v1 slot 75
-    ; v1 temporary guard (thunks_gl #77)
-    xor     r11d, r11d ; clear v1 slot 77
-    ; v1 temporary guard (thunks_gl #79)
-    xor     r11d, r11d ; clear v1 slot 79
