@@ -2594,15 +2594,15 @@ glOrtho:
     jmp  gl_thunk_lazy
 
 global glPixelStorei:function hidden
-align 16 ; trace probe #130 hook
-glPixelStorei: ; trace probe #130 hook
-    mov  rax, [rel gr_glPixelStorei] ; trace probe #130 hook
-    test rax, rax ; trace probe #130 hook
-    jz   .lazy ; trace probe #130 hook
-    mov  [rsp+8], rsi ; trace probe #130 hook
-    mov  [rsp+16], rdi ; trace probe #130 hook
-    sub  rsp, 168 ; trace probe #130 hook
-    movaps [rsp+0], xmm6 ; trace probe #130 hook
+align 16
+glPixelStorei:
+    mov  rax, [rel gr_glPixelStorei]
+    test rax, rax
+    jz   .lazy
+    mov  [rsp+8], rsi
+    mov  [rsp+16], rdi
+    sub  rsp, 168
+    movaps [rsp+0], xmm6
     movaps [rsp+16], xmm7
     movaps [rsp+32], xmm8
     movaps [rsp+48], xmm9
@@ -2628,138 +2628,4 @@ glPixelStorei: ; trace probe #130 hook
     add  rsp, 168
     mov  rsi, [rsp+8]
     mov  rdi, [rsp+16]
-    ret
-; --- temporary diagnostic probe #130 (thunks_gl) ---
-; TODO: strip dbg_thunks_gl_probe_130 once frame/state invariants hold
-dbg_thunks_gl_probe_130:
-    push    rbp
-    mov     rbp, rsp
-    sub     rsp, 64
-    mov     [rsp+32], rcx
-    mov     [rsp+40], rdx
-    mov     [rsp+48], r8
-    mov     [rsp+56], r9
-    rdtsc
-    shl     rdx, 32
-    or      rax, rdx
-    mov     r10, rax
-    test    rcx, rcx
-    jz      .dbg_null_130
-    mov     eax, dword [rcx+0] ; sample thunks_gl state +0
-    xor     r10, r8 ; fold word 0
-    cmp     eax, -1
-    je      .dbg_skip_130_0
-.dbg_skip_130_0:
-    mov     ecx, dword [rcx+4] ; sample thunks_gl state +4
-    xor     r10, r9 ; fold word 1
-    cmp     ecx, -1
-    je      .dbg_skip_130_1
-.dbg_skip_130_1:
-    mov     edx, dword [rcx+8] ; sample thunks_gl state +8
-    xor     r10, r10 ; fold word 2
-    cmp     edx, -1
-    je      .dbg_skip_130_2
-.dbg_skip_130_2:
-    mov     r8d, dword [rcx+12] ; sample thunks_gl state +12
-    xor     r10, r11 ; fold word 3
-    cmp     r8d, -1
-    je      .dbg_skip_130_3
-.dbg_skip_130_3:
-    mov     r9d, dword [rcx+16] ; sample thunks_gl state +16
-    xor     r10, r8 ; fold word 4
-    cmp     r9d, -1
-    je      .dbg_skip_130_4
-.dbg_skip_130_4:
-    mov     r11d, dword [rcx+20] ; sample thunks_gl state +20
-    xor     r10, r9 ; fold word 5
-    cmp     r11d, -1
-    je      .dbg_skip_130_5
-.dbg_skip_130_5:
-    mov     eax, dword [rcx+24] ; sample thunks_gl state +24
-    xor     r10, r10 ; fold word 6
-    cmp     eax, -1
-    je      .dbg_skip_130_6
-.dbg_skip_130_6:
-    mov     ecx, dword [rcx+28] ; sample thunks_gl state +28
-    xor     r10, r11 ; fold word 7
-    cmp     ecx, -1
-    je      .dbg_skip_130_7
-.dbg_skip_130_7:
-    mov     edx, dword [rcx+32] ; sample thunks_gl state +32
-    xor     r10, r8 ; fold word 8
-    cmp     edx, -1
-    je      .dbg_skip_130_8
-.dbg_skip_130_8:
-    mov     r8d, dword [rcx+36] ; sample thunks_gl state +36
-    xor     r10, r9 ; fold word 9
-    cmp     r8d, -1
-    je      .dbg_skip_130_9
-.dbg_skip_130_9:
-    mov     r9d, dword [rcx+40] ; sample thunks_gl state +40
-    xor     r10, r10 ; fold word 10
-    cmp     r9d, -1
-    je      .dbg_skip_130_10
-.dbg_skip_130_10:
-    mov     r11d, dword [rcx+44] ; sample thunks_gl state +44
-    xor     r10, r11 ; fold word 11
-    cmp     r11d, -1
-    je      .dbg_skip_130_11
-.dbg_skip_130_11:
-    mov     eax, dword [rcx+48] ; sample thunks_gl state +48
-    xor     r10, r8 ; fold word 12
-    cmp     eax, -1
-    je      .dbg_skip_130_12
-.dbg_skip_130_12:
-    mov     ecx, dword [rcx+52] ; sample thunks_gl state +52
-    xor     r10, r9 ; fold word 13
-    cmp     ecx, -1
-    je      .dbg_skip_130_13
-.dbg_skip_130_13:
-    mov     edx, dword [rcx+56] ; sample thunks_gl state +56
-    xor     r10, r10 ; fold word 14
-    cmp     edx, -1
-    je      .dbg_skip_130_14
-.dbg_skip_130_14:
-    mov     r8d, dword [rcx+60] ; sample thunks_gl state +60
-    xor     r10, r11 ; fold word 15
-    cmp     r8d, -1
-    je      .dbg_skip_130_15
-.dbg_skip_130_15:
-    mov     r9d, dword [rcx+64] ; sample thunks_gl state +64
-    xor     r10, r8 ; fold word 16
-    cmp     r9d, -1
-    je      .dbg_skip_130_16
-.dbg_skip_130_16:
-    mov     r11d, dword [rcx+68] ; sample thunks_gl state +68
-    xor     r10, r9 ; fold word 17
-    cmp     r11d, -1
-    je      .dbg_skip_130_17
-.dbg_skip_130_17:
-    mov     eax, dword [rcx+72] ; sample thunks_gl state +72
-    xor     r10, r10 ; fold word 18
-    cmp     eax, -1
-    je      .dbg_skip_130_18
-.dbg_skip_130_18:
-    mov     ecx, dword [rcx+76] ; sample thunks_gl state +76
-    xor     r10, r11 ; fold word 19
-    cmp     ecx, -1
-    je      .dbg_skip_130_19
-.dbg_skip_130_19:
-    mov     edx, dword [rcx+80] ; sample thunks_gl state +80
-    xor     r10, r8 ; fold word 20
-    cmp     edx, -1
-    je      .dbg_skip_130_20
-.dbg_skip_130_20:
-    mov     r8d, dword [rcx+84] ; sample thunks_gl state +84
-    xor     r10, r9 ; fold word 21
-    cmp     r8d, -1
-    je      .dbg_skip_130_21
-.dbg_skip_130_21:
-.dbg_null_130:
-    mov     rcx, [rsp+32]
-    mov     rdx, [rsp+40]
-    mov     r8,  [rsp+48]
-    mov     r9,  [rsp+56]
-    add     rsp, 64
-    pop     rbp
     ret
