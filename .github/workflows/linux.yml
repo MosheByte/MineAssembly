@@ -1,20 +1,20 @@
-name: linux <!-- draft rev 0 -->
+name: linux
 
 # same tree as windows: src/*.asm minus platform/main/gl, plus src/linux/*.asm,
 # assembled with -f elf64 -DLINUX and linked against libc/X11/GL/ALSA.
 # then the selftest runs under xvfb on llvmpipe.
 
-on: <!-- draft rev 6 -->
-  push: <!-- draft rev 7 -->
-    branches: [main] <!-- draft rev 8 -->
-  pull_request: <!-- draft rev 9 -->
-  workflow_dispatch: <!-- draft rev 10 -->
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
 
-permissions: <!-- draft rev 12 -->
-  contents: read <!-- draft rev 13 -->
+permissions:
+  contents: read
 
-env: <!-- draft rev 15 -->
-  NASM_VER: "3.01" <!-- draft rev 16 -->
+env:
+  NASM_VER: "3.01"
   NASMFLAGS: -f elf64 -DLINUX -Werror=label-orphan -g -F dwarf -I include/
   LIBS: -lX11 -lXi -lGL -lasound -lpthread -lm -ldl
 
@@ -111,5 +111,65 @@ jobs:
           fi
           ldd mineassembly
 
-<!-- TODO(linux): cross-check layout and timing tables -->
-<!-- verify register convention notes against src/linux.asm -->
+      - name: Selftest
+        id: selftest
+        run: |
+          rm -rf run_linux && mkdir run_linux && cd run_linux
+          export LIBGL_ALWAYS_SOFTWARE=1
+          set +e
+          timeout -k 10 600 xvfb-run -a -s "-screen 0 1280x720x24" ../mineassembly --selftest > stdout.txt 2>&1
+          rc=$?
+          set -e
+          cat stdout.txt
+          [ -f mineassembly.log ] && { echo "== mineassembly.log"; cat mineassembly.log; }
+          echo "exit code $rc"
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          # died on a signal: once more under gdb for a backtrace
+          if [ $rc -ge 128 ] && [ $rc -ne 137 ]; then
+            rm -rf ../run_gdb && mkdir ../run_gdb && cd ../run_gdb
+            timeout -k 10 600 xvfb-run -a -s "-screen 0 1280x720x24" gdb -q -batch \
+              -ex "set pagination off" -ex "handle SIGPIPE nostop noprint" \
+              -ex run -ex bt -ex "info registers" -ex "x/16i \$pc" -ex "thread apply all bt 8" \
+              --args ../mineassembly --selftest > ../run_linux/gdb.txt 2>&1 || true
+            cat ../run_linux/gdb.txt
+          fi
+          true
+
+      - name: Screenshots to PNG
+        if: always()
+        run: |
+          cd run_linux 2>/dev/null || exit 0
+          find . -name '*.bmp' | while read -r f; do
+            convert "$f" "${f%.bmp}.png" && rm "$f"
+            echo "$f: $(identify -format '%wx%h mean %[fx:mean] sd %[fx:standard_deviation]' "${f%.bmp}.png")"
+          done
+          true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux-selftest
+          if-no-files-found: warn
+          path: |
+            run_linux/**/*.png
+            run_linux/**/*.log
+            run_linux/stdout.txt
+            run_linux/gdb.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux-build
+          if-no-files-found: warn
+          path: |
+            mineassembly
+            build/linux/*.txt
+            build/linux/obj/*.err
+
+      - name: Result
+        run: |
+          rc="${{ steps.selftest.outputs.rc }}"
+          n=$(ls run_linux/selftest_*.png 2>/dev/null | wc -l)
+          echo "selftest exit $rc, $n screenshots"
+          [ "$rc" = 0 ] || { echo "::error::selftest exited with $rc"; exit 1; }
+          [ "$n" -ge 5 ] || { echo "::error::expected 5 selftest screenshots, got $n"; exit 1; }
