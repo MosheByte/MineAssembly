@@ -1,0 +1,115 @@
+name: linux <!-- draft rev 0 -->
+
+# same tree as windows: src/*.asm minus platform/main/gl, plus src/linux/*.asm,
+# assembled with -f elf64 -DLINUX and linked against libc/X11/GL/ALSA.
+# then the selftest runs under xvfb on llvmpipe.
+
+on: <!-- draft rev 6 -->
+  push: <!-- draft rev 7 -->
+    branches: [main] <!-- draft rev 8 -->
+  pull_request: <!-- draft rev 9 -->
+  workflow_dispatch: <!-- draft rev 10 -->
+
+permissions: <!-- draft rev 12 -->
+  contents: read <!-- draft rev 13 -->
+
+env: <!-- draft rev 15 -->
+  NASM_VER: "3.01" <!-- draft rev 16 -->
+  NASMFLAGS: -f elf64 -DLINUX -Werror=label-orphan -g -F dwarf -I include/
+  LIBS: -lX11 -lXi -lGL -lasound -lpthread -lm -ldl
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Packages
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            build-essential libx11-dev libxi-dev libgl-dev libglx-dev libasound2-dev \
+            xvfb xauth libgl1-mesa-dri libglx-mesa0 mesa-utils imagemagick gdb
+
+      # same nasm as the windows job gets from choco, the distro one is older
+      - name: NASM cache
+        uses: actions/cache@v4
+        with:
+          path: ~/nasm
+          key: nasm-${{ env.NASM_VER }}-ubuntu-24.04
+
+      - name: NASM
+        run: |
+          if [ ! -x "$HOME/nasm/bin/nasm" ]; then
+            cd "$RUNNER_TEMP"
+            if curl -fsSL -o nasm.tar.xz "https://www.nasm.us/pub/nasm/releasebuilds/$NASM_VER/nasm-$NASM_VER.tar.xz" \
+               && tar xf nasm.tar.xz && cd "nasm-$NASM_VER" && ./configure -q && make -s -j"$(nproc)" nasm; then
+              install -D nasm "$HOME/nasm/bin/nasm"
+            else
+              echo "::warning::nasm $NASM_VER build failed, falling back to the distro nasm"
+              sudo apt-get install -y -qq nasm
+            fi
+          fi
+          [ -x "$HOME/nasm/bin/nasm" ] && echo "$HOME/nasm/bin" >> "$GITHUB_PATH"
+          true
+
+      - name: Assemble
+        run: |
+          nasm -v
+          rm -rf build/linux && mkdir -p build/linux/obj
+          { ls src/*.asm | grep -vE '^src/(platform|main|gl)\.asm$'; ls src/linux/*.asm 2>/dev/null || true; } > build/linux/sources.txt
+          echo "$(wc -l < build/linux/sources.txt) sources:"; tr '\n' ' ' < build/linux/sources.txt; echo
+          # src/foo.asm -> obj/foo.o, src/linux/foo.asm -> obj/linux_foo.o
+          xargs -a build/linux/sources.txt -P "$(nproc)" -n 1 sh -c '
+            f="$1"; o="build/linux/obj/$(echo "${f#src/}" | tr / _ | sed "s/\.asm\$/.o/")"
+            if nasm $NASMFLAGS "$f" -o "$o" 2> "$o.err"; then cat "$o.err"; exit 0; fi
+            cat "$o.err"
+            sed -n "s/^\([^:]*\):\([0-9]*\): error: \(.*\)/::error file=\1,line=\2::\3/p" "$o.err" | head -5
+            echo "::error file=$f::assembly failed"
+            rm -f "$o"; exit 1
+          ' _
+
+      - name: Symbol report
+        if: always()
+        run: |
+          cd build/linux
+          ls obj/*.o > /dev/null 2>&1 || { echo "no objects"; exit 0; }
+          nm -u obj/*.o | awk 'NF==2 && $1=="U" {print $2}' | sort -u > undef.txt
+          nm -g --defined-only obj/*.o | awk 'NF==3 {print $3}' | sort > def_all.txt
+          sort -u def_all.txt > def.txt
+          libs=""
+          for l in libc.so.6 libm.so.6 libX11.so.6 libXi.so.6 libGL.so.1 libGLX.so.0 libasound.so.2; do
+            p=$(ls /usr/lib/x86_64-linux-gnu/$l /lib/x86_64-linux-gnu/$l 2>/dev/null | head -1)
+            [ -n "$p" ] && libs="$libs $p"
+          done
+          nm -D --defined-only $libs 2>/dev/null | awk 'NF==3 {sub(/@.*/, "", $3); print $3}' | sort -u > libsyms.txt
+          comm -23 undef.txt def.txt > unresolved.txt
+          comm -23 unresolved.txt libsyms.txt > missing.txt
+          uniq -d def_all.txt > dup.txt
+          comm -12 def.txt libsyms.txt > clash.txt
+          echo "== referenced but defined nowhere in our objects or the libs ($(wc -l < missing.txt)):"
+          cat missing.txt | tr '\n' ' '; echo
+          echo "== defined in more than one object ($(wc -l < dup.txt)):"
+          cat dup.txt | tr '\n' ' '; echo
+          echo "== ours AND exported by a system lib, would interpose if a lib calls it ($(wc -l < clash.txt)):"
+          cat clash.txt | tr '\n' ' '; echo
+          [ -s missing.txt ] && echo "::warning::$(wc -l < missing.txt) unresolved symbols, see the Symbol report step"
+          true
+
+      - name: Link
+        run: |
+          gcc -no-pie -o mineassembly build/linux/obj/*.o -Wl,-z,noexecstack $LIBS
+          ls -l mineassembly
+          # the exe must not export any code. if it does, a shared lib (xcb, mesa, alsa)
+          # calls our win64 function instead of its own libc one
+          nm -D --defined-only mineassembly | awk '$2 ~ /^[Tti]$/' > build/linux/exported.txt
+          if [ -s build/linux/exported.txt ]; then
+            echo "::error::functions exported from the exe (interposed over a shared lib):"
+            cat build/linux/exported.txt
+            exit 1
+          fi
+          ldd mineassembly
+
+<!-- TODO(linux): cross-check layout and timing tables -->
+<!-- verify register convention notes against src/linux.asm -->
